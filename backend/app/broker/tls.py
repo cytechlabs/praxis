@@ -14,10 +14,10 @@ Wire/storage format conventions (kept consistent across PRA-150 and PRA-151):
   bridge the two.
 
 
-Uvicorn 0.27 does not surface peer certs in ASGI scope (see
-spike_peer_cert_uvicorn.py). The broker uses ``websockets.serve`` +
-``asyncio.start_server`` + explicit ``ssl.SSLContext`` instead, which
-gives us direct access to the underlying ``SSLSocket``.
+Uvicorn 0.27 does not surface peer certs in ASGI scope. The broker uses
+``websockets.serve`` + ``asyncio.start_server`` + explicit
+``ssl.SSLContext`` instead, which gives us direct access to the
+underlying ``SSLSocket``.
 
 Identity model (PRA-150 + PRA-151):
 - Real identity is the ``URI SAN`` ``praxis://system/<id>``.

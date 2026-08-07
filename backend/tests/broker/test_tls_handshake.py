@@ -1,10 +1,10 @@
 """PRA-151 task #13: broker mTLS handshake + peer cert validation.
 
 Narrow scope: prove the broker process requires mTLS, accepts WSS,
-extracts the peer cert via the websockets-lib transport (NOT Uvicorn —
-see spike_peer_cert_uvicorn.py), validates it against the System
-identity, and rejects invalid cases. No registry, heartbeat, nonce, or
-op flow yet.
+extracts the peer cert via the websockets-lib transport (NOT Uvicorn,
+which does not surface peer certs in ASGI scope), validates it against
+the System identity, and rejects invalid cases. No registry,
+heartbeat, nonce, or op flow yet.
 
 These tests run a real broker on a high port for each test, drive it
 with a real ``websockets`` client presenting various certs (good /
