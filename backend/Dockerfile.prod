@@ -116,11 +116,13 @@ RUN if [ -e /app/scripts/spikes ]; then \
 
 RUN chmod +x /app/scripts/start.prod.sh && chown -R praxis:praxis /app
 
-# Pre-create the mirror_data volume mount point owned by praxis so Docker
-# preserves that ownership on first mount of the named volume (PRA-157).
-# Without this, the mount lands root:root and the non-root backend can't
-# write the praxis-mirror.json descriptor or any sync output.
-RUN mkdir -p /data/praxis/mirrors && chown -R praxis:praxis /data
+# Pre-create the persistent data volume mount points owned by praxis so Docker
+# preserves that ownership on first mount of each named volume. Without this the
+# mounts land root:root and the non-root backend cannot write the
+# praxis-mirror.json descriptor, any sync output, or local-file audit sink
+# records under the audit file sink root.
+RUN mkdir -p /data/praxis/mirrors /data/praxis/audit-sinks \
+ && chown -R praxis:praxis /data
 
 USER praxis
 

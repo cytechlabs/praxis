@@ -12,8 +12,10 @@ Every security-relevant action in the app calls ``emit(...)``, which:
 
 Sink transports:
 
-    * ``file``  — append the event JSON to a newline-delimited file. Local
-      disk only; callers supply the path.
+    * ``file``: append the event JSON to a newline-delimited file on local
+      disk. ``target`` is a relative path beneath the operator-approved
+      audit file sink root; absolute paths, traversal, and symlinked path
+      components are rejected at create/update and again at delivery.
     * ``syslog`` — RFC 5424 over TCP (``target`` is ``host:port``). Chosen
       over UDP so operators get a delivery signal.
     * ``http``  — POST the event JSON to ``target``. Optional HMAC-SHA256
@@ -43,7 +45,6 @@ import hashlib
 import hmac
 import json
 import logging
-import os
 import socket
 import ssl
 import uuid
@@ -56,7 +57,7 @@ from sqlalchemy.orm import Session as DbSession
 
 from ..db.access_models import AuditEvent, AuditSink, AuditSinkDelivery
 from ..db.session import SessionLocal
-from . import outbound_http_guard
+from . import audit_file_sink_guard, outbound_http_guard
 
 logger = logging.getLogger(__name__)
 
@@ -164,12 +165,17 @@ def event_to_dict(row: AuditEvent) -> Dict[str, Any]:
 
 
 def _send_file(sink: AuditSink, payload: str) -> None:
-    # ``target`` is a path. Append-only, newline-delimited JSON.
-    os.makedirs(os.path.dirname(sink.target) or ".", exist_ok=True)
-    with open(sink.target, "a", encoding="utf-8") as f:
-        f.write(payload)
-        if not payload.endswith("\n"):
-            f.write("\n")
+    # ``target`` is a relative path under the audit file sink root. Append-only,
+    # newline-delimited JSON. The guard re-reads the root and re-validates the
+    # target on every delivery, then pins each traversed directory, so a target
+    # that was valid when the sink was saved cannot be redirected later by a
+    # symlink or a changed root. A stored target that predates the confinement
+    # rules is never rewritten or redirected: it fails here with an actionable
+    # error and follows the normal retry / dead-letter path.
+    try:
+        audit_file_sink_guard.append_line(sink.target, payload)
+    except audit_file_sink_guard.FileSinkTargetError as exc:
+        raise AuditError(f"file sink target rejected: {exc}") from exc
 
 
 def _send_syslog(sink: AuditSink, payload: str) -> None:

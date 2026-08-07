@@ -15,7 +15,7 @@ from ...db.access_models import AuditEvent, AuditSink, AuditSinkDelivery
 from ...db.models import User
 from ...db.session import get_db
 from ...services import audit_event_service as aes
-from ...services import outbound_http_guard
+from ...services import audit_file_sink_guard, outbound_http_guard
 
 router = APIRouter(redirect_slashes=False)
 
@@ -61,6 +61,22 @@ def _validate_http_sink_target(target: str) -> None:
             require_https=True,
         )
     except outbound_http_guard.SsrfBlocked as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+# Confinement guardrail for operator-configured local-file audit sinks. The
+# delivery worker writes the target from inside the trust boundary, so a target
+# is a relative path beneath the configured audit file sink root and never an
+# absolute path, a traversal, or a symlinked component. The shared guard walks
+# the root and every existing target component with no-follow directory
+# descriptors here and again at delivery, so the two boundaries cannot drift.
+def _validate_file_sink_target(target: str) -> None:
+    """Validate a ``file`` audit-sink target; raise ``HTTPException(400)`` when it
+    is not a usable relative path beneath the audit file sink root. Only applies
+    to ``file`` sinks. syslog and http targets keep their own handling."""
+    try:
+        audit_file_sink_guard.validate(target)
+    except audit_file_sink_guard.FileSinkTargetError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
@@ -200,6 +216,8 @@ async def create_sink(
         raise HTTPException(status_code=400, detail="sink name already in use")
     if payload.kind == "http":
         _validate_http_sink_target(payload.target)
+    elif payload.kind == "file":
+        _validate_file_sink_target(payload.target)
     sink = AuditSink(
         name=payload.name,
         kind=payload.kind,
@@ -229,6 +247,8 @@ async def update_sink(
     if payload.target is not None:
         if sink.kind == "http":
             _validate_http_sink_target(payload.target)
+        elif sink.kind == "file":
+            _validate_file_sink_target(payload.target)
         sink.target = payload.target
     if payload.hmac_secret is not None:
         sink.hmac_secret = payload.hmac_secret or None

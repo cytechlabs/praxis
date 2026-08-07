@@ -61,15 +61,15 @@ def test_event_to_dict_shape_is_stable(db, admin_user):
 
 def test_emit_enqueues_delivery_for_each_enabled_sink(db, admin_user):
     sink_a = AuditSink(
-        name="a", kind="file", target="/tmp/a.jsonl", enabled=True, config_json="{}"
+        name="a", kind="file", target="a.jsonl", enabled=True, config_json="{}"
     )
     sink_b = AuditSink(
-        name="b", kind="file", target="/tmp/b.jsonl", enabled=True, config_json="{}"
+        name="b", kind="file", target="b.jsonl", enabled=True, config_json="{}"
     )
     sink_disabled = AuditSink(
         name="c",
         kind="file",
-        target="/tmp/c.jsonl",
+        target="c.jsonl",
         enabled=False,
         config_json="{}",
     )
@@ -90,12 +90,13 @@ def test_emit_enqueues_delivery_for_each_enabled_sink(db, admin_user):
 # -------------------------------------------------------------- transports
 
 
-def test_file_sink_appends_jsonl(tmp_path):
+def test_file_sink_appends_jsonl(tmp_path, monkeypatch):
+    monkeypatch.setenv("AUDIT_FILE_SINK_ROOT", str(tmp_path))
     sink = AuditSink(
         id=1,
         name="f",
         kind="file",
-        target=str(tmp_path / "out.jsonl"),
+        target="out.jsonl",
         enabled=True,
         config_json="{}",
     )
@@ -141,11 +142,12 @@ def test_http_sink_signs_with_hmac():
 # ---------------------------------------------------------- delivery flow
 
 
-def test_deliver_one_marks_delivered_on_success(db, tmp_path):
+def test_deliver_one_marks_delivered_on_success(db, tmp_path, monkeypatch):
+    monkeypatch.setenv("AUDIT_FILE_SINK_ROOT", str(tmp_path))
     sink = AuditSink(
         name="s",
         kind="file",
-        target=str(tmp_path / "x.jsonl"),
+        target="x.jsonl",
         enabled=True,
         config_json="{}",
     )
@@ -172,7 +174,7 @@ def test_deliver_one_retries_on_transport_error(db):
     sink = AuditSink(
         name="s-bad",
         kind="file",
-        target="/nonexistent-dir/xxx/out.jsonl",
+        target="unreachable/out.jsonl",
         enabled=True,
         config_json="{}",
     )
@@ -203,7 +205,7 @@ def test_deliver_one_dead_letters_after_max_attempts(db):
     sink = AuditSink(
         name="s-dead",
         kind="file",
-        target="/nonexistent/x.jsonl",
+        target="doomed/x.jsonl",
         enabled=True,
         config_json="{}",
     )
@@ -232,7 +234,7 @@ def test_retry_dead_letter_resets(db):
     sink = AuditSink(
         name="s-retry",
         kind="file",
-        target="/nonexistent/x.jsonl",
+        target="retry/x.jsonl",
         enabled=True,
         config_json="{}",
     )
@@ -257,7 +259,11 @@ def test_retry_dead_letter_resets(db):
 
 def test_retry_rejects_non_dead_letter(db):
     sink = AuditSink(
-        name="s-live", kind="file", target="/tmp/x", enabled=True, config_json="{}"
+        name="s-live",
+        kind="file",
+        target="live/x.jsonl",
+        enabled=True,
+        config_json="{}",
     )
     db.add(sink)
     db.commit()

@@ -43,16 +43,20 @@ services:
       context: ./backend
       dockerfile: Dockerfile.prod
     # Drop dev bind mounts (source, .env, node_modules anon volume); the image
-    # is the source of truth in prod. Keep the three persistent app volumes:
+    # is the source of truth in prod. This list REPLACES the base list, so every
+    # persistent app volume must be repeated here:
     #   - vault_data (ro): bundled-mode backend reads the embedded Vault token;
     # - mirror_data: persisted mirrored content across restarts;
     # - recordings_data: session recordings must survive restarts —
     #     the base backend mounts it, and dropping it here silently lost
     #     recordings in production.
+    # - audit_sink_data: local-file audit sink output. Backend-only, and the
+    #     root every file sink is confined to (AUDIT_FILE_SINK_ROOT).
     volumes: !override
       - vault_data:/vault/data:ro
       - mirror_data:/data/praxis/mirrors
       - recordings_data:/data/praxis/recordings
+      - audit_sink_data:/data/praxis/audit-sinks
     # Publish NO backend host port. The base stack already publishes no
     # direct backend app port; this override keeps it empty so nothing
     # is ever added. In prod the backend is reachable only over the Docker

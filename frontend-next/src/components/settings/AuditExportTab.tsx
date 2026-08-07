@@ -16,7 +16,7 @@ import {
 const kindLabels: Record<AuditSink['kind'], string> = {
   syslog: 'Syslog (RFC 5424 over TCP/TLS)',
   http: 'HTTP JSON (HMAC-signed)',
-  file: 'Local file (JSONL)',
+  file: 'Local file (JSONL, relative path)',
 };
 
 const AuditExportTab = () => {
@@ -107,7 +107,7 @@ const AuditExportTab = () => {
     switch (kind) {
       case 'syslog': return 'host:port - defaults to 6514 if no port';
       case 'http': return 'https://siem.example/audit-ingest';
-      case 'file': return '/var/log/praxis/audit.jsonl';
+      case 'file': return 'exports/audit.jsonl';
     }
   };
 
@@ -201,6 +201,11 @@ const AuditExportTab = () => {
           <div>
             <label className="block text-xs uppercase tracking-wide text-gray-500 mb-1">Target</label>
             <Input value={form.target} onChange={e => setForm(f => ({ ...f, target: e.target.value }))} placeholder={targetHelp(form.kind)} />
+            {form.kind === 'file' && (
+              <p className="text-xs text-gray-500 mt-1">
+                Relative path under the configured audit sink directory. Absolute paths and traversal are rejected.
+              </p>
+            )}
           </div>
           {form.kind === 'http' && (
             <div>
