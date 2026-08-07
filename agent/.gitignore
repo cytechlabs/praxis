@@ -1,0 +1,5 @@
+# PRA-152: build artefacts
+/dist/
+*.test
+*.out
+coverage.out

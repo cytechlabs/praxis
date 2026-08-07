@@ -1,0 +1,79 @@
+---
+title: Settings
+description: Tabbed settings page covering general, timezone, SSH identity, connection, notifications, and alerts.
+section: Admin
+order: 8
+keywords: [settings, timezone, connection, notifications, preferences, ssh identity, alert config]
+---
+
+# Settings
+
+![Settings](/help/settings.png)
+
+`Settings` (cog icon in the top bar) is a tabbed page with every admin-level configuration that doesn't have its own sidebar destination. Each tab is a self-contained form - changes on one tab don't affect another. Keep an eye on the toast notifications; every save returns a success or failure message inline.
+
+## General
+
+The baseline app-wide settings:
+
+- **Site name** - displayed in the browser title and top bar
+- **Default landing page** - where users go after login (dashboard is the default)
+- **Session timeout minutes** - how long a refresh token lives before forcing re-login
+- **Logo** - upload a PNG/SVG that replaces the default Praxis mark in the top bar
+
+These apply to every user. Per-user preferences live under **Account** in the top-bar user menu.
+
+## Timezone
+
+Praxis stores every timestamp in UTC in the database. The timezone tab controls how timestamps render in the UI for your account:
+
+- **Display timezone** - your local zone (e.g. `America/New_York`, `Europe/London`, `UTC`)
+- **Date format** - ISO, US (MM/DD/YYYY), or EU (DD/MM/YYYY)
+- **Time format** - 12h or 24h
+
+All dashboard charts, job schedules, and audit log timestamps respect this setting. Internally Praxis keeps everything UTC so multi-user deployments don't see drift between admins in different zones.
+
+## Connection settings
+
+Global SSH connection tunables. These apply to every system unless a per-system policy overrides:
+
+- **connection_timeout** - socket-level TCP + SSH banner timeout in seconds (default 10)
+- **max_pool_size** - max concurrent pooled SSH connections per host (default 50)
+- **pool_cleanup_interval** - seconds between pool sweep passes (default 300)
+- **max_idle_time** - seconds a pooled connection can be idle before eviction (default 600)
+- **unreachable_threshold** - consecutive health-check failures before a system flips to `Unreachable` (default 2)
+- **default_ssh_port** - port used when a System doesn't override (default 22)
+
+Tune these if you have an unusual network - e.g. a satellite link benefits from a longer timeout and a smaller pool.
+
+## SSH Identity
+
+Zero-trust CA config. Covered in depth in [SSH & Security](/help/ssh-and-security):
+
+- **user_cert_ttl_seconds** - how long each signed user cert lives (default 300)
+- **default_principal** - Linux username the signed cert authorizes (blank = per-credential username)
+- **CA Identifier + Public Key** - read-only status of the current Vault CA
+- **Danger zone** - Rotate CA, Revoke All User Certs (admin-only, recorded in rotation history)
+
+## Notification preferences
+
+Per-user opt-out for in-app notifications. By default every user receives every event type relevant to them; this tab lets you disable specific types (e.g. "I don't care about `package_scan_complete`, stop pinging me").
+
+Opting out affects **in-app notifications only**. External alert configs (Slack, webhook) are unaffected - they're fleet-level and fire regardless of individual user preferences.
+
+## Alert Configs
+
+The alert/webhook destinations tab. Every row is an AlertConfig that subscribes to a set of event types and routes matching events to Slack or a generic webhook. Covered in detail under [Alerts & Webhooks](/help/monitoring-and-alerts#alerts-and-webhooks).
+
+Buttons per row:
+
+- **Test** - fire a synthetic event to verify the endpoint
+- **Edit** - change events, destination, HMAC secret, scope
+- **Delete** - remove the config; any in-flight retries are abandoned
+- **Deliveries** (expandable panel) - recent delivery history with status, attempt count, retry button for dead-lettered rows
+
+Create a new config with the **New Alert Config** button. At minimum you need a name, a destination URL, and one subscribed event type. HMAC secret and smart-group scope are optional.
+
+### Clearing a secret
+
+On an existing config you can either type a new secret to rotate, or tick "Clear secret (disables signing)" to remove HMAC entirely. Leave the input blank on edit to keep the existing secret unchanged.

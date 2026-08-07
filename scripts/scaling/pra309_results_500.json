@@ -1,0 +1,133 @@
+{
+  "hosts": 500,
+  "pool": {
+    "size": 20,
+    "max_overflow": 10,
+    "ceiling": 30
+  },
+  "reads": {
+    "get_fleet_dashboard": {
+      "n": 30,
+      "min_ms": 7.11,
+      "p50_ms": 8.08,
+      "p95_ms": 9.05,
+      "max_ms": 9.78,
+      "mean_ms": 8.23
+    },
+    "get_fleet_health": {
+      "n": 30,
+      "min_ms": 2.21,
+      "p50_ms": 2.51,
+      "p95_ms": 2.82,
+      "max_ms": 2.94,
+      "mean_ms": 2.51
+    }
+  },
+  "reconcile_sweep": {
+    "hosts": 500,
+    "max_workers": 8,
+    "wall_s": 0.666,
+    "hosts_per_s": 751.0,
+    "per_host": {
+      "n": 500,
+      "min_ms": 3.84,
+      "p50_ms": 10.42,
+      "p95_ms": 14.54,
+      "max_ms": 19.25,
+      "mean_ms": 10.54
+    },
+    "errors": 0
+  },
+  "pool_saturation": {
+    "1": {
+      "concurrency": 1,
+      "ops": 10,
+      "wall_s": 0.019,
+      "op_latency": {
+        "n": 10,
+        "min_ms": 0.84,
+        "p50_ms": 2.13,
+        "p95_ms": 2.45,
+        "max_ms": 2.57,
+        "mean_ms": 1.85
+      },
+      "pool_timeouts": 0,
+      "errors": 0
+    },
+    "10": {
+      "concurrency": 10,
+      "ops": 100,
+      "wall_s": 0.068,
+      "op_latency": {
+        "n": 100,
+        "min_ms": 0.91,
+        "p50_ms": 6.03,
+        "p95_ms": 9.92,
+        "max_ms": 12.93,
+        "mean_ms": 6.17
+      },
+      "pool_timeouts": 0,
+      "errors": 0
+    },
+    "20": {
+      "concurrency": 20,
+      "ops": 200,
+      "wall_s": 0.148,
+      "op_latency": {
+        "n": 200,
+        "min_ms": 1.29,
+        "p50_ms": 12.18,
+        "p95_ms": 20.25,
+        "max_ms": 25.1,
+        "mean_ms": 12.31
+      },
+      "pool_timeouts": 0,
+      "errors": 0
+    },
+    "30": {
+      "concurrency": 30,
+      "ops": 300,
+      "wall_s": 0.215,
+      "op_latency": {
+        "n": 300,
+        "min_ms": 1.98,
+        "p50_ms": 17.42,
+        "p95_ms": 28.89,
+        "max_ms": 41.26,
+        "mean_ms": 17.48
+      },
+      "pool_timeouts": 0,
+      "errors": 0
+    },
+    "45": {
+      "concurrency": 45,
+      "ops": 450,
+      "wall_s": 0.324,
+      "op_latency": {
+        "n": 450,
+        "min_ms": 1.23,
+        "p50_ms": 16.79,
+        "p95_ms": 32.15,
+        "max_ms": 160.11,
+        "mean_ms": 20.24
+      },
+      "pool_timeouts": 0,
+      "errors": 0
+    },
+    "60": {
+      "concurrency": 60,
+      "ops": 600,
+      "wall_s": 0.438,
+      "op_latency": {
+        "n": 600,
+        "min_ms": 1.37,
+        "p50_ms": 19.44,
+        "p95_ms": 40.49,
+        "max_ms": 224.23,
+        "mean_ms": 24.48
+      },
+      "pool_timeouts": 0,
+      "errors": 0
+    }
+  }
+}

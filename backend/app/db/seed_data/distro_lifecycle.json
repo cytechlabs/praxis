@@ -1,0 +1,46 @@
+{
+  "_meta": {
+    "source": "https://endoflife.date snapshot",
+    "as_of": "2026-07-16",
+    "notes": "Hand-maintained EOL reference data. See docs/eol-data.md for the refresh procedure. Edit this file then run scripts/update-eol-data.py to upsert into a running install. The Alembic migration at install time bulk-loads the same JSON."
+  },
+  "entries": [
+    {"distro_id": "ubuntu", "release": "14.04", "eol_date": "2019-04-25", "support_kind": "standard", "source": "endoflife.date", "as_of": "2026-05-02"},
+    {"distro_id": "ubuntu", "release": "14.04", "eol_date": "2024-04-30", "support_kind": "esm",      "source": "endoflife.date", "as_of": "2026-05-02"},
+    {"distro_id": "ubuntu", "release": "16.04", "eol_date": "2021-04-30", "support_kind": "standard", "source": "endoflife.date", "as_of": "2026-05-02"},
+    {"distro_id": "ubuntu", "release": "16.04", "eol_date": "2026-04-30", "support_kind": "esm",      "source": "endoflife.date", "as_of": "2026-05-02"},
+    {"distro_id": "ubuntu", "release": "18.04", "eol_date": "2023-05-31", "support_kind": "standard", "source": "endoflife.date", "as_of": "2026-05-02"},
+    {"distro_id": "ubuntu", "release": "18.04", "eol_date": "2028-05-31", "support_kind": "esm",      "source": "endoflife.date", "as_of": "2026-05-02"},
+    {"distro_id": "ubuntu", "release": "20.04", "eol_date": "2025-04-29", "support_kind": "standard", "source": "endoflife.date", "as_of": "2026-05-02"},
+    {"distro_id": "ubuntu", "release": "20.04", "eol_date": "2030-04-29", "support_kind": "esm",      "source": "endoflife.date", "as_of": "2026-05-02"},
+    {"distro_id": "ubuntu", "release": "22.04", "eol_date": "2027-06-01", "support_kind": "standard", "source": "endoflife.date", "as_of": "2026-05-02"},
+    {"distro_id": "ubuntu", "release": "22.04", "eol_date": "2032-06-01", "support_kind": "esm",      "source": "endoflife.date", "as_of": "2026-05-02"},
+    {"distro_id": "ubuntu", "release": "24.04", "eol_date": "2029-06-01", "support_kind": "standard", "source": "endoflife.date", "as_of": "2026-05-02"},
+    {"distro_id": "ubuntu", "release": "24.04", "eol_date": "2034-06-01", "support_kind": "esm",      "source": "endoflife.date", "as_of": "2026-05-02"},
+    {"distro_id": "ubuntu", "release": "26.04", "eol_date": "2031-06-01", "support_kind": "standard", "source": "endoflife.date", "as_of": "2026-07-16"},
+    {"distro_id": "ubuntu", "release": "26.04", "eol_date": "2036-06-01", "support_kind": "esm",      "source": "endoflife.date", "as_of": "2026-07-16"},
+
+    {"distro_id": "rhel",   "release": "7", "eol_date": "2024-06-30", "support_kind": "standard", "source": "endoflife.date", "as_of": "2026-05-02"},
+    {"distro_id": "rhel",   "release": "7", "eol_date": "2028-06-30", "support_kind": "extended", "source": "endoflife.date", "as_of": "2026-05-02"},
+    {"distro_id": "rhel",   "release": "8", "eol_date": "2029-05-31", "support_kind": "standard", "source": "endoflife.date", "as_of": "2026-05-02"},
+    {"distro_id": "rhel",   "release": "9", "eol_date": "2032-05-31", "support_kind": "standard", "source": "endoflife.date", "as_of": "2026-05-02"},
+    {"distro_id": "rhel",   "release": "10", "eol_date": "2035-05-31", "support_kind": "standard", "source": "endoflife.date", "as_of": "2026-07-16"},
+
+    {"distro_id": "rocky",  "release": "8", "eol_date": "2029-05-31", "support_kind": "standard", "source": "endoflife.date", "as_of": "2026-05-02"},
+    {"distro_id": "rocky",  "release": "9", "eol_date": "2032-05-31", "support_kind": "standard", "source": "endoflife.date", "as_of": "2026-05-02"},
+    {"distro_id": "rocky",  "release": "10", "eol_date": "2035-05-31", "support_kind": "standard", "source": "endoflife.date", "as_of": "2026-07-16"},
+
+    {"distro_id": "almalinux", "release": "8", "eol_date": "2029-03-01", "support_kind": "standard", "source": "endoflife.date", "as_of": "2026-05-02"},
+    {"distro_id": "almalinux", "release": "9", "eol_date": "2032-05-31", "support_kind": "standard", "source": "endoflife.date", "as_of": "2026-05-02"},
+    {"distro_id": "almalinux", "release": "10", "eol_date": "2035-05-31", "support_kind": "standard", "source": "endoflife.date", "as_of": "2026-07-16"},
+
+    {"distro_id": "debian", "release": "10", "eol_date": "2022-09-10", "support_kind": "standard", "source": "endoflife.date", "as_of": "2026-05-02"},
+    {"distro_id": "debian", "release": "10", "eol_date": "2024-06-30", "support_kind": "extended", "source": "endoflife.date", "as_of": "2026-05-02"},
+    {"distro_id": "debian", "release": "11", "eol_date": "2024-08-14", "support_kind": "standard", "source": "endoflife.date", "as_of": "2026-05-02"},
+    {"distro_id": "debian", "release": "11", "eol_date": "2026-08-31", "support_kind": "extended", "source": "endoflife.date", "as_of": "2026-05-02"},
+    {"distro_id": "debian", "release": "12", "eol_date": "2026-06-10", "support_kind": "standard", "source": "endoflife.date", "as_of": "2026-05-02"},
+    {"distro_id": "debian", "release": "12", "eol_date": "2028-06-30", "support_kind": "extended", "source": "endoflife.date", "as_of": "2026-05-02"},
+    {"distro_id": "debian", "release": "13", "eol_date": "2028-08-09", "support_kind": "standard", "source": "endoflife.date", "as_of": "2026-07-16"},
+    {"distro_id": "debian", "release": "13", "eol_date": "2030-06-30", "support_kind": "extended", "source": "endoflife.date", "as_of": "2026-07-16"}
+  ]
+}

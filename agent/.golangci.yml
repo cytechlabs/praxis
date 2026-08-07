@@ -1,0 +1,43 @@
+# golangci-lint v2 config for PRA-152 task #1.
+#
+# Conservative set per the design lock: errcheck, govet, revive,
+# staticcheck for code-quality lints; gofmt + goimports for
+# formatting (now under their own `formatters` section in v2).
+#
+# v2 introduced a new schema. Keep `version: "2"` at the top so the
+# loader doesn't fall back to v1 compatibility mode.
+
+version: "2"
+
+run:
+  timeout: 5m
+  go: "1.26"
+
+linters:
+  default: none
+  enable:
+    - errcheck
+    - govet
+    - revive
+    - staticcheck
+  settings:
+    revive:
+      severity: warning
+      rules:
+        - name: var-naming
+        - name: package-comments
+        - name: indent-error-flow
+        - name: error-return
+        - name: error-naming
+        - name: unexported-return
+        - name: blank-imports
+        - name: superfluous-else
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/cytechlabs/praxis/agent

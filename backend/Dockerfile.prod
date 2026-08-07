@@ -1,0 +1,128 @@
+# Backend production image — multi-stage build.
+# Builder stage installs deps to a virtualenv; runtime stage copies the venv
+# over a slim base, so tooling like gcc / build headers stay out of the final
+# image.
+
+# ── Builder ──────────────────────────────────────────────────────────────
+# PRA-321: Python 3.14 runtime for 1.0 (evaluated in PRA-319; the broker mTLS blocker
+# that held it is fixed in PRA-320's backend/app/broker/tls.py). The only web-stack pin
+# change this required was pydantic 2.6.0 -> 2.12.0 (first line whose pydantic-core has a
+# cp314 wheel); every dependency installs from a wheel on 3.14 (no source builds).
+FROM python:3.14.6-slim-bookworm AS builder
+
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+# Build deps for psycopg2, cryptography, etc. Also pull in the latest
+# Debian security updates on top of the base image (PRA-121).
+RUN apt-get update && apt-get upgrade -y --no-install-recommends \
+    && apt-get install -y --no-install-recommends \
+        build-essential \
+        libpq-dev \
+        libssl-dev \
+        libffi-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build
+
+# Create an isolated venv that we'll copy into the runtime stage.
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Install deps first (separate layer) so source changes don't bust the cache.
+COPY requirements.txt setup.py ./
+RUN pip install --upgrade pip wheel \
+ && pip install -r requirements.txt
+
+# Install the app itself into the venv.
+COPY . .
+RUN pip install --no-deps .
+
+# ── Optional paid-capable bundle (PRA-134) ─────────────────────────────────
+# OSS / dev / default builds do NOT include the private praxis-ee package and
+# are fully free-capable. A paid-capable build opts in with `--build-arg
+# PRAXIS_EE=1`, which installs the private `praxis-ee` **wheel** strictly from a
+# LOCAL wheel directory (`backend/ee-wheels/`, already in the build context).
+# There are NO registry credentials here: `--no-index` disables any network
+# index, so no token/index URL ever enters build args, image metadata,
+# provenance, or logs. The wheel is a pre-fetched artifact placed in the context
+# by the release pipeline (see .github/workflows/publish.yml) or a local build.
+# --no-deps: praxis-ee's runtime deps (pyjwt, cryptography) are already installed
+# from requirements.txt. It **fails closed**: PRAXIS_EE=1 with no wheel present
+# makes pip error and the build fail, rather than shipping a free-only image
+# mislabeled as paid-capable.
+ARG PRAXIS_EE=0
+RUN if [ "$PRAXIS_EE" = "1" ]; then \
+        echo "PRA-134: paid-capable build — installing praxis-ee from local wheels" && \
+        pip install --no-cache-dir --no-index --no-deps \
+            --find-links=/build/ee-wheels praxis-ee ; \
+    else \
+        echo "OSS build — praxis-ee not bundled (free-capable)" ; \
+    fi
+
+
+# ── Runtime ──────────────────────────────────────────────────────────────
+# PRA-319: keep the runtime base pinned to the SAME Python as the builder so the
+# copied /opt/venv (with its compiled cp314 extension modules) matches the interpreter.
+FROM python:3.14.6-slim-bookworm AS runtime
+
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH="/opt/venv/bin:$PATH"
+
+# Runtime libs only — no compilers. Pull latest Debian security updates
+# on top of the base image (PRA-121) so CVE-patched libssl/libsqlite/etc
+# land in the final image. PRA-157 #2a adds debmirror + rsync + gpgv
+# for the mirror-engine subprocess work. PRA-158 #1 adds full ``gnupg``
+# (signing engine needs gpg --gen-key / --sign / --import; gpgv alone
+# is verify-only).
+RUN apt-get update && apt-get upgrade -y --no-install-recommends \
+    && apt-get install -y --no-install-recommends \
+        libpq5 \
+        tini \
+        debmirror \
+        rsync \
+        gpgv \
+        gnupg \
+        dnf \
+        dnf-plugins-core \
+        createrepo-c \
+        apt-utils \
+    && rm -rf /var/lib/apt/lists/*
+
+# Non-root user (UID 1000).
+RUN groupadd --system --gid 1000 praxis \
+ && useradd  --system --uid 1000 --gid praxis --home-dir /app --shell /sbin/nologin praxis
+
+WORKDIR /app
+
+COPY --from=builder /opt/venv /opt/venv
+COPY --from=builder /build/app /app/app
+COPY --from=builder /build/alembic.ini /app/
+COPY --from=builder /build/alembic /app/alembic
+COPY --from=builder /build/scripts /app/scripts
+
+RUN chmod +x /app/scripts/start.prod.sh && chown -R praxis:praxis /app
+
+# Pre-create the mirror_data volume mount point owned by praxis so Docker
+# preserves that ownership on first mount of the named volume (PRA-157).
+# Without this, the mount lands root:root and the non-root backend can't
+# write the praxis-mirror.json descriptor or any sync output.
+RUN mkdir -p /data/praxis/mirrors && chown -R praxis:praxis /data
+
+USER praxis
+
+EXPOSE 8000 9090
+
+# PRA-180 CI-02: runtime healthcheck so orchestrators / `docker compose ps`
+# detect a hung backend and restart policies can act. Uses the stdlib (no curl
+# in this slim image) to poll the public /health endpoint. start-period covers
+# alembic upgrade + uvicorn boot before failures count.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+    CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=4).status == 200 else 1)"
+
+# tini reaps zombies and forwards signals to uvicorn cleanly.
+ENTRYPOINT ["/usr/bin/tini", "--"]
+CMD ["/app/scripts/start.prod.sh"]

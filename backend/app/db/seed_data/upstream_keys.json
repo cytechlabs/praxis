@@ -1,0 +1,13 @@
+{
+  "_meta": {
+    "source": "operator-curated",
+    "purpose": "Seed file for mirror_upstream_keys — Praxis-wide upstream-archive trust anchors.",
+    "notes": [
+      "PRA-158 #4c. Upstream archive keys (Ubuntu Archive, Debian, Rocky, Alma, CentOS Stream, RHEL) rotate periodically; we deliberately do NOT bake known keys into the codebase because a stale baked-in anchor is a security footgun. Each operator makes a deliberate trust decision per anchor.",
+      "To populate: paste armored PGP PUBLIC KEY BLOCKs from authoritative sources (the distro's docs, package signing key page, or an existing trusted host's /etc/apt/trusted.gpg.d / /etc/pki/rpm-gpg/) into the entries array as objects with name, armored_public_key, and optional notes.",
+      "To import: run scripts/seed-upstream-keys.py (airgap-friendly, file-only — never fetches anything). The script is idempotent: keys already in the table by fingerprint are skipped with a log line.",
+      "An empty entries array is a valid no-op — operators who don't enable verify_upstream_signature don't need any anchors."
+    ]
+  },
+  "entries": []
+}

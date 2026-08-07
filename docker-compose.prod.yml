@@ -1,0 +1,213 @@
+# Praxis production compose.
+#
+# Compose v2. Swarm-compatibility deliberately deferred.
+#
+# This overlay is BOTH the production-parity local build AND the pinned release
+# runtime — same Dockerfiles (Dockerfile.prod), entrypoints, topology, volumes,
+# health checks, and env validation in either form.
+#
+# Canonical local production-parity build (from current source):
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+#       --profile bundled --profile proxy up -d --build
+#   `--build` is what makes the local form explicit — it rebuilds the prod images
+#   from the working tree regardless of the image tag.
+#
+# Canonical pinned release deploy (pull published images from GHCR):
+#   export PRAXIS_VERSION=vX.Y.Z          # REQUIRED — pin an exact release tag
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+#       --profile bundled --profile proxy pull
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+#       --profile bundled --profile proxy up -d
+#   PRAXIS_VERSION drives every released image tag below. It defaults to :latest
+#   only as a convenience for local iteration; release deploys MUST pin an exact
+#   version (see docs/release-checklist.md) — never deploy an unpinned :latest.
+#
+# Browser ingress requires --profile proxy: it starts Caddy (the SOLE public
+# ingress). Without it, backend/frontend publish no host ports and the
+# stack is intentionally unreachable from a browser.
+#
+# With external services, drop --profile bundled and set DATABASE_URL /
+# VAULT_ADDR / VAULT_TOKEN in .env (see .env.example "DEPLOYMENT MODE").
+
+x-prod-logging: &prod-logging
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  backend:
+    image: ghcr.io/cytechlabs/praxis-backend:${PRAXIS_VERSION:-latest}
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    # Drop dev bind mounts (source, .env, node_modules anon volume); the image
+    # is the source of truth in prod. Keep the three persistent app volumes:
+    #   - vault_data (ro): bundled-mode backend reads the embedded Vault token;
+    # - mirror_data: persisted mirrored content across restarts;
+    # - recordings_data: session recordings must survive restarts —
+    #     the base backend mounts it, and dropping it here silently lost
+    #     recordings in production.
+    volumes: !override
+      - vault_data:/vault/data:ro
+      - mirror_data:/data/praxis/mirrors
+      - recordings_data:/data/praxis/recordings
+    # Publish NO backend host port. The base stack already publishes no
+    # direct backend app port; this override keeps it empty so nothing
+    # is ever added. In prod the backend is reachable only over the Docker
+    # networks (Caddy proxies to it on frontend_net; Prometheus scrapes
+    # backend:9090 on backend_net). This
+    # fails secure in Compose itself so a direct client cannot bypass Caddy/TLS,
+    # rather than relying on operators to firewall the host port.
+    ports: !override []
+    environment:
+      # Force production mode. The base dev compose defaults
+      # ENVIRONMENT=${ENVIRONMENT:-development}; applying the prod overlay must
+      # not silently inherit `development` (which would disable the production
+      # startup-hardening gates in app/api/main.py). This is a literal value, so
+      # it wins over any ENVIRONMENT set in the operator's .env.
+      - ENVIRONMENT=production
+      # Single worker is the supported 1.0 model while the interactive SSH
+      # session runtime is process-local: multiple workers can route the
+      # WebSocket attach to a worker that did not open the session. The backend
+      # entrypoint fails fast if UVICORN_WORKERS > 1 unless the unsupported
+      # ALLOW_UNSAFE_MULTIWORKER_SESSIONS=1 override is set.
+      - UVICORN_WORKERS=${UVICORN_WORKERS:-1}
+      # Trusted reverse-proxy addresses for uvicorn proxy headers.
+      # Safe default trusts only loopback; set this to the Caddy / edge-proxy
+      # address or subnet to record real client IPs in rate limits and audit
+      # actor_ip fields.
+      - FORWARDED_ALLOW_IPS=${FORWARDED_ALLOW_IPS:-127.0.0.1}
+      # Browser-facing origin used to build OIDC redirect/callback
+      # URLs. Set to your real external URL.
+      - PUBLIC_BASE_URL=${PUBLIC_BASE_URL:-https://localhost}
+      - OIDC_REDIRECT_URI=${OIDC_REDIRECT_URI:-}
+    # Explicit runtime healthcheck on the backend app service
+    # (the prod image also carries a HEALTHCHECK; declaring it here makes the
+    # prod overlay self-documenting and lets `docker compose ps` / dependents
+    # observe health). Uses the stdlib — no curl in the slim prod image.
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=4).status == 200 else 1)"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    networks:
+      - frontend_net
+      - backend_net
+    restart: unless-stopped
+    <<: *prod-logging
+
+  # Run the production agent-broker from the pinned production backend
+  # image (same artifact as `backend`, different command). Since the base
+  # broker is already production-parity (Dockerfile.prod, no source/.env bind
+  # mount); this overlay pins the released image tag + adds restart/logging.
+  # command / environment / ports / depends_on / networks are inherited from the
+  # base broker service; only the image/build, volumes, and
+  # logging are overridden here. `command` is re-declared for self-documentation.
+  agent-broker:
+    image: ghcr.io/cytechlabs/praxis-backend:${PRAXIS_VERSION:-latest}
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    command: ["python", "-m", "app.broker.main"]
+    # Drop the dev source + .env bind mounts; the image is the source of truth in
+    # prod. Keep ONLY the read-only vault_data mount — the broker reads its TLS
+    # cert/key from /vault/data/broker/ and the agent CA from
+    # /vault/data/agent-ca-cert.pem. Do NOT mount vault_recovery; root/unseal
+    # recovery material stays Vault-container-only.
+    volumes: !override
+      - vault_data:/vault/data:ro
+    restart: unless-stopped
+    <<: *prod-logging
+
+  frontend:
+    image: ghcr.io/cytechlabs/praxis-frontend:${PRAXIS_VERSION:-latest}
+    build:
+      context: ./frontend-next
+      dockerfile: Dockerfile.prod
+    # prod image is self-contained (the base already drops bind mounts).
+    volumes: !override []
+    # Publish NO frontend host port. The base stack already publishes no
+    # frontend port; this override keeps it empty. In prod Caddy reaches
+    # the frontend over frontend_net, so nothing is host-published, keeping Caddy
+    # the sole public ingress.
+    ports: !override []
+    environment:
+      - NODE_ENV=production
+      - BACKEND_URL=http://backend:8000
+    # Runtime healthcheck on the frontend app service. Any
+    # non-5xx response to GET / counts as healthy (Next serves the app or
+    # redirects to /login). Uses node's stdlib http — no curl in the slim image.
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "require('http').get('http://127.0.0.1:3000/', r => process.exit(r.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    networks:
+      - frontend_net
+    restart: unless-stopped
+    <<: *prod-logging
+
+  db:
+    restart: unless-stopped
+    <<: *prod-logging
+
+  vault:
+    restart: unless-stopped
+    <<: *prod-logging
+
+  prometheus:
+    restart: unless-stopped
+    <<: *prod-logging
+
+  db_backup:
+    restart: unless-stopped
+    <<: *prod-logging
+
+  # Caddy — opt-in via --profile proxy. When active, Caddy is the SOLE public
+  # ingress: it is the only service that publishes public host ports (80/443).
+  # The prod override clears the backend's AND the frontend's dev host ports
+  # (ports: !override []), so both are reachable only over the Docker networks
+  # (Caddy proxies to them on frontend_net) and cannot be hit directly bypassing
+  # Caddy/TLS. The only other host binding is Prometheus on 127.0.0.1:9091
+  # (loopback-only, not public). Run production with --profile proxy for ingress.
+  caddy:
+    profiles: [proxy]
+    image: caddy:2.11.4-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - PRAXIS_DOMAIN=${PRAXIS_DOMAIN:-localhost}
+      - PRAXIS_TLS_MODE=${PRAXIS_TLS_MODE:-internal}
+      - PRAXIS_ACME_EMAIL=${PRAXIS_ACME_EMAIL:-}
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./caddy/tls:/etc/caddy/tls:ro
+      - ./certs:/certs:ro  # byo mode only; empty otherwise (safe)
+      - caddy_data:/data
+      - caddy_config:/config
+      - caddy_logs:/var/log/caddy
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - frontend_net
+    restart: unless-stopped
+    <<: *prod-logging
+
+volumes:
+  caddy_data:
+  caddy_config:
+  caddy_logs:

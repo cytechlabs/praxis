@@ -1,0 +1,32 @@
+[Unit]
+Description=Praxis Fleet Agent
+Documentation=https://github.com/cytechlabs/praxis
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# install.sh substitutes @BIN_PATH@ and @CONFIG_DIR@ at install time
+# so --bin-path / --config-dir flags propagate to the unit. Verbatim
+# defaults survive a substitution-less install (e.g. manual copy).
+ExecStart=@BIN_PATH@ connect --config-dir @CONFIG_DIR@
+Restart=on-failure
+RestartSec=5s
+# Agent reads config + key from /etc/praxis-agent. No secrets in
+# argv/env so they don't leak via `ps` or systemd logs.
+User=root
+
+# Hardening — conservative pass for M13. Filesystem-lockdown
+# (ProtectSystem=strict, ReadWritePaths) is intentionally NOT set
+# yet because file_put / exec / pty are root-anywhere primitives;
+# locking the filesystem here would make legitimate ops fail. A
+# later milestone will move write-policy to broker authz so the
+# agent itself can be confined.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+
+[Install]
+WantedBy=multi-user.target

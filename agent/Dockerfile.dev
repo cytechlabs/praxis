@@ -1,0 +1,41 @@
+# Dev image for the Praxis thin agent (PRA-152 task #1).
+#
+# Kept separate from backend/Dockerfile.dev so the Python image stays
+# lean. Built only when working on agent code; not pulled in by the
+# default `docker compose up` for backend devs.
+#
+# Includes the Go toolchain + golangci-lint + the cross-compile
+# targets we ship in CI. Mirrors what the agent-build CI lane does so
+# `docker compose run --rm agent make lint test build-all` reproduces
+# CI behaviour locally.
+
+FROM golang:1.26-alpine
+
+ENV CGO_ENABLED=0 \
+    GOFLAGS="-mod=readonly"
+
+# Tools needed by Makefile + golangci-lint.
+RUN apk add --no-cache \
+        bash \
+        git \
+        make \
+        ca-certificates
+
+# golangci-lint v2.x is the first line that supports Go 1.26. The v2
+# import path includes /v2/ — keep that in sync with any version bump.
+# Pinned for reproducibility; CI matches this version so local + CI
+# lint diffs stay aligned.
+ARG GOLANGCI_LINT_VERSION=v2.11.0
+RUN go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@${GOLANGCI_LINT_VERSION}
+RUN go install golang.org/x/tools/cmd/goimports@latest
+
+WORKDIR /agent
+
+# Pre-fetch deps in their own layer so subsequent rebuilds with only
+# Go-source changes don't re-download modules.
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+
+CMD ["bash"]

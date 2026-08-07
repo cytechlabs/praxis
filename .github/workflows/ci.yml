@@ -1,0 +1,396 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main, 'release/**']
+  push:
+    # PRA-345/PRA-270: `main` is the CI-gated integration branch and
+    # `release/**` are frozen backport lines, but normal working branches also
+    # run push CI so slices get feedback before opening a PR. The GitFlow-era
+    # permanent `dev` and milestone `m*/**` branches remain retired.
+    branches: [main, 'release/**', 'feature/**', 'bug/**', 'fix/**', 'security/**', 'hotfix/**']
+
+jobs:
+  backend-lint:
+    name: Backend Lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'  # PRA-321: run backend CI on the shipped 3.14 runtime
+          cache: 'pip'
+
+      - name: Install linting tools
+        run: pip install "black==23.12.1" "isort==5.13.2"
+
+      - name: Check formatting (black)
+        run: black --check .
+
+      - name: Check import sorting (isort)
+        run: isort --check --profile black --settings-path setup.cfg .
+
+  # PRA-278: pylint runs as its own lane so a style regression fails fast and
+  # independently of the (slower) test lanes below. It imports `app`, so it still
+  # needs the full backend dependency set installed.
+  backend-pylint:
+    name: Backend Pylint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'  # PRA-321: run backend CI on the shipped 3.14 runtime
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install -e .
+          pip install pylint
+
+      - name: Lint (pylint)
+        run: pylint app --fail-under=5.0
+
+  # PRA-278: the backend test suite (3,400+ tests) is split into parallel lanes
+  # so a failure in one area returns without waiting on the whole monolith, and
+  # the slowest lane — not the sum of all tests — sets wall-clock feedback time.
+  # Lanes are path-based and mutually exhaustive: `services` + `api` + everything
+  # else (broker/db/cli/integration via --ignore). Using --ignore for the `rest`
+  # lane means any NEW top-level tests/ directory is still gated (it falls into
+  # `rest`), so the split can never silently drop release coverage. fail-fast is
+  # off so every lane reports independently.
+  backend-test:
+    name: Backend Test (${{ matrix.lane }})
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - lane: services
+            paths: tests/services
+          - lane: api
+            paths: tests/api
+          - lane: rest
+            paths: tests --ignore=tests/services --ignore=tests/api
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/praxis
+      SECRET_KEY: ci-test-secret-key
+      ENVIRONMENT: testing
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: praxis
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'  # PRA-321: run backend CI on the shipped 3.14 runtime
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install -e .
+          pip install pytest
+
+      - name: Run tests (${{ matrix.lane }})
+        # --tb=short is also in pytest.ini addopts; kept here so the CI command is
+        # self-documenting. Slow (subprocess) + integration tests stay in-gate:
+        # slow lives under tests/services and integration under `rest` (it
+        # self-skips unless PRAXIS_E2E=1).
+        run: |
+          alembic upgrade head
+          pytest --tb=short ${{ matrix.paths }}
+
+  agent-build:
+    # PRA-152 task #1: Go toolchain lane. Runs gofmt diff, go vet,
+    # golangci-lint, go test, and cross-compiles for both target
+    # architectures. Cross-compile only — no QEMU runner. Pinned
+    # golangci-lint version matches agent/Dockerfile.dev so local +
+    # CI lint diffs stay aligned.
+    name: Agent Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: agent
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: agent/go.mod
+          # cache-dependency-path defaults to go.sum; setup-go skips
+          # caching gracefully when it's missing (zero deps right now).
+
+      - name: Verify go.mod is tidy
+        run: |
+          go mod tidy
+          # `git diff` covers tracked files; if tidy materialised a
+          # go.sum that wasn't tracked, surface that too.
+          git diff --exit-code
+          if [ -f go.sum ] && ! git ls-files --error-unmatch go.sum >/dev/null 2>&1; then
+            echo "go.sum was created by 'go mod tidy' but is not tracked — commit it"
+            exit 1
+          fi
+
+      - name: Check formatting (gofmt)
+        run: |
+          if [ -n "$(gofmt -l .)" ]; then
+            echo "gofmt would reformat the following files:"
+            gofmt -l .
+            gofmt -d .
+            exit 1
+          fi
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Lint (golangci-lint)
+        # golangci-lint v2.x is the first line that supports Go 1.26.
+        # v2.11 pinned for reproducibility and matches the version
+        # baked into agent/Dockerfile.dev.
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.11.0
+          working-directory: agent
+          args: --timeout 5m
+
+      - name: Test
+        run: go test ./...
+
+      - name: Cross-compile (linux/amd64)
+        env:
+          GOOS: linux
+          GOARCH: amd64
+        run: go build -trimpath -ldflags "-s -w" -o /tmp/praxis-agent-amd64 ./cmd/praxis-agent
+
+      - name: Cross-compile (linux/arm64)
+        env:
+          GOOS: linux
+          GOARCH: arm64
+        run: go build -trimpath -ldflags "-s -w" -o /tmp/praxis-agent-arm64 ./cmd/praxis-agent
+
+      - name: Smoke (host arch)
+        run: |
+          go build -trimpath -ldflags "-s -w -X main.Version=ci -X main.Commit=$(git rev-parse --short HEAD)" -o /tmp/praxis-agent ./cmd/praxis-agent
+          /tmp/praxis-agent --version
+
+  frontend-checks:
+    name: Frontend Checks
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend-next
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend-next/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint (ESLint)
+        run: npx eslint src
+
+      # PRA-268: block raw red-*/blue-*/#DC2626 in the foundation surfaces
+      # (semantic tokens + shared primitives + shell). Feature pages are out of
+      # scope until the PRA-270+ sweeps. See docs/ui-foundation.md.
+      - name: Color-drift guardrail (foundation)
+        run: npm run check:colors
+
+      - name: Type check (TypeScript)
+        run: npx tsc --noEmit
+
+      # PRA-256: pure-logic unit tests (Vitest). Establishes the first frontend
+      # test lane; currently covers the out-of-order-response request guard.
+      - name: Unit tests (Vitest)
+        run: npm test
+
+  docker-build:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      # PRA-299: the dev Dockerfiles are retired — local and release builds both
+      # use the production Dockerfiles (the canonical production-parity path). This
+      # lane builds them as a fast "does it build" smoke; the Container Security
+      # Scan lane also builds + scans the same prod images.
+      - name: Build backend image
+        run: docker build -f backend/Dockerfile.prod backend/
+
+      - name: Build frontend image
+        run: docker build -f frontend-next/Dockerfile.prod frontend-next/
+
+  security-scan:
+    name: Container Security Scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build backend prod image
+        run: docker build -f backend/Dockerfile.prod -t praxis-backend:scan backend/
+
+      - name: Build frontend prod image
+        run: docker build -f frontend-next/Dockerfile.prod -t praxis-frontend:scan frontend-next/
+
+      # PRA-121: Fail the pipeline on any CRITICAL CVE. HIGH is reported
+      # via the SARIF upload below but not gated so we don't block on
+      # upstream noise we can't immediately fix.
+      - name: Trivy gate (backend) — fail on CRITICAL
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          image-ref: praxis-backend:scan
+          format: table
+          severity: CRITICAL
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: os,library
+
+      - name: Trivy gate (frontend) — fail on CRITICAL
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          image-ref: praxis-frontend:scan
+          format: table
+          severity: CRITICAL
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: os,library
+
+      # Full SARIF reports saved as build artifacts (download to inspect).
+      # NOTE: surfacing these in the GitHub Security tab (code scanning)
+      # requires GitHub Advanced Security. Where GHAS is available, add a
+      # `github/codeql-action/upload-sarif@v3` step for each SARIF file.
+      - name: Trivy SARIF (backend)
+        if: always()
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          image-ref: praxis-backend:scan
+          format: sarif
+          output: trivy-backend.sarif
+          severity: CRITICAL,HIGH,MEDIUM
+          ignore-unfixed: true
+
+      - name: Trivy SARIF (frontend)
+        if: always()
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          image-ref: praxis-frontend:scan
+          format: sarif
+          output: trivy-frontend.sarif
+          severity: CRITICAL,HIGH,MEDIUM
+          ignore-unfixed: true
+
+      # CycloneDX SBOM for each image, archived as a build artifact. On
+      # tag push, publish.yml regenerates these and attaches them to the
+      # GitHub Release.
+      - name: SBOM (backend, CycloneDX)
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          image-ref: praxis-backend:scan
+          format: cyclonedx
+          output: sbom-backend.cdx.json
+
+      - name: SBOM (frontend, CycloneDX)
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          image-ref: praxis-frontend:scan
+          format: cyclonedx
+          output: sbom-frontend.cdx.json
+
+      - name: Upload SBOMs + SARIF as artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-reports
+          path: |
+            sbom-backend.cdx.json
+            sbom-frontend.cdx.json
+            trivy-backend.sarif
+            trivy-frontend.sarif
+          retention-days: 30
+
+  # PRA-317: repo/filesystem dependency scan — the source-level counterpart to
+  # the image Trivy gates above. It scans the dependency manifests/lockfiles
+  # (backend pip, frontend npm) AND the AGENT Go modules. The shipped agent is a
+  # tarball binary, not a container image, so this filesystem scan is the agent's
+  # 1.0 vulnerability gate. Posture matches the image gates: CRITICAL blocks;
+  # HIGH is report-only via SARIF (avoid blocking on upstream noise we can't
+  # immediately fix — Dependabot drives the HIGH backlog down over time).
+  dependency-scan:
+    name: Dependency Vulnerability Scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Trivy filesystem gate — fail on CRITICAL
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln
+          severity: CRITICAL
+          exit-code: '1'
+          ignore-unfixed: true
+
+      # Full CRITICAL/HIGH/MEDIUM report saved as an artifact (download to
+      # inspect). As with the image SARIF, surfacing this in the GitHub Security
+      # tab requires GitHub Advanced Security; add a
+      # github/codeql-action/upload-sarif step where GHAS is available.
+      - name: Trivy filesystem SARIF (CRITICAL/HIGH/MEDIUM)
+        if: always()
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln
+          format: sarif
+          output: trivy-fs.sarif
+          severity: CRITICAL,HIGH,MEDIUM
+          ignore-unfixed: true
+
+      - name: Upload filesystem scan SARIF as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-scan-reports
+          path: trivy-fs.sarif
+          retention-days: 30
+          if-no-files-found: warn

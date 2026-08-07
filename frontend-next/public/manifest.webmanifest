@@ -1,0 +1,13 @@
+{
+  "name": "Praxis",
+  "short_name": "Praxis",
+  "description": "Praxis fleet management",
+  "icons": [
+    { "src": "/brand/praxis-app-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/brand/praxis-app-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "theme_color": "#0d0d0f",
+  "background_color": "#0d0d0f",
+  "display": "standalone",
+  "start_url": "/"
+}

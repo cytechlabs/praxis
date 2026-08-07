@@ -1,0 +1,272 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * PRA-268 — Praxis 1.0 semantic design tokens.
+ *
+ * Tokens are RGB channel triplets ("R G B") so Tailwind can apply opacity
+ * modifiers via `rgb(var(--token) / <alpha-value>)`. Dark is the 1.0 default
+ * runtime theme (`:root`); light is fully defined and switched by
+ * `data-theme="light"` on <html> (used by the /design showcase and, once the
+ * page sweeps land, a future global toggle — deferred in this slice).
+ *
+ * Color rules (design locks):
+ *   - Signal Red #CE1B2B: PRAXIS brand, active navigation, and
+ *     destructive/critical states ONLY. Never a generic accent.
+ *   - Primary/secondary actions are NEUTRAL (Ink/Paper), never blue.
+ *   - Links are neutral underlined text with Signal Red hover.
+ *   - Focus and selection are NEUTRAL, never red.
+ *   - Cards/panels use neutral chrome — no glow, no top-edge gradient.
+ */
+
+:root {
+  /* Brand constants (identical in both themes). */
+  --brand: 206 27 43; /* Signal Red #CE1B2B */
+  --brand-hover: 169 18 31; /* darker Signal Red */
+  --brand-fg: 255 255 255;
+
+  /* Legacy convenience aliases (full colors) for existing bg-background /
+   * text-foreground usages and the body element. These resolve --surface /
+   * --content in the USING element's context, so they follow data-theme. */
+  --background: rgb(var(--surface));
+  --foreground: rgb(var(--content));
+  accent-color: rgb(var(--action));
+}
+
+/*
+ * Dark theme — the 1.0 default (`:root`), and re-assertable on any subtree via
+ * `data-theme="dark"` (used by the /design showcase to place a dark panel inside
+ * a light context, and vice versa).
+ */
+:root,
+[data-theme='dark'] {
+  --surface: 13 13 15; /* app background */
+  --surface-raised: 21 21 24; /* cards */
+  --surface-overlay: 28 28 32; /* modals, popovers, hover */
+  --surface-sunken: 9 9 11; /* inputs, wells */
+
+  --content: 244 244 245; /* primary text */
+  --content-muted: 161 161 170; /* secondary text/labels */
+  --content-subtle: 113 113 122; /* tertiary/placeholder */
+
+  --border: 39 39 42;
+  --border-strong: 63 63 70;
+
+  /* Neutral primary action (NOT red, NOT blue). */
+  --action: 228 228 231;
+  --action-fg: 20 20 20;
+  --action-hover: 244 244 245;
+  --action-secondary: 28 28 32;
+  --action-secondary-fg: 244 244 245;
+
+  --link: 212 212 216; /* neutral link text */
+  --link-hover: 206 27 43; /* Signal Red on hover */
+
+  --focus: 212 212 216; /* neutral focus ring */
+  --selection: 63 63 70; /* neutral text selection */
+
+  --danger: 206 27 43; /* = Signal Red (destructive/critical) */
+  --danger-fg: 255 255 255;
+  --success: 74 222 128;
+  --success-fg: 6 46 24;
+  --warning: 250 204 21;
+  --warning-fg: 41 37 5;
+  --info: 161 161 170; /* NEUTRAL, never blue */
+  --info-fg: 244 244 245;
+
+  color-scheme: dark;
+}
+
+/* Light theme — overrides on any subtree via `data-theme="light"`. */
+[data-theme='light'] {
+  --surface: 250 250 248; /* Paper #FAFAF8 */
+  --surface-raised: 255 255 255;
+  --surface-overlay: 255 255 255;
+  --surface-sunken: 240 240 237;
+
+  --content: 20 20 20; /* Ink #141414 */
+  --content-muted: 82 82 91;
+  --content-subtle: 113 113 122;
+
+  --border: 228 228 231;
+  --border-strong: 212 212 216;
+
+  --action: 20 20 20; /* Ink primary */
+  --action-fg: 250 250 248; /* Paper */
+  --action-hover: 0 0 0;
+  --action-secondary: 255 255 255;
+  --action-secondary-fg: 20 20 20;
+
+  --link: 63 63 70;
+  --link-hover: 206 27 43;
+
+  --focus: 82 82 91;
+  --selection: 212 212 216;
+
+  --danger: 206 27 43;
+  --danger-fg: 255 255 255;
+  --success: 21 128 61;
+  --success-fg: 255 255 255;
+  --warning: 180 83 9;
+  --warning-fg: 255 255 255;
+  --info: 82 82 91;
+  --info-fg: 255 255 255;
+
+  color-scheme: light;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#__next {
+  height: 100vh;
+}
+
+/* Scrollbar — neutral, theme-aware. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--border-strong)) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgb(var(--border-strong));
+  border-radius: 3px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--content-subtle));
+}
+
+/* Selection — NEUTRAL (never red). */
+::selection {
+  background: rgb(var(--selection) / 0.7);
+  color: rgb(var(--content));
+}
+
+/* cmdk overrides */
+[cmdk-group-heading] {
+  display: none;
+}
+
+/*
+ * Brand asset theme swap (PRA-268). Official marks ship in two variants - one
+ * for dark backgrounds, one for light. Show the dark-bg mark by default (dark is
+ * the 1.0 default theme) and swap to the light-bg mark in any light-themed
+ * subtree. This keeps /design's forced light panel honest while the global
+ * light-mode toggle remains deferred.
+ */
+.brand-light {
+  display: none;
+}
+[data-theme='light'] .brand-dark {
+  display: none;
+}
+[data-theme='light'] .brand-light {
+  display: inline-block;
+}
+
+/* Keyboard focus — NEUTRAL ring, WCAG-visible. */
+:focus-visible {
+  outline: 2px solid rgb(var(--focus));
+  outline-offset: 2px;
+}
+
+/*
+ * Card surfaces — NEUTRAL chrome. The old red top-edge gradient + hover glow is
+ * retired (PRA-268). `.card-glow` is kept as a class so existing usages don't
+ * break, but it now only does a subtle neutral border emphasis on hover.
+ */
+.card-glow {
+  transition: border-color 0.2s ease;
+}
+.card-glow:hover {
+  border-color: rgb(var(--border-strong));
+}
+
+/* Stat card accent — retired red gradient; neutral no-op kept for compat. */
+.stat-accent {
+  position: relative;
+}
+
+/* NProgress loading bar — Signal Red (brand/active indicator). */
+#nprogress {
+  pointer-events: none;
+}
+#nprogress .bar {
+  background: rgb(var(--brand));
+  position: fixed;
+  z-index: 9999;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+}
+#nprogress .peg {
+  display: block;
+  position: absolute;
+  right: 0;
+  width: 100px;
+  height: 100%;
+  box-shadow: 0 0 10px rgb(var(--brand)), 0 0 5px rgb(var(--brand));
+  opacity: 1;
+  transform: rotate(3deg) translate(0px, -4px);
+}
+
+/*
+ * Block-cursor loading motif (PRA-268) — a blinking block that echoes the
+ * Praxis terminal identity. Used by the app loading shells.
+ */
+@keyframes praxis-cursor-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+.praxis-cursor {
+  display: inline-block;
+  width: 0.6em;
+  height: 1.1em;
+  vertical-align: text-bottom;
+  background: rgb(var(--content));
+  animation: praxis-cursor-blink 1s steps(1) infinite;
+}
+
+/*
+ * Desktop support boundary (PRA-272) — CSS-only viewport gate.
+ *
+ * Praxis 1.0 is desktop-only. Rather than let product chrome clip below the
+ * supported width, `<ViewportGate>` renders the whole app inside `.viewport-app`
+ * and a branded fallback in `.viewport-unsupported`; this media query swaps which
+ * one is visible. It is pure CSS (no JS/matchMedia/resize listener) so it is
+ * SSR-safe, hydration-safe, and deterministic for screenshots.
+ *
+ * The boundary is `MIN_SUPPORTED_WIDTH - 1` (1279px) from
+ * `src/config/viewport.ts`. CSS cannot import the constant — keep these in sync
+ * (see viewport.test.ts).
+ */
+.viewport-unsupported {
+  display: none;
+}
+@media (max-width: 1279px) {
+  .viewport-app {
+    display: none;
+  }
+  .viewport-unsupported {
+    display: flex;
+  }
+}

@@ -1,0 +1,112 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+.env
+.venv
+env/
+venv/
+ENV/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node/Frontend
+node_modules/
+.npm
+.env.local
+.env.*.local
+.env.development
+.env.test
+.env.production
+.pnpm-debug.log*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+dist/
+dist-ssr/
+*.local
+coverage/
+.next/
+out/
+build/
+.DS_Store
+*.pem
+
+# IDE
+.idea/
+.vscode/
+.claude/
+claude-codex/
+*.swp
+*.swo
+*~
+.vs/
+/project-docs/
+
+# Docker
+.docker/
+docker-compose.override.yml
+
+# Database
+*.sqlite3
+*.db
+
+# System
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Testing
+.coverage
+coverage/
+.nyc_output/
+
+# Build
+.build/
+build/
+dist/
+
+# Temp files
+*.tmp
+*.temp
+.cache/
+node_modules/
+test-results/
+playwright-report/
+
+# PRA-157 #6: dnf creates .rpmdb/ under $HOME on first run; that's
+# /app for the praxis container user. The rpm engine isolates this
+# under dnf_state_dir(slug) in production (#6-a), but a developer
+# running the integration tests on the host can still see one
+# appear in the working tree if HOME isn't pinned.
+.rpmdb/
+
+# PRA-134: private praxis-ee wheels dropped into the paid build context are never committed
+backend/ee-wheels/*.whl
+backend/ee-wheels/*.tar.gz
+
+# PRA-311 upgrade-smoke scratch dir (created under repo because Docker only
+# bind-mounts repo paths in this env; cleaned by the script trap)
+.tmp-pra311-oldscripts-*

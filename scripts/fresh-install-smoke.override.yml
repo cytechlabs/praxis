@@ -1,0 +1,32 @@
+# PRA-179 Slice 2: hermetic local smoke override.
+#
+# Layered on top of docker-compose.yml + docker-compose.prod.yml when the
+# smoke runs via scripts/test-fresh-install-smoke.sh. Two jobs:
+#
+#   1. Drop every host port binding so the smoke does not conflict with a
+#      developer's running dev stack on ports 3000 / 8000 / 8443 / 9091.
+#      All smoke verification runs via ``docker compose exec`` inside the
+#      smoke project's docker network.
+#
+#   2. Inject ``PRAXIS_PUBLIC_URL`` for the backend so ``/agent/bootstrap.sh``
+#      resolves cleanly. The base compose does not set this; the smoke needs
+#      it because the bootstrap-script route refuses to serve until the var
+#      is present.
+#
+# Nothing else changes. Image source (build vs GHCR pull) and the bundled
+# profile gating still come from docker-compose.prod.yml.
+
+services:
+  backend:
+    ports: !override []
+    environment:
+      - PRAXIS_PUBLIC_URL=${PRAXIS_PUBLIC_URL:-http://backend:8000}
+
+  frontend:
+    ports: !override []
+
+  agent-broker:
+    ports: !override []
+
+  prometheus:
+    ports: !override []

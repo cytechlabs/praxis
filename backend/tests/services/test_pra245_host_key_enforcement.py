@@ -1,0 +1,248 @@
+"""PRA-245: SSH host-key verification is enforced for browser sessions and SFTP
+file transfers, not just normal SSH connections.
+
+Covers the shared ``configure_host_key_policy`` helper plus the session and
+file-transfer client-setup paths — proving none of them silently install
+``AutoAddPolicy`` when a system requires host-key verification.
+"""
+
+from __future__ import annotations
+
+import uuid
+from types import SimpleNamespace
+from unittest.mock import MagicMock
+
+import paramiko
+import pytest
+
+from app.db.access_models import HostUserState
+from app.db.models import Credential, Group, System
+from app.db.ssh_security_models import SSHHostKey, SSHSecurityPolicy
+from app.services import file_transfer_service as fts
+from app.services import session_service as ss
+from app.services.ssh_service import (
+    HostKeyPromptPolicy,
+    SSHConnectionError,
+    configure_host_key_policy,
+)
+
+# --------------------------------------------------------------- helpers
+
+
+def _rsa_pub_b64() -> str:
+    return paramiko.RSAKey.generate(2048).get_base64()
+
+
+def _mk_system(db, seed_distro, admin_user, *, require: bool, ip="10.9.0.1") -> System:
+    tag = uuid.uuid4().hex[:8]
+    grp = Group(name=f"pra245-{tag}")
+    cred = Credential(
+        name=f"pra245-cred-{tag}", auth_method="password", username="root"
+    )
+    db.add_all([grp, cred])
+    db.flush()
+    policy = SSHSecurityPolicy(
+        name=f"pra245-pol-{tag}",
+        require_host_key_verification=require,
+        created_by=admin_user.id,
+    )
+    db.add(policy)
+    db.flush()
+    system = System(
+        hostname=f"pra245-{tag}.example.com",
+        ip_address=ip,
+        distro_id=seed_distro.id,
+        os_version="22.04",
+        status="Active",
+        group_id=grp.id,
+        credentials_id=cred.id,
+        ssh_security_policy_id=policy.id,
+    )
+    db.add(system)
+    db.flush()
+    return system
+
+
+def _store_key(db, system, *, key_type="ssh-rsa", verified=True) -> SSHHostKey:
+    hk = SSHHostKey(
+        system_id=system.id,
+        hostname=system.hostname,
+        key_type=key_type,
+        public_key=_rsa_pub_b64(),
+        fingerprint=f"fp-{uuid.uuid4().hex}",
+        verified=verified,
+    )
+    db.add(hk)
+    db.flush()
+    return hk
+
+
+def _mock_client() -> MagicMock:
+    client = MagicMock()
+    client.get_host_keys.return_value = MagicMock()
+    return client
+
+
+class _SpyClient:
+    """A stand-in paramiko.SSHClient that records the host-key policy and can
+    simulate a rejected (mismatch/unknown) host key at connect time."""
+
+    def __init__(self, connect_raises: Exception | None = None):
+        self.policy = None
+        self.connect_raises = connect_raises
+        self._host_keys = MagicMock()
+
+    def set_missing_host_key_policy(self, policy):
+        self.policy = policy
+
+    def get_host_keys(self):
+        return self._host_keys
+
+    def connect(self, **_kw):
+        if self.connect_raises:
+            raise self.connect_raises
+
+    def open_sftp(self):
+        return MagicMock()
+
+    def close(self):
+        pass
+
+
+# --------------------------------------------- configure_host_key_policy
+
+
+def test_verification_disabled_uses_autoadd(db, seed_distro, admin_user):
+    system = _mk_system(db, seed_distro, admin_user, require=False)
+    client = _mock_client()
+    configure_host_key_policy(client, db, system)
+    policy = client.set_missing_host_key_policy.call_args[0][0]
+    assert isinstance(policy, paramiko.AutoAddPolicy)
+
+
+def test_required_without_stored_key_uses_tofu_prompt(db, seed_distro, admin_user):
+    system = _mk_system(db, seed_distro, admin_user, require=True)
+    client = _mock_client()
+    configure_host_key_policy(client, db, system)
+    policy = client.set_missing_host_key_policy.call_args[0][0]
+    assert isinstance(policy, HostKeyPromptPolicy)
+    assert not isinstance(policy, paramiko.AutoAddPolicy)
+
+
+def test_required_with_verified_key_uses_reject_and_loads_both_names(
+    db, seed_distro, admin_user
+):
+    system = _mk_system(db, seed_distro, admin_user, require=True)
+    _store_key(db, system, key_type="ssh-rsa")
+    client = _mock_client()
+    configure_host_key_policy(client, db, system)
+    policy = client.set_missing_host_key_policy.call_args[0][0]
+    assert isinstance(policy, paramiko.RejectPolicy)
+    # The verified key is preloaded for BOTH hostname and IP (paramiko then
+    # rejects any mismatch/unknown key).
+    names = [c.args[0] for c in client.get_host_keys.return_value.add.call_args_list]
+    assert system.hostname in names
+    assert system.ip_address in names
+
+
+def test_unsupported_stored_key_type_fails_closed(db, seed_distro, admin_user):
+    system = _mk_system(db, seed_distro, admin_user, require=True)
+    _store_key(db, system, key_type="ecdsa-sha2-nistp256")
+    client = _mock_client()
+    with pytest.raises(SSHConnectionError):
+        configure_host_key_policy(client, db, system)
+
+
+# ------------------------------------------------- file-transfer / SFTP
+
+
+def test_file_transfer_uses_reject_policy_when_required(
+    db, seed_distro, admin_user, monkeypatch
+):
+    system = _mk_system(db, seed_distro, admin_user, require=True)
+    _store_key(db, system, key_type="ssh-rsa")
+    spy = _SpyClient()
+    monkeypatch.setattr(fts, "_mint_cert_for", lambda user, login, ttl=300: MagicMock())
+    monkeypatch.setattr(fts.paramiko, "SSHClient", lambda: spy)
+    with fts._open_sftp(db, admin_user, system, "root") as sftp:
+        assert sftp is not None
+    assert isinstance(spy.policy, paramiko.RejectPolicy)
+    assert not isinstance(spy.policy, paramiko.AutoAddPolicy)
+
+
+def test_file_transfer_rejects_changed_or_unknown_key(
+    db, seed_distro, admin_user, monkeypatch
+):
+    # A rejected host key at connect surfaces as ssh_connect_failed for every
+    # SFTP op (upload/download/list/stat all go through _open_sftp).
+    system = _mk_system(db, seed_distro, admin_user, require=True)
+    _store_key(db, system, key_type="ssh-rsa")
+    spy = _SpyClient(connect_raises=paramiko.SSHException("host key mismatch/unknown"))
+    monkeypatch.setattr(fts, "_mint_cert_for", lambda *a, **k: MagicMock())
+    monkeypatch.setattr(fts.paramiko, "SSHClient", lambda: spy)
+    with pytest.raises(fts.FileTransferError, match="ssh_connect_failed"):
+        with fts._open_sftp(db, admin_user, system, "root"):
+            pass
+
+
+def test_file_transfer_unsupported_key_fails_closed(
+    db, seed_distro, admin_user, monkeypatch
+):
+    system = _mk_system(db, seed_distro, admin_user, require=True)
+    _store_key(db, system, key_type="ecdsa-sha2-nistp256")
+    spy = _SpyClient()
+    monkeypatch.setattr(fts, "_mint_cert_for", lambda *a, **k: MagicMock())
+    monkeypatch.setattr(fts.paramiko, "SSHClient", lambda: spy)
+    with pytest.raises(fts.FileTransferError, match="ssh_host_key_error"):
+        with fts._open_sftp(db, admin_user, system, "root"):
+            pass
+
+
+# ----------------------------------------------------- browser session
+
+
+def test_session_uses_reject_policy_and_rejects_changed_key(
+    db, seed_distro, admin_user, monkeypatch
+):
+    system = _mk_system(db, seed_distro, admin_user, require=True)
+    _store_key(db, system, key_type="ssh-rsa")
+    login = "root"
+    db.add(
+        HostUserState(
+            system_id=system.id, login=login, mode="per_user", state="provisioned"
+        )
+    )
+    db.flush()
+
+    # Permissive authorization (no approval / no TOTP) so we reach the client setup.
+    fake_result = SimpleNamespace(
+        fleet_role=SimpleNamespace(id=1, max_session_s=3600),
+        login=login,
+        requires_approval=False,
+        requires_totp=False,
+        # PRA-287: session_service now takes the conservative session ceiling and
+        # recording retention from the AuthorizationResult, not the representative
+        # role.
+        max_session_s=3600,
+        recording_retention_days=90,
+    )
+    monkeypatch.setattr(ss, "authorize_action", lambda *a, **k: fake_result)
+    # Fake the Vault cert mint + audit so no external calls are made.
+    fake_vault = MagicMock()
+    fake_vault.sign_ssh_user_cert.return_value = "signed-cert"
+    monkeypatch.setattr(ss, "VaultService", lambda db: fake_vault)
+    monkeypatch.setattr(paramiko.RSAKey, "load_certificate", lambda self, cert: None)
+    import app.services.audit_event_service as aes
+
+    monkeypatch.setattr(aes, "emit_user_cert_sign", lambda *a, **k: None)
+
+    # A rejected host key at connect (as RejectPolicy would produce).
+    spy = _SpyClient(connect_raises=paramiko.SSHException("host key mismatch/unknown"))
+    monkeypatch.setattr(ss.paramiko, "SSHClient", lambda: spy)
+
+    with pytest.raises(ss.SessionError):
+        ss.open_session(db, admin_user, system.id, login=login)
+
+    # The session path installed the verification policy — never AutoAddPolicy.
+    assert isinstance(spy.policy, paramiko.RejectPolicy)
+    assert not isinstance(spy.policy, paramiko.AutoAddPolicy)

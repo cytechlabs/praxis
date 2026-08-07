@@ -1,0 +1,67 @@
+# Frontend production image — multi-stage build.
+# Uses Next.js standalone output so the runtime image contains only the
+# compiled server, not the full node_modules tree.
+
+# ── Dependencies stage ───────────────────────────────────────────────────
+FROM node:24.18.1-slim AS deps
+
+WORKDIR /app
+COPY package.json package-lock.json .npmrc ./
+RUN npm ci
+
+
+# ── Builder stage ────────────────────────────────────────────────────────
+FROM node:24.18.1-slim AS builder
+
+WORKDIR /app
+
+# Reuse installed deps from the deps stage.
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+# Produces .next/standalone/server.js + .next/static/ + .next/server/
+ENV NEXT_TELEMETRY_DISABLED=1
+RUN npm run build
+
+
+# ── Runtime stage ────────────────────────────────────────────────────────
+FROM node:24.18.1-slim AS runtime
+
+# node:22-slim ships a non-root "node" user (UID 1000).
+WORKDIR /app
+
+# Pull latest Debian security updates on top of the base image (PRA-121).
+RUN apt-get update && apt-get upgrade -y --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
+
+# The standalone runtime runs `node server.js` and never uses npm/npx. Drop the
+# base image's global npm so its bundled dependencies (e.g. node-tar,
+# CVE-2026-59873) are neither shipped nor flagged in the runtime image.
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
+
+RUN chown node:node /app
+
+ENV NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1 \
+    PORT=3000 \
+    HOSTNAME=0.0.0.0
+
+USER node
+
+# Standalone output includes a trimmed server.js + its minimal node_modules.
+COPY --from=builder --chown=node:node /app/.next/standalone ./
+# Static assets Next serves directly — not bundled into standalone.
+COPY --from=builder --chown=node:node /app/.next/static ./.next/static
+COPY --from=builder --chown=node:node /app/public ./public
+
+EXPOSE 3000
+
+# PRA-180 CI-02: runtime healthcheck so a hung Next.js standalone server is
+# detected by orchestrators / `docker compose ps`. Uses node's stdlib http (no
+# curl in this slim image); any non-5xx response to GET / counts as healthy
+# (Next may serve the app or redirect to /login).
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD node -e "require('http').get('http://127.0.0.1:3000/', r => process.exit(r.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))"
+
+# server.js is produced by standalone output.
+CMD ["node", "server.js"]

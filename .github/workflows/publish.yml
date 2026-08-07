@@ -1,0 +1,225 @@
+name: Publish
+
+# PRA-121: On tag push matching v*.*.*, build prod images and push to
+# GHCR as separate packages (praxis-backend, praxis-frontend), generate
+# CycloneDX SBOMs, and attach both to the GitHub Release.
+#
+# Uses the default GITHUB_TOKEN for GHCR login — no PAT required.
+# Packages inherit the repo's visibility; flip each package to Public
+# once via GitHub → Your packages → Package settings → Change visibility.
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+      - 'v*.*.*-*'   # rc / beta tags
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to publish (e.g. v1.0.0-rc.1). Must already exist.'
+        required: true
+      # PRA-134: opt-in paid-capable backend. Only settable on workflow_dispatch,
+      # so normal tag-push publishes stay OSS/free-capable and never touch the
+      # private artifact or its secret.
+      paid_backend:
+        description: 'Bundle the private praxis-ee wheel for a paid-capable backend image.'
+        type: boolean
+        default: false
+        required: false
+
+permissions:
+  contents: write
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  OWNER: cytechlabs
+
+jobs:
+  # PRA-180 CI-01: gate the publish/release path on an in-repo CI result so a
+  # tag cut from an unverified commit cannot publish images. This re-runs the
+  # core blocking checks against the exact tagged ref before any image is
+  # built or pushed; `publish` below `needs: verify`. (The container CRITICAL
+  # Trivy gate + SBOM run in ci.yml on the source branches; branch protection
+  # requiring CI before merge to `main` is the complementary repository setting
+  # — see docs/release-checklist.md.)
+  verify:
+    name: Verify (gate)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/praxis
+      SECRET_KEY: ci-test-secret-key
+      ENVIRONMENT: testing
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: praxis
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'  # PRA-321: run backend CI on the shipped 3.14 runtime
+          cache: 'pip'
+
+      - name: Install backend dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install -e .
+          pip install pytest
+
+      - name: Backend migrations + tests
+        run: |
+          alembic upgrade head
+          pytest --tb=short
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend-next/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend-next
+        run: npm ci
+
+      - name: Frontend lint + type check
+        working-directory: frontend-next
+        run: |
+          npx eslint src
+          npx tsc --noEmit
+
+  publish:
+    name: Build + push + release
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - name: Resolve version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ github.event.inputs.tag }}"
+          else
+            TAG="${GITHUB_REF#refs/tags/}"
+          fi
+          VERSION="${TAG#v}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          # Derive a major.minor for additional tagging on stable releases.
+          if [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            MAJOR_MINOR=$(echo "$VERSION" | cut -d. -f1,2)
+            echo "major_minor=$MAJOR_MINOR" >> "$GITHUB_OUTPUT"
+            echo "is_stable=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_stable=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # PRA-134: fetch the private praxis-ee wheel into the LOCAL build-context
+      # wheel dir for a paid-capable build. Runs only on an explicit
+      # workflow_dispatch with paid_backend=true, so tag-push / OSS publishes
+      # never reference the secret. The token is a narrowly-scoped read-only
+      # deploy token consumed only in this step's env — it is never passed as a
+      # Docker build arg, so it cannot leak into image metadata/provenance/logs.
+      # Fails closed: a missing secret or wheel aborts the paid build.
+      - name: Fetch praxis-ee wheel (paid-capable backend)
+        if: ${{ github.event.inputs.paid_backend == 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.PRAXIS_EE_DEPLOY_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "paid_backend=true but PRAXIS_EE_DEPLOY_TOKEN secret is not configured" >&2
+            exit 1
+          fi
+          mkdir -p backend/ee-wheels
+          gh release download --repo "${{ env.OWNER }}/praxis-ee" \
+            --pattern 'praxis_ee-*.whl' --dir backend/ee-wheels
+          ls backend/ee-wheels/praxis_ee-*.whl
+
+      - name: Build + push backend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile.prod
+          push: true
+          build-args: |
+            PRAXIS_EE=${{ github.event.inputs.paid_backend == 'true' && '1' || '0' }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.OWNER }}/praxis-backend:${{ steps.version.outputs.version }}
+            ${{ steps.version.outputs.is_stable == 'true' && format('{0}/{1}/praxis-backend:{2}', env.REGISTRY, env.OWNER, steps.version.outputs.major_minor) || '' }}
+            ${{ steps.version.outputs.is_stable == 'true' && format('{0}/{1}/praxis-backend:latest', env.REGISTRY, env.OWNER) || '' }}
+
+      - name: Build + push frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend-next
+          file: ./frontend-next/Dockerfile.prod
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.OWNER }}/praxis-frontend:${{ steps.version.outputs.version }}
+            ${{ steps.version.outputs.is_stable == 'true' && format('{0}/{1}/praxis-frontend:{2}', env.REGISTRY, env.OWNER, steps.version.outputs.major_minor) || '' }}
+            ${{ steps.version.outputs.is_stable == 'true' && format('{0}/{1}/praxis-frontend:latest', env.REGISTRY, env.OWNER) || '' }}
+
+      # SBOMs against the just-pushed images — exact content that users pull.
+      - name: SBOM (backend)
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.OWNER }}/praxis-backend:${{ steps.version.outputs.version }}
+          format: cyclonedx
+          output: sbom-backend-${{ steps.version.outputs.version }}.cdx.json
+
+      - name: SBOM (frontend)
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.OWNER }}/praxis-frontend:${{ steps.version.outputs.version }}
+          format: cyclonedx
+          output: sbom-frontend-${{ steps.version.outputs.version }}.cdx.json
+
+      - name: Attach SBOMs to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          files: |
+            sbom-backend-${{ steps.version.outputs.version }}.cdx.json
+            sbom-frontend-${{ steps.version.outputs.version }}.cdx.json
+          body: |
+            ## Container images
+
+            ```
+            docker pull ${{ env.REGISTRY }}/${{ env.OWNER }}/praxis-backend:${{ steps.version.outputs.version }}
+            docker pull ${{ env.REGISTRY }}/${{ env.OWNER }}/praxis-frontend:${{ steps.version.outputs.version }}
+            ```
+
+            ## SBOM
+
+            CycloneDX 1.5 SBOMs for each image are attached to this release.
+          generate_release_notes: true

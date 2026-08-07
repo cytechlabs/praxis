@@ -1,0 +1,67 @@
+# .pre-commit-config.yaml
+repos:
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+    -   id: trailing-whitespace
+    -   id: end-of-file-fixer
+    -   id: check-yaml
+    -   id: check-json
+    -   id: check-added-large-files
+    -   id: check-merge-conflict
+
+-   repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+    -   id: gitleaks
+
+-   repo: https://github.com/psf/black
+    rev: 23.12.1
+    hooks:
+    -   id: black
+        language_version: python3.11
+        files: ^backend/.*\.py$
+
+-   repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+    -   id: isort
+        args: ["--profile", "black"]
+        files: ^backend/.*\.py$
+
+-   repo: local
+    hooks:
+    # PRA-152 task #1: gofmt staged Go files. Mirrors the black/isort
+    # pattern. Uses host `gofmt` if available; otherwise falls through
+    # to a docker-run via the agent dev image. Skipped on systems
+    # with neither.
+    -   id: agent-gofmt
+        name: Go Format (agent)
+        entry: bash -c 'if command -v gofmt >/dev/null 2>&1; then gofmt -l -w "$@"; elif docker image inspect praxis-agent-dev >/dev/null 2>&1; then docker run --rm -v "$(pwd)/agent:/agent" praxis-agent-dev gofmt -l -w "$@"; else echo "⚠ Skipping gofmt (no gofmt and no praxis-agent-dev image)"; fi' --
+        language: system
+        files: ^agent/.*\.go$
+        types: [file]
+
+    -   id: frontend-typecheck
+        name: Frontend TypeScript Check
+        entry: bash -c 'cd frontend-next && npx tsc --noEmit'
+        language: system
+        files: ^frontend-next/.*\.(ts|tsx)$
+        pass_filenames: false
+        types: [file]
+
+    -   id: frontend-lint
+        name: Frontend Linting
+        entry: bash -c 'cd frontend-next && npx next lint'
+        language: system
+        files: ^frontend-next/.*\.(js|jsx|ts|tsx)$
+        pass_filenames: false
+        types: [file]
+
+    -   id: backend-lint
+        name: Backend Linting
+        entry: bash -c 'docker compose exec -T backend pylint app 2>/dev/null || echo "⚠ Skipping backend lint (Docker not running)"'
+        language: system
+        files: ^backend/.*\.py$
+        pass_filenames: false
+        types: [file]

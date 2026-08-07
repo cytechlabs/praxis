@@ -1,0 +1,37 @@
+# Praxis production reverse proxy (PRA-27).
+#
+# TLS mode controlled by PRAXIS_TLS_MODE env:
+#   internal (default) → Caddy self-signs; browsers warn until operator
+#                        trusts Caddy's local root CA (`caddy trust` or
+#                        import /data/caddy/pki/authorities/local/root.crt)
+#   acme               → Let's Encrypt; requires PRAXIS_DOMAIN resolvable and
+#                        port 443 reachable. Optionally PRAXIS_ACME_EMAIL.
+#   byo                → operator-provided cert+key mounted at /certs/
+#
+# PRAXIS_DOMAIN is the site name Caddy responds to. Defaults to "localhost"
+# for the internal case; set to your real hostname for acme/byo.
+
+{$PRAXIS_DOMAIN:localhost} {
+	encode gzip
+
+	import /etc/caddy/tls/{$PRAXIS_TLS_MODE:internal}.conf
+
+	# Next.js server (also proxies /api/backend/* internally via rewrites).
+	reverse_proxy frontend:3000
+
+	# Edge security headers (redundant with Next.js's, but covers non-Next
+	# error paths and early 4xx responses).
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+
+	log {
+		output file /var/log/caddy/access.log {
+			roll_size 20mb
+			roll_keep 5
+		}
+		format json
+	}
+}

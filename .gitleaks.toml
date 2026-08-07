@@ -1,0 +1,8 @@
+title = "Praxis gitleaks config"
+
+[allowlist]
+  description = "Allow known dev defaults and example files"
+  paths = [
+    '''\.env\.example$''',
+    '''backend/\.env\.example$''',
+  ]

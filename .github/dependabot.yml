@@ -1,0 +1,161 @@
+# PRA-317: Dependabot for the 1.0 dependency-hygiene baseline.
+#
+# Covers every dependency ecosystem in the repo. Updates are GROUPED per
+# ecosystem so a week's bumps land as a few reviewable PRs instead of dozens,
+# and scheduled on staggered weekday mornings to avoid a Monday flood.
+#
+# DCO: Dependabot commits are bot-authored and cannot carry a `Signed-off-by`
+# trailer; the DCO workflow (.github/workflows/dco.yml) exempts the Dependabot
+# bot so these PRs are mergeable. See docs/dependency-security-policy.md.
+#
+# Trivy remains the vulnerability GATE (image CRITICAL gates + the repo
+# filesystem CRITICAL gate in ci.yml). Dependabot is the mechanism that keeps
+# dependencies current and drives down the report-only HIGH backlog.
+version: 2
+
+updates:
+  # ---- GitHub Actions (all workflows) ----
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Etc/UTC
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - github-actions
+    commit-message:
+      prefix: ci
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+
+  # ---- Frontend npm ----
+  # Split production vs development/test so runtime (security-relevant) bumps are
+  # reviewed apart from tooling churn.
+  - package-ecosystem: npm
+    directory: /frontend-next
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Etc/UTC
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - frontend
+    commit-message:
+      prefix: frontend
+    groups:
+      frontend-prod:
+        dependency-type: production
+        patterns:
+          - "*"
+      frontend-dev:
+        dependency-type: development
+        patterns:
+          - "*"
+
+  # ---- Backend Python (pip) ----
+  - package-ecosystem: pip
+    directory: /backend
+    schedule:
+      interval: weekly
+      day: tuesday
+      time: "06:00"
+      timezone: Etc/UTC
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - backend
+    commit-message:
+      prefix: backend
+    groups:
+      backend-python:
+        patterns:
+          - "*"
+
+  # ---- Agent Go modules ----
+  # The shipped agent is a static Go binary (tarball release), so its Go module
+  # supply chain — not a container image — is the real 1.0 surface. Trivy's
+  # filesystem scan covers agent/go.sum; Dependabot keeps the modules current.
+  - package-ecosystem: gomod
+    directory: /agent
+    schedule:
+      interval: weekly
+      day: tuesday
+      time: "06:00"
+      timezone: Etc/UTC
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - agent
+    commit-message:
+      prefix: agent
+    groups:
+      agent-go:
+        patterns:
+          - "*"
+
+  # ---- Docker base images ----
+  # Dependabot's docker ecosystem detects the non-standard Dockerfile names
+  # (Dockerfile.prod / Dockerfile.dev) by filename match. Backend + frontend
+  # prod images are shipped and Trivy-gated; the agent image is DEV-ONLY (the
+  # shipped agent is a tarball) and tracked purely for dev-toolchain hygiene.
+  - package-ecosystem: docker
+    directory: /backend
+    schedule:
+      interval: weekly
+      day: wednesday
+      time: "06:00"
+      timezone: Etc/UTC
+    open-pull-requests-limit: 3
+    labels:
+      - dependencies
+      - docker
+    commit-message:
+      prefix: docker
+    groups:
+      docker-backend:
+        patterns:
+          - "*"
+
+  - package-ecosystem: docker
+    directory: /frontend-next
+    schedule:
+      interval: weekly
+      day: wednesday
+      time: "06:00"
+      timezone: Etc/UTC
+    open-pull-requests-limit: 3
+    labels:
+      - dependencies
+      - docker
+    commit-message:
+      prefix: docker
+    groups:
+      docker-frontend:
+        patterns:
+          - "*"
+
+  - package-ecosystem: docker
+    directory: /agent
+    schedule:
+      interval: weekly
+      day: wednesday
+      time: "06:00"
+      timezone: Etc/UTC
+    open-pull-requests-limit: 3
+    labels:
+      - dependencies
+      - docker
+      - dev-only
+    commit-message:
+      prefix: docker
+    groups:
+      docker-agent:
+        patterns:
+          - "*"

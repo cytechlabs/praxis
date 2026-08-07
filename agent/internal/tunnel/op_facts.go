@@ -1,0 +1,640 @@
+// PRA-155 #2b-a: facts op handler.
+//
+// runFacts collects the locked PRA-155 v1 inventory from the host and
+// returns it inline on op_complete (no per-op frame stream — the
+// per-op WSS is opened/closed for the protocol but no data frames
+// flow on it). Each probe is best-effort; any failure produces a
+// {"key":..., "error":...} entry in partial_errors and the rest of
+// the report still ships.
+//
+// Locked rules (PRA-155 #2b-a):
+//   - No package-manager mutations. We only detect WHICH package
+//     manager exists by binary presence + `--version` invocation; we
+//     never run install/upgrade/refresh/etc.
+//   - No network-heavy probes. Cloud metadata is a single short-
+//     timeout HTTP GET to 169.254.169.254 (IMDSv1-only — no IMDSv2
+//     token issuance). On any error or non-cloud network the probe
+//     returns nothing and a partial_error.
+//   - Only allowlisted cloud fields land in cloud_instance_metadata
+//     (cloud_provider, instance_id, region, zone). Tokens, IAM creds,
+//     user-data, SSH keys are NEVER fetched or stored.
+//   - The inline facts payload shape MUST match what
+//     FactsService.ingest expects. Backend adds source_transport +
+//     system_id; nothing else needs translation.
+//
+// The agent runs as root for v1 (per the PRA-153 lock); /proc and
+// /etc/os-release are world-readable on every distro that ships a
+// kernel younger than this codebase, so probes don't need elevation.
+
+package tunnel
+
+import (
+	"bufio"
+	"context"
+	"encoding/json"
+	"errors"
+	"io"
+	"net"
+	"net/http"
+	"os"
+	"os/exec"
+	"runtime"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/coder/websocket"
+)
+
+// Cloud-metadata probe budget. Enough that a real cloud host's IMDSv1
+// endpoint replies (typical: <50ms intra-region) without dragging
+// non-cloud hosts into a long blocking wait.
+const factsCloudProbeTimeout = 750 * time.Millisecond
+
+// IMDSv1 endpoints. We do NOT issue IMDSv2 tokens (PUT
+// /latest/api/token) because that opens a credential surface; if a
+// host has IMDSv2 required and v1 disabled, cloud fields land
+// NULL with a partial_error and the rest of the inventory still
+// ships.
+const (
+	imdsAWSBase = "http://169.254.169.254/latest/meta-data"
+	imdsGCPBase = "http://169.254.169.254/computeMetadata/v1/instance"
+)
+
+// factsResult is the inline payload appended to op_complete. Field
+// names match FactsService.ingest scalar columns + JSONB shapes
+// exactly; backend serializes this dict straight into the ingest
+// path with source_transport="agent".
+type factsResult struct {
+	SchemaVersion         int              `json:"schema_version"`
+	CollectedAt           string           `json:"collected_at"`
+	CPUModel              string           `json:"cpu_model,omitempty"`
+	CPUCores              int              `json:"cpu_cores,omitempty"`
+	RAMTotalBytes         int64            `json:"ram_total_bytes,omitempty"`
+	KernelVersion         string           `json:"kernel_version,omitempty"`
+	DistroID              string           `json:"distro_id,omitempty"`
+	DistroRelease         string           `json:"distro_release,omitempty"`
+	UptimeSeconds         int64            `json:"uptime_seconds,omitempty"`
+	RebootRequired        *bool            `json:"reboot_required,omitempty"`
+	PackageManager        string           `json:"package_manager,omitempty"`
+	PackageManagerVersion string           `json:"package_manager_version,omitempty"`
+	Virtualization        string           `json:"virtualization,omitempty"`
+	CloudProvider         string           `json:"cloud_provider,omitempty"`
+	CloudInstanceMetadata map[string]any   `json:"cloud_instance_metadata,omitempty"`
+	Disks                 []map[string]any `json:"disks,omitempty"`
+}
+
+// factsCollector is the seam tests inject. Production builds the real
+// implementation that reads /proc, runs `uname`, etc.; tests provide
+// a fake that returns canned values + canned errors per probe so we
+// can exercise the partial_errors aggregation path.
+type factsCollector interface {
+	cpuModelAndCores() (string, int, error)
+	ramTotalBytes() (int64, error)
+	kernelVersion() (string, error)
+	distro() (string, string, error)
+	uptimeSeconds() (int64, error)
+	rebootRequired() (bool, error)
+	packageManager() (string, string, error)
+	virtualization() (string, error)
+	disks() ([]map[string]any, error)
+	cloudMetadata(ctx context.Context) (string, map[string]any, error)
+}
+
+// defaultFactsCollector is the production implementation. Stateless;
+// each call re-reads the underlying source.
+type defaultFactsCollector struct{}
+
+// runFacts is the op_type="facts" handler. The per-op WSS is already
+// dialed + op_attach was sent by the dispatch loop; we don't push
+// any frames on it (facts are inline on op_complete). The deferred
+// conn.CloseNow() in dispatch() shuts the per-op WSS cleanly.
+//
+// Per the PRA-155 lock, this MUST always return success-with-extras
+// when the collection itself completes, even if every probe failed —
+// FactsService.ingest treats the upserted row's NULL columns +
+// partial_errors as the right outcome for "agent reachable but local
+// reads broken". We only return opOutcomeError() for protocol-level
+// failures the agent can detect (e.g., context cancelled).
+func (p *opPump) runFacts(ctx context.Context, opID int, conn *websocket.Conn, raw map[string]any) opOutcome {
+	_ = opID
+	_ = conn
+	_ = raw
+
+	if ctx.Err() != nil {
+		return opOutcomeError("op_stream_closed")
+	}
+
+	c := defaultFactsCollector{}
+	facts, partialErrors := collectFacts(ctx, c)
+
+	out := opOutcomeSuccess()
+	out.extra = map[string]any{
+		"facts":          facts,
+		"partial_errors": partialErrors,
+	}
+	return out
+}
+
+// collectFacts runs every probe via “c“, accumulating partial
+// errors. Exposed (lowercase but package-internal) so tests can drive
+// it with a fake collector.
+func collectFacts(
+	ctx context.Context, c factsCollector,
+) (map[string]any, []map[string]any) {
+	partial := []map[string]any{}
+	out := map[string]any{
+		"schema_version": 1,
+		"collected_at":   time.Now().UTC().Format(time.RFC3339),
+	}
+
+	if model, cores, err := c.cpuModelAndCores(); err != nil {
+		partial = append(partial, probeError("cpu", err))
+	} else {
+		if model != "" {
+			out["cpu_model"] = model
+		}
+		if cores > 0 {
+			out["cpu_cores"] = cores
+		}
+	}
+
+	if ram, err := c.ramTotalBytes(); err != nil {
+		partial = append(partial, probeError("ram_total_bytes", err))
+	} else if ram > 0 {
+		out["ram_total_bytes"] = ram
+	}
+
+	if kv, err := c.kernelVersion(); err != nil {
+		partial = append(partial, probeError("kernel_version", err))
+	} else if kv != "" {
+		out["kernel_version"] = kv
+	}
+
+	if id, rel, err := c.distro(); err != nil {
+		partial = append(partial, probeError("distro", err))
+	} else {
+		if id != "" {
+			out["distro_id"] = id
+		}
+		if rel != "" {
+			out["distro_release"] = rel
+		}
+	}
+
+	if up, err := c.uptimeSeconds(); err != nil {
+		partial = append(partial, probeError("uptime_seconds", err))
+	} else if up > 0 {
+		out["uptime_seconds"] = up
+	}
+
+	if rr, err := c.rebootRequired(); err != nil {
+		// Reboot probe is best-effort and a missing marker is the
+		// "no reboot needed" answer on most distros — only record a
+		// partial when we hit a real error (e.g. permission denied
+		// reading the marker file).
+		partial = append(partial, probeError("reboot_required", err))
+	} else {
+		out["reboot_required"] = rr
+	}
+
+	if pm, ver, err := c.packageManager(); err != nil {
+		partial = append(partial, probeError("package_manager", err))
+	} else {
+		if pm != "" {
+			out["package_manager"] = pm
+		}
+		if ver != "" {
+			out["package_manager_version"] = ver
+		}
+	}
+
+	if v, err := c.virtualization(); err != nil {
+		partial = append(partial, probeError("virtualization", err))
+	} else if v != "" {
+		out["virtualization"] = v
+	}
+
+	if d, err := c.disks(); err != nil {
+		partial = append(partial, probeError("disks", err))
+	} else if len(d) > 0 {
+		out["disks"] = d
+	}
+
+	if provider, md, err := c.cloudMetadata(ctx); err != nil {
+		// Non-cloud hosts time out here on the link-local IP. That's
+		// expected, not an error worth surfacing — but we still want
+		// chronic IMDS misconfig (e.g. cloud host with v1 disabled)
+		// to be visible. The partial entry is enough; backend audit
+		// will show the pattern across hosts.
+		partial = append(partial, probeError("cloud_metadata", err))
+	} else {
+		if provider != "" {
+			out["cloud_provider"] = provider
+		}
+		if len(md) > 0 {
+			out["cloud_instance_metadata"] = md
+		}
+	}
+
+	return out, partial
+}
+
+func probeError(key string, err error) map[string]any {
+	return map[string]any{"key": key, "error": err.Error()}
+}
+
+// ---------------------------------------------------------------- collectors
+
+func (defaultFactsCollector) cpuModelAndCores() (string, int, error) {
+	if runtime.GOOS != "linux" {
+		return "", runtime.NumCPU(), nil
+	}
+	f, err := os.Open("/proc/cpuinfo")
+	if err != nil {
+		return "", 0, err
+	}
+	defer f.Close() //nolint:errcheck
+	model := ""
+	cores := 0
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := scanner.Text()
+		// model name is repeated per-logical-core; we keep the first.
+		if model == "" && strings.HasPrefix(line, "model name") {
+			if i := strings.Index(line, ":"); i >= 0 {
+				model = strings.TrimSpace(line[i+1:])
+			}
+		}
+		if strings.HasPrefix(line, "processor") {
+			cores++
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return model, cores, err
+	}
+	if cores == 0 {
+		// Fallback: runtime sees scheduler-visible CPUs which on
+		// Linux mirror /proc/cpuinfo's processor count except in
+		// niche cgroup setups. Better than reporting zero.
+		cores = runtime.NumCPU()
+	}
+	return model, cores, nil
+}
+
+func (defaultFactsCollector) ramTotalBytes() (int64, error) {
+	if runtime.GOOS != "linux" {
+		return 0, errors.New("/proc/meminfo unavailable on " + runtime.GOOS)
+	}
+	f, err := os.Open("/proc/meminfo")
+	if err != nil {
+		return 0, err
+	}
+	defer f.Close() //nolint:errcheck
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if !strings.HasPrefix(line, "MemTotal:") {
+			continue
+		}
+		// MemTotal: 16234156 kB
+		fields := strings.Fields(line)
+		if len(fields) < 2 {
+			return 0, errors.New("MemTotal malformed")
+		}
+		kb, err := strconv.ParseInt(fields[1], 10, 64)
+		if err != nil {
+			return 0, err
+		}
+		return kb * 1024, nil
+	}
+	if err := scanner.Err(); err != nil {
+		return 0, err
+	}
+	return 0, errors.New("MemTotal not found")
+}
+
+func (defaultFactsCollector) kernelVersion() (string, error) {
+	out, err := runCmdOutput("uname", "-r")
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(out), nil
+}
+
+func (defaultFactsCollector) distro() (string, string, error) {
+	f, err := os.Open("/etc/os-release")
+	if err != nil {
+		return "", "", err
+	}
+	defer f.Close() //nolint:errcheck
+	id := ""
+	verID := ""
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := scanner.Text()
+		k, v, ok := splitKV(line)
+		if !ok {
+			continue
+		}
+		v = strings.Trim(v, `"`)
+		switch k {
+		case "ID":
+			id = v
+		case "VERSION_ID":
+			verID = v
+		}
+	}
+	return id, verID, scanner.Err()
+}
+
+func (defaultFactsCollector) uptimeSeconds() (int64, error) {
+	if runtime.GOOS != "linux" {
+		return 0, errors.New("/proc/uptime unavailable on " + runtime.GOOS)
+	}
+	b, err := os.ReadFile("/proc/uptime")
+	if err != nil {
+		return 0, err
+	}
+	fields := strings.Fields(string(b))
+	if len(fields) == 0 {
+		return 0, errors.New("/proc/uptime malformed")
+	}
+	// First field is "<seconds>.<centiseconds>"; we want a whole
+	// integer seconds value for the API contract.
+	whole := fields[0]
+	if i := strings.Index(whole, "."); i >= 0 {
+		whole = whole[:i]
+	}
+	return strconv.ParseInt(whole, 10, 64)
+}
+
+// rebootRequiredMarkers lists the well-known reboot-needed signals
+// across distros. Presence of any → true. None → false. We do NOT
+// run `dnf needs-restarting -r` here because it can dial a network
+// (depending on plugins) and the PRA-155 lock prohibits
+// network-heavy probes in the agent collector.
+var rebootRequiredMarkers = []string{
+	"/var/run/reboot-required",       // Debian/Ubuntu
+	"/run/reboot-required",           // newer Debian/Ubuntu (same content)
+	"/var/run/reboot-required.pkgs",  // also Debian/Ubuntu
+	"/usr/bin/needs-restarting",      // RHEL/CentOS — binary presence is informational only
+	"/var/run/yum-no-restart-needed", // legacy negative marker
+}
+
+func (defaultFactsCollector) rebootRequired() (bool, error) {
+	// Positive markers — file existence means a reboot is pending.
+	for _, p := range []string{
+		"/var/run/reboot-required",
+		"/run/reboot-required",
+	} {
+		if _, err := os.Stat(p); err == nil {
+			return true, nil
+		} else if !os.IsNotExist(err) {
+			return false, err
+		}
+	}
+	return false, nil
+}
+
+// packageManagerCandidates lists the binaries whose presence we
+// treat as definitive proof of which package manager runs the host.
+// Order matters: apt before dpkg, dnf before yum, since later entries
+// are legacy fallbacks on the same family.
+var packageManagerCandidates = []struct {
+	name string
+	bin  string
+}{
+	{"apt", "apt-get"},
+	{"dnf", "dnf"},
+	{"yum", "yum"},
+	{"zypper", "zypper"},
+	{"pacman", "pacman"},
+	{"apk", "apk"},
+}
+
+func (defaultFactsCollector) packageManager() (string, string, error) {
+	for _, c := range packageManagerCandidates {
+		path, err := exec.LookPath(c.bin)
+		if err != nil {
+			continue
+		}
+		// `--version` is a read-only call across all listed PMs. We
+		// keep stderr suppressed and accept any returncode — version
+		// strings are stable across nonzero-exit edge cases (some
+		// PMs print to stderr).
+		out, _ := exec.Command(path, "--version").Output()
+		ver := firstLine(string(out))
+		return c.name, ver, nil
+	}
+	return "", "", errors.New("no known package manager binary on PATH")
+}
+
+func (defaultFactsCollector) virtualization() (string, error) {
+	out, err := runCmdOutput("systemd-detect-virt", "--quiet=false")
+	if err != nil {
+		// systemd-detect-virt exits 1 on bare-metal; exec.Run treats
+		// that as an error. Distinguish "not virtualized" (rc=1, "none")
+		// from "tool missing" (PathError) so bare metal isn't recorded
+		// as a probe failure.
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			text := strings.TrimSpace(string(exitErr.Stderr))
+			if text == "" {
+				text = strings.TrimSpace(out)
+			}
+			if text == "none" || text == "" {
+				return "none", nil
+			}
+		}
+		// Tool genuinely missing or unrunnable — partial error.
+		return "", err
+	}
+	return strings.TrimSpace(out), nil
+}
+
+func (defaultFactsCollector) disks() ([]map[string]any, error) {
+	// lsblk -J emits a JSON tree we can parse without shell-quoting
+	// pain. -b reports byte counts (we want raw, not human-readable).
+	// -o limits the columns to the ones we persist; future-proof if
+	// lsblk versions grow new defaults that bloat output.
+	out, err := runCmdOutput("lsblk", "-J", "-b", "-o", "MOUNTPOINT,FSTYPE,SIZE,FSUSED,FSAVAIL")
+	if err != nil {
+		return nil, err
+	}
+	var parsed struct {
+		Blockdevices []map[string]any `json:"blockdevices"`
+	}
+	if err := json.Unmarshal([]byte(out), &parsed); err != nil {
+		return nil, err
+	}
+	disks := []map[string]any{}
+	walkLsblk(parsed.Blockdevices, &disks)
+	return disks, nil
+}
+
+// walkLsblk recurses through lsblk's tree (devices may have
+// "children") and emits one entry per mounted filesystem.
+func walkLsblk(nodes []map[string]any, out *[]map[string]any) {
+	for _, n := range nodes {
+		mp, _ := n["mountpoint"].(string)
+		fs, _ := n["fstype"].(string)
+		if mp != "" && fs != "" {
+			total := lsblkInt64(n["size"])
+			avail := lsblkInt64(n["fsavail"])
+			// Some filesystems report fsavail; older lsblks don't.
+			// total_bytes is always non-negative; free_bytes <= total.
+			entry := map[string]any{
+				"mountpoint":  mp,
+				"filesystem":  fs,
+				"total_bytes": total,
+				"free_bytes":  avail,
+			}
+			*out = append(*out, entry)
+		}
+		if kids, ok := n["children"].([]any); ok {
+			children := make([]map[string]any, 0, len(kids))
+			for _, k := range kids {
+				if m, ok := k.(map[string]any); ok {
+					children = append(children, m)
+				}
+			}
+			walkLsblk(children, out)
+		}
+	}
+}
+
+func lsblkInt64(v any) int64 {
+	switch t := v.(type) {
+	case float64:
+		return int64(t)
+	case int64:
+		return t
+	case string:
+		n, _ := strconv.ParseInt(t, 10, 64)
+		return n
+	}
+	return 0
+}
+
+func (defaultFactsCollector) cloudMetadata(ctx context.Context) (string, map[string]any, error) {
+	// Two probes in sequence with a tight overall budget. AWS first
+	// because it's the most common cloud the tool will see; GCP
+	// second because its endpoint requires a special header that
+	// won't accidentally hit AWS. Azure's IMDS requires IMDSv2-style
+	// header semantics so we skip it for v1; that means Azure hosts
+	// land NULL until we revisit cloud probes in a later slice.
+	probeCtx, cancel := context.WithTimeout(ctx, factsCloudProbeTimeout)
+	defer cancel()
+	client := &http.Client{
+		Transport: &http.Transport{
+			DialContext: (&net.Dialer{Timeout: factsCloudProbeTimeout}).DialContext,
+		},
+	}
+
+	// AWS IMDSv1 (no token): direct GET works only on hosts that
+	// haven't enforced IMDSv2-required mode.
+	if instance, region, ok := tryAWSIMDS(probeCtx, client); ok {
+		md := map[string]any{
+			"cloud_provider": "aws",
+			"instance_id":    instance,
+		}
+		if region != "" {
+			md["region"] = region
+		}
+		return "aws", md, nil
+	}
+
+	if instance, zone, ok := tryGCPMetadata(probeCtx, client); ok {
+		md := map[string]any{
+			"cloud_provider": "gcp",
+			"instance_id":    instance,
+		}
+		if zone != "" {
+			md["zone"] = zone
+		}
+		return "gcp", md, nil
+	}
+
+	return "", nil, errors.New("no cloud metadata service responded")
+}
+
+func tryAWSIMDS(ctx context.Context, client *http.Client) (string, string, bool) {
+	instance, ok := imdsGet(ctx, client, imdsAWSBase+"/instance-id", nil)
+	if !ok || instance == "" {
+		return "", "", false
+	}
+	az, _ := imdsGet(ctx, client, imdsAWSBase+"/placement/availability-zone", nil)
+	region := az
+	// us-east-1a → us-east-1
+	if n := len(region); n > 0 {
+		last := region[n-1]
+		if last >= 'a' && last <= 'z' {
+			region = region[:n-1]
+		}
+	}
+	return instance, region, true
+}
+
+func tryGCPMetadata(ctx context.Context, client *http.Client) (string, string, bool) {
+	headers := http.Header{"Metadata-Flavor": []string{"Google"}}
+	instance, ok := imdsGet(ctx, client, imdsGCPBase+"/id", headers)
+	if !ok || instance == "" {
+		return "", "", false
+	}
+	zone, _ := imdsGet(ctx, client, imdsGCPBase+"/zone", headers)
+	// GCP returns "projects/<id>/zones/<zone>"; keep just the leaf.
+	if i := strings.LastIndex(zone, "/"); i >= 0 {
+		zone = zone[i+1:]
+	}
+	return instance, zone, true
+}
+
+func imdsGet(ctx context.Context, client *http.Client, url string, hdr http.Header) (string, bool) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return "", false
+	}
+	for k, vs := range hdr {
+		for _, v := range vs {
+			req.Header.Add(k, v)
+		}
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", false
+	}
+	defer resp.Body.Close() //nolint:errcheck
+	if resp.StatusCode != http.StatusOK {
+		return "", false
+	}
+	b, err := io.ReadAll(io.LimitReader(resp.Body, 1024))
+	if err != nil {
+		return "", false
+	}
+	return strings.TrimSpace(string(b)), true
+}
+
+// ---------------------------------------------------------------- helpers
+
+func runCmdOutput(name string, args ...string) (string, error) {
+	out, err := exec.Command(name, args...).Output()
+	if err != nil {
+		return "", err
+	}
+	return string(out), nil
+}
+
+func firstLine(s string) string {
+	if i := strings.IndexByte(s, '\n'); i >= 0 {
+		return strings.TrimSpace(s[:i])
+	}
+	return strings.TrimSpace(s)
+}
+
+func splitKV(line string) (string, string, bool) {
+	i := strings.IndexByte(line, '=')
+	if i <= 0 {
+		return "", "", false
+	}
+	return line[:i], line[i+1:], true
+}

@@ -1,0 +1,249 @@
+services:
+  # ─── Bundled data tier ───────────────────────────────────────
+  # Services under the "bundled" profile only run when that profile is active.
+  # `COMPOSE_PROFILES=bundled` in .env makes this the default. Operators
+  # supplying external Postgres/Vault should unset the profile and pass
+  # DATABASE_URL / VAULT_ADDR / VAULT_TOKEN via env instead.
+  vault:
+    profiles: [bundled]
+    # Bundled secrets runtime is OpenBao (drop-in for HashiCorp Vault).
+    # Alpine-based (the `apk add` below works), ships the `bao` CLI plus a
+    # `vault`->`bao` shim, and honors VAULT_ADDR/VAULT_TOKEN. The Docker service
+    # name, /vault paths, and volume names are intentionally kept for 1.0 compat.
+    image: openbao/openbao:2.6.1
+    # OpenBao's image defaults to the non-root `openbao` user (uid 100), whereas
+    # hashicorp/vault ran as root. The startup command needs root to `apk add`
+    # jq/openssl and to chown the broker TLS files, so pin root explicitly to
+    # preserve the prior behavior. (File storage lives under the vault-only
+    # volumes, so root here does not widen the app's access to secrets.)
+    user: "0:0"
+    volumes:
+      - ./vault/config:/vault/config
+      - ./vault/scripts:/vault/scripts
+      - vault_data:/vault/data
+      # Operator recovery material (root token + unseal keys) lives here,
+      # mounted ONLY into the Vault container — NOT into backend/agent-broker — so
+      # app services can never read root/unseal material. Only scoped service
+      # creds + public cert material stay in the app-mounted vault_data above.
+      - vault_recovery:/vault/recovery
+    cap_add:
+      - IPC_LOCK
+    environment:
+      - VAULT_ADDR=http://127.0.0.1:8200
+      - PRAXIS_VAULT_RECOVERY_DIR=/vault/recovery
+    # openssl: broker-tls.sh validates/renews the bundled broker cert
+    # with openssl, which is not in the base vault image.
+    command: sh -c "apk add --no-cache jq openssl && ls -la /vault/scripts && chmod +x /vault/scripts/*.sh && sh /vault/scripts/startup.sh"
+    healthcheck:
+      # `bao status` rc: 0 = unsealed (healthy), 2 = sealed, 1 = unreachable. The
+      # container is "healthy" only once init-vault.sh has unsealed it, which is
+      # what backend/agent-broker `depends_on: service_healthy` waits for.
+      test: ["CMD", "bao", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    networks:
+      - backend_net
+
+  backend:
+    # Production-parity local runtime. The base stack builds the same
+    # production image + entrypoint as a release (Dockerfile.prod / start.prod.sh)
+    # — there is no separate dev image, source bind mount, or hot reload. The
+    # canonical local workflow layers docker-compose.prod.yml on top; see that
+    # file's header for the build / release commands.
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    volumes:
+      - vault_data:/vault/data:ro
+      - recordings_data:/data/praxis/recordings
+      - mirror_data:/data/praxis/mirrors
+    environment:
+      # DATABASE_URL defaults to the bundled db service. Override to point
+      # at an external Postgres when running without the bundled profile.
+      - DATABASE_URL=${DATABASE_URL:-postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-praxis}}
+      - TEST_DATABASE_URL=${TEST_DATABASE_URL:-postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-praxis}_test}
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+      - SECRET_KEY=${SECRET_KEY:?SECRET_KEY is required - set it in .env (see .env.example), e.g. via openssl rand -hex 32}
+      # VAULT_ADDR defaults to the bundled vault. For external Vault, set to
+      # https://vault.your-domain.com:8200 (or similar) + supply VAULT_TOKEN.
+      - VAULT_ADDR=${VAULT_ADDR:-http://vault:8200}
+      - VAULT_TOKEN=${VAULT_TOKEN:-}
+      - ALGORITHM=${ALGORITHM:-HS256}
+      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+      - REFRESH_TOKEN_EXPIRE_DAYS=${REFRESH_TOKEN_EXPIRE_DAYS:-7}
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-praxisadmin}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@praxis.dev}
+      - CORS_ORIGINS=${CORS_ORIGINS:-https://localhost,http://frontend:3000}
+      - TRUSTED_HOSTS=${TRUSTED_HOSTS:-localhost,127.0.0.1,backend}
+      # Backend → broker internal HTTP: tunnel health, op
+      # dispatch. Reached via the docker network only —
+      # the broker doesn't publish 8444 to the host.
+      - PRAXIS_BROKER_INTERNAL_URL=${PRAXIS_BROKER_INTERNAL_URL:-http://agent-broker:8444}
+    depends_on:
+      db:
+        condition: service_healthy
+        required: false
+      vault:
+        condition: service_healthy
+        required: false
+    networks:
+      - frontend_net
+      - backend_net
+
+  # Dedicated agent broker process. Same image as
+  # backend, different command. Runs single-worker (the AgentRegistry +
+  # OperationManager are in-memory and not shardable). Exposes mTLS WSS
+  # on PRAXIS_BROKER_PORT (default 8443) for /agent/tunnel and
+  # /agent/op. /agent/ca-bundle stays on the main backend.
+  agent-broker:
+    # Production-parity — same production image as the backend, broker
+    # command. No dev image or source bind mount.
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    command: ["python", "-m", "app.broker.main"]
+    volumes:
+      - vault_data:/vault/data:ro
+    ports:
+      - "${PRAXIS_BROKER_PORT:-8443}:8443"
+    environment:
+      - DATABASE_URL=${DATABASE_URL:-postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-praxis}}
+      - VAULT_ADDR=${VAULT_ADDR:-http://vault:8200}
+      - VAULT_TOKEN=${VAULT_TOKEN:-}
+      - SECRET_KEY=${SECRET_KEY:?SECRET_KEY is required - set it in .env (see .env.example), e.g. via openssl rand -hex 32}
+      - ALGORITHM=${ALGORITHM:-HS256}
+      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+      - PRAXIS_BROKER_PORT=8443
+      # Internal HTTP API: backend ↔ broker. NOT published
+      # to the host; reached only via the docker network.
+      - PRAXIS_BROKER_INTERNAL_PORT=${PRAXIS_BROKER_INTERNAL_PORT:-8444}
+      # Operator overrides for the cert paths. Defaults read from
+      # /vault/data/broker/ which init-vault.sh provisions.
+      - PRAXIS_BROKER_TLS_CERT=${PRAXIS_BROKER_TLS_CERT:-/vault/data/broker/server.crt}
+      - PRAXIS_BROKER_TLS_KEY=${PRAXIS_BROKER_TLS_KEY:-/vault/data/broker/server.key}
+      - PRAXIS_BROKER_TLS_CA_CLIENT=${PRAXIS_BROKER_TLS_CA_CLIENT:-/vault/data/agent-ca-cert.pem}
+      - PRAXIS_BROKER_LOG_LEVEL=${PRAXIS_BROKER_LOG_LEVEL:-INFO}
+    depends_on:
+      db:
+        condition: service_healthy
+        required: false
+      vault:
+        condition: service_healthy
+        required: false
+    restart: unless-stopped
+    networks:
+      - backend_net
+
+  frontend:
+    # Production-parity — builds the production Next.js image, no dev
+    # image, source bind mount, or host port. Browser ingress is via Caddy
+    # (--profile proxy in docker-compose.prod.yml).
+    build:
+      context: ./frontend-next
+      dockerfile: Dockerfile.prod
+    environment:
+      - VITE_API_URL=http://backend:8000
+    depends_on:
+      - backend
+    networks:
+      - frontend_net
+
+  db:
+    profiles: [bundled]
+    image: postgres:15.18-alpine
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-praxis}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - backup_data:/backups  # Shared volume for backups
+    networks:
+      - backend_net
+
+  prometheus:
+    # Bundled infrastructure telemetry for the Praxis control plane — not
+    # the paid Command Metrics feature, and not a full observability platform (no
+    # Grafana/Alertmanager/exporters/public ingress in 1.0). Pinned to the current
+    # Prometheus LTS (3.13.x; the 3.5 LTS line ends support 2026-07-31); never
+    # `latest`. The image defaults already read /etc/prometheus/prometheus.yml and
+    # store the TSDB at /prometheus, so no command override is needed; default
+    # retention is 15 days.
+    image: prom/prometheus:v3.13.1
+    ports:
+      - "127.0.0.1:9091:9090"  # Prometheus UI — loopback only, never public
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      # Named TSDB volume so time series survive ordinary container
+      # recreation (docker compose up -d / image bump). Wipe deliberately with
+      # `docker compose down` + `docker volume rm praxis_prometheus_data`.
+      - prometheus_data:/prometheus
+    depends_on:
+      backend:
+        # Do not start scraping before the exporter can serve.
+        condition: service_healthy
+    healthcheck:
+      # Prometheus readiness (busybox `wget` ships in the image). The
+      # service is not reported healthy until it can serve scrapes/queries.
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:9090/-/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - backend_net
+
+  db_backup:
+    profiles: [bundled]
+    image: alpine:3.19.9
+    volumes:
+      - ./scripts:/scripts
+      - backup_data:/backups  # Shared volume for backups
+    # scripts/backup.sh reads POSTGRES_USER /
+    # POSTGRES_PASSWORD / POSTGRES_DB to authenticate against the
+    # bundled db. Without these passed through, operators using a
+    # non-default POSTGRES_PASSWORD get FATAL auth-failure and an
+    # empty dump file each night. Defaults match the bundled db's
+    # own defaults so this is a no-op for operators who never
+    # touched POSTGRES_PASSWORD.
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-praxis}
+    entrypoint: /bin/sh -c "apk add --no-cache bash postgresql15-client && \
+                            crontab -l | { cat; echo '0 2 * * * /scripts/backup.sh'; } | crontab - && \
+                           crond -f"
+    networks:
+      - backend_net
+
+# Two-tier network model:
+# - frontend_net: frontend <-> backend only
+# - backend_net:  backend <-> db, vault, prometheus, db_backup
+# The backend straddles both so it remains the single ingress path to the
+# data tier. db, vault, and prometheus have no route to the frontend.
+networks:
+  frontend_net:
+    driver: bridge
+  backend_net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  backup_data:
+  vault_data:
+  # Vault operator recovery material (root token + unseal keys). Mounted
+  # ONLY into the vault service, never into backend/agent-broker.
+  vault_recovery:
+  recordings_data:
+  mirror_data:
+  # Prometheus TSDB (infrastructure telemetry). Named so control-plane
+  # metrics survive normal container recreation; not the paid Command Metrics store.
+  prometheus_data:
