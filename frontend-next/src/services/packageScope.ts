@@ -57,3 +57,18 @@ export function scopeSearchParams(scope: PackageScope): Record<string, string> {
   if (scope.id != null) params.scope_id = String(scope.id);
   return params;
 }
+
+/** The one package inventory route; every scoped package link points here. */
+export const PACKAGE_INVENTORY_PATH = '/package-management/inventory';
+
+/**
+ * Deep link to the package inventory scoped to a single system. Serializes the
+ * same `scope_type`/`scope_id` contract the inventory page hydrates from, so a
+ * link and an in-page selection resolve to the identical cohort.
+ */
+export function systemPackageInventoryHref(systemId: number): string {
+  const query = new URLSearchParams(
+    scopeSearchParams({ type: 'system', id: systemId }),
+  );
+  return `${PACKAGE_INVENTORY_PATH}?${query.toString()}`;
+}

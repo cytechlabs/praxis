@@ -1,9 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import {
   ALL_SCOPE,
+  PACKAGE_INVENTORY_PATH,
   isAggregateScope,
   isScopeReady,
   scopeSearchParams,
+  systemPackageInventoryHref,
 } from './packageScope';
 
 describe('packageScope helpers', () => {
@@ -51,5 +53,27 @@ describe('packageScope helpers', () => {
     expect(isScopeReady({ type: 'group', id: 4 })).toBe(true);
     expect(isScopeReady({ type: 'group', id: null })).toBe(false);
     expect(isScopeReady({ type: 'system', id: null })).toBe(false);
+  });
+
+  it('systemPackageInventoryHref points at the canonical inventory route', () => {
+    expect(systemPackageInventoryHref(42)).toBe(
+      '/package-management/inventory?scope_type=system&scope_id=42',
+    );
+  });
+
+  it('systemPackageInventoryHref carries the scope the inventory page hydrates from', () => {
+    const href = systemPackageInventoryHref(7);
+    const url = new URL(href, 'https://praxis.invalid');
+    expect(url.pathname).toBe(PACKAGE_INVENTORY_PATH);
+    expect(url.searchParams.get('scope_type')).toBe('system');
+    expect(url.searchParams.get('scope_id')).toBe('7');
+    expect([...url.searchParams.keys()]).toEqual(['scope_type', 'scope_id']);
+  });
+
+  it('systemPackageInventoryHref serializes the same params the scoped fetches send', () => {
+    const url = new URL(systemPackageInventoryHref(12), 'https://praxis.invalid');
+    expect(Object.fromEntries(url.searchParams)).toEqual(
+      scopeSearchParams({ type: 'system', id: 12 }),
+    );
   });
 });
