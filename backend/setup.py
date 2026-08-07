@@ -5,12 +5,12 @@ setup(
     version="1.0.0",
     packages=find_packages(),
     install_requires=[
-        "fastapi==0.109.0",
-        "uvicorn==0.27.0",
+        "fastapi==0.141.1",
+        "uvicorn==0.52.1",
         "sqlalchemy==2.0.51",
         "alembic==1.18.5",
         "psycopg2-binary==2.9.12",
-        "pydantic-settings==2.1.0",
+        "pydantic-settings==2.14.2",
     ],
     entry_points={
         "console_scripts": [
