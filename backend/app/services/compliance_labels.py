@@ -23,7 +23,7 @@ enums are intentionally kept stable; these labels are ADDED alongside them.
 from __future__ import annotations
 
 import re
-from typing import Optional
+from typing import Iterable, Mapping, Optional
 
 # ---------------------------------------------------------------------------
 # Runner family (from the internal runner_owner). Both historical
@@ -222,18 +222,26 @@ def verdict_label(verdict: Optional[str]) -> str:
 # ---------------------------------------------------------------------------
 
 
-def _assert_no_leak() -> None:
-    tables = (
-        _RUNNER_FAMILY_LABELS,
-        _RUNNER_STATUS_LABELS,
-        _STATUS_LABELS,
-        _VERDICT_REASON_LABELS,
-        _DYNAMIC_REASON_LABELS,
-        VERDICT_LABELS,
-    )
+_LABEL_TABLES = (
+    _RUNNER_FAMILY_LABELS,
+    _RUNNER_STATUS_LABELS,
+    _STATUS_LABELS,
+    _VERDICT_REASON_LABELS,
+    _DYNAMIC_REASON_LABELS,
+    VERDICT_LABELS,
+)
+
+
+def _check_no_leak(tables: Iterable[Mapping[str, str]]) -> None:
+    """Raise when any static product-facing label carries an internal token.
+
+    Raised explicitly rather than asserted so the invariant still fails closed
+    on an optimized interpreter, where assertions are stripped.
+    """
     for table in tables:
         for label in table.values():
-            assert not _looks_internal(label), f"leaky compliance label: {label!r}"
+            if _looks_internal(label):
+                raise RuntimeError(f"leaky compliance label: {label!r}")
 
 
-_assert_no_leak()
+_check_no_leak(_LABEL_TABLES)

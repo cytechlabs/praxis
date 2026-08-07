@@ -17,7 +17,7 @@ strings enumerated here.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any, Dict, Iterable, List
 
 from . import report_run_service as rrs
 
@@ -175,10 +175,24 @@ _CATALOG: List[Dict[str, Any]] = [
 # Fail-closed invariant: every registered report kind must appear in the catalog
 # exactly once, and the catalog must not describe an unknown kind. This keeps
 # the documented contract and the enforced vocabulary from drifting apart.
+
+
+def _validate_catalog_kinds(
+    catalog_kinds: Iterable[str], valid_kinds: Iterable[str]
+) -> None:
+    """Raise when the catalog and the enforced kind vocabulary disagree.
+
+    Raised explicitly rather than asserted so the invariant still fails closed
+    on an optimized interpreter, where assertions are stripped.
+    """
+    if sorted(catalog_kinds) != sorted(valid_kinds):
+        raise RuntimeError(
+            "report_catalog and report_run_service.VALID_REPORT_KINDS are out of sync"
+        )
+
+
 _KINDS_IN_CATALOG = [entry["report_kind"] for entry in _CATALOG]
-assert sorted(_KINDS_IN_CATALOG) == sorted(
-    rrs.VALID_REPORT_KINDS
-), "report_catalog and report_run_service.VALID_REPORT_KINDS are out of sync"
+_validate_catalog_kinds(_KINDS_IN_CATALOG, rrs.VALID_REPORT_KINDS)
 
 
 def list_catalog() -> List[Dict[str, Any]]:
