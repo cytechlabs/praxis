@@ -19,9 +19,9 @@ jobs:
         working-directory: backend
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.14'  # PRA-321: run backend CI on the shipped 3.14 runtime
           cache: 'pip'
@@ -46,9 +46,9 @@ jobs:
         working-directory: backend
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.14'  # PRA-321: run backend CI on the shipped 3.14 runtime
           cache: 'pip'
@@ -107,9 +107,9 @@ jobs:
           --health-retries 5
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.14'  # PRA-321: run backend CI on the shipped 3.14 runtime
           cache: 'pip'
@@ -142,9 +142,9 @@ jobs:
         working-directory: agent
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version-file: agent/go.mod
           # cache-dependency-path defaults to go.sum; setup-go skips
@@ -211,9 +211,9 @@ jobs:
         working-directory: frontend-next
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: 'npm'
@@ -243,7 +243,7 @@ jobs:
     name: Docker Build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       # PRA-299: the dev Dockerfiles are retired — local and release builds both
       # use the production Dockerfiles (the canonical production-parity path). This
@@ -261,7 +261,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Build backend prod image
         run: docker build -f backend/Dockerfile.prod -t praxis-backend:scan backend/
@@ -273,7 +273,7 @@ jobs:
       # via the SARIF upload below but not gated so we don't block on
       # upstream noise we can't immediately fix.
       - name: Trivy gate (backend) — fail on CRITICAL
-        uses: aquasecurity/trivy-action@0.35.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: praxis-backend:scan
           format: table
@@ -283,7 +283,7 @@ jobs:
           vuln-type: os,library
 
       - name: Trivy gate (frontend) — fail on CRITICAL
-        uses: aquasecurity/trivy-action@0.35.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: praxis-frontend:scan
           format: table
@@ -298,7 +298,7 @@ jobs:
       # `github/codeql-action/upload-sarif@v3` step for each SARIF file.
       - name: Trivy SARIF (backend)
         if: always()
-        uses: aquasecurity/trivy-action@0.35.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: praxis-backend:scan
           format: sarif
@@ -308,7 +308,7 @@ jobs:
 
       - name: Trivy SARIF (frontend)
         if: always()
-        uses: aquasecurity/trivy-action@0.35.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: praxis-frontend:scan
           format: sarif
@@ -320,14 +320,14 @@ jobs:
       # tag push, publish.yml regenerates these and attaches them to the
       # GitHub Release.
       - name: SBOM (backend, CycloneDX)
-        uses: aquasecurity/trivy-action@0.35.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: praxis-backend:scan
           format: cyclonedx
           output: sbom-backend.cdx.json
 
       - name: SBOM (frontend, CycloneDX)
-        uses: aquasecurity/trivy-action@0.35.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: praxis-frontend:scan
           format: cyclonedx
@@ -335,7 +335,7 @@ jobs:
 
       - name: Upload SBOMs + SARIF as artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: security-reports
           path: |
@@ -358,10 +358,10 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Trivy filesystem gate — fail on CRITICAL
-        uses: aquasecurity/trivy-action@0.35.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: fs
           scan-ref: .
@@ -376,7 +376,7 @@ jobs:
       # github/codeql-action/upload-sarif step where GHAS is available.
       - name: Trivy filesystem SARIF (CRITICAL/HIGH/MEDIUM)
         if: always()
-        uses: aquasecurity/trivy-action@0.35.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: fs
           scan-ref: .
@@ -388,7 +388,7 @@ jobs:
 
       - name: Upload filesystem scan SARIF as artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: dependency-scan-reports
           path: trivy-fs.sarif
