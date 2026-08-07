@@ -33,7 +33,15 @@ def _rsa_pub_b64() -> str:
     return paramiko.RSAKey.generate(2048).get_base64()
 
 
-def _mk_system(db, seed_distro, admin_user, *, require: bool, ip="10.9.0.1") -> System:
+def _mk_system(
+    db, seed_distro, admin_user, *, require: bool | None, ip="10.9.0.1"
+) -> System:
+    """Build a system for host-key tests.
+
+    ``require=None`` creates the system with **no** SSH security policy at all
+    (PRA-370: absent configuration, which must fail closed) rather than a policy
+    that opts out.
+    """
     tag = uuid.uuid4().hex[:8]
     grp = Group(name=f"pra245-{tag}")
     cred = Credential(
@@ -41,13 +49,16 @@ def _mk_system(db, seed_distro, admin_user, *, require: bool, ip="10.9.0.1") -> 
     )
     db.add_all([grp, cred])
     db.flush()
-    policy = SSHSecurityPolicy(
-        name=f"pra245-pol-{tag}",
-        require_host_key_verification=require,
-        created_by=admin_user.id,
-    )
-    db.add(policy)
-    db.flush()
+    policy_id = None
+    if require is not None:
+        policy = SSHSecurityPolicy(
+            name=f"pra245-pol-{tag}",
+            require_host_key_verification=require,
+            created_by=admin_user.id,
+        )
+        db.add(policy)
+        db.flush()
+        policy_id = policy.id
     system = System(
         hostname=f"pra245-{tag}.example.com",
         ip_address=ip,
@@ -56,7 +67,7 @@ def _mk_system(db, seed_distro, admin_user, *, require: bool, ip="10.9.0.1") -> 
         status="Active",
         group_id=grp.id,
         credentials_id=cred.id,
-        ssh_security_policy_id=policy.id,
+        ssh_security_policy_id=policy_id,
     )
     db.add(system)
     db.flush()
@@ -113,7 +124,11 @@ class _SpyClient:
 
 
 def test_verification_disabled_uses_autoadd(db, seed_distro, admin_user):
+    """PRA-370: the permissive path survives, but ONLY as an explicit,
+    persisted administrator opt-out."""
     system = _mk_system(db, seed_distro, admin_user, require=False)
+    assert system.ssh_security_policy is not None
+    assert system.ssh_security_policy.require_host_key_verification is False
     client = _mock_client()
     configure_host_key_policy(client, db, system)
     policy = client.set_missing_host_key_policy.call_args[0][0]
@@ -153,6 +168,90 @@ def test_unsupported_stored_key_type_fails_closed(db, seed_distro, admin_user):
         configure_host_key_policy(client, db, system)
 
 
+# ------------------------------- PRA-370: a MISSING policy must fail closed
+#
+# A system with no ``ssh_security_policy`` is absent security configuration, not
+# an administrator opt-out. It must take the same verifying path as a policy that
+# requires verification, and must never reach ``AutoAddPolicy``.
+
+
+def test_missing_policy_uses_tofu_prompt_never_autoadd(db, seed_distro, admin_user):
+    system = _mk_system(db, seed_distro, admin_user, require=None)
+    assert system.ssh_security_policy is None
+    client = _mock_client()
+    configure_host_key_policy(client, db, system)
+    assert client.set_missing_host_key_policy.call_count == 1
+    policy = client.set_missing_host_key_policy.call_args[0][0]
+    assert isinstance(policy, HostKeyPromptPolicy)
+    assert not isinstance(policy, paramiko.AutoAddPolicy)
+    # No AutoAddPolicy was installed at any point in the call.
+    assert not any(
+        isinstance(c.args[0], paramiko.AutoAddPolicy)
+        for c in client.set_missing_host_key_policy.call_args_list
+    )
+
+
+def test_missing_policy_with_verified_key_uses_reject(db, seed_distro, admin_user):
+    system = _mk_system(db, seed_distro, admin_user, require=None)
+    _store_key(db, system, key_type="ssh-rsa")
+    client = _mock_client()
+    configure_host_key_policy(client, db, system)
+    policy = client.set_missing_host_key_policy.call_args[0][0]
+    assert isinstance(policy, paramiko.RejectPolicy)
+    assert not isinstance(policy, paramiko.AutoAddPolicy)
+
+
+def test_missing_policy_unsupported_stored_key_fails_closed(
+    db, seed_distro, admin_user
+):
+    system = _mk_system(db, seed_distro, admin_user, require=None)
+    _store_key(db, system, key_type="ecdsa-sha2-nistp256")
+    client = _mock_client()
+    with pytest.raises(SSHConnectionError):
+        configure_host_key_policy(client, db, system)
+    # The fail-closed policy was installed before the parse failure, so the
+    # client is never left permissive.
+    assert isinstance(
+        client.set_missing_host_key_policy.call_args[0][0], paramiko.RejectPolicy
+    )
+
+
+def test_missing_policy_unverified_stored_key_uses_tofu_prompt(
+    db, seed_distro, admin_user
+):
+    system = _mk_system(db, seed_distro, admin_user, require=None)
+    _store_key(db, system, key_type="ssh-rsa", verified=False)
+    client = _mock_client()
+    configure_host_key_policy(client, db, system)
+    policy = client.set_missing_host_key_policy.call_args[0][0]
+    assert isinstance(policy, HostKeyPromptPolicy)
+    assert not isinstance(policy, paramiko.AutoAddPolicy)
+
+
+# ------------------------------------------------- command path (SSHService)
+
+
+def test_ssh_service_missing_policy_installs_verifying_policy(
+    db, seed_distro, admin_user, monkeypatch
+):
+    """The command path shares the helper, so a policy-less system gets the
+    first-use capture policy there too, not AutoAddPolicy."""
+    from app.services import ssh_service as sshs
+
+    system = _mk_system(db, seed_distro, admin_user, require=None)
+    spy = _SpyClient()
+    monkeypatch.setattr(sshs.paramiko, "SSHClient", lambda: spy)
+
+    svc = sshs.SSHService(db)
+    # The credential has no Vault path, so the connect attempt fails right after
+    # the host-key policy is installed. That is all this test needs.
+    with pytest.raises(SSHConnectionError):
+        svc._create_connection(system)
+
+    assert isinstance(spy.policy, HostKeyPromptPolicy)
+    assert not isinstance(spy.policy, paramiko.AutoAddPolicy)
+
+
 # ------------------------------------------------- file-transfer / SFTP
 
 
@@ -185,6 +284,21 @@ def test_file_transfer_rejects_changed_or_unknown_key(
             pass
 
 
+def test_file_transfer_missing_policy_never_uses_autoadd(
+    db, seed_distro, admin_user, monkeypatch
+):
+    # PRA-370: SFTP inherits the shared helper, so a policy-less system captures
+    # on first use instead of blindly trusting whatever key the server offers.
+    system = _mk_system(db, seed_distro, admin_user, require=None)
+    spy = _SpyClient()
+    monkeypatch.setattr(fts, "_mint_cert_for", lambda user, login, ttl=300: MagicMock())
+    monkeypatch.setattr(fts.paramiko, "SSHClient", lambda: spy)
+    with fts._open_sftp(db, admin_user, system, "root") as sftp:
+        assert sftp is not None
+    assert isinstance(spy.policy, HostKeyPromptPolicy)
+    assert not isinstance(spy.policy, paramiko.AutoAddPolicy)
+
+
 def test_file_transfer_unsupported_key_fails_closed(
     db, seed_distro, admin_user, monkeypatch
 ):
@@ -201,12 +315,9 @@ def test_file_transfer_unsupported_key_fails_closed(
 # ----------------------------------------------------- browser session
 
 
-def test_session_uses_reject_policy_and_rejects_changed_key(
-    db, seed_distro, admin_user, monkeypatch
-):
-    system = _mk_system(db, seed_distro, admin_user, require=True)
-    _store_key(db, system, key_type="ssh-rsa")
-    login = "root"
+def _open_session_with_spy(db, admin_user, system, monkeypatch, login="root"):
+    """Drive ``session_service.open_session`` far enough to install the host-key
+    policy, then abort at connect. Returns the spy client."""
     db.add(
         HostUserState(
             system_id=system.id, login=login, mode="per_user", state="provisioned"
@@ -243,6 +354,30 @@ def test_session_uses_reject_policy_and_rejects_changed_key(
     with pytest.raises(ss.SessionError):
         ss.open_session(db, admin_user, system.id, login=login)
 
+    return spy
+
+
+def test_session_uses_reject_policy_and_rejects_changed_key(
+    db, seed_distro, admin_user, monkeypatch
+):
+    system = _mk_system(db, seed_distro, admin_user, require=True)
+    _store_key(db, system, key_type="ssh-rsa")
+
+    spy = _open_session_with_spy(db, admin_user, system, monkeypatch)
+
     # The session path installed the verification policy — never AutoAddPolicy.
     assert isinstance(spy.policy, paramiko.RejectPolicy)
+    assert not isinstance(spy.policy, paramiko.AutoAddPolicy)
+
+
+def test_session_missing_policy_never_uses_autoadd(
+    db, seed_distro, admin_user, monkeypatch
+):
+    # PRA-370: browser sessions inherit the shared helper, so a policy-less
+    # system captures on first use rather than auto-adding.
+    system = _mk_system(db, seed_distro, admin_user, require=None)
+
+    spy = _open_session_with_spy(db, admin_user, system, monkeypatch)
+
+    assert isinstance(spy.policy, HostKeyPromptPolicy)
     assert not isinstance(spy.policy, paramiko.AutoAddPolicy)
