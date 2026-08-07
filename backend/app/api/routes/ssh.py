@@ -1,15 +1,22 @@
 """
 API routes for SSH connection management.
+
+Connection lifecycle only: test, close, and their fleet-wide sweeps. Running a
+command on a host is not exposed here. That contract belongs to
+``/command-execution/execute``, which applies validation, risk classification and
+approvals before any transport runs; a second HTTP entry point into
+``SSHService.execute_command`` would bypass all of it. ``SSHService``'s execute
+methods remain internal transport primitives for package, facts, drift and
+repository work.
 """
 
 from typing import Any, Dict, List
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Path
 from sqlalchemy.orm import Session
 
 from ...core.auth import require_role, require_system_access
-from ...core.rate_limit import limiter
-from ...db.models import System, User
+from ...db.models import User
 from ...db.session import get_db
 from ...services.access_authorization_service import scoped_system_ids
 from ...services.ssh_service import SSHConnectionError, SSHService
@@ -62,46 +69,6 @@ def test_all_connections(
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Error testing connections: {str(e)}"
-        ) from e
-
-
-@router.post(
-    "/execute/{system_id}",
-    response_model=Dict[str, Any],
-    dependencies=[Depends(require_system_access("admin", "maintainer"))],
-)
-@limiter.limit("30/minute")
-def execute_command(
-    request: Request,
-    command: str,
-    system_id: int = Path(
-        ..., description="The ID of the system to execute the command on"
-    ),
-    timeout: int = Query(None, description="Command execution timeout in seconds"),
-    current_user: User = Depends(require_role("admin", "maintainer")),
-    db: Session = Depends(get_db),
-):
-    """
-    Execute a command on a specific system.
-    """
-    try:
-        # Check if the system exists
-        system = db.query(System).filter(System.id == system_id).first()
-        if not system:
-            raise HTTPException(
-                status_code=404, detail=f"System with ID {system_id} not found"
-            )
-
-        ssh_service = SSHService(db)
-        result = ssh_service.execute_command(
-            system_id, command, timeout, user_id=current_user.id
-        )
-        return result
-    except SSHConnectionError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Error executing command: {str(e)}"
         ) from e
 
 

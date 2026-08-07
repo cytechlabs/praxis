@@ -10,18 +10,6 @@ interface ConnectionTestResult {
   tested_at: string;
 }
 
-interface CommandExecutionResult {
-  system_id: number;
-  hostname: string;
-  command: string;
-  status: 'success' | 'warning' | 'failed' | 'error';
-  stdout: string;
-  stderr: string;
-  exit_code: number | null;
-  execution_time_ms: number;
-  executed_at: string;
-}
-
 export const testConnection = async (systemId: number): Promise<ConnectionTestResult> => {
   const response = await apiFetch(`/api/backend/ssh/test/${systemId}`);
   if (!response.ok) {
@@ -36,25 +24,6 @@ export const testAllConnections = async (): Promise<ConnectionTestResult[]> => {
   if (!response.ok) {
     const error = await response.json();
     throw new Error(formatApiError(error, 'Failed to test connections'));
-  }
-  return response.json();
-};
-
-export const executeCommand = async (
-  systemId: number,
-  command: string,
-  timeout?: number
-): Promise<CommandExecutionResult> => {
-  const url = new URL(`/api/backend/ssh/execute/${systemId}`, window.location.origin);
-  url.searchParams.append('command', command);
-  if (timeout !== undefined) {
-    url.searchParams.append('timeout', timeout.toString());
-  }
-
-  const response = await apiFetch(url.toString(), { method: 'POST' });
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(formatApiError(error, 'Failed to execute command'));
   }
   return response.json();
 };
