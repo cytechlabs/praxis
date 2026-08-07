@@ -60,6 +60,27 @@ const fileChunk = 32 * 1024
 // Reads from /proc are sometimes useful so file_get is unaffected.
 var blockedPutPrefixes = []string{"/proc", "/sys", "/dev", "/run"}
 
+// Fixed operation labels for file-transfer diagnostics. They match the
+// op_type the broker requested and are never derived from request input.
+const (
+	fileOpTypeGet = "file_get"
+	fileOpTypePut = "file_put"
+)
+
+// logFileOpFailure emits one bounded diagnostic at a file handler's
+// outcome boundary so an operator can correlate a failure reason with
+// the operation it belongs to. Only the operation ID, the fixed
+// operation type, and the normalized reason are recorded: request
+// parameters, source and destination paths, temporary filenames, frame
+// payloads, file contents, and raw errors must never reach the log.
+// Success and cancellation are not failures and emit nothing.
+func (p *opPump) logFileOpFailure(opID int, opType string, outcome opOutcome) {
+	if outcome.outcome != "error" || outcome.error == nil || outcome.error.Reason == "" {
+		return
+	}
+	p.log.Printf("op=%d %s failed reason=%s", opID, opType, outcome.error.Reason)
+}
+
 type fileGetParams struct {
 	path     string
 	maxBytes int64
@@ -81,8 +102,12 @@ type fileHeader struct {
 }
 
 // runFileGet reads the requested path off disk and streams it.
-// Returns the outcome the caller posts as op_complete.
-func (p *opPump) runFileGet(ctx context.Context, opID int, conn *websocket.Conn, raw map[string]any) opOutcome {
+// Returns the outcome the caller posts as op_complete. Every exit
+// path, early rejection or mid-stream, funnels through the deferred
+// diagnostic below.
+func (p *opPump) runFileGet(ctx context.Context, opID int, conn *websocket.Conn, raw map[string]any) (outcome opOutcome) {
+	defer func() { p.logFileOpFailure(opID, fileOpTypeGet, outcome) }()
+
 	fp := parseFileGetParams(raw)
 	if fp.rejected != "" {
 		return opOutcomeError(fp.rejected)
@@ -194,7 +219,11 @@ func closeWSSGracefully(ctx context.Context, conn *websocket.Conn) error {
 // runFilePut accepts an inbound ChannelControl header followed by
 // ChannelFile Data frames terminated by a Close. Writes atomically
 // via tempfile + fsync + rename in the same directory as the target.
-func (p *opPump) runFilePut(ctx context.Context, opID int, conn *websocket.Conn, raw map[string]any) opOutcome {
+// Every exit path, early rejection or mid-receive, funnels through the
+// deferred diagnostic below.
+func (p *opPump) runFilePut(ctx context.Context, opID int, conn *websocket.Conn, raw map[string]any) (outcome opOutcome) {
+	defer func() { p.logFileOpFailure(opID, fileOpTypePut, outcome) }()
+
 	fp := parseFilePutParams(raw)
 	if fp.rejected != "" {
 		return opOutcomeError(fp.rejected)
