@@ -38,13 +38,8 @@ from app.db.models import (
     ContentProfile,
     Credential,
     Group,
-    GroupContentProfileSubscription,
     HostContentProfileSubscription,
     PatchPolicy,
-    PatchUpdatePlan,
-    PatchUpdatePlanHost,
-    SmartGroup,
-    SmartGroupMembership,
     System,
 )
 from app.services import (

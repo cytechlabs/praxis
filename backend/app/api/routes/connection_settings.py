@@ -2,7 +2,7 @@
 API routes for global connection settings (PRA-62).
 """
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel, validator
 from sqlalchemy.orm import Session
 

@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional
 from sqlalchemy.orm import Session
 
 from ..db.models import Distro, RepoSource, System
-from .ssh_service import SSHConnectionError, SSHService
+from .ssh_service import SSHService
 
 logger = logging.getLogger(__name__)
 

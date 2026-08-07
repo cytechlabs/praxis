@@ -16,7 +16,7 @@ from typing import Any, Dict, List, Optional, Sequence
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import JSONResponse, StreamingResponse
-from sqlalchemy import case, func
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from ...core.auth import get_current_user, require_role

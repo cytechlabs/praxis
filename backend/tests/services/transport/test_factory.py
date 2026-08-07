@@ -8,7 +8,6 @@ BrokerClient + minimal System mock + stub SSHService.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 import pytest
 

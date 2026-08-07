@@ -34,7 +34,7 @@ Covers:
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import pytest
 from sqlalchemy.exc import IntegrityError
@@ -54,9 +54,6 @@ from app.services.patch_advisory_service import (
     IMPORT_STATUS_PARTIAL,
     IMPORT_STATUS_SUCCESS,
     SEVERITY_HIGH,
-    SEVERITY_LOW,
-    SEVERITY_MEDIUM,
-    SEVERITY_UNKNOWN,
     SOURCE_KIND_DEBIAN_SECURITY,
     SOURCE_KIND_REDHAT_UPDATEINFO,
     SOURCE_KIND_UBUNTU_USN,

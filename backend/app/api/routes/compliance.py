@@ -35,7 +35,6 @@ from app.api.schemas.compliance import (
     ComplianceCheckRead,
     ComplianceCheckUpdate,
     ComplianceEvidencePage,
-    ComplianceEvidenceRead,
     ComplianceFleetSummary,
     CompliancePolicyCreate,
     CompliancePolicyDetail,

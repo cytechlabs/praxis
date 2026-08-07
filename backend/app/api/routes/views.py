@@ -4,14 +4,14 @@ API routes for saved filter views (PRA-114).
 
 import json
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Path
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from ...core.api_errors import internal_error
-from ...core.auth import get_current_user, require_role
+from ...core.auth import get_current_user
 from ...db.models import SavedView, User
 from ...db.session import get_db
 from ...services.access_authorization_service import scoped_system_ids

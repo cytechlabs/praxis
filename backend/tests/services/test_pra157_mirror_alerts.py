@@ -5,8 +5,6 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from unittest.mock import patch
 
-import pytest
-
 from app.db.models import MirrorAlertState, MirrorRepo
 from app.services import alert_service, mirror_alerts
 

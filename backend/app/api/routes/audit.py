@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import json
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session as DbSession
 
 from ...core.auth import get_current_user, require_role

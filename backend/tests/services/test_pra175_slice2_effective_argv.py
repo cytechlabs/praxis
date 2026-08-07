@@ -38,7 +38,6 @@ import pytest
 from app.db.models import (
     Credential,
     Group,
-    PackageHistory,
     PatchPolicy,
     PatchRollbackDispatchHost,
     PatchRollbackDispatchHostPackage,
@@ -51,10 +50,7 @@ from app.db.models import (
     System,
 )
 from app.services import (
-    patch_execution_dispatch_service,
     patch_execution_service,
-    patch_policy_service,
-    patch_reboot_dispatch_service,
     patch_reboot_service,
     patch_rollback_dispatch_service,
     patch_rollback_service,

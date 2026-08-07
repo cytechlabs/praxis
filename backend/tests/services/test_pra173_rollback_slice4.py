@@ -22,7 +22,7 @@ Covers ``patch_rollback_verify_service``:
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 import pytest
 
@@ -39,7 +39,6 @@ from app.db.models import (
     PatchUpdateExecutionHost,
     PatchUpdateExecutionHostPackage,
     PatchUpdateExecutionRollback,
-    PatchUpdateExecutionRollbackHost,
     PatchUpdateExecutionRollbackPackage,
     PatchUpdatePlan,
     PatchUpdatePlanHost,

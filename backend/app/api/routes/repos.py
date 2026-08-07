@@ -6,7 +6,7 @@ import re
 from typing import Any, Dict, Optional
 from urllib.parse import urlparse
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from fastapi import APIRouter, Depends, HTTPException, Path
 from pydantic import BaseModel, Field, validator
 from sqlalchemy.orm import Session
 

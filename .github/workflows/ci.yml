@@ -62,6 +62,22 @@ jobs:
       - name: Lint (pylint)
         run: pylint app --fail-under=5.0
 
+      # Unused imports are gated on their own, with no score threshold, so a new
+      # one fails the build instead of being absorbed into an aggregate score.
+      # The scope is wider than the lane above because dead imports accumulate
+      # fastest in tests and one-off scripts.
+      #
+      # Imports kept deliberately (model registration for Base.metadata, package
+      # re-exports) must carry `# pylint: disable=unused-import` on the import
+      # statement. Add `# noqa: F401` alongside it when the same import also
+      # needs to stay silent for the hosted analyzer, which honours noqa but not
+      # the pylint pragma.
+      #
+      # `__init__.py` files are exempt via `init-import=no` in .pylintrc; their
+      # re-exports are declared in `__all__` instead.
+      - name: Lint unused imports (pylint W0611)
+        run: pylint --disable=all --enable=unused-import --score=n app alembic tests scripts
+
   # PRA-278: the backend test suite (3,400+ tests) is split into parallel lanes
   # so a failure in one area returns without waiting on the whole monolith, and
   # the slowest lane — not the sum of all tests — sets wall-clock feedback time.

@@ -16,18 +16,10 @@ Covers the readiness audit fixes:
 from __future__ import annotations
 
 import re
-from datetime import datetime
 
 import pytest
 
-from app.db.models import (
-    CompliancePolicyEvidence,
-    Credential,
-    Group,
-    HostFacts,
-    Package,
-    System,
-)
+from app.db.models import CompliancePolicyEvidence, Credential, Group, Package, System
 from app.services import (
     compliance_evaluation_service,
     compliance_labels,

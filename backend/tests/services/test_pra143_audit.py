@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timedelta
 from unittest.mock import patch
 
 import pytest
 
-from app.db.access_models import AuditEvent, AuditSink, AuditSinkDelivery
+from app.db.access_models import AuditSink, AuditSinkDelivery
 from app.services import audit_event_service as aes
 
 # ---------------------------------------------------------------- emit

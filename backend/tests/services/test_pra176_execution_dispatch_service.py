@@ -44,7 +44,6 @@ import pytest
 
 from app.db.models import (
     CompliancePolicyEvidence,
-    ComplianceRemediationExecutionAttempt,
     Credential,
     Group,
     HostFacts,
@@ -62,9 +61,7 @@ from app.services.compliance_remediation_execution_service import (
     AUDIT_COMPLIANCE_REMEDIATION_EXECUTION_DISPATCHED,
     AUDIT_COMPLIANCE_REMEDIATION_EXECUTION_FAILED,
     AUDIT_COMPLIANCE_REMEDIATION_EXECUTION_SUCCEEDED,
-    STATE_DISPATCHED,
     STATE_FAILED,
-    STATE_PENDING,
     STATE_SUCCEEDED,
     ComplianceError,
 )

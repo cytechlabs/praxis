@@ -24,20 +24,11 @@ tests assert the substrate, not the (non-existent) execution.
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from typing import List, Optional
+from typing import List
 
 import pytest
 
-from app.db.models import (
-    Credential,
-    Group,
-    Package,
-    PackageUpdate,
-    PatchPolicy,
-    PatchUpdateExecution,
-    PatchUpdateExecutionHost,
-    System,
-)
+from app.db.models import Credential, Group, Package, PackageUpdate, PatchPolicy, System
 from app.services import (
     patch_execution_service,
     patch_policy_service,
@@ -55,7 +46,6 @@ from app.services.patch_execution_service import (
     EXECUTION_STATE_PAUSED,
     EXECUTION_STATE_RUNNING,
     SKIP_REASON_NO_SELECTED_PACKAGES,
-    SKIP_REASON_PLAN_HOST_BLOCKED,
     START_REFUSAL_ACTIVE_EXECUTION_EXISTS,
     START_REFUSAL_APPROVAL_REQUIRED,
     START_REFUSAL_FUTURE_SCHEDULE,

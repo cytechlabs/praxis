@@ -27,7 +27,6 @@ from pathlib import Path
 import pytest
 
 from app.db.models import (
-    AirgapImport,
     ContentChannel,
     ContentChannelRepo,
     ContentProfile,

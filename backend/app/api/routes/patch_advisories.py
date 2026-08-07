@@ -34,7 +34,6 @@ from app.api.schemas.patch_advisories import (
     AdvisoryImportResponse,
     FleetAdvisoryCountsRead,
     PatchAdvisoryDetailRead,
-    PatchAdvisoryFixedPackageRead,
     PatchAdvisoryImportRunRead,
     PatchAdvisoryRead,
 )

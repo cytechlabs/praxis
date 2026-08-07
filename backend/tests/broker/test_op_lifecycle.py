@@ -33,10 +33,8 @@ from app.broker.ops import (
     NonceExpired,
     NonceInvalid,
     NonceLimitExceeded,
-    Operation,
     OperationManager,
     OperationState,
-    OpNotFound,
 )
 from app.broker.protocol import (
     Channel,

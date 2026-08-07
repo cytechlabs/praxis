@@ -8,11 +8,11 @@ assignment, deletion, and bulk import.
 
 import re
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
-from sqlalchemy import or_, text
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from ...core.auth import get_current_user, require_role
@@ -31,7 +31,6 @@ from ...db.models import (
     PackageUpdate,
     RepoSource,
     System,
-    SystemAudit,
     SystemMetadata,
     Tag,
     User,

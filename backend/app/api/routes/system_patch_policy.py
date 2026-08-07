@@ -25,7 +25,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.schemas.patch_policies import EffectivePolicyRead, PatchPolicyRead
+from app.api.schemas.patch_policies import EffectivePolicyRead
 from app.core.auth import get_current_user, require_system_access
 from app.db.session import get_db
 from app.services import patch_policy_service

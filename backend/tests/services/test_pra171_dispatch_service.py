@@ -25,7 +25,7 @@ Slice 2 contract verified:
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, List
 
 import pytest
 
@@ -52,7 +52,6 @@ from app.services.patch_execution_dispatch_service import (
     AUDIT_EXECUTION_HOST_SUCCEEDED,
     ERROR_CODE_PACKAGE_MANAGER_FAILED,
     ERROR_CODE_TRANSPORT_ERROR,
-    ERROR_CODE_UNSUPPORTED_FAMILY,
     PACKAGE_OUTCOME_FAILED,
     PACKAGE_OUTCOME_SUCCEEDED,
     DispatchResult,
@@ -64,7 +63,6 @@ from app.services.patch_execution_dispatch_service import (
 from app.services.patch_execution_service import (
     EXECUTION_HOST_STATE_FAILED,
     EXECUTION_HOST_STATE_PENDING,
-    EXECUTION_HOST_STATE_RUNNING,
     EXECUTION_HOST_STATE_SUCCEEDED,
     PatchUpdateExecutionError,
 )

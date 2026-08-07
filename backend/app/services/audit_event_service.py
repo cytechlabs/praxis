@@ -46,11 +46,9 @@ import logging
 import os
 import socket
 import ssl
-import threading
-import time
 import uuid
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 from urllib.error import URLError
 
 import httpx

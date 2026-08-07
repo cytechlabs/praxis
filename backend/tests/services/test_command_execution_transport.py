@@ -19,10 +19,7 @@ a real SSH server, agent, broker, OR a live database. The focus is:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
 from unittest.mock import MagicMock, patch
-
-import pytest
 
 from app.services.command_execution_service import CommandExecutionService
 from app.services.transport import (

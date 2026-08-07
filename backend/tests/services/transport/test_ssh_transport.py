@@ -9,7 +9,6 @@ CommandResult / FileGetStream / FilePutStream shapes.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from io import BytesIO
 from unittest.mock import MagicMock
 
 import paramiko

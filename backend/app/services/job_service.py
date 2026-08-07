@@ -21,7 +21,6 @@ from ..db.models import (
     PackageHistory,
     System,
     Tag,
-    User,
     system_tag,
 )
 from ..db.session import SessionLocal

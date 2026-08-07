@@ -9,14 +9,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.db.models import (
-    ContentProfile,
-    Credential,
-    Group,
-    HostContentProfileSubscription,
-    System,
-)
-from app.services import content_profile_apply as orch_module
+from app.db.models import Credential, Group, System
 from app.services.content_profile_apply import ApplyOutcome
 
 

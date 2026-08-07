@@ -20,7 +20,7 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from app.db.access_models import AccessBinding, AccessGrant, FleetRole
+from app.db.access_models import AccessGrant, FleetRole
 from app.db.models import Credential, Group, SmartGroup, SmartGroupMembership, System
 from app.services import access_binding_service as abs_svc
 from app.services import host_user_provisioning_service as prov

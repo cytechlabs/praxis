@@ -36,11 +36,11 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import Iterable, List, Optional, Sequence
+from typing import Iterable, List, Optional
 
 from sqlalchemy.orm import Session
 
-from ..db.models import MirrorRepo, MirrorSyncRun, MirrorSyncRunPackage
+from ..db.models import MirrorSyncRun, MirrorSyncRunPackage
 
 logger = logging.getLogger(__name__)
 

@@ -1,8 +1,6 @@
 """Seed initial data for groups, distros, and roles after migrations."""
 
-from datetime import date, datetime
-
-from sqlalchemy import text
+from datetime import date
 
 from app.db.models import Distro, Group, Role
 from app.db.session import SessionLocal

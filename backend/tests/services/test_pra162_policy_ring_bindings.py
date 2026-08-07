@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.db.models import PatchPolicyRingBinding, PatchRing
+from app.db.models import PatchPolicyRingBinding
 from app.services import patch_policy_service, patch_ring_service
 from app.services.patch_policy_service import (
     AUDIT_PATCH_POLICY_RING_BOUND,

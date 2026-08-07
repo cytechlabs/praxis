@@ -28,8 +28,6 @@ from datetime import datetime, timedelta
 import pytest
 
 from app.db.models import (
-    CompliancePolicy,
-    CompliancePolicyCheck,
     CompliancePolicyEvidence,
     Credential,
     Group,

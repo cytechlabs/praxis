@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from app.db.models import System
 from app.db.session import SessionLocal
-from app.db.ssh_security_models import SSHHostKey, SSHSecurityPolicy
+from app.db.ssh_security_models import SSHHostKey
 from app.services.ssh_service import SSHConnectionError, SSHService
 
 

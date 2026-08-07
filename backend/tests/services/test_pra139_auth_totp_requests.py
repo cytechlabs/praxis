@@ -3,18 +3,12 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import pyotp
 import pytest
 
-from app.db.access_models import (
-    AccessBinding,
-    AccessGrant,
-    AccessRequest,
-    FleetRole,
-    TotpChallenge,
-)
+from app.db.access_models import AccessBinding, FleetRole
 from app.db.models import Credential, Group, System
 from app.services import access_authorization_service as auth_svc
 from app.services import access_binding_service as abs_svc

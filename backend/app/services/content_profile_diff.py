@@ -44,7 +44,7 @@ from typing import Dict, List, Optional, Tuple
 
 from sqlalchemy.orm import Session
 
-from ..db.models import MirrorRepo, MirrorSyncRun
+from ..db.models import MirrorSyncRun
 from .content_profile_service import ContentProfileService, ResolvedMirrorEntry
 
 logger = logging.getLogger(__name__)

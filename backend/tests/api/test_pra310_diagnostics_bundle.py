@@ -12,8 +12,6 @@ import json
 import logging
 import zipfile
 
-import pytest
-
 from app.core.log_buffer import install_log_buffer
 from app.db.access_models import AuditEvent
 from app.services import diagnostics_service as diag

@@ -18,7 +18,13 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 # Import our models
 from app.db.base import Base
-from app.db.models import (  # Updated imports - removed UserRole, added RefreshToken
+
+# These names are deliberately unused. Importing app.db.models executes the model
+# modules so that every table registers on Base.metadata before target_metadata
+# is read below. If this import is dropped and the package-level registration in
+# app/db/__init__.py ever changes, Base.metadata can be empty and autogenerate
+# would emit drop_table operations for live tables.
+from app.db.models import (  # noqa: F401; pylint: disable=unused-import
     RefreshToken,
     Role,
     User,

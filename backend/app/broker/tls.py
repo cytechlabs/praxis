@@ -38,7 +38,6 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from cryptography import x509
-from cryptography.hazmat.primitives import serialization
 
 # URI SAN format: praxis://system/<positive int>
 SYSTEM_URI_RE = re.compile(r"^praxis://system/(\d+)$")

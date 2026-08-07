@@ -118,7 +118,6 @@ from .patch_update_plan_service import (
     CONTENT_PROFILE_STATE_RESOLVED,
     PACKAGE_MANAGER_FAMILY_APT,
     PACKAGE_MANAGER_FAMILY_DNF,
-    PACKAGE_MANAGER_FAMILY_UNKNOWN,
 )
 
 logger = logging.getLogger(__name__)

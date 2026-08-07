@@ -45,7 +45,6 @@ from datetime import datetime, timedelta
 from typing import List, Optional
 
 from passlib.hash import pbkdf2_sha256
-from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
 from ..db.models import HostMirrorServeCredential, MirrorRepo, System

@@ -14,8 +14,7 @@ import pytest
 from app.core.auth import get_password_hash
 from app.db.access_models import AccessGrant, FleetRole
 from app.db.access_models import Session as SessionRow
-from app.db.access_models import SessionLock
-from app.db.models import Credential, Group, RefreshToken, Role, System, User
+from app.db.models import Credential, Group, RefreshToken, System, User
 from app.services import access_authorization_service as authz
 from app.services import access_binding_service as abs_svc
 from app.services import identity_access_service as ias

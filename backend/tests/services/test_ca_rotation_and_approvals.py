@@ -8,7 +8,6 @@ import pytest
 from app.db.models import (
     CARotation,
     CommandApproval,
-    CommandApprovalVote,
     Credential,
     Group,
     SSHIdentitySettings,

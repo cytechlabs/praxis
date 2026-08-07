@@ -27,7 +27,6 @@ import uuid
 from datetime import datetime
 from typing import Any, Dict, Optional
 
-import websockets
 from websockets.exceptions import ConnectionClosed
 from websockets.legacy.server import WebSocketServerProtocol
 
@@ -51,7 +50,6 @@ from .protocol import (
     DEFAULT_MAX_FRAME_PAYLOAD_BYTES,
     HEARTBEAT_DEAD_SECONDS,
     HEARTBEAT_INTERVAL_SECONDS,
-    Frame,
     FrameError,
     HandshakeError,
     decode_frame,

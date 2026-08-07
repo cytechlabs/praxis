@@ -3,7 +3,7 @@ API routes for maintenance windows (PRA-79).
 """
 
 import json
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from pydantic import BaseModel

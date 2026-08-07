@@ -29,7 +29,7 @@ import os
 import threading
 import time
 from datetime import datetime, timedelta
-from typing import Any, Dict, Iterable, Iterator, List, Optional
+from typing import Any, Dict, Iterator, List, Optional
 
 from sqlalchemy.orm import Session as DbSession
 

@@ -41,7 +41,6 @@ from app.db.models import (
     MaintenanceWindow,
     Package,
     PackageUpdate,
-    PatchPolicy,
     PatchUpdateExecutionReboot,
     System,
 )
@@ -49,7 +48,6 @@ from app.services import (
     patch_execution_service,
     patch_policy_service,
     patch_reboot_dispatch_service,
-    patch_reboot_service,
     patch_update_plan_service,
 )
 from app.services.patch_reboot_dispatch_service import (

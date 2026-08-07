@@ -51,8 +51,6 @@ from app.db.models import (
     PatchAdvisory,
     PatchAdvisoryHostApplicability,
     PatchPolicy,
-    PatchUpdatePlan,
-    PatchUpdatePlanHost,
     PatchUpdatePlanSelectedPackage,
     System,
 )

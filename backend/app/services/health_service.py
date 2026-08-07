@@ -17,7 +17,6 @@ from ..db.models import (
     Group,
     Job,
     JobHistory,
-    Package,
     PackageUpdate,
     System,
     SystemMetadata,

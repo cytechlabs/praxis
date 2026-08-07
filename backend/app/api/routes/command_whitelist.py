@@ -2,7 +2,6 @@
 API routes for command whitelist and validation rule management (PRA-118).
 """
 
-import json
 import re
 from typing import Any, Dict, List, Optional
 

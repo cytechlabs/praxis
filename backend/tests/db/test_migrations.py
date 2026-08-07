@@ -2,7 +2,7 @@ import pytest
 from alembic.config import Config
 from alembic.runtime.migration import MigrationContext
 from alembic.script import ScriptDirectory
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine
 
 from app.db.base import Base
 from app.db.config import DatabaseSettings

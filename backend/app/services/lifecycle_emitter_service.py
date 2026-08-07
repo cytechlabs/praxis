@@ -33,7 +33,7 @@ from __future__ import annotations
 
 import logging
 from datetime import date, datetime
-from typing import Iterable, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 from sqlalchemy.orm import Session
 

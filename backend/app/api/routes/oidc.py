@@ -5,7 +5,7 @@ OIDC authentication routes.
 import json
 import logging
 import os
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -13,7 +13,7 @@ from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from ...core.auth import get_current_user, require_role
+from ...core.auth import require_role
 from ...db.models import OIDCProvider, User
 from ...db.session import get_db
 from ...services import outbound_http_guard

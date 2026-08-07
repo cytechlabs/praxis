@@ -5,14 +5,13 @@ This module provides API endpoints for managing Linux systems in the inventory,
 including registration, updates, deletion, and querying system information.
 """
 
-import ipaddress  # pylint: disable=unused-import
 import re
 from datetime import datetime
 from typing import Any, Dict, List, Optional  # pylint: disable=unused-import
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field, IPvAnyAddress, validator
-from sqlalchemy import func, or_
+from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 

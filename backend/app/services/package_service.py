@@ -9,7 +9,7 @@ import threading
 from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
-from sqlalchemy import false, func
+from sqlalchemy import false
 from sqlalchemy.orm import Session
 
 from ..db.models import Distro, Package, PackageHistory, PackageUpdate, System, User

@@ -17,8 +17,6 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import inspect
-
 from app.db.models import MirrorRepo, MirrorSyncRun
 
 

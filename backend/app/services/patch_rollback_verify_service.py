@@ -61,8 +61,6 @@ from ..db.models import (
     PatchRollbackDispatchHost,
     PatchRollbackDispatchHostPackage,
     PatchRollbackDispatchRun,
-    PatchUpdateExecution,
-    PatchUpdateExecutionRollback,
     PatchUpdateExecutionRollbackPackage,
     System,
     User,

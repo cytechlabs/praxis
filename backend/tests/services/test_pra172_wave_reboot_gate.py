@@ -29,7 +29,7 @@ No test issues a real reboot command — fakes are used throughout.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Callable, List, Optional
+from typing import Callable, Optional
 
 import pytest
 
@@ -39,12 +39,10 @@ from app.db.models import (
     HostFacts,
     Package,
     PackageUpdate,
-    PatchPolicy,
     PatchUpdateExecutionReboot,
     System,
 )
 from app.services import (
-    patch_execution_dispatch_service,
     patch_execution_service,
     patch_policy_service,
     patch_reboot_service,

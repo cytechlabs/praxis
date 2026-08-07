@@ -12,15 +12,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from sqlalchemy.orm import Session
 
-from app.db.models import (
-    CommandValidationRule,
-    CommandWhitelist,
-    Credential,
-    Distro,
-    Group,
-    System,
-    User,
-)
+from app.db.models import Credential, Distro, Group, System, User
 from app.db.session import SessionLocal
 from app.services.command_validation_service import CommandValidationService
 

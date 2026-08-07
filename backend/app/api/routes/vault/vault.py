@@ -10,15 +10,11 @@ from sqlalchemy.orm import Session
 from ....core.auth import require_role
 from ....db.models import User
 from ....db.session import get_db
-from ....services.vault_service import (  # pylint: disable=unused-import
-    VaultConnectionError,
-    VaultService,
-)
-from ...schemas.vault.vault import (  # pylint: disable=unused-import
+from ....services.vault_service import VaultService
+from ...schemas.vault.vault import (
     VaultConfigCreate,
     VaultConfigResponse,
     VaultConfigUpdate,
-    VaultHealthResponse,
 )
 
 router = APIRouter()

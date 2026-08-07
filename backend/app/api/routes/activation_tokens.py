@@ -20,7 +20,7 @@ from pydantic import BaseModel, Field, validator
 from sqlalchemy.orm import Session
 
 from ...core.auth import require_role
-from ...db.models import ActivationToken, Group, System, Tag, User
+from ...db.models import ActivationToken, Group, Tag, User
 from ...db.session import get_db
 from ...services import activation_token_service as svc
 

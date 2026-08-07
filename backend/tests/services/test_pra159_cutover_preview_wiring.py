@@ -8,7 +8,6 @@ profile → channel → mirror chain.
 from __future__ import annotations
 
 from datetime import datetime
-from unittest.mock import MagicMock
 
 import pytest
 
