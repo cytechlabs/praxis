@@ -9,6 +9,7 @@ import { useFormatTimestamp } from '@/context/TimestampPreferencesContext';
 import { PageHeader, Button, StatCard, Card, Badge, statusToBadgeVariant, EmptyState, Select } from '@/components/ui';
 import HelpLink from '@/components/help/HelpLink';
 import { humanizeStatus, humanizeLabel } from '@/utils/humanize';
+import { summarizeJobResult } from '@/utils/jobResults';
 
 const getDuration = (start: string | null, end: string | null) => {
   if (!start || !end) return '-';
@@ -63,26 +64,6 @@ const JobHistory = () => {
   const completedCount = history.filter((h) => h.status === 'completed').length;
   const failedCount = history.filter((h) => h.status === 'failed').length;
   const cancelledCount = history.filter((h) => h.status === 'cancelled').length;
-
-  // result comes pre-parsed from the backend (JSON was decoded server-side)
-  const getResultSummary = (result: any): string => {
-    if (!result) return '-';
-    if (Array.isArray(result)) {
-      return `${result.length} systems updated`;
-    }
-    if (typeof result === 'string') {
-      try {
-        const parsed = JSON.parse(result);
-        if (Array.isArray(parsed)) {
-          return `${parsed.length} systems updated`;
-        }
-      } catch {
-        // not JSON, fall through
-      }
-      return result;
-    }
-    return JSON.stringify(result);
-  };
 
   return (
     <MainLayout>
@@ -177,7 +158,7 @@ const JobHistory = () => {
                   </div>
                   <div>{item.start_time ? formatTimestamp(item.start_time) : '-'}</div>
                   <div>{getDuration(item.start_time, item.end_time)}</div>
-                  <div className="truncate" title={item.result ? getResultSummary(item.result) : undefined}>{getResultSummary(item.result)}</div>
+                  <div className="truncate" title={item.result ? summarizeJobResult(item.result) : undefined}>{summarizeJobResult(item.result)}</div>
                   <div className="truncate" title={item.error_message || undefined}>
                     {item.error_message ? (
                       <span className="text-red-400">{item.error_message}</span>

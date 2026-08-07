@@ -7,6 +7,7 @@ import Head from 'next/head';
 import { useFormatTimestamp } from '@/context/TimestampPreferencesContext';
 import { PageHeader, Button, StatCard, Card, Badge, EmptyState, ConfirmModal } from '@/components/ui';
 import HelpLink from '@/components/help/HelpLink';
+import { formatJobResultDetail } from '@/utils/jobResults';
 
 const getDuration = (start: string | null, end: string | null) => {
   if (!start || !end) return '-';
@@ -221,7 +222,7 @@ const FailedJobs = () => {
                         <div>
                           <span className="text-gray-400 text-xs block mb-1">Detailed Results</span>
                           <pre className="text-gray-300 text-xs bg-gray-900 rounded p-2 border border-gray-800/50 overflow-x-auto max-h-40 overflow-y-auto">
-                            {typeof item.result === 'string' ? item.result : JSON.stringify(item.result, null, 2)}
+                            {formatJobResultDetail(item.result)}
                           </pre>
                         </div>
                       )}

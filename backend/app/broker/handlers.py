@@ -609,10 +609,9 @@ def _maybe_schedule_cert_expiry(
         return None
 
     async def _close_at_expiry() -> None:
-        try:
-            await asyncio.sleep(delay)
-        except asyncio.CancelledError:
-            raise
+        # Cancellation propagates out of the sleep so a tunnel that closes
+        # before its cert expires never sends bye or emits the expiry event.
+        await asyncio.sleep(delay)
         logger.info(
             "tunnel closing on cert expiry: system_id=%s session=%s not_after=%s",
             entry.system_id,

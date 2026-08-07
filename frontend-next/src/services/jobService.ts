@@ -117,6 +117,24 @@ export interface RollbackResponse {
   results: RollbackResult[];
 }
 
+/**
+ * Outcome of one job run on one system. `status` is always present; the
+ * remaining fields depend on the job type (package counts for scans, applied
+ * counts for updates, a message for skips and errors).
+ */
+export interface JobExecutionResult {
+  status: string;
+  message?: string;
+  [field: string]: unknown;
+}
+
+/** One entry of a job run's per-system results. */
+export interface JobResultEntry {
+  system_id: number;
+  hostname: string;
+  result: JobExecutionResult;
+}
+
 export interface JobHistoryItem {
   id: number;
   job_id: number;
@@ -125,7 +143,10 @@ export interface JobHistoryItem {
   start_time: string;
   end_time: string | null;
   status: string;
-  result: string | null;
+  /** Decoded server-side: an array of per-system entries, or null for a run
+   *  that never recorded results (still in flight, or abandoned before the
+   *  results were written). */
+  result: JobResultEntry[] | null;
   error_message: string | null;
   systems_targeted: number;
   systems_completed: number;
