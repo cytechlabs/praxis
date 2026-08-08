@@ -147,9 +147,15 @@ Package metadata versions must match the tag you are about to cut. For a
 - [ ] `frontend-next/package-lock.json` → `X.Y.Z`
 - [ ] `backend/setup.py` → `X.Y.Z`
 
-The agent binary derives its version from the `agent-vX.Y.Z` tag at build time
-(`-X main.Version=...`), so it needs no source edit — but the agent tag and the
-app tag must share the same `X.Y.Z`.
+- [ ] `agent/VERSION` → `X.Y.Z`
+- [ ] `_DEFAULT_RELEASE_VERSION` in
+      `backend/app/api/routes/agent_bootstrap.py` → `vX.Y.Z`
+
+`agent/VERSION` is the agent's source of truth: artifact names and the binary's
+embedded version both derive from it, and the release workflow refuses a tag
+that disagrees with it. The backend carries a mirror because its image does not
+ship the agent source tree. See [docs/agent-release.md](agent-release.md) for
+the full list of places a version bump touches.
 
 `scripts/check-release-readiness.sh` verifies this alignment; see step 8.
 
@@ -161,11 +167,18 @@ Two tags per release, both cut from the same verified commit:
   - Triggers `publish.yml`: builds and pushes the backend/frontend images and
     attaches SBOMs to the GitHub Release.
 - **Agent release:** `agent-vX.Y.Z` (e.g. `agent-v1.0.0`).
-  - Triggers `agent-release.yml`: builds per-arch tarballs, checksums, and the
-    keyless cosign signature/certificate, and attaches them to the Release.
+  - Triggers `agent-release.yml`: builds the per-arch tarballs reproducibly
+    with the Go toolchain pinned by `agent/GO_VERSION`, generates a per-arch
+    agent SBOM and checksums, signs `checksums.txt` with keyless cosign, and
+    attaches the seven assets to the Release.
 
 > Do not create these tags until every check above has passed. Tag protection
 > (step 0) should restrict who can push them.
+
+Before pushing the agent tag, run the agent release workflow once via
+`workflow_dispatch` with `dry_run` left checked. It builds and verifies
+without publishing, signing, or contacting Sigstore. See
+[docs/agent-release.md](agent-release.md).
 
 ## 5. Publish workflow verification
 
@@ -179,6 +192,10 @@ After pushing the `vX.Y.Z` tag:
 After pushing the `agent-vX.Y.Z` tag:
 
 - [ ] `agent-release.yml` ran and completed for the tag.
+- [ ] The `build` job's reproducibility step passed (it builds the release
+      twice and compares checksums).
+- [ ] The `publish` job ran only after the tag/`agent/VERSION` match, the
+      upstream-repository check, and the no-existing-release check all passed.
 
 ## 6. GHCR image tag / digest verification
 
@@ -225,10 +242,17 @@ sha256sum -c checksums.txt
 
 - [ ] `cosign verify-blob` succeeds and the certificate identity matches the
       `cytechlabs/praxis` agent-release workflow.
-- [ ] `sha256sum -c checksums.txt` reports OK for both the amd64 and arm64
-      tarballs.
-- [ ] The five artifacts (two tarballs, `checksums.txt`, `.sig`, `.pem`) are
-      attached to the Release.
+- [ ] `sha256sum -c checksums.txt` reports OK for both tarballs and both SBOMs.
+- [ ] The seven artifacts (two tarballs, two per-arch
+      `praxis-agent-vX.Y.Z-linux-<arch>-sbom.cdx.json`, `checksums.txt`,
+      `.sig`, `.pem`) are attached to the Release.
+- [ ] The downloaded binary reports the released version:
+      `praxis-agent version --json` shows `"version": "vX.Y.Z"`, the full
+      40-character `"commit"` of the tagged ref, and `"stamped": true`.
+- [ ] Install, update, rollback, and uninstall were exercised against a test
+      host per [agent/packaging/README.md](../agent/packaging/README.md).
+      `scripts/test-agent-release-smoke.sh` covers the same lifecycle in a
+      container and is the cheaper pre-tag gate.
 
 ### Optional pre-tag readiness helper
 

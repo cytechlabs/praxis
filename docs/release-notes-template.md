@@ -38,7 +38,12 @@ Agent artifacts are published under the matching `agent-v<X.Y.Z>` tag:
 
 - `praxis-agent-v<X.Y.Z>-linux-amd64.tar.gz`
 - `praxis-agent-v<X.Y.Z>-linux-arm64.tar.gz`
+- `praxis-agent-v<X.Y.Z>-linux-amd64-sbom.cdx.json`
+- `praxis-agent-v<X.Y.Z>-linux-arm64-sbom.cdx.json`
 - `checksums.txt`, `checksums.txt.sig`, `checksums.txt.pem`
+
+The tarballs are built reproducibly with a pinned Go toolchain: rebuilding
+the release tag produces artifacts with the same checksums.
 
 Verify before installing (see
 [agent/packaging/README.md](../agent/packaging/README.md)):

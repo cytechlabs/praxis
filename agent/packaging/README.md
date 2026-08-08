@@ -102,17 +102,90 @@ has dialed the broker and completed the mTLS handshake.
 | `/etc/praxis-agent/broker-ca.crt` | broker CA bundle |
 | `/etc/systemd/system/praxis-agent.service` | systemd unit |
 
-## Re-running the installer
+## Checking what is installed
 
-`install.sh` is idempotent. It replaces the binary if changed, reloads
-systemd only if the unit file changed, restarts the service only if it
-was already active. Existing config and identity files are never
-overwritten.
+```sh
+praxis-agent version
+#   praxis-agent v1.0.0 (commit 00fdd4df026d, linux/amd64, go1.26.5)
+
+praxis-agent version --json
+```
+
+The JSON form reports `version`, `commit`, `go_version`, `os`, `arch`, and
+`stamped`. The human-readable line abbreviates the commit; the JSON form
+carries the full 40-character SHA, which is the identifier to quote in a bug
+report. A `stamped` of `false` means the binary is a local build rather than
+a published release artifact. There is no build timestamp: release builds are
+reproducible, so the version, commit, and Go toolchain fully identify the
+binary.
+
+## Updating to a new release
+
+Updates are operator-triggered. The agent never updates itself.
+
+```sh
+# 1. Download and verify the new release (see "Verifying the download").
+tar xzf praxis-agent-<new>-linux-<arch>.tar.gz
+cd praxis-agent-<new>-linux-<arch>
+
+# 2. Install over the existing deployment. Config and identity are kept.
+sudo ./install.sh
+
+# 3. Confirm the new binary is live.
+praxis-agent version
+sudo systemctl status praxis-agent
+```
+
+`install.sh` is idempotent. It replaces the binary only if it changed,
+reloads systemd only if the unit file changed, and restarts the service
+only if it was already active. Existing `config.json`, `agent.key`,
+`agent.crt`, and `broker-ca.crt` are never overwritten, so an update does
+not re-enroll the host.
+
+The agent reconnects to the broker on restart, so a routine update shows up
+as a brief liveness gap in the control plane rather than a re-enrollment.
+
+## Rolling back
+
+Rollback is the same operation against the older tarball. Keep the previous
+release's tarball on the host (or re-download and re-verify it) before
+updating, so the rollback path does not depend on network access:
+
+```sh
+cd praxis-agent-<previous>-linux-<arch>
+sudo ./install.sh
+praxis-agent version      # confirm the previous version is back
+```
+
+Because identity material is preserved across install, update, and
+rollback, moving between agent versions never requires a new activation
+token. Rolling back does not undo control-plane state; if the newer agent
+completed work, that work stands.
+
+## Uninstalling
+
+```sh
+# Stop and remove the service and the binary, keeping identity material
+# so the host can be reinstalled without re-enrolling:
+sudo ./uninstall.sh
+
+# Preview without changing anything:
+sudo ./uninstall.sh --dry-run
+
+# Also delete /etc/praxis-agent (config, key, cert). Irreversible; the
+# host must be re-enrolled to come back:
+sudo ./uninstall.sh --purge
+```
+
+Removing the agent from a host does not revoke its certificate. Revoke the
+system in the control plane as a separate step when decommissioning.
 
 ## Verifying the download
 
-Each release ships a `checksums.txt` over the per-arch tarballs plus
-a keyless cosign signature over `checksums.txt`. Two-step verification:
+Each release ships a `checksums.txt` covering the per-arch tarballs and their
+CycloneDX SBOMs, plus a keyless cosign signature over `checksums.txt`. Each
+architecture has its own SBOM, since the dependency set is resolved per
+target. Two-step verification:
 
 ```sh
 # 1. cosign anchors trust to the GitHub Actions identity that built
@@ -124,7 +197,7 @@ cosign verify-blob \
     --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
     checksums.txt
 
-# 2. sha256 anchors the tarballs to checksums.txt.
+# 2. sha256 anchors the tarballs and the SBOMs to checksums.txt.
 sha256sum -c checksums.txt
 ```
 
@@ -132,3 +205,6 @@ The cosign identity must match the repository that produced the
 release. The regex above pins to `cytechlabs/praxis`; verifying a
 release built from a different repo means swapping the org/repo
 segment to match — same trust model, different signing identity.
+
+Verify before extracting. A tarball that fails either check should be
+discarded, not installed.

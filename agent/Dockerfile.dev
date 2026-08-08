@@ -9,16 +9,28 @@
 # `docker compose run --rm agent make lint test build-all` reproduces
 # CI behaviour locally.
 
-FROM golang:1.26-alpine
+# This image is also the local release builder, so its Go toolchain is the
+# one that produces published artifacts. It is pinned twice: the exact patch
+# version from agent/GO_VERSION, and the multi-architecture index digest of
+# that image, which is immutable. Keep GO_VERSION, the tag, and the digest in
+# step; the release contract tests fail if they drift apart.
+ARG GO_VERSION=1.26.5
+FROM golang:${GO_VERSION}-alpine@sha256:0178a641fbb4858c5f1b48e34bdaabe0350a330a1b1149aabd498d0699ff5fb2
 
 ENV CGO_ENABLED=0 \
     GOFLAGS="-mod=readonly"
 
-# Tools needed by Makefile + golangci-lint.
+# Tools needed by Makefile + golangci-lint. GNU tar and gzip are required
+# by the reproducible `make package` target: busybox tar has no --sort,
+# so archive member order would depend on directory iteration order.
+# python3 backs `make verify-sbom`, which parses the generated SBOM.
 RUN apk add --no-cache \
         bash \
         git \
         make \
+        tar \
+        gzip \
+        python3 \
         ca-certificates
 
 # golangci-lint v2.x is the first line that supports Go 1.26. The v2
@@ -28,6 +40,11 @@ RUN apk add --no-cache \
 ARG GOLANGCI_LINT_VERSION=v2.11.0
 RUN go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@${GOLANGCI_LINT_VERSION}
 RUN go install golang.org/x/tools/cmd/goimports@latest
+
+# SBOM generator used by `make sbom`. Pinned to the same version the
+# release workflow installs so a locally generated SBOM matches CI.
+ARG CYCLONEDX_GOMOD_VERSION=v1.10.0
+RUN go install github.com/CycloneDX/cyclonedx-gomod/cmd/cyclonedx-gomod@${CYCLONEDX_GOMOD_VERSION}
 
 WORKDIR /agent
 

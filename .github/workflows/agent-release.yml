@@ -1,14 +1,25 @@
-# Agent release pipeline (PRA-152 task #6 + #6b).
+# Agent release pipeline.
 #
-# Triggered by tags matching `agent-v*` (including RC/prerelease) so
-# it doesn't fire on unrelated repo tags. Builds the per-arch
-# tarballs + checksums, signs checksums.txt with keyless cosign
-# (Sigstore + GitHub OIDC), and uploads all five artifacts to a
+# Builds the reproducible Linux amd64/arm64 agent tarballs, the CycloneDX
+# SBOM, and the SHA-256 checksum manifest, then signs the manifest with
+# keyless cosign (Sigstore + GitHub OIDC) and attaches everything to a
 # GitHub Release.
+#
+# Two entry points:
+#
+#   * push of an `agent-v*` tag  -> build, verify, and publish.
+#   * workflow_dispatch          -> build and verify only by default.
+#                                   Publishing requires dry_run=false and
+#                                   a ref that is already an `agent-v*`
+#                                   tag; the workflow never creates tags.
+#
+# The build job holds a read-only token. Only the publish job can write
+# to the repository or mint an OIDC token, and it refuses to run outside
+# `cytechlabs/praxis` or to overwrite a release that already exists.
 #
 # Repo identity note: the cosign certificate identity pins to this
 # workflow path under cytechlabs/praxis; the verification regex in the
-# packaged README must match this path.
+# packaged README and the release docs must match this path.
 
 name: Agent Release
 
@@ -16,66 +27,261 @@ on:
   push:
     tags:
       - 'agent-v*'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Build and verify without publishing'
+        type: boolean
+        default: true
 
-permissions:
-  contents: write   # create the GitHub Release + upload assets
-  id-token: write   # mint OIDC token for keyless cosign signing
+# Least privilege by default: individual jobs opt in to what they need.
+permissions: {}
+
+# One release run at a time per ref. Never cancel in progress — a
+# half-uploaded release is worse than a queued one.
+concurrency:
+  group: agent-release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  COSIGN_VERSION: 'v2.4.1'
 
 jobs:
-  release:
-    name: Build + package agent
+  build:
+    name: Build + verify agent artifacts
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: agent
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+      publish: ${{ steps.mode.outputs.publish }}
 
     steps:
-      - uses: actions/checkout@v7
-
-      - uses: actions/setup-go@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          go-version-file: agent/go.mod
+          # cyclonedx-gomod derives the main module version from git
+          # history, so the SBOM needs more than a shallow checkout.
+          fetch-depth: 0
+          persist-credentials: false
 
-      - name: Derive version from tag
-        id: ver
+      - name: Read the pinned Go toolchain
+        id: go
         run: |
-          # Tag is `agent-vX.Y.Z` -> VERSION=vX.Y.Z
-          tag="${GITHUB_REF_NAME}"
-          version="${tag#agent-}"
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "release_name=Agent $version" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+          # agent/GO_VERSION is the exact patch release published artifacts
+          # are built with. go.mod only declares the language version, which
+          # would let any newer patch release change the binary.
+          echo "version=$(tr -d '[:space:]' < agent/GO_VERSION)" >> "$GITHUB_OUTPUT"
 
-      - name: Build + package
-        run: make release VERSION=${{ steps.ver.outputs.version }}
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: ${{ steps.go.outputs.version }}
+          check-latest: false
+
+      - name: Confirm the toolchain is the pinned one
+        run: |
+          set -euo pipefail
+          pinned="go$(tr -d '[:space:]' < agent/GO_VERSION)"
+          actual="$(go env GOVERSION)"
+          if [ "$actual" != "$pinned" ]; then
+            echo "go toolchain is $actual, expected $pinned" >&2
+            exit 1
+          fi
+          echo "building with $actual"
+
+      - name: Resolve release mode
+        id: mode
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          # A tag push always publishes. A manual run publishes only when
+          # the operator explicitly cleared dry_run.
+          if [ "$EVENT_NAME" = "push" ]; then
+            publish=true
+          elif [ "$DRY_RUN" = "false" ]; then
+            publish=true
+          else
+            publish=false
+          fi
+          echo "publish=$publish" >> "$GITHUB_OUTPUT"
+          echo "publish=$publish"
+
+      - name: Derive and verify version
+        id: ver
+        working-directory: agent
+        env:
+          REF_NAME: ${{ github.ref_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          PUBLISH: ${{ steps.mode.outputs.publish }}
+        run: |
+          set -euo pipefail
+          # agent/VERSION is the source of truth. The tag only triggers the
+          # release; if the two disagree the artifacts would be named for
+          # one version and published under another, so refuse to continue.
+          version="v$(tr -d '[:space:]' < VERSION)"
+          if [ "$PUBLISH" = "true" ]; then
+            if [ "$REF_TYPE" != "tag" ]; then
+              echo "publishing requires a tag ref; got $REF_TYPE '$REF_NAME'" >&2
+              exit 1
+            fi
+            make verify-version TAG="$REF_NAME"
+          else
+            echo "dry run: building $version from ${REF_TYPE} ${REF_NAME}"
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Build twice and verify reproducibility
+        working-directory: agent
+        # verify-repro builds the full release twice from the same source
+        # and fails if any artifact checksum differs. It leaves the second
+        # build in dist/, which is what gets published.
+        run: make verify-repro
+
+      - name: Verify checksums and inspect artifacts
+        working-directory: agent
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          set -euo pipefail
+          cd dist
+          sha256sum -c checksums.txt
+          ls -la
+          # Confirm the built binary reports the version it was released as.
+          reported="$(./praxis-agent-linux-amd64 version --json)"
+          echo "$reported"
+          echo "$reported" | grep -q "\"version\": \"${VERSION}\""
+
+      - name: Stage release assets
+        working-directory: agent
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          set -euo pipefail
+          # Only the published set moves forward; the bare cross-compiled
+          # binaries stay behind so they cannot be attached by accident.
+          mkdir -p release
+          for arch in amd64 arm64; do
+            mv "dist/praxis-agent-${VERSION}-linux-${arch}.tar.gz"        release/
+            mv "dist/praxis-agent-${VERSION}-linux-${arch}-sbom.cdx.json" release/
+          done
+          mv dist/checksums.txt release/
+          ls -la release
+
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: agent-release-assets
+          path: agent/release/
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    name: Sign + publish GitHub Release
+    needs: build
+    if: >-
+      needs.build.outputs.publish == 'true' &&
+      github.repository == 'cytechlabs/praxis'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # create the GitHub Release + upload assets
+      id-token: write   # mint OIDC token for keyless cosign signing
+
+    steps:
+      - name: Confirm ref is an agent release tag
+        env:
+          REF_NAME: ${{ github.ref_name }}
+          REF_TYPE: ${{ github.ref_type }}
+        run: |
+          set -euo pipefail
+          # Defence in depth: the build job already checked this, but the
+          # publish job is the one holding a write token.
+          if [ "$REF_TYPE" != "tag" ]; then
+            echo "refusing to publish from non-tag ref '$REF_NAME'" >&2
+            exit 1
+          fi
+          case "$REF_NAME" in
+            agent-v*) ;;
+            *) echo "refusing to publish from tag '$REF_NAME'; expected agent-v*" >&2; exit 1 ;;
+          esac
+
+      - name: Refuse to overwrite an existing release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          # Re-running against an already published tag would silently
+          # replace assets end users may have already verified.
+          if gh release view "$REF_NAME" >/dev/null 2>&1; then
+            echo "release $REF_NAME already exists; refusing to overwrite" >&2
+            echo "delete the release deliberately if you intend to republish" >&2
+            exit 1
+          fi
+          echo "no existing release for $REF_NAME"
+
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
+        with:
+          name: agent-release-assets
+          path: release
+
+      - name: Verify checksums before signing
+        working-directory: release
+        run: |
+          set -euo pipefail
+          # Sign only what has been re-verified in this job. Anything that
+          # did not survive the artifact round trip must not be signed.
+          sha256sum -c checksums.txt
+          ls -la
 
       - name: Install cosign
-        uses: sigstore/cosign-installer@v3
+        uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
         with:
-          cosign-release: 'v2.4.1'
+          cosign-release: ${{ env.COSIGN_VERSION }}
 
       - name: Sign checksums.txt (keyless, OIDC)
-        # `--yes` skips the keyless interactive confirmation. Failure
-        # here aborts the job — we never ship unsigned artifacts that
-        # look signed by default later.
+        working-directory: release
+        # `--yes` skips the keyless interactive confirmation. Failure here
+        # aborts the job — we never ship unsigned artifacts that look
+        # signed by default later.
         run: |
+          set -euo pipefail
           cosign sign-blob \
             --yes \
-            --output-signature dist/checksums.txt.sig \
-            --output-certificate dist/checksums.txt.pem \
-            dist/checksums.txt
+            --output-signature checksums.txt.sig \
+            --output-certificate checksums.txt.pem \
+            checksums.txt
 
-      - name: Show artifacts
-        run: ls -la dist/
+      - name: Verify the signature we just produced
+        working-directory: release
+        env:
+          REPO: ${{ github.repository }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          # Confirm the artifacts verify with the exact command the
+          # packaged README tells operators to run.
+          cosign verify-blob \
+            --certificate checksums.txt.pem \
+            --signature checksums.txt.sig \
+            --certificate-identity-regexp \
+              "^https://github.com/${REPO}/.github/workflows/agent-release.yml@refs/tags/agent-v.*$" \
+            --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
+            checksums.txt
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3
         with:
-          name: ${{ steps.ver.outputs.release_name }}
+          name: Agent ${{ needs.build.outputs.version }}
           tag_name: ${{ github.ref_name }}
           generate_release_notes: true
+          fail_on_unmatched_files: true
           files: |
-            agent/dist/praxis-agent-${{ steps.ver.outputs.version }}-linux-amd64.tar.gz
-            agent/dist/praxis-agent-${{ steps.ver.outputs.version }}-linux-arm64.tar.gz
-            agent/dist/checksums.txt
-            agent/dist/checksums.txt.sig
-            agent/dist/checksums.txt.pem
+            release/praxis-agent-${{ needs.build.outputs.version }}-linux-amd64.tar.gz
+            release/praxis-agent-${{ needs.build.outputs.version }}-linux-arm64.tar.gz
+            release/praxis-agent-${{ needs.build.outputs.version }}-linux-amd64-sbom.cdx.json
+            release/praxis-agent-${{ needs.build.outputs.version }}-linux-arm64-sbom.cdx.json
+            release/checksums.txt
+            release/checksums.txt.sig
+            release/checksums.txt.pem
