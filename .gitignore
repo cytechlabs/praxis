@@ -66,6 +66,9 @@ claude-codex/
 .docker/
 docker-compose.override.yml
 
+# Secrets
+.secrets/
+
 # Database
 *.sqlite3
 *.db
