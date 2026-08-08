@@ -132,21 +132,24 @@ async def login(
         raise
     log_support_event(logger, "auth.login", outcome="success", actor_user_id=user.id)
 
+    access_ttl = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    refresh_ttl = timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+
     access_token = create_access_token(
         data={"sub": user.username},
-        expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
+        expires_delta=access_ttl,
     )
 
     token_refresh = create_refresh_token(
         data={"sub": user.username},
-        expires_delta=timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS),
+        expires_delta=refresh_ttl,
     )
 
     # Store refresh token
     db_refresh_token = RefreshToken(
         token=token_refresh,
         user_id=user.id,
-        expires_at=datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS),
+        expires_at=datetime.utcnow() + refresh_ttl,
         is_valid=True,
     )
     db.add(db_refresh_token)
@@ -156,6 +159,8 @@ async def login(
         "access_token": access_token,
         "refresh_token": token_refresh,
         "token_type": "bearer",
+        "expires_in": int(access_ttl.total_seconds()),
+        "refresh_expires_in": int(refresh_ttl.total_seconds()),
     }
 
 
@@ -267,21 +272,24 @@ async def refresh_access_token(
             detail="Invalid or expired refresh token",
         )
 
+    access_ttl = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    refresh_ttl = timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+
     new_access_token = create_access_token(
         data={"sub": username},
-        expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
+        expires_delta=access_ttl,
     )
 
     new_refresh_token = create_refresh_token(
         data={"sub": username},
-        expires_delta=timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS),
+        expires_delta=refresh_ttl,
     )
 
     db.add(
         RefreshToken(
             token=new_refresh_token,
             user_id=claimed.user_id,
-            expires_at=now + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS),
+            expires_at=now + refresh_ttl,
             is_valid=True,
         )
     )
@@ -291,6 +299,8 @@ async def refresh_access_token(
         "access_token": new_access_token,
         "refresh_token": new_refresh_token,
         "token_type": "bearer",
+        "expires_in": int(access_ttl.total_seconds()),
+        "refresh_expires_in": int(refresh_ttl.total_seconds()),
     }
 
 

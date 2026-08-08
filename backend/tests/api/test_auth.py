@@ -1,6 +1,11 @@
 """Integration tests for the auth flow (login, refresh, rotation, logout)."""
 
+from datetime import datetime
 
+import jwt
+import pytest
+
+from app.core.auth import ALGORITHM, SECRET_KEY
 from app.db.models import AppSettings, RefreshToken
 
 
@@ -46,6 +51,94 @@ def test_login_success_returns_tokens_and_sets_no_cookies_at_backend(
     assert body["access_token"]
     assert body["refresh_token"]
     assert body["token_type"] == "bearer"
+
+
+def _seconds_until_exp(token: str) -> float:
+    payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    return payload["exp"] - datetime.utcnow().timestamp()
+
+
+def test_login_reports_default_token_lifetimes(client, admin_user):
+    """Login advertises the lifetimes it actually signed the tokens with."""
+    body = _login(client).json()
+
+    assert body["expires_in"] == 30 * 60
+    assert body["refresh_expires_in"] == 7 * 24 * 60 * 60
+    assert _seconds_until_exp(body["access_token"]) == pytest.approx(
+        body["expires_in"], abs=10
+    )
+    assert _seconds_until_exp(body["refresh_token"]) == pytest.approx(
+        body["refresh_expires_in"], abs=10
+    )
+
+
+def test_login_lifetimes_follow_overridden_constants(client, admin_user, monkeypatch):
+    monkeypatch.setattr("app.api.routes.auth.ACCESS_TOKEN_EXPIRE_MINUTES", 5)
+    monkeypatch.setattr("app.api.routes.auth.REFRESH_TOKEN_EXPIRE_DAYS", 2)
+
+    body = _login(client).json()
+
+    assert body["expires_in"] == 5 * 60
+    assert body["refresh_expires_in"] == 2 * 24 * 60 * 60
+    assert _seconds_until_exp(body["access_token"]) == pytest.approx(
+        body["expires_in"], abs=10
+    )
+    assert _seconds_until_exp(body["refresh_token"]) == pytest.approx(
+        body["refresh_expires_in"], abs=10
+    )
+
+
+def test_login_refresh_lifetime_matches_persisted_expiry(client, admin_user, db):
+    """The advertised refresh lifetime matches the stored server-side deadline."""
+    body = _login(client).json()
+
+    db.expire_all()
+    row = db.query(RefreshToken).filter_by(token=body["refresh_token"]).one()
+    stored = (row.expires_at - datetime.utcnow()).total_seconds()
+    assert stored == pytest.approx(body["refresh_expires_in"], abs=10)
+
+
+def test_refresh_reports_default_token_lifetimes(client, admin_user):
+    old_refresh = _login(client).json()["refresh_token"]
+
+    body = client.post(f"/auth/refresh?token_refresh={old_refresh}").json()
+
+    assert body["expires_in"] == 30 * 60
+    assert body["refresh_expires_in"] == 7 * 24 * 60 * 60
+    assert _seconds_until_exp(body["access_token"]) == pytest.approx(
+        body["expires_in"], abs=10
+    )
+    assert _seconds_until_exp(body["refresh_token"]) == pytest.approx(
+        body["refresh_expires_in"], abs=10
+    )
+
+
+def test_refresh_lifetimes_follow_overridden_constants(client, admin_user, monkeypatch):
+    old_refresh = _login(client).json()["refresh_token"]
+    monkeypatch.setattr("app.api.routes.auth.ACCESS_TOKEN_EXPIRE_MINUTES", 15)
+    monkeypatch.setattr("app.api.routes.auth.REFRESH_TOKEN_EXPIRE_DAYS", 3)
+
+    body = client.post(f"/auth/refresh?token_refresh={old_refresh}").json()
+
+    assert body["expires_in"] == 15 * 60
+    assert body["refresh_expires_in"] == 3 * 24 * 60 * 60
+    assert _seconds_until_exp(body["access_token"]) == pytest.approx(
+        body["expires_in"], abs=10
+    )
+    assert _seconds_until_exp(body["refresh_token"]) == pytest.approx(
+        body["refresh_expires_in"], abs=10
+    )
+
+
+def test_refresh_lifetime_matches_persisted_expiry(client, admin_user, db):
+    old_refresh = _login(client).json()["refresh_token"]
+
+    body = client.post(f"/auth/refresh?token_refresh={old_refresh}").json()
+
+    db.expire_all()
+    row = db.query(RefreshToken).filter_by(token=body["refresh_token"]).one()
+    stored = (row.expires_at - datetime.utcnow()).total_seconds()
+    assert stored == pytest.approx(body["refresh_expires_in"], abs=10)
 
 
 def test_login_wrong_password_401(client, admin_user):

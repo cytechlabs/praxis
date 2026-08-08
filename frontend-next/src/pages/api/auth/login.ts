@@ -1,5 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { serializeCookie, BACKEND_URL } from '../../../utils/cookies';
+import {
+  DEFAULT_ACCESS_TOKEN_MAX_AGE,
+  DEFAULT_REFRESH_TOKEN_MAX_AGE,
+  maxAgeFromLifetime,
+} from '../../../utils/authCookieLifetime';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -37,8 +42,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const user = await userRes.json();
 
     res.setHeader('Set-Cookie', [
-      serializeCookie('access_token', tokenData.access_token, { maxAge: 30 * 60 }),
-      serializeCookie('refresh_token', tokenData.refresh_token, { maxAge: 7 * 24 * 60 * 60 }),
+      serializeCookie('access_token', tokenData.access_token, {
+        maxAge: maxAgeFromLifetime(tokenData.expires_in, DEFAULT_ACCESS_TOKEN_MAX_AGE),
+      }),
+      serializeCookie('refresh_token', tokenData.refresh_token, {
+        maxAge: maxAgeFromLifetime(tokenData.refresh_expires_in, DEFAULT_REFRESH_TOKEN_MAX_AGE),
+      }),
     ]);
 
     return res.status(200).json(user);
