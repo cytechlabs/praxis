@@ -156,9 +156,9 @@ def list_rotations(db: Session, limit: int = 50) -> list:
             "event_type": r.event_type,
             "ca_identifier": r.ca_identifier,
             "performed_by": r.performed_by,
-            "performed_at": r.performed_at.isoformat() + "Z"
-            if r.performed_at
-            else None,
+            "performed_at": (
+                r.performed_at.isoformat() + "Z" if r.performed_at else None
+            ),
         }
         for r in rows
     ]

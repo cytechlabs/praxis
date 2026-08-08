@@ -1428,9 +1428,7 @@ def evaluate_rollback_feasibility(
 # ---------------------------------------------------------------------------
 
 
-def get_rollback_for_execution(
-    db: Session, execution_id: int
-) -> Tuple[
+def get_rollback_for_execution(db: Session, execution_id: int) -> Tuple[
     PatchUpdateExecution,
     Optional[PatchUpdateExecutionRollback],
     List[PatchUpdateExecutionRollbackHost],
@@ -1485,9 +1483,7 @@ def get_rollback_for_execution(
     return execution, rollback_row, host_rows, packages_by_host
 
 
-def list_rollback_host_packages(
-    db: Session, rollback_host_id: int
-) -> Tuple[
+def list_rollback_host_packages(db: Session, rollback_host_id: int) -> Tuple[
     PatchUpdateExecutionRollbackHost,
     List[PatchUpdateExecutionRollbackPackage],
 ]:
@@ -1513,9 +1509,7 @@ def list_rollback_host_packages(
     return host_row, package_rows
 
 
-def get_plan_rollback_summary(
-    db: Session, plan_id: int
-) -> Tuple[
+def get_plan_rollback_summary(db: Session, plan_id: int) -> Tuple[
     PatchUpdatePlan,
     List[Tuple[PatchUpdateExecution, Optional[PatchUpdateExecutionRollback]]],
     Dict[str, Any],

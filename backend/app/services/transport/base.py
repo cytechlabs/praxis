@@ -73,29 +73,25 @@ RecvIterator = AsyncIterator[bytes]
 class PtySendChannel(Protocol):
     """Push raw bytes into the remote PTY's stdin."""
 
-    async def __call__(self, data: bytes) -> None:
-        ...  # noqa: E701
+    async def __call__(self, data: bytes) -> None: ...  # noqa: E701
 
 
 class PtyResizeFn(Protocol):
     """Resize the remote PTY (TIOCSWINSZ on the agent side)."""
 
-    async def __call__(self, rows: int, cols: int) -> None:
-        ...  # noqa: E701
+    async def __call__(self, rows: int, cols: int) -> None: ...  # noqa: E701
 
 
 class PtySignalFn(Protocol):
     """Send a signal name (``"INT"`` / ``"TERM"`` / ``"QUIT"`` / ``"HUP"``)."""
 
-    async def __call__(self, name: str) -> None:
-        ...  # noqa: E701
+    async def __call__(self, name: str) -> None: ...  # noqa: E701
 
 
 class PtyCloseFn(Protocol):
     """Tear down the PTY session and release the underlying transport."""
 
-    async def __call__(self) -> None:
-        ...  # noqa: E701
+    async def __call__(self) -> None: ...  # noqa: E701
 
 
 @dataclass
@@ -124,15 +120,13 @@ class PtySession:
 class FileWriteFn(Protocol):
     """Push the next chunk of a file_put body."""
 
-    async def __call__(self, chunk: bytes) -> None:
-        ...  # noqa: E701
+    async def __call__(self, chunk: bytes) -> None: ...  # noqa: E701
 
 
 class FileCloseFn(Protocol):
     """Finalize / close a file stream."""
 
-    async def __call__(self) -> None:
-        ...  # noqa: E701
+    async def __call__(self) -> None: ...  # noqa: E701
 
 
 @dataclass

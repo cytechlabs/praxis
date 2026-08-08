@@ -816,9 +816,7 @@ def get_reboot_queue(
     return execution, rows, summary
 
 
-def get_plan_reboot_queue(
-    db: Session, plan_id: int
-) -> Tuple[
+def get_plan_reboot_queue(db: Session, plan_id: int) -> Tuple[
     PatchUpdatePlan,
     List[PatchUpdateExecution],
     List[PatchUpdateExecutionReboot],

@@ -23,26 +23,22 @@ def upgrade() -> None:
     # (seed script runs after this migration but the join yields 0 rows,
     # so nothing is updated — a later startup will re-run and the seed
     # will have already created the Default row by then).
-    op.execute(
-        """
+    op.execute("""
         UPDATE systems
         SET ssh_security_policy_id = (
             SELECT id FROM ssh_security_policies WHERE name = 'Default' LIMIT 1
         )
         WHERE ssh_security_policy_id IS NULL
           AND EXISTS (SELECT 1 FROM ssh_security_policies WHERE name = 'Default')
-        """
-    )
+        """)
 
 
 def downgrade() -> None:
     # Set systems back to NULL where they were backfilled to the Default policy
-    op.execute(
-        """
+    op.execute("""
         UPDATE systems
         SET ssh_security_policy_id = NULL
         WHERE ssh_security_policy_id = (
             SELECT id FROM ssh_security_policies WHERE name = 'Default' LIMIT 1
         )
-        """
-    )
+        """)

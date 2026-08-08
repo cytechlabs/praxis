@@ -3,7 +3,6 @@ API routes for system group management.
 Includes endpoints for CRUD operations on groups and system assignments.
 """
 
-
 from datetime import datetime
 from typing import List, Optional
 

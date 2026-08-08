@@ -188,9 +188,11 @@ async def apply_content_profile_to_host(
         except PublicServeUrlNotConfigured as exc:
             outcome = ApplyOutcome(
                 state="failed",
-                profile_slug=resolved.profile.profile_slug
-                if resolved.profile is not None
-                else None,
+                profile_slug=(
+                    resolved.profile.profile_slug
+                    if resolved.profile is not None
+                    else None
+                ),
                 error_text=str(exc),
             )
             _emit_outcome(

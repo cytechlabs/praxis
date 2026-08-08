@@ -116,13 +116,13 @@ def _run_agent_download(system, chunks, *, size=0, cap=None, capture_created=Non
             capture_created.append(p)
         return fd, p
 
-    with patch(
-        "app.services.transport.agent.AgentTransport"
-    ) as agent_cls, patch.object(fts, "_finish_audit", finish), patch(
-        "app.db.session.SessionLocal", return_value=MagicMock()
-    ), patch.object(
-        fts.tempfile, "mkstemp", _spy_mkstemp
-    ), _maybe_cap():
+    with (
+        patch("app.services.transport.agent.AgentTransport") as agent_cls,
+        patch.object(fts, "_finish_audit", finish),
+        patch("app.db.session.SessionLocal", return_value=MagicMock()),
+        patch.object(fts.tempfile, "mkstemp", _spy_mkstemp),
+        _maybe_cap(),
+    ):
         agent_cls.return_value.open_file_get = _open_fg
         gen = fts._download_via_agent(MagicMock(), system, "/etc/hosts", 1)
         yielded = list(gen)
@@ -176,12 +176,11 @@ def test_declared_over_cap_rejected_before_consuming():
         stream.size = 5_000
         return stream
 
-    with patch(
-        "app.services.transport.agent.AgentTransport"
-    ) as agent_cls, patch.object(fts, "_finish_audit", finish), patch(
-        "app.db.session.SessionLocal", return_value=MagicMock()
-    ), patch.object(
-        fts, "AGENT_TRANSFER_MAX_BYTES", 1_000
+    with (
+        patch("app.services.transport.agent.AgentTransport") as agent_cls,
+        patch.object(fts, "_finish_audit", finish),
+        patch("app.db.session.SessionLocal", return_value=MagicMock()),
+        patch.object(fts, "AGENT_TRANSFER_MAX_BYTES", 1_000),
     ):
         agent_cls.return_value.open_file_get = _open_fg
         gen = fts._download_via_agent(MagicMock(), system, "/big", 1)
@@ -229,12 +228,11 @@ def test_actual_over_cap_rejected_while_consuming():
     async def _open_fg(path):
         return _FakeStream(chunks, size=0)
 
-    with patch(
-        "app.services.transport.agent.AgentTransport"
-    ) as agent_cls, patch.object(fts, "_finish_audit", finish), patch(
-        "app.db.session.SessionLocal", return_value=MagicMock()
-    ), patch.object(
-        fts, "AGENT_TRANSFER_MAX_BYTES", cap
+    with (
+        patch("app.services.transport.agent.AgentTransport") as agent_cls,
+        patch.object(fts, "_finish_audit", finish),
+        patch("app.db.session.SessionLocal", return_value=MagicMock()),
+        patch.object(fts, "AGENT_TRANSFER_MAX_BYTES", cap),
     ):
         agent_cls.return_value.open_file_get = _open_fg
         gen = fts._download_via_agent(MagicMock(), system, "/big", 1)
@@ -265,10 +263,10 @@ def test_transport_error_marks_audit_error_and_fails_closed():
         stream.chunks = _boom_gen()
         return stream
 
-    with patch(
-        "app.services.transport.agent.AgentTransport"
-    ) as agent_cls, patch.object(fts, "_finish_audit", finish), patch(
-        "app.db.session.SessionLocal", return_value=MagicMock()
+    with (
+        patch("app.services.transport.agent.AgentTransport") as agent_cls,
+        patch.object(fts, "_finish_audit", finish),
+        patch("app.db.session.SessionLocal", return_value=MagicMock()),
     ):
         agent_cls.return_value.open_file_get = _open_fg
         gen = fts._download_via_agent(MagicMock(), system, "/etc/hosts", 1)
@@ -300,10 +298,10 @@ def test_unexpected_stream_error_fails_closed_and_marks_error():
         stream.chunks = _truncating_gen()
         return stream
 
-    with patch(
-        "app.services.transport.agent.AgentTransport"
-    ) as agent_cls, patch.object(fts, "_finish_audit", finish), patch(
-        "app.db.session.SessionLocal", return_value=MagicMock()
+    with (
+        patch("app.services.transport.agent.AgentTransport") as agent_cls,
+        patch.object(fts, "_finish_audit", finish),
+        patch("app.db.session.SessionLocal", return_value=MagicMock()),
     ):
         agent_cls.return_value.open_file_get = _open_fg
         gen = fts._download_via_agent(MagicMock(), system, "/etc/hosts", 1)
@@ -390,12 +388,11 @@ def test_concurrent_downloads_each_spool_bounded():
             "n_chunks": len(chunks),
         }
 
-    with patch(
-        "app.services.transport.agent.AgentTransport"
-    ) as agent_cls, patch.object(fts, "_finish_audit", MagicMock()), patch(
-        "app.db.session.SessionLocal", return_value=MagicMock()
-    ), patch.object(
-        fts.tempfile, "mkstemp", _spy_mkstemp
+    with (
+        patch("app.services.transport.agent.AgentTransport") as agent_cls,
+        patch.object(fts, "_finish_audit", MagicMock()),
+        patch("app.db.session.SessionLocal", return_value=MagicMock()),
+        patch.object(fts.tempfile, "mkstemp", _spy_mkstemp),
     ):
         agent_cls.return_value.open_file_get = _open_fg
         threads = [threading.Thread(target=_worker, args=(i,)) for i in range(n)]

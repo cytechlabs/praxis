@@ -205,9 +205,11 @@ def _hello(client_cert, *, version=1, agent_version="0.1.0", capabilities=None):
         "type": "hello",
         "protocol_version": version,
         "agent_version": agent_version,
-        "capabilities": capabilities
-        if capabilities is not None
-        else ["exec", "pty", "facts", "heartbeat"],
+        "capabilities": (
+            capabilities
+            if capabilities is not None
+            else ["exec", "pty", "facts", "heartbeat"]
+        ),
         "cert_fingerprint": "sha256:" + fp,
     }
 

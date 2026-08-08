@@ -417,9 +417,12 @@ def test_upload_pref_agent_healthy_routes_to_agent_via_real_broker(fake_broker):
     user.id = 1
     rows, finishes, p_open, p_finish = _patch_audit_capture()
 
-    with _patch_gate(system), p_open, p_finish, patch.object(
-        fts, "_upload_via_ssh"
-    ) as ssh_upload:
+    with (
+        _patch_gate(system),
+        p_open,
+        p_finish,
+        patch.object(fts, "_upload_via_ssh") as ssh_upload,
+    ):
         result = fts.upload_stream(
             MagicMock(), user, system.id, "/tmp/x", iter([b"hello"])
         )
@@ -449,13 +452,17 @@ def test_download_pref_agent_healthy_routes_to_agent_via_real_broker(fake_broker
     # would silently no-op and a regression leaving the row stuck in
     # "in_progress" wouldn't fail this test.
     fake_db = MagicMock()
-    fake_db.query.return_value.filter.return_value.first.side_effect = (
-        lambda: rows[-1] if rows else None
+    fake_db.query.return_value.filter.return_value.first.side_effect = lambda: (
+        rows[-1] if rows else None
     )
 
-    with _patch_gate(system), p_open, p_finish, patch.object(
-        fts, "_download_via_ssh"
-    ) as ssh_dl, patch("app.db.session.SessionLocal", return_value=fake_db):
+    with (
+        _patch_gate(system),
+        p_open,
+        p_finish,
+        patch.object(fts, "_download_via_ssh") as ssh_dl,
+        patch("app.db.session.SessionLocal", return_value=fake_db),
+    ):
         gen = fts.download_stream(MagicMock(), user, system.id, "/etc/hosts")
         body = b"".join(gen)
 
@@ -506,9 +513,13 @@ def test_upload_pref_ssh_with_healthy_agent_uses_ssh_path(fake_broker):
     rows, _finishes, p_open, p_finish = _patch_audit_capture()
 
     ssh_result = {"remote_path": "/tmp/x", "size": 5, "sha256": "abc"}
-    with _patch_gate(system), p_open, p_finish, patch.object(
-        fts, "_upload_via_ssh", return_value=ssh_result
-    ) as ssh_upload, patch.object(fts, "_upload_via_agent") as agent_upload:
+    with (
+        _patch_gate(system),
+        p_open,
+        p_finish,
+        patch.object(fts, "_upload_via_ssh", return_value=ssh_result) as ssh_upload,
+        patch.object(fts, "_upload_via_agent") as agent_upload,
+    ):
         fts.upload_stream(MagicMock(), user, system.id, "/tmp/x", iter([b"hello"]))
 
     ssh_upload.assert_called_once()
@@ -527,9 +538,13 @@ def test_upload_pref_auto_tunnel_down_falls_back_to_ssh(fake_broker):
     rows, _finishes, p_open, p_finish = _patch_audit_capture()
 
     ssh_result = {"remote_path": "/tmp/x", "size": 5, "sha256": "abc"}
-    with _patch_gate(system), p_open, p_finish, patch.object(
-        fts, "_upload_via_ssh", return_value=ssh_result
-    ) as ssh_upload, patch.object(fts, "_upload_via_agent") as agent_upload:
+    with (
+        _patch_gate(system),
+        p_open,
+        p_finish,
+        patch.object(fts, "_upload_via_ssh", return_value=ssh_result) as ssh_upload,
+        patch.object(fts, "_upload_via_agent") as agent_upload,
+    ):
         fts.upload_stream(MagicMock(), user, system.id, "/tmp/x", iter([b"hello"]))
 
     ssh_upload.assert_called_once()
@@ -549,9 +564,12 @@ def test_upload_pref_auto_healthy_tunnel_routes_to_agent_via_real_broker(fake_br
     user.id = 1
     rows, _finishes, p_open, p_finish = _patch_audit_capture()
 
-    with _patch_gate(system), p_open, p_finish, patch.object(
-        fts, "_upload_via_ssh"
-    ) as ssh_upload:
+    with (
+        _patch_gate(system),
+        p_open,
+        p_finish,
+        patch.object(fts, "_upload_via_ssh") as ssh_upload,
+    ):
         fts.upload_stream(MagicMock(), user, system.id, "/tmp/x", iter([b"hello"]))
 
     ssh_upload.assert_not_called()

@@ -287,8 +287,7 @@ def demonstrate_api_usage():
     print("🌐 API USAGE DEMONSTRATION")
     print("=" * 60)
 
-    print(
-        """
+    print("""
 The Command Result Processing API provides the following endpoints:
 
 1. POST /command-results/process/{execution_id}
@@ -330,8 +329,7 @@ Example API calls:
 - curl "/command-results/history?system_id=1&limit=50"
 - curl "/command-results/metrics/report?days=7"
 - curl "/command-results/errors/patterns?days=30"
-"""
-    )
+""")
 
 
 if __name__ == "__main__":

@@ -117,9 +117,11 @@ def test_listdir_pref_other_than_agent_does_not_reject(pref):
     paramiko path."""
     system = _SystemStub(transport_preference=pref)
     user = _UserStub()
-    with _patch_gate(system), patch.object(
-        fts, "_reject_force_agent_directory_op"
-    ) as reject, patch.object(fts, "_open_sftp") as open_sftp:
+    with (
+        _patch_gate(system),
+        patch.object(fts, "_reject_force_agent_directory_op") as reject,
+        patch.object(fts, "_open_sftp") as open_sftp,
+    ):
         # Mock the SFTP context manager + listdir result
         sftp = MagicMock()
         sftp.listdir_attr.return_value = []
@@ -153,11 +155,18 @@ def test_upload_routes_to_ssh_for_pref_ssh():
     rows, p_open = _patch_open_audit()
     finishes, p_finish = _patch_finish_audit()
     # Stub the SSH path so we don't hit paramiko.
-    with _patch_gate(system), p_open, p_finish, _patch_resolve("ssh"), patch.object(
-        fts,
-        "_upload_via_ssh",
-        return_value={"remote_path": "/tmp/x", "size": 3, "sha256": "abc"},
-    ) as ssh_upload, patch.object(fts, "_upload_via_agent") as agent_upload:
+    with (
+        _patch_gate(system),
+        p_open,
+        p_finish,
+        _patch_resolve("ssh"),
+        patch.object(
+            fts,
+            "_upload_via_ssh",
+            return_value={"remote_path": "/tmp/x", "size": 3, "sha256": "abc"},
+        ) as ssh_upload,
+        patch.object(fts, "_upload_via_agent") as agent_upload,
+    ):
         result = fts.upload_stream(
             MagicMock(), user, system.id, "/tmp/x", iter([b"abc"])
         )
@@ -172,11 +181,18 @@ def test_upload_routes_to_agent_for_pref_agent_healthy():
     user = _UserStub()
     rows, p_open = _patch_open_audit()
     finishes, p_finish = _patch_finish_audit()
-    with _patch_gate(system), p_open, p_finish, _patch_resolve("agent"), patch.object(
-        fts,
-        "_upload_via_agent",
-        return_value={"remote_path": "/tmp/x", "size": 3, "sha256": "abc"},
-    ) as agent_upload, patch.object(fts, "_upload_via_ssh") as ssh_upload:
+    with (
+        _patch_gate(system),
+        p_open,
+        p_finish,
+        _patch_resolve("agent"),
+        patch.object(
+            fts,
+            "_upload_via_agent",
+            return_value={"remote_path": "/tmp/x", "size": 3, "sha256": "abc"},
+        ) as agent_upload,
+        patch.object(fts, "_upload_via_ssh") as ssh_upload,
+    ):
         fts.upload_stream(MagicMock(), user, system.id, "/tmp/x", iter([b"abc"]))
     agent_upload.assert_called_once()
     ssh_upload.assert_not_called()
@@ -191,8 +207,11 @@ def test_upload_force_agent_unavailable_writes_audit_then_raises():
     user = _UserStub()
     rows, p_open = _patch_open_audit()
     finishes, p_finish = _patch_finish_audit()
-    with _patch_gate(system), p_open, p_finish, _patch_resolve(
-        None, raises=TransportUnavailable("no tunnel")
+    with (
+        _patch_gate(system),
+        p_open,
+        p_finish,
+        _patch_resolve(None, raises=TransportUnavailable("no tunnel")),
     ):
         with pytest.raises(TransportUnavailable):
             fts.upload_stream(MagicMock(), user, system.id, "/tmp/x", iter([b"abc"]))
@@ -210,9 +229,14 @@ def test_download_routes_to_ssh_for_pref_ssh():
     user = _UserStub()
     rows, p_open = _patch_open_audit()
     finishes, p_finish = _patch_finish_audit()
-    with _patch_gate(system), p_open, p_finish, _patch_resolve("ssh"), patch.object(
-        fts, "_download_via_ssh", return_value=iter([b"hello"])
-    ) as ssh_dl, patch.object(fts, "_download_via_agent") as agent_dl:
+    with (
+        _patch_gate(system),
+        p_open,
+        p_finish,
+        _patch_resolve("ssh"),
+        patch.object(fts, "_download_via_ssh", return_value=iter([b"hello"])) as ssh_dl,
+        patch.object(fts, "_download_via_agent") as agent_dl,
+    ):
         gen = fts.download_stream(MagicMock(), user, system.id, "/etc/hosts")
         list(gen)
     ssh_dl.assert_called_once()
@@ -225,9 +249,16 @@ def test_download_routes_to_agent_for_pref_agent():
     user = _UserStub()
     rows, p_open = _patch_open_audit()
     finishes, p_finish = _patch_finish_audit()
-    with _patch_gate(system), p_open, p_finish, _patch_resolve("agent"), patch.object(
-        fts, "_download_via_agent", return_value=iter([b"hello"])
-    ) as agent_dl, patch.object(fts, "_download_via_ssh") as ssh_dl:
+    with (
+        _patch_gate(system),
+        p_open,
+        p_finish,
+        _patch_resolve("agent"),
+        patch.object(
+            fts, "_download_via_agent", return_value=iter([b"hello"])
+        ) as agent_dl,
+        patch.object(fts, "_download_via_ssh") as ssh_dl,
+    ):
         gen = fts.download_stream(MagicMock(), user, system.id, "/etc/hosts")
         list(gen)
     agent_dl.assert_called_once()
@@ -240,8 +271,11 @@ def test_download_force_agent_unavailable_writes_audit_then_raises():
     user = _UserStub()
     rows, p_open = _patch_open_audit()
     finishes, p_finish = _patch_finish_audit()
-    with _patch_gate(system), p_open, p_finish, _patch_resolve(
-        None, raises=TransportUnavailable("no tunnel")
+    with (
+        _patch_gate(system),
+        p_open,
+        p_finish,
+        _patch_resolve(None, raises=TransportUnavailable("no tunnel")),
     ):
         with pytest.raises(TransportUnavailable):
             fts.download_stream(MagicMock(), user, system.id, "/etc/hosts")
@@ -259,9 +293,10 @@ def test_download_via_agent_does_not_call_factory():
     audit row (transport='agent') and the actual operation
     disagreeing. Agent helper must build AgentTransport directly."""
     system = _SystemStub()
-    with patch.object(fts, "get_transport") as factory, patch(
-        "app.services.transport.agent.AgentTransport"
-    ) as agent_cls:
+    with (
+        patch.object(fts, "get_transport") as factory,
+        patch("app.services.transport.agent.AgentTransport") as agent_cls,
+    ):
         agent_cls.return_value.open_file_get = MagicMock()
 
         async def _open_fg(path):
@@ -293,9 +328,11 @@ def test_upload_via_agent_does_not_call_factory():
     system = _SystemStub()
     audit = MagicMock()
     audit.id = 1
-    with patch.object(fts, "get_transport") as factory, patch(
-        "app.services.transport.agent.AgentTransport"
-    ) as agent_cls, patch.object(fts, "_finish_audit"):
+    with (
+        patch.object(fts, "get_transport") as factory,
+        patch("app.services.transport.agent.AgentTransport") as agent_cls,
+        patch.object(fts, "_finish_audit"),
+    ):
 
         async def _open_fp(path, *, size, overwrite):
             stream = MagicMock()

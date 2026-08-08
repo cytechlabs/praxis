@@ -105,12 +105,12 @@ def _window_to_dict(window: MaintenanceWindow, db: Session) -> Dict[str, Any]:
         "schedule": schedule,
         "enabled": window.enabled,
         "created_by": window.created_by,
-        "created_at": window.created_at.isoformat() + "Z"
-        if window.created_at
-        else None,
-        "updated_at": window.updated_at.isoformat() + "Z"
-        if window.updated_at
-        else None,
+        "created_at": (
+            window.created_at.isoformat() + "Z" if window.created_at else None
+        ),
+        "updated_at": (
+            window.updated_at.isoformat() + "Z" if window.updated_at else None
+        ),
     }
 
 

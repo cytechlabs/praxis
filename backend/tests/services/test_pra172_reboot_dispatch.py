@@ -866,9 +866,12 @@ def test_transport_error_maps_to_transport_error_failure(db, admin_user, host_fa
     # SSHService is imported lazily inside default_reboot_dispatch
     # via `from .ssh_service import SSHService`; patch the source
     # module so the lazy import picks up the fake.
-    with _mock.patch(
-        "app.services.ssh_service.SSHService", _FakeSSHService
-    ), _mock.patch.object(_ssh_mod.SSHTransport, "run_command", _raise_transport_error):
+    with (
+        _mock.patch("app.services.ssh_service.SSHService", _FakeSSHService),
+        _mock.patch.object(
+            _ssh_mod.SSHTransport, "run_command", _raise_transport_error
+        ),
+    ):
         result = patch_reboot_dispatch_service.default_reboot_dispatch(
             db, h, list(patch_reboot_dispatch_service.DEFAULT_REBOOT_COMMAND)
         )

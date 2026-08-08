@@ -146,9 +146,11 @@ async def update_compliance_trend(
     return {
         "trend": trend,
         "days": days,
-        "note": "Sparse data is expected if few package operations occurred."
-        if not trend
-        else None,
+        "note": (
+            "Sparse data is expected if few package operations occurred."
+            if not trend
+            else None
+        ),
     }
 
 

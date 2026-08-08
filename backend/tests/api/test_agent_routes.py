@@ -110,11 +110,12 @@ def test_bootstrap_rejects_when_ssh_warning(authed_client, system_row):
 
 
 def test_bootstrap_signs_and_returns_cert(authed_client, system_row):
-    with patch(
-        "app.api.routes.agent.SSHService.test_connection", side_effect=_ssh_ok
-    ), patch(
-        "app.services.agent_identity_service.AgentIdentityService._sign",
-        new=_stub_sign_response(),
+    with (
+        patch("app.api.routes.agent.SSHService.test_connection", side_effect=_ssh_ok),
+        patch(
+            "app.services.agent_identity_service.AgentIdentityService._sign",
+            new=_stub_sign_response(),
+        ),
     ):
         res = authed_client.post(
             f"/agent/bootstrap/{system_row.id}", json={"csr_pem": "csr"}
@@ -133,11 +134,12 @@ def test_bootstrap_signs_and_returns_cert(authed_client, system_row):
 
 def test_disable_enable_revoke_round_trip(authed_client, system_row):
     # First enroll
-    with patch(
-        "app.api.routes.agent.SSHService.test_connection", side_effect=_ssh_ok
-    ), patch(
-        "app.services.agent_identity_service.AgentIdentityService._sign",
-        new=_stub_sign_response(),
+    with (
+        patch("app.api.routes.agent.SSHService.test_connection", side_effect=_ssh_ok),
+        patch(
+            "app.services.agent_identity_service.AgentIdentityService._sign",
+            new=_stub_sign_response(),
+        ),
     ):
         bootstrap = authed_client.post(
             f"/agent/bootstrap/{system_row.id}", json={"csr_pem": "csr"}
@@ -179,11 +181,12 @@ def test_revoke_requires_reason(authed_client, system_row):
 
 
 def test_renew_admin_gated_and_calls_service(authed_client, system_row):
-    with patch(
-        "app.api.routes.agent.SSHService.test_connection", side_effect=_ssh_ok
-    ), patch(
-        "app.services.agent_identity_service.AgentIdentityService._sign",
-        new=_stub_sign_response(serial="boot-1"),
+    with (
+        patch("app.api.routes.agent.SSHService.test_connection", side_effect=_ssh_ok),
+        patch(
+            "app.services.agent_identity_service.AgentIdentityService._sign",
+            new=_stub_sign_response(serial="boot-1"),
+        ),
     ):
         authed_client.post(f"/agent/bootstrap/{system_row.id}", json={"csr_pem": "csr"})
 

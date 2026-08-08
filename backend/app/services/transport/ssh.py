@@ -93,9 +93,11 @@ class SSHTransport(Transport):
             try:
                 stdin_io, stdout_io, stderr_io = client.exec_command(
                     cmd_str,
-                    timeout=timeout_seconds
-                    if timeout_seconds and timeout_seconds > 0
-                    else None,
+                    timeout=(
+                        timeout_seconds
+                        if timeout_seconds and timeout_seconds > 0
+                        else None
+                    ),
                 )
                 if stdin is not None:
                     stdin_io.write(stdin)

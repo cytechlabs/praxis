@@ -125,9 +125,7 @@ def complete_operation(
             severity = (
                 "error"
                 if status == "failed"
-                else "warning"
-                if status == "partial"
-                else "info"
+                else "warning" if status == "partial" else "info"
             )
             send_alert(
                 db,

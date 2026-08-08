@@ -1143,10 +1143,10 @@ class SSHService:  # pylint: disable=too-many-instance-attributes
             )
             if exit_code != 0 or error.strip():
                 result["status"] = "warning"
-                result[
-                    "message"
-                ] = "Connection established but command returned error: {}".format(  # pylint:disable=consider-using-f-string
-                    error.strip() or f"exit {exit_code}"
+                result["message"] = (
+                    "Connection established but command returned error: {}".format(  # pylint:disable=consider-using-f-string
+                        error.strip() or f"exit {exit_code}"
+                    )
                 )
             else:
                 result["status"] = "success"

@@ -320,9 +320,7 @@ async def complete_review(
         status = (
             404
             if e.code == "not_found"
-            else 409
-            if e.code in ("invalid_state", "undecided")
-            else 400
+            else 409 if e.code in ("invalid_state", "undecided") else 400
         )
         raise HTTPException(status_code=status, detail=str(e)) from e
     item_count = (

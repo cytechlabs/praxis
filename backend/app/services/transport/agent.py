@@ -82,9 +82,9 @@ class AgentTransport(Transport):
             exit_code=int(result.exit_code) if result.exit_code is not None else -1,
             stdout=result.stdout,
             stderr=result.stderr,
-            duration_ms=int(result.duration_ms)
-            if result.duration_ms is not None
-            else 0,
+            duration_ms=(
+                int(result.duration_ms) if result.duration_ms is not None else 0
+            ),
         )
 
     async def open_pty(self, *_args, **_kwargs) -> PtySession:
