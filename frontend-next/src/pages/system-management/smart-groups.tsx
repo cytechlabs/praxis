@@ -233,21 +233,21 @@ const SmartGroupsPage: React.FC = () => {
       updateAtPath(path, () => ({ ...c, ...next } as Condition));
     };
     return (
-      <div className="flex items-center gap-2 bg-zinc-900/40 border border-zinc-800 rounded-md px-2 py-1.5">
+      <div className="flex items-center gap-2 bg-surface-raised/40 border border-border rounded-md px-2 py-1.5">
         <select
           value={c.field}
           onChange={e => {
             const nf = catalogByField.get(e.target.value)!;
             update({ field: nf.field, op: nf.ops[0], value: defaultValueForType(nf.type) });
           }}
-          className="bg-zinc-950 border border-zinc-800 rounded text-xs text-gray-200 px-2 py-1 focus:outline-none focus:border-red-600"
+          className="bg-surface-sunken border border-border rounded text-xs text-content px-2 py-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
         >
           {catalog.map(f => <option key={f.field} value={f.field}>{f.field}</option>)}
         </select>
         <select
           value={c.op}
           onChange={e => update({ op: e.target.value })}
-          className="bg-zinc-950 border border-zinc-800 rounded text-xs text-gray-200 px-2 py-1 focus:outline-none focus:border-red-600"
+          className="bg-surface-sunken border border-border rounded text-xs text-content px-2 py-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
         >
           {(spec?.ops || []).map(o => <option key={o} value={o}>{o}</option>)}
         </select>
@@ -256,7 +256,7 @@ const SmartGroupsPage: React.FC = () => {
             type="text"
             value={String(c.value ?? '')}
             onChange={e => update({ value: e.target.value })}
-            className="flex-1 bg-zinc-950 border border-zinc-800 rounded text-xs text-gray-200 px-2 py-1 focus:outline-none focus:border-red-600"
+            className="flex-1 bg-surface-sunken border border-border rounded text-xs text-content px-2 py-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
             placeholder={c.op === 'regex' ? 'POSIX regex' : (FIELD_HINTS[c.field] || 'value')}
             title={FIELD_HINTS[c.field]}
           />
@@ -266,7 +266,7 @@ const SmartGroupsPage: React.FC = () => {
             type="text"
             value={(Array.isArray(c.value) ? (c.value as string[]) : []).join(', ')}
             onChange={e => update({ value: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })}
-            className="flex-1 bg-zinc-950 border border-zinc-800 rounded text-xs text-gray-200 px-2 py-1 focus:outline-none focus:border-red-600"
+            className="flex-1 bg-surface-sunken border border-border rounded text-xs text-content px-2 py-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
             placeholder={FIELD_HINTS[c.field] || 'comma,separated,values'}
             title={FIELD_HINTS[c.field]}
           />
@@ -275,7 +275,7 @@ const SmartGroupsPage: React.FC = () => {
           <select
             value={String(Boolean(c.value))}
             onChange={e => update({ value: e.target.value === 'true' })}
-            className="bg-zinc-950 border border-zinc-800 rounded text-xs text-gray-200 px-2 py-1 focus:outline-none focus:border-red-600"
+            className="bg-surface-sunken border border-border rounded text-xs text-content px-2 py-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
           >
             <option value="true">true</option>
             <option value="false">false</option>
@@ -286,10 +286,10 @@ const SmartGroupsPage: React.FC = () => {
             type="number"
             value={Number(c.value ?? 0)}
             onChange={e => update({ value: Number(e.target.value) })}
-            className="w-24 bg-zinc-950 border border-zinc-800 rounded text-xs text-gray-200 px-2 py-1 focus:outline-none focus:border-red-600"
+            className="w-24 bg-surface-sunken border border-border rounded text-xs text-content px-2 py-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
           />
         )}
-        <button onClick={() => deleteAtPath(path)} className="text-gray-500 hover:text-red-400" aria-label="Remove condition">
+        <button onClick={() => deleteAtPath(path)} className="text-content-subtle hover:text-red-400" aria-label="Remove condition">
           <X size={14} />
         </button>
       </div>
@@ -299,29 +299,29 @@ const SmartGroupsPage: React.FC = () => {
   const renderGroup = (g: GroupNode, path: number[]) => {
     const isRoot = path.length === 0;
     return (
-      <div className={`border ${isRoot ? 'border-red-900/40' : 'border-zinc-800'} rounded-md p-2 space-y-2 bg-zinc-950/40`}>
+      <div className={`border ${isRoot ? 'border-red-900/40' : 'border-border'} rounded-md p-2 space-y-2 bg-surface-sunken/40`}>
         <div className="flex items-center gap-2">
           <select
             value={g.op}
             onChange={e => updateAtPath(path, node => ({ ...(node as GroupNode), op: e.target.value as Op }))}
-            className="bg-zinc-950 border border-red-900/40 rounded text-xs font-bold text-red-300 uppercase px-2 py-1 focus:outline-none focus:border-red-600"
+            className="bg-surface-sunken border border-red-900/40 rounded text-xs font-bold text-red-300 uppercase px-2 py-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
           >
             <option value="and">AND</option>
             <option value="or">OR</option>
           </select>
-          <span className="text-xs text-gray-500">{g.rules.length} rule{g.rules.length === 1 ? '' : 's'}</span>
+          <span className="text-xs text-content-subtle">{g.rules.length} rule{g.rules.length === 1 ? '' : 's'}</span>
           <div className="ml-auto flex gap-1">
             <Button variant="outline" onClick={() => addCondition(path)} icon={<Plus size={12} />}>Condition</Button>
             <Button variant="outline" onClick={() => addGroup(path)} icon={<Plus size={12} />}>Group</Button>
             {!isRoot && (
-              <button onClick={() => deleteAtPath(path)} className="text-gray-500 hover:text-red-400 px-1" aria-label="Remove group">
+              <button onClick={() => deleteAtPath(path)} className="text-content-subtle hover:text-red-400 px-1" aria-label="Remove group">
                 <X size={14} />
               </button>
             )}
           </div>
         </div>
-        <div className="pl-2 space-y-2 border-l-2 border-zinc-800">
-          {g.rules.length === 0 && <div className="text-xs text-gray-600 italic px-2">Empty group - add a condition or nested group.</div>}
+        <div className="pl-2 space-y-2 border-l-2 border-border">
+          {g.rules.length === 0 && <div className="text-xs text-content-subtle italic px-2">Empty group - add a condition or nested group.</div>}
           {g.rules.map((r, i) => (
             <div key={i}>
               {isGroup(r) ? renderGroup(r, [...path, i]) : renderCondition(r, [...path, i])}
@@ -343,9 +343,9 @@ const SmartGroupsPage: React.FC = () => {
         actions={<div className="flex items-center gap-2"><Button variant="primary" icon={<Plus size={16} />} onClick={openCreate}>New Smart Group</Button><HelpLink slug="fleet-and-hosts" /></div>}
       />
 
-      <div className="border border-zinc-800 rounded-lg overflow-hidden">
-        <table className="w-full text-sm text-gray-200">
-          <thead className="bg-red-900/30 text-gray-300 text-xs uppercase">
+      <div className="border border-border rounded-lg overflow-hidden">
+        <table className="w-full text-sm text-content">
+          <thead className="bg-red-900/30 text-content text-xs uppercase">
             <tr>
               <th className="px-4 py-3 text-left">Name</th>
               <th className="px-4 py-3 text-left">Description</th>
@@ -354,17 +354,17 @@ const SmartGroupsPage: React.FC = () => {
               <th className="px-4 py-3 text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-800">
+          <tbody className="divide-y divide-border">
             {loading ? (
-              <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-500">Loading...</td></tr>
+              <tr><td colSpan={5} className="px-4 py-8 text-center text-content-subtle">Loading...</td></tr>
             ) : groups.length === 0 ? (
-              <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-500">No smart groups yet. Create one to target systems by rule.</td></tr>
+              <tr><td colSpan={5} className="px-4 py-8 text-center text-content-subtle">No smart groups yet. Create one to target systems by rule.</td></tr>
             ) : groups.map(g => (
               <tr key={g.id} className="hover:bg-white/[0.03]">
                 <td className="px-4 py-3 font-medium flex items-center gap-2"><Filter size={14} className="text-red-400" />{g.name}</td>
-                <td className="px-4 py-3 text-gray-400">{g.description || '-'}</td>
+                <td className="px-4 py-3 text-content-muted">{g.description || '-'}</td>
                 <td className="px-4 py-3 text-center">
-                  <button onClick={() => openMembers(g)} className="px-2 py-0.5 bg-zinc-800 hover:bg-zinc-700 rounded text-xs">
+                  <button onClick={() => openMembers(g)} className="px-2 py-0.5 bg-border hover:bg-border-strong rounded text-xs">
                     {g.member_count} <ChevronRight size={12} className="inline" />
                   </button>
                 </td>
@@ -375,9 +375,9 @@ const SmartGroupsPage: React.FC = () => {
                 </td>
                 <td className="px-4 py-3 text-right">
                   <div className="flex justify-end gap-2">
-                    <button onClick={() => recompute(g)} className="p-1 text-gray-400 hover:text-amber-400" title="Recompute membership"><RefreshCw size={16} /></button>
-                    <button onClick={() => openEdit(g)} className="p-1 text-gray-400 hover:text-slate-300" title="Edit"><Pencil size={16} /></button>
-                    <button onClick={() => remove(g)} className="p-1 text-gray-400 hover:text-red-400" title="Delete"><Trash2 size={16} /></button>
+                    <button onClick={() => recompute(g)} className="p-1 text-content-muted hover:text-amber-400" title="Recompute membership"><RefreshCw size={16} /></button>
+                    <button onClick={() => openEdit(g)} className="p-1 text-content-muted hover:text-content" title="Edit"><Pencil size={16} /></button>
+                    <button onClick={() => remove(g)} className="p-1 text-content-muted hover:text-red-400" title="Delete"><Trash2 size={16} /></button>
                   </div>
                 </td>
               </tr>
@@ -388,26 +388,26 @@ const SmartGroupsPage: React.FC = () => {
 
       {/* Editor modal */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0c0c0f]/70">
-          <div className="bg-[#0c0c0f] border border-zinc-800 rounded-lg w-full max-w-3xl p-6 space-y-4 max-h-[92vh] overflow-y-auto">
-            <h2 className="text-lg font-bold text-gray-100">{editing ? 'Edit Smart Group' : 'Create Smart Group'}</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-surface/70">
+          <div className="bg-surface-overlay border border-border rounded-lg w-full max-w-3xl p-6 space-y-4 max-h-[92vh] overflow-y-auto">
+            <h2 className="text-lg font-bold text-content">{editing ? 'Edit Smart Group' : 'Create Smart Group'}</h2>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Name</label>
+                <label className="block text-sm text-content-muted mb-1">Name</label>
                 <input value={formName} onChange={e => setFormName(e.target.value)}
-                  className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded text-gray-200 focus:outline-none focus:border-red-600"
+                  className="w-full px-3 py-2 bg-surface-sunken border border-border rounded text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
                   placeholder="e.g. Production Ubuntu Servers" />
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Description (optional)</label>
+                <label className="block text-sm text-content-muted mb-1">Description (optional)</label>
                 <input value={formDesc} onChange={e => setFormDesc(e.target.value)}
-                  className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded text-gray-200 focus:outline-none focus:border-red-600" />
+                  className="w-full px-3 py-2 bg-surface-sunken border border-border rounded text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong" />
               </div>
             </div>
 
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="text-sm text-gray-400">Rule</label>
+                <label className="text-sm text-content-muted">Rule</label>
                 <div className="text-xs">
                   {previewError ? (
                     <span className="text-red-400">{previewError}</span>
@@ -422,7 +422,7 @@ const SmartGroupsPage: React.FC = () => {
             <div className="flex items-center gap-2">
               <input id="sg-enabled" type="checkbox" checked={formEnabled}
                 onChange={e => setFormEnabled(e.target.checked)} className="accent-red-600" />
-              <label htmlFor="sg-enabled" className="text-sm text-gray-300">Enabled</label>
+              <label htmlFor="sg-enabled" className="text-sm text-content">Enabled</label>
             </div>
 
             <div className="flex justify-end gap-3 pt-2">
@@ -437,21 +437,21 @@ const SmartGroupsPage: React.FC = () => {
 
       {/* Members drawer */}
       {membersOpen && (
-        <div className="fixed inset-0 z-40 flex justify-end bg-[#0c0c0f]/70" onClick={() => setMembersOpen(null)}>
-          <div className="bg-[#0c0c0f] border-l border-zinc-800 w-full max-w-md h-full overflow-y-auto p-5 space-y-3" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-40 flex justify-end bg-surface/70" onClick={() => setMembersOpen(null)}>
+          <div className="bg-surface-overlay border-l border-border w-full max-w-md h-full overflow-y-auto p-5 space-y-3" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-100 flex items-center gap-2"><UsersIcon size={18} /> Members · {membersOpen.name}</h3>
-              <button onClick={() => setMembersOpen(null)} className="text-gray-500 hover:text-gray-300"><X size={18} /></button>
+              <h3 className="text-lg font-semibold text-content flex items-center gap-2"><UsersIcon size={18} /> Members · {membersOpen.name}</h3>
+              <button onClick={() => setMembersOpen(null)} className="text-content-subtle hover:text-content"><X size={18} /></button>
             </div>
-            <div className="text-xs text-gray-500">{members.length} member{members.length === 1 ? '' : 's'}</div>
-            <div className="border border-zinc-800 rounded divide-y divide-zinc-800/70">
+            <div className="text-xs text-content-subtle">{members.length} member{members.length === 1 ? '' : 's'}</div>
+            <div className="border border-border rounded divide-y divide-border/70">
               {members.length === 0 ? (
-                <div className="p-4 text-sm text-gray-500">No systems match this rule right now.</div>
+                <div className="p-4 text-sm text-content-subtle">No systems match this rule right now.</div>
               ) : members.map(m => (
                 <div key={m.id} className="p-3 flex items-center justify-between">
                   <div>
-                    <div className="text-sm text-gray-200 font-medium">{m.hostname}</div>
-                    <div className="text-xs text-gray-500">{m.ip_address || ''}</div>
+                    <div className="text-sm text-content font-medium">{m.hostname}</div>
+                    <div className="text-xs text-content-subtle">{m.ip_address || ''}</div>
                   </div>
                   <StatusBadge status={m.status} />
                 </div>

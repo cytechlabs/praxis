@@ -136,7 +136,7 @@ const LoginPage: React.FC = () => {
   return (
     <>
       <Head><title>Login | Praxis</title></Head>
-      <div className="min-h-screen flex items-center justify-center bg-[#09090b] p-4 relative overflow-hidden">
+      <div className="min-h-screen flex items-center justify-center bg-surface p-4 relative overflow-hidden">
         {/* Subtle background glow */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-red-950/20 rounded-full blur-[120px] pointer-events-none" />
 
@@ -149,7 +149,7 @@ const LoginPage: React.FC = () => {
             </p>
           </div>
 
-          <div className="bg-[#0c0c0f] border border-gray-800/60 rounded-xl p-8 shadow-2xl">
+          <div className="bg-surface-raised border border-border/60 rounded-xl p-8 shadow-2xl">
             {error && (
               <div className="mb-4 px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-md text-red-400 text-sm text-center">
                 {error}
@@ -170,34 +170,34 @@ const LoginPage: React.FC = () => {
                   {ssoLoading ? 'Redirecting...' : `Sign in with ${ssoStatus.provider_name || 'SSO'}`}
                 </Button>
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="flex-1 h-px bg-gray-800" />
-                  <span className="text-xs text-gray-600">or</span>
-                  <div className="flex-1 h-px bg-gray-800" />
+                  <div className="flex-1 h-px bg-surface-overlay" />
+                  <span className="text-xs text-content-subtle">or</span>
+                  <div className="flex-1 h-px bg-surface-overlay" />
                 </div>
               </>
             )}
 
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
-                <label htmlFor="username" className="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-1.5">Username</label>
+                <label htmlFor="username" className="block text-xs font-medium text-content-muted uppercase tracking-wider mb-1.5">Username</label>
                 <input
                   type="text"
                   id="username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   required
-                  className="w-full px-3 py-2.5 bg-[#09090b] border border-gray-800/60 rounded-md text-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-600 transition-colors"
+                  className="w-full px-3 py-2.5 bg-surface-sunken border border-border/60 rounded-md text-content text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong transition-colors"
                 />
               </div>
               <div>
-                <label htmlFor="password" className="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-1.5">Password</label>
+                <label htmlFor="password" className="block text-xs font-medium text-content-muted uppercase tracking-wider mb-1.5">Password</label>
                 <input
                   type="password"
                   id="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="w-full px-3 py-2.5 bg-[#09090b] border border-gray-800/60 rounded-md text-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-600 transition-colors"
+                  className="w-full px-3 py-2.5 bg-surface-sunken border border-border/60 rounded-md text-content text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong transition-colors"
                 />
               </div>
               <Button

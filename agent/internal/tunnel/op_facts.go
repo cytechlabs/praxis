@@ -116,7 +116,7 @@ type defaultFactsCollector struct{}
 // partial_errors as the right outcome for "agent reachable but local
 // reads broken". We only return opOutcomeError() for protocol-level
 // failures the agent can detect (e.g., context cancelled).
-func (p *opPump) runFacts(ctx context.Context, opID int, conn *websocket.Conn, raw map[string]any) opOutcome {
+func (*opPump) runFacts(ctx context.Context, opID int, conn *websocket.Conn, raw map[string]any) opOutcome {
 	_ = opID
 	_ = conn
 	_ = raw

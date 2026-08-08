@@ -155,13 +155,13 @@ const CompliancePoliciesPage: React.FC = () => {
         {showCreate && canWrite && (
           <Card>
             <CardBody>
-              <h2 className="text-lg font-semibold text-gray-200 mb-4">
+              <h2 className="text-lg font-semibold text-content mb-4">
                 New compliance policy
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Field label="Slug">
                   <input
-                    className="w-full bg-gray-900 border border-gray-800 rounded px-3 py-1.5 text-sm text-gray-100"
+                    className="w-full bg-surface-sunken border border-border rounded px-3 py-1.5 text-sm text-content"
                     value={form.slug}
                     onChange={(e) =>
                       setForm((f) => ({ ...f, slug: e.target.value }))
@@ -171,7 +171,7 @@ const CompliancePoliciesPage: React.FC = () => {
                 </Field>
                 <Field label="Name">
                   <input
-                    className="w-full bg-gray-900 border border-gray-800 rounded px-3 py-1.5 text-sm text-gray-100"
+                    className="w-full bg-surface-sunken border border-border rounded px-3 py-1.5 text-sm text-content"
                     value={form.name}
                     onChange={(e) =>
                       setForm((f) => ({ ...f, name: e.target.value }))
@@ -181,7 +181,7 @@ const CompliancePoliciesPage: React.FC = () => {
                 </Field>
                 <Field label="Severity">
                   <select
-                    className="w-full bg-gray-900 border border-gray-800 rounded px-3 py-1.5 text-sm text-gray-100"
+                    className="w-full bg-surface-sunken border border-border rounded px-3 py-1.5 text-sm text-content"
                     value={form.severity}
                     onChange={(e) =>
                       setForm((f) => ({
@@ -199,7 +199,7 @@ const CompliancePoliciesPage: React.FC = () => {
                 </Field>
                 <Field label="Category">
                   <input
-                    className="w-full bg-gray-900 border border-gray-800 rounded px-3 py-1.5 text-sm text-gray-100"
+                    className="w-full bg-surface-sunken border border-border rounded px-3 py-1.5 text-sm text-content"
                     value={form.category}
                     onChange={(e) =>
                       setForm((f) => ({ ...f, category: e.target.value }))
@@ -209,7 +209,7 @@ const CompliancePoliciesPage: React.FC = () => {
                 </Field>
                 <Field label="Description" wide>
                   <textarea
-                    className="w-full bg-gray-900 border border-gray-800 rounded px-3 py-1.5 text-sm text-gray-100"
+                    className="w-full bg-surface-sunken border border-border rounded px-3 py-1.5 text-sm text-content"
                     rows={3}
                     value={form.description}
                     onChange={(e) =>
@@ -253,11 +253,11 @@ const CompliancePoliciesPage: React.FC = () => {
           <CardBody>
             <div className="flex items-center gap-4 mb-4 flex-wrap">
               <div className="flex items-center gap-2">
-                <label className="text-xs text-gray-400 uppercase tracking-wide">
+                <label className="text-xs text-content-muted uppercase tracking-wide">
                   Origin
                 </label>
                 <select
-                  className="bg-gray-900 border border-gray-800 rounded px-3 py-1.5 text-sm text-gray-100"
+                  className="bg-surface-sunken border border-border rounded px-3 py-1.5 text-sm text-content"
                   value={builtInFilter}
                   onChange={(e) =>
                     setBuiltInFilter(e.target.value as BuiltInFilter)
@@ -268,7 +268,7 @@ const CompliancePoliciesPage: React.FC = () => {
                   <option value="custom">Custom only</option>
                 </select>
               </div>
-              <label className="flex items-center gap-2 text-sm text-gray-300">
+              <label className="flex items-center gap-2 text-sm text-content">
                 <input
                   type="checkbox"
                   checked={enabledOnly}
@@ -296,7 +296,7 @@ const CompliancePoliciesPage: React.FC = () => {
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="text-left text-gray-400 border-b border-gray-800">
+                  <thead className="text-left text-content-muted border-b border-border">
                     <tr>
                       <th className="py-2 pr-3">Slug</th>
                       <th className="py-2 pr-3">Name</th>
@@ -311,7 +311,7 @@ const CompliancePoliciesPage: React.FC = () => {
                     {policies.map((p) => (
                       <tr
                         key={p.id}
-                        className="border-b border-gray-900/50 hover:bg-gray-900/30"
+                        className="border-b border-border/50 hover:bg-surface-overlay/30"
                       >
                         <td className="py-2 pr-3">
                           <Link
@@ -321,13 +321,13 @@ const CompliancePoliciesPage: React.FC = () => {
                             {p.slug}
                           </Link>
                         </td>
-                        <td className="py-2 pr-3 text-gray-200">{p.name}</td>
+                        <td className="py-2 pr-3 text-content">{p.name}</td>
                         <td className="py-2 pr-3">
                           <Badge variant={severityBadgeVariant(p.severity)}>
                             {SEVERITY_LABELS[p.severity]}
                           </Badge>
                         </td>
-                        <td className="py-2 pr-3 text-gray-300">{p.category}</td>
+                        <td className="py-2 pr-3 text-content">{p.category}</td>
                         <td className="py-2 pr-3">
                           {p.enabled ? (
                             <Badge variant="success">Enabled</Badge>
@@ -339,7 +339,7 @@ const CompliancePoliciesPage: React.FC = () => {
                           {p.built_in ? (
                             <Badge variant="info">Built-in</Badge>
                           ) : (
-                            <span className="text-xs text-gray-500">-</span>
+                            <span className="text-xs text-content-subtle">-</span>
                           )}
                         </td>
                         <td className="py-2 pr-3 text-right">
@@ -389,7 +389,7 @@ const Field: React.FC<{
   wide?: boolean;
 }> = ({ label, children, wide }) => (
   <div className={wide ? 'md:col-span-2' : ''}>
-    <label className="block text-xs uppercase tracking-wide text-gray-500 mb-1">
+    <label className="block text-xs uppercase tracking-wide text-content-subtle mb-1">
       {label}
     </label>
     {children}

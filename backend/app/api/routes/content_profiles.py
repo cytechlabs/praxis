@@ -142,9 +142,11 @@ def _binding_to_read(binding: ResolvedBinding) -> dict:
 def _effective_to_read(effective: EffectiveProfile) -> dict:
     return {
         "state": effective.state,
-        "profile": _binding_to_read(effective.profile)
-        if effective.profile is not None
-        else None,
+        "profile": (
+            _binding_to_read(effective.profile)
+            if effective.profile is not None
+            else None
+        ),
         "conflict_bindings": [_binding_to_read(b) for b in effective.conflict_bindings],
     }
 
@@ -1064,9 +1066,9 @@ async def get_host_resolved_content(
     resolved = service.resolve_content_for_host(system_id)
     return {
         "state": resolved.state,
-        "profile": _binding_to_read(resolved.profile)
-        if resolved.profile is not None
-        else None,
+        "profile": (
+            _binding_to_read(resolved.profile) if resolved.profile is not None else None
+        ),
         "conflict_bindings": [_binding_to_read(b) for b in resolved.conflict_bindings],
         "entries": [_resolved_entry_to_dict(e) for e in resolved.entries],
     }

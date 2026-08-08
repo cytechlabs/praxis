@@ -83,7 +83,7 @@ const ProvisionedUsersCard = ({ systemId, systemHostname, principalsHookDeployed
       >
         <div>
           <div>Provisioned Users</div>
-          <div className="text-xs font-normal text-gray-500 mt-0.5">
+          <div className="text-xs font-normal text-content-subtle mt-0.5">
             Linux accounts Praxis manages on this host.
           </div>
         </div>
@@ -97,7 +97,7 @@ const ProvisionedUsersCard = ({ systemId, systemHostname, principalsHookDeployed
           </div>
         )}
         {loading ? (
-          <div className="text-gray-500 text-sm">Loading…</div>
+          <div className="text-content-subtle text-sm">Loading…</div>
         ) : rows.length === 0 ? (
           <EmptyState
             title="No managed accounts"
@@ -108,7 +108,7 @@ const ProvisionedUsersCard = ({ systemId, systemHostname, principalsHookDeployed
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs uppercase tracking-wide text-gray-500 border-b border-gray-800">
+                <tr className="text-left text-xs uppercase tracking-wide text-content-subtle border-b border-border">
                   <th className="py-2 pr-4">Login</th>
                   <th className="py-2 pr-4">Mode</th>
                   <th className="py-2 pr-4">State</th>
@@ -118,16 +118,16 @@ const ProvisionedUsersCard = ({ systemId, systemHostname, principalsHookDeployed
               </thead>
               <tbody>
                 {rows.map(r => (
-                  <tr key={r.id} className="border-b border-gray-900 hover:bg-white/5">
-                    <td className="py-3 pr-4 font-mono text-gray-300">{r.login}</td>
-                    <td className="py-3 pr-4 text-gray-400 text-xs">{r.mode}</td>
+                  <tr key={r.id} className="border-b border-border hover:bg-white/5">
+                    <td className="py-3 pr-4 font-mono text-content">{r.login}</td>
+                    <td className="py-3 pr-4 text-content-muted text-xs">{r.mode}</td>
                     <td className="py-3 pr-4">
                       <Badge variant={stateVariant(r.state)}>{humanizeStatus(r.state)}</Badge>
                     </td>
-                    <td className="py-3 pr-4 text-gray-400 text-xs">
+                    <td className="py-3 pr-4 text-content-muted text-xs">
                       {r.last_reconciled_at ? formatTimestamp(r.last_reconciled_at) : '-'}
                     </td>
-                    <td className="py-3 pr-4 text-xs text-gray-400 truncate max-w-xs">
+                    <td className="py-3 pr-4 text-xs text-content-muted truncate max-w-xs">
                       {r.state === 'error' && r.last_error ? (
                         <span className="text-red-400">{r.last_error}</span>
                       ) : r.state === 'removed' && r.home_archive_path ? (

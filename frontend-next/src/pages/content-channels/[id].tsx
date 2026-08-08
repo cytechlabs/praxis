@@ -53,7 +53,7 @@ const ContentChannelDetailPage: React.FC = () => {
   if (id == null || Number.isNaN(id)) {
     return (
       <MainLayout>
-        <div className="p-6 text-gray-400">Invalid channel id.</div>
+        <div className="p-6 text-content-muted">Invalid channel id.</div>
       </MainLayout>
     );
   }
@@ -101,7 +101,7 @@ const ContentChannelDetailPage: React.FC = () => {
       <div className="p-6">
         <Link
           href="/content-channels/all"
-          className="mb-3 inline-flex items-center gap-1 text-sm text-gray-400 hover:text-gray-200"
+          className="mb-3 inline-flex items-center gap-1 text-sm text-content-muted hover:text-content"
         >
           <ArrowLeft size={14} /> All content channels
         </Link>
@@ -123,28 +123,28 @@ const ContentChannelDetailPage: React.FC = () => {
             )}
 
             <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-              <div className="rounded border border-zinc-800 bg-[#111115] p-3 text-sm text-gray-300">
-                <div className="text-xs text-gray-500">Family</div>
+              <div className="rounded border border-border bg-surface-raised p-3 text-sm text-content">
+                <div className="text-xs text-content-subtle">Family</div>
                 <Badge variant="neutral">{channel.package_family?.toUpperCase()}</Badge>
               </div>
-              <div className="rounded border border-zinc-800 bg-[#111115] p-3 text-sm text-gray-300">
-                <div className="text-xs text-gray-500">Repos</div>
+              <div className="rounded border border-border bg-surface-raised p-3 text-sm text-content">
+                <div className="text-xs text-content-subtle">Repos</div>
                 {channel.repos.length}
               </div>
-              <div className="rounded border border-zinc-800 bg-[#111115] p-3 text-sm text-gray-300">
-                <div className="text-xs text-gray-500">Created</div>
+              <div className="rounded border border-border bg-surface-raised p-3 text-sm text-content">
+                <div className="text-xs text-content-subtle">Created</div>
                 {formatTimestamp(channel.created_at)}
               </div>
             </div>
 
             {channel.description && (
-              <div className="mb-4 rounded border border-zinc-800 bg-[#111115] p-3 text-sm text-gray-300 whitespace-pre-wrap">
+              <div className="mb-4 rounded border border-border bg-surface-raised p-3 text-sm text-content whitespace-pre-wrap">
                 {channel.description}
               </div>
             )}
 
             <div className="mb-2 flex items-center justify-between">
-              <h3 className="text-sm font-medium text-gray-200">Repos</h3>
+              <h3 className="text-sm font-medium text-content">Repos</h3>
               <button
                 onClick={() => setShowAdd((v) => !v)}
                 disabled={!!channel.deleted_at}
@@ -155,12 +155,12 @@ const ContentChannelDetailPage: React.FC = () => {
             </div>
 
             {showAdd && (
-              <div className="mb-3 rounded border border-zinc-800 bg-[#111115] p-3">
+              <div className="mb-3 rounded border border-border bg-surface-raised p-3">
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                  <label className="text-xs text-gray-400">
+                  <label className="text-xs text-content-muted">
                     Mirror ({channel.package_family} only)
                     <select
-                      className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-gray-100"
+                      className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-content"
                       value={form.mirror_id ?? ''}
                       onChange={(e) =>
                         setForm({
@@ -177,10 +177,10 @@ const ContentChannelDetailPage: React.FC = () => {
                       ))}
                     </select>
                   </label>
-                  <label className="text-xs text-gray-400">
+                  <label className="text-xs text-content-muted">
                     Suite override (optional, e.g. <code>jammy-security</code>)
                     <input
-                      className="mt-1 w-full rounded bg-black/40 px-2 py-1 font-mono text-sm text-gray-100"
+                      className="mt-1 w-full rounded bg-black/40 px-2 py-1 font-mono text-sm text-content"
                       value={form.suite_override}
                       onChange={(e) =>
                         setForm({ ...form, suite_override: e.target.value })
@@ -198,7 +198,7 @@ const ContentChannelDetailPage: React.FC = () => {
                   </button>
                   <button
                     onClick={() => setShowAdd(false)}
-                    className="rounded border border-zinc-700 px-3 py-1.5 text-sm text-gray-300 hover:bg-zinc-800"
+                    className="rounded border border-border-strong px-3 py-1.5 text-sm text-content hover:bg-surface-overlay"
                   >
                     Cancel
                   </button>
@@ -207,13 +207,13 @@ const ContentChannelDetailPage: React.FC = () => {
             )}
 
             {channel.repos.length === 0 ? (
-              <div className="rounded border border-zinc-800 bg-[#111115] p-3 text-sm text-gray-500">
+              <div className="rounded border border-border bg-surface-raised p-3 text-sm text-content-subtle">
                 No repos yet. Add one to start composing this channel.
               </div>
             ) : (
-              <div className="overflow-x-auto rounded border border-zinc-800 bg-[#111115]">
+              <div className="overflow-x-auto rounded border border-border bg-surface-raised">
                 <table className="w-full text-sm">
-                  <thead className="border-b border-zinc-800 text-left text-gray-400">
+                  <thead className="border-b border-border text-left text-content-muted">
                     <tr>
                       <th className="px-4 py-2">Mirror</th>
                       <th className="px-4 py-2">Suite</th>
@@ -221,13 +221,13 @@ const ContentChannelDetailPage: React.FC = () => {
                       <th className="px-4 py-2 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-zinc-800">
+                  <tbody className="divide-y divide-border">
                     {channel.repos.map((r) => (
-                      <tr key={r.id} className="hover:bg-zinc-900/40">
-                        <td className="px-4 py-2 font-mono text-gray-200">
+                      <tr key={r.id} className="hover:bg-surface-overlay/40">
+                        <td className="px-4 py-2 font-mono text-content">
                           {r.mirror_slug}
                         </td>
-                        <td className="px-4 py-2 text-gray-300">
+                        <td className="px-4 py-2 text-content">
                           {r.effective_suite}
                           {r.suite_override && (
                             <Badge variant="neutral" className="ml-2">
@@ -235,7 +235,7 @@ const ContentChannelDetailPage: React.FC = () => {
                             </Badge>
                           )}
                         </td>
-                        <td className="px-4 py-2 text-gray-400">
+                        <td className="px-4 py-2 text-content-muted">
                           {r.pinned_run_id ? (
                             <span title={r.pinned_manifest_sha256 || undefined}>
                               run #{r.pinned_run_id}
@@ -248,7 +248,7 @@ const ContentChannelDetailPage: React.FC = () => {
                           <button
                             onClick={() => handleRemoveRepo(r.id)}
                             disabled={!!channel.deleted_at}
-                            className="inline-flex items-center gap-1 rounded p-1 text-gray-400 hover:text-red-400 disabled:opacity-30"
+                            className="inline-flex items-center gap-1 rounded p-1 text-content-muted hover:text-red-400 disabled:opacity-30"
                           >
                             <Trash2 size={16} />
                           </button>

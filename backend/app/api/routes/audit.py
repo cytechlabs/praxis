@@ -299,12 +299,12 @@ async def list_deliveries(
                 "status": d.status,
                 "attempts": d.attempts,
                 "last_error": d.last_error,
-                "next_attempt_at": d.next_attempt_at.isoformat() + "Z"
-                if d.next_attempt_at
-                else None,
-                "delivered_at": d.delivered_at.isoformat() + "Z"
-                if d.delivered_at
-                else None,
+                "next_attempt_at": (
+                    d.next_attempt_at.isoformat() + "Z" if d.next_attempt_at else None
+                ),
+                "delivered_at": (
+                    d.delivered_at.isoformat() + "Z" if d.delivered_at else None
+                ),
             }
             for d in rows
         ],

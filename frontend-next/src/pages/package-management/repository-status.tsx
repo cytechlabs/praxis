@@ -179,7 +179,7 @@ const RepositoryStatus = () => {
             <div className="flex justify-between items-center">
               <div className="flex items-center space-x-3">
                 <select
-                  className="px-4 py-2 bg-gray-950 border border-gray-800 rounded-md text-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500"
+                  className="px-4 py-2 bg-surface-sunken border border-border rounded-md text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring"
                   value={selectedSystem ?? ''}
                   onChange={(e) => setSelectedSystem(Number(e.target.value))}
                 >
@@ -190,7 +190,7 @@ const RepositoryStatus = () => {
                   ))}
                 </select>
                 {packageManager && (
-                  <span className="px-3 py-1 bg-gray-800 text-gray-300 rounded text-sm">
+                  <span className="px-3 py-1 bg-surface-overlay text-content rounded text-sm">
                     {packageManager}
                   </span>
                 )}
@@ -223,18 +223,18 @@ const RepositoryStatus = () => {
           </div>
 
           {showTemplates && templates.length > 0 && (
-            <div className="mb-6 border border-gray-800 rounded-lg p-4">
-              <h3 className="text-lg font-medium text-gray-200 mb-3">Available Templates</h3>
+            <div className="mb-6 border border-border rounded-lg p-4">
+              <h3 className="text-lg font-medium text-content mb-3">Available Templates</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {templates.map((t) => (
                   <div
                     key={t.name}
-                    className="bg-gray-950 border border-gray-800 rounded-lg p-3 flex flex-col justify-between"
+                    className="bg-surface-sunken border border-border rounded-lg p-3 flex flex-col justify-between"
                   >
                     <div>
-                      <h4 className="font-medium text-gray-200">{t.name}</h4>
-                      <p className="text-sm text-gray-400 mt-1">{t.description}</p>
-                      <p className="text-xs text-gray-500 mt-1 truncate">{t.url}</p>
+                      <h4 className="font-medium text-content">{t.name}</h4>
+                      <p className="text-sm text-content-muted mt-1">{t.description}</p>
+                      <p className="text-xs text-content-subtle mt-1 truncate">{t.url}</p>
                     </div>
                     <Button
                       variant="outline"
@@ -251,60 +251,60 @@ const RepositoryStatus = () => {
           )}
 
           {showAddForm && (
-            <div className="mb-6 border border-gray-800 rounded-lg p-4">
-              <h3 className="text-lg font-medium text-gray-200 mb-3">Add Repository</h3>
+            <div className="mb-6 border border-border rounded-lg p-4">
+              <h3 className="text-lg font-medium text-content mb-3">Add Repository</h3>
               <form onSubmit={handleAdd} className="space-y-3">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm text-gray-400 mb-1">Name *</label>
+                    <label className="block text-sm text-content-muted mb-1">Name *</label>
                     <input
                       type="text"
                       required
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full px-3 py-2 bg-gray-950 border border-gray-800 rounded-md text-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500"
+                      className="w-full px-3 py-2 bg-surface-sunken border border-border rounded-md text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring"
                       placeholder="e.g. Ubuntu Universe"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm text-gray-400 mb-1">URL *</label>
+                    <label className="block text-sm text-content-muted mb-1">URL *</label>
                     <input
                       type="text"
                       required
                       value={formData.url}
                       onChange={(e) => setFormData({ ...formData, url: e.target.value })}
-                      className="w-full px-3 py-2 bg-gray-950 border border-gray-800 rounded-md text-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500"
+                      className="w-full px-3 py-2 bg-surface-sunken border border-border rounded-md text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring"
                       placeholder="e.g. http://archive.ubuntu.com/ubuntu"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm text-gray-400 mb-1">Components</label>
+                    <label className="block text-sm text-content-muted mb-1">Components</label>
                     <input
                       type="text"
                       value={formData.components}
                       onChange={(e) => setFormData({ ...formData, components: e.target.value })}
-                      className="w-full px-3 py-2 bg-gray-950 border border-gray-800 rounded-md text-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500"
+                      className="w-full px-3 py-2 bg-surface-sunken border border-border rounded-md text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring"
                       placeholder="e.g. main restricted universe"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm text-gray-400 mb-1">Distribution</label>
+                    <label className="block text-sm text-content-muted mb-1">Distribution</label>
                     <input
                       type="text"
                       value={formData.distribution}
                       onChange={(e) => setFormData({ ...formData, distribution: e.target.value })}
-                      className="w-full px-3 py-2 bg-gray-950 border border-gray-800 rounded-md text-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500"
+                      className="w-full px-3 py-2 bg-surface-sunken border border-border rounded-md text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring"
                       placeholder="e.g. noble, jammy"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">GPG Key URL</label>
+                  <label className="block text-sm text-content-muted mb-1">GPG Key URL</label>
                   <input
                     type="text"
                     value={formData.gpg_key_url}
                     onChange={(e) => setFormData({ ...formData, gpg_key_url: e.target.value })}
-                    className="w-full px-3 py-2 bg-gray-950 border border-gray-800 rounded-md text-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500"
+                    className="w-full px-3 py-2 bg-surface-sunken border border-border rounded-md text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring"
                     placeholder="https://..."
                   />
                 </div>
@@ -343,9 +343,9 @@ const RepositoryStatus = () => {
           </div>
 
           <div className="mb-6">
-            <h3 className="text-lg font-medium text-gray-200 mb-3">Managed Repositories</h3>
-            <div className="border border-gray-800 rounded-lg">
-              <div className="grid grid-cols-6 gap-4 p-4 bg-gray-950 border-b border-gray-800 font-medium text-gray-200">
+            <h3 className="text-lg font-medium text-content mb-3">Managed Repositories</h3>
+            <div className="border border-border rounded-lg">
+              <div className="grid grid-cols-6 gap-4 p-4 bg-surface-sunken border-b border-border font-medium text-content">
                 <div>Name</div>
                 <div>URL</div>
                 <div>Type</div>
@@ -354,27 +354,27 @@ const RepositoryStatus = () => {
                 <div>Actions</div>
               </div>
               {loading ? (
-                <div className="p-4 text-gray-400">Loading repositories...</div>
+                <div className="p-4 text-content-muted">Loading repositories...</div>
               ) : repos.length === 0 ? (
-                <div className="p-4 text-gray-400">
+                <div className="p-4 text-content-muted">
                   No managed repositories. Add one using the button above or use a template.
                 </div>
               ) : (
                 repos.map((repo) => (
                   <div
                     key={repo.id}
-                    className="grid grid-cols-6 gap-4 p-4 border-b border-gray-800 last:border-b-0 hover:bg-gray-950"
+                    className="grid grid-cols-6 gap-4 p-4 border-b border-border last:border-b-0 hover:bg-surface-overlay"
                   >
-                    <div className="font-medium text-gray-300">{repo.name}</div>
-                    <div className="text-gray-400 text-sm truncate" title={repo.url}>
+                    <div className="font-medium text-content">{repo.name}</div>
+                    <div className="text-content-muted text-sm truncate" title={repo.url}>
                       {repo.url}
                     </div>
                     <div>
-                      <span className="px-2 py-1 bg-gray-800 text-gray-300 rounded text-sm">
+                      <span className="px-2 py-1 bg-surface-overlay text-content rounded text-sm">
                         {repo.repo_type}
                       </span>
                     </div>
-                    <div className="text-gray-400 text-sm">{repo.components || '-'}</div>
+                    <div className="text-content-muted text-sm">{repo.components || '-'}</div>
                     <div>
                       <span
                         className={`px-2 py-1 rounded text-sm ${
@@ -406,32 +406,32 @@ const RepositoryStatus = () => {
           </div>
 
           <div>
-            <h3 className="text-lg font-medium text-gray-200 mb-3">Detected System Repositories</h3>
-            <div className="border border-gray-800 rounded-lg">
-              <div className="grid grid-cols-4 gap-4 p-4 bg-gray-950 border-b border-gray-800 font-medium text-gray-200">
+            <h3 className="text-lg font-medium text-content mb-3">Detected System Repositories</h3>
+            <div className="border border-border rounded-lg">
+              <div className="grid grid-cols-4 gap-4 p-4 bg-surface-sunken border-b border-border font-medium text-content">
                 <div>Source</div>
                 <div>URL</div>
                 <div>Distribution</div>
                 <div>Components</div>
               </div>
               {loading ? (
-                <div className="p-4 text-gray-400">Loading...</div>
+                <div className="p-4 text-content-muted">Loading...</div>
               ) : detectedRepos.length === 0 ? (
-                <div className="p-4 text-gray-400">
+                <div className="p-4 text-content-muted">
                   No repositories detected. Sync to scan the system.
                 </div>
               ) : (
                 detectedRepos.map((repo, idx) => (
                   <div
                     key={idx}
-                    className="grid grid-cols-4 gap-4 p-4 border-b border-gray-800 last:border-b-0 hover:bg-gray-950"
+                    className="grid grid-cols-4 gap-4 p-4 border-b border-border last:border-b-0 hover:bg-surface-overlay"
                   >
-                    <div className="text-gray-300">{repo.type || repo.name || repo.section || '-'}</div>
-                    <div className="text-gray-400 text-sm truncate" title={repo.url}>
+                    <div className="text-content">{repo.type || repo.name || repo.section || '-'}</div>
+                    <div className="text-content-muted text-sm truncate" title={repo.url}>
                       {repo.url || '-'}
                     </div>
-                    <div className="text-gray-400 text-sm">{repo.distribution || '-'}</div>
-                    <div className="text-gray-400 text-sm">{repo.components || '-'}</div>
+                    <div className="text-content-muted text-sm">{repo.distribution || '-'}</div>
+                    <div className="text-content-muted text-sm">{repo.components || '-'}</div>
                   </div>
                 ))
               )}

@@ -165,23 +165,23 @@ const VaultSettingsTab = ({ onConfigSaved }: VaultSettingsTabProps = {}) => {
         <>
           {/* Current Configuration */}
           {vaultConfig ? (
-            <div className="bg-[#0c0c0f] border border-gray-800/60 rounded p-4">
+            <div className="bg-surface-raised border border-border/60 rounded p-4">
               <h3 className="text-lg font-medium mb-4">Current Configuration</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-gray-400">Type:</p>
+                  <p className="text-content-muted">Type:</p>
                   <p className="text-white">
                     {vaultConfig.is_internal ? 'Internal Vault' : 'External Vault'}
                   </p>
                 </div>
                 {!vaultConfig.is_internal && (
                   <div>
-                    <p className="text-gray-400">Server URL:</p>
+                    <p className="text-content-muted">Server URL:</p>
                     <p className="text-white">{vaultConfig.server_url}</p>
                   </div>
                 )}
                 <div>
-                  <p className="text-gray-400">Status:</p>
+                  <p className="text-content-muted">Status:</p>
                   <div
                     className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                       health?.healthy
@@ -194,7 +194,7 @@ const VaultSettingsTab = ({ onConfigSaved }: VaultSettingsTabProps = {}) => {
                 </div>
                 {health && (
                   <div>
-                    <p className="text-gray-400">Details:</p>
+                    <p className="text-content-muted">Details:</p>
                     <p className="text-white">
                       {health.status}
                       {health.version && ` (v${health.version})`}
@@ -202,7 +202,7 @@ const VaultSettingsTab = ({ onConfigSaved }: VaultSettingsTabProps = {}) => {
                   </div>
                 )}
                 <div>
-                  <p className="text-gray-400">Last Health Check:</p>
+                  <p className="text-content-muted">Last Health Check:</p>
                   <p className="text-white">
                     {vaultConfig.last_health_check
                       ? formatTimestamp(vaultConfig.last_health_check)
@@ -223,14 +223,14 @@ const VaultSettingsTab = ({ onConfigSaved }: VaultSettingsTabProps = {}) => {
               </div>
             </div>
           ) : (
-            <div className="bg-[#0c0c0f] border border-gray-800/60 rounded p-4">
-              <p className="text-gray-300">No Vault configuration found. Please configure Vault to enable integration.</p>
+            <div className="bg-surface-raised border border-border/60 rounded p-4">
+              <p className="text-content">No Vault configuration found. Please configure Vault to enable integration.</p>
             </div>
           )}
 
           {/* Configuration Form */}
           {isFormOpen && (
-            <div className="bg-[#0c0c0f] border border-gray-800/60 rounded p-4 mt-4">
+            <div className="bg-surface-raised border border-border/60 rounded p-4 mt-4">
               <h3 className="text-lg font-medium mb-4">
                 {vaultConfig ? 'Update Vault Configuration' : 'New Vault Configuration'}
               </h3>
@@ -250,24 +250,24 @@ const VaultSettingsTab = ({ onConfigSaved }: VaultSettingsTabProps = {}) => {
 
                 {!formData.is_internal && (
                   <div className="mb-4">
-                    <label className="block text-gray-300 mb-2">Server URL</label>
+                    <label className="block text-content mb-2">Server URL</label>
                     <input
                       type="text"
                       name="server_url"
                       value={formData.server_url}
                       onChange={handleInputChange}
                       placeholder="https://vault.example.com:8200"
-                      className="w-full px-3 py-2 bg-[#09090b] border border-gray-700/60 rounded text-white focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-600"
+                      className="w-full px-3 py-2 bg-surface-sunken border border-border-strong/60 rounded text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
                       required={!formData.is_internal}
                     />
-                    <p className="text-gray-400 text-sm mt-1">
+                    <p className="text-content-muted text-sm mt-1">
                       The URL of your external Vault server
                     </p>
                   </div>
                 )}
 
                 <div className="mb-4">
-                  <label className="block text-gray-300 mb-2">
+                  <label className="block text-content mb-2">
                     {formData.is_internal ? 'Backend Service Token' : 'Authentication Token'}
                   </label>
                   <input
@@ -276,10 +276,10 @@ const VaultSettingsTab = ({ onConfigSaved }: VaultSettingsTabProps = {}) => {
                     value={formData.token}
                     onChange={handleInputChange}
                     placeholder="s.example123token"
-                    className="w-full px-3 py-2 bg-[#09090b] border border-gray-700/60 rounded text-white focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-600"
+                    className="w-full px-3 py-2 bg-surface-sunken border border-border-strong/60 rounded text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
                     required
                   />
-                  <p className="text-gray-400 text-sm mt-1">
+                  <p className="text-content-muted text-sm mt-1">
                     {formData.is_internal
                       ? 'The backend service token generated during Vault initialization. Retrieve it with: docker compose exec vault cat /vault/data/backend-token'
                       : 'A token with appropriate permissions for your external Vault server'}

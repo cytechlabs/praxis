@@ -153,10 +153,10 @@ const ComplianceStarterPackPage: React.FC = () => {
                   <CardBody>
                     <div className="flex justify-between items-start mb-3">
                       <div>
-                        <h2 className="text-lg font-semibold text-gray-200">
+                        <h2 className="text-lg font-semibold text-content">
                           {e.name}
                         </h2>
-                        <p className="text-xs text-gray-500 font-mono mt-1">
+                        <p className="text-xs text-content-subtle font-mono mt-1">
                           {e.starter_pack_key}
                         </p>
                       </div>
@@ -183,11 +183,11 @@ const ComplianceStarterPackPage: React.FC = () => {
                     </div>
 
                     {e.description && (
-                      <p className="text-sm text-gray-300 mb-3">{e.description}</p>
+                      <p className="text-sm text-content mb-3">{e.description}</p>
                     )}
 
                     {e.has_coverage_pending && (
-                      <p className="text-xs text-gray-400 mb-3">
+                      <p className="text-xs text-content-muted mb-3">
                         {e.coverage_pending_count} of these checks need host
                         facts Praxis doesn&apos;t collect yet, so they show as
                         “Coverage pending” rather than pass/fail until that

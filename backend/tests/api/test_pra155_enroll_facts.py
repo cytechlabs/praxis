@@ -163,10 +163,13 @@ def test_enroll_facts_failure_does_not_break_cert_response(
     def _boom(*args, **kwargs):
         raise RuntimeError("simulated ingest crash")
 
-    with patch(
-        "app.services.agent_identity_service.AgentIdentityService._sign",
-        new=_stub_sign(serial="pra155-3"),
-    ), patch("app.services.facts_service.ingest", new=_boom):
+    with (
+        patch(
+            "app.services.agent_identity_service.AgentIdentityService._sign",
+            new=_stub_sign(serial="pra155-3"),
+        ),
+        patch("app.services.facts_service.ingest", new=_boom),
+    ):
         res = client.post(
             "/agent/enroll",
             json=agent.enroll_body(

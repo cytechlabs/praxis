@@ -178,8 +178,8 @@ const ConnectionSettingsTab: React.FC = () => {
         <div className="flex items-center gap-3">
           <Wifi className="text-red-500" size={24} />
           <div>
-            <h2 className="text-lg font-semibold text-gray-200">Connection Settings</h2>
-            <p className="text-sm text-gray-400">
+            <h2 className="text-lg font-semibold text-content">Connection Settings</h2>
+            <p className="text-sm text-content-muted">
               Global SSH connection pool and timeout configuration. Changes apply to new connections.
             </p>
           </div>
@@ -192,17 +192,17 @@ const ConnectionSettingsTab: React.FC = () => {
           return (
             <div
               key={key}
-              className="bg-[#0c0c0f] border border-gray-800/60 rounded-lg p-4"
+              className="bg-surface-raised border border-border/60 rounded-lg p-4"
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
-                  <label className="block text-sm font-medium text-gray-200 mb-1">
+                  <label className="block text-sm font-medium text-content mb-1">
                     {label}
                     {!isDefault && (
                       <span className="ml-2 text-xs text-yellow-500 font-normal">modified</span>
                     )}
                   </label>
-                  <p className="text-xs text-gray-400 mb-3">{description}</p>
+                  <p className="text-xs text-content-muted mb-3">{description}</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <input
@@ -211,18 +211,18 @@ const ConnectionSettingsTab: React.FC = () => {
                     onChange={(e) => handleChange(key, e.target.value)}
                     min={min}
                     max={max}
-                    className="w-24 bg-[#09090b] border border-gray-700/60 rounded px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-600 text-right"
+                    className="w-24 bg-surface-sunken border border-border-strong/60 rounded px-3 py-1.5 text-sm text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong text-right"
                   />
                   {unit && (
-                    <span className="text-xs text-gray-500 w-20">{unit}</span>
+                    <span className="text-xs text-content-subtle w-20">{unit}</span>
                   )}
                 </div>
               </div>
               <div className="flex items-center gap-4 mt-1">
-                <span className="text-xs text-gray-500">
+                <span className="text-xs text-content-subtle">
                   Range: {min.toLocaleString()} – {max.toLocaleString()}
                 </span>
-                <span className="text-xs text-gray-500">
+                <span className="text-xs text-content-subtle">
                   Default: {DEFAULTS[key].toLocaleString()}
                 </span>
               </div>
@@ -231,7 +231,7 @@ const ConnectionSettingsTab: React.FC = () => {
         })}
       </div>
 
-      <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-800/60">
+      <div className="flex items-center justify-between mt-6 pt-4 border-t border-border/60">
         <Button
           variant="outline"
           onClick={handleRestoreDefaults}

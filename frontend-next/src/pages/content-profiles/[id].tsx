@@ -92,7 +92,7 @@ const ContentProfileDetailPage: React.FC = () => {
   if (id == null || Number.isNaN(id)) {
     return (
       <MainLayout>
-        <div className="p-6 text-gray-400">Invalid profile id.</div>
+        <div className="p-6 text-content-muted">Invalid profile id.</div>
       </MainLayout>
     );
   }
@@ -207,7 +207,7 @@ const ContentProfileDetailPage: React.FC = () => {
       <div className="p-6">
         <Link
           href="/content-profiles/all"
-          className="mb-3 inline-flex items-center gap-1 text-sm text-gray-400 hover:text-gray-200"
+          className="mb-3 inline-flex items-center gap-1 text-sm text-content-muted hover:text-content"
         >
           <ArrowLeft size={14} /> All content profiles
         </Link>
@@ -229,28 +229,28 @@ const ContentProfileDetailPage: React.FC = () => {
             )}
 
             <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-              <div className="rounded border border-zinc-800 bg-[#111115] p-3 text-sm text-gray-300">
-                <div className="text-xs text-gray-500">Family</div>
+              <div className="rounded border border-border bg-surface-raised p-3 text-sm text-content">
+                <div className="text-xs text-content-subtle">Family</div>
                 <Badge variant="neutral">{profile.package_family?.toUpperCase()}</Badge>
               </div>
-              <div className="rounded border border-zinc-800 bg-[#111115] p-3 text-sm text-gray-300">
-                <div className="text-xs text-gray-500">Channels</div>
+              <div className="rounded border border-border bg-surface-raised p-3 text-sm text-content">
+                <div className="text-xs text-content-subtle">Channels</div>
                 {profile.channels.length}
               </div>
-              <div className="rounded border border-zinc-800 bg-[#111115] p-3 text-sm text-gray-300">
-                <div className="text-xs text-gray-500">Effective subscribers</div>
+              <div className="rounded border border-border bg-surface-raised p-3 text-sm text-content">
+                <div className="text-xs text-content-subtle">Effective subscribers</div>
                 {subscribers.length}
               </div>
             </div>
 
             {profile.description && (
-              <div className="mb-4 rounded border border-zinc-800 bg-[#111115] p-3 text-sm text-gray-300 whitespace-pre-wrap">
+              <div className="mb-4 rounded border border-border bg-surface-raised p-3 text-sm text-content whitespace-pre-wrap">
                 {profile.description}
               </div>
             )}
 
             <div className="mb-2 flex items-center justify-between">
-              <h3 className="text-sm font-medium text-gray-200">Channels</h3>
+              <h3 className="text-sm font-medium text-content">Channels</h3>
               <button
                 onClick={() => setShowAddChannel((v) => !v)}
                 disabled={!!profile.deleted_at || eligibleChannels.length === 0}
@@ -261,11 +261,11 @@ const ContentProfileDetailPage: React.FC = () => {
             </div>
 
             {showAddChannel && (
-              <div className="mb-3 rounded border border-zinc-800 bg-[#111115] p-3">
-                <label className="text-xs text-gray-400">
+              <div className="mb-3 rounded border border-border bg-surface-raised p-3">
+                <label className="text-xs text-content-muted">
                   Channel ({profile.package_family} only)
                   <select
-                    className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-gray-100"
+                    className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-content"
                     value={linkChannelId ?? ''}
                     onChange={(e) =>
                       setLinkChannelId(e.target.value ? Number(e.target.value) : null)
@@ -289,7 +289,7 @@ const ContentProfileDetailPage: React.FC = () => {
                   </button>
                   <button
                     onClick={() => setShowAddChannel(false)}
-                    className="rounded border border-zinc-700 px-3 py-1.5 text-sm text-gray-300 hover:bg-zinc-800"
+                    className="rounded border border-border-strong px-3 py-1.5 text-sm text-content hover:bg-surface-overlay"
                   >
                     Cancel
                   </button>
@@ -298,21 +298,21 @@ const ContentProfileDetailPage: React.FC = () => {
             )}
 
             {profile.channels.length === 0 ? (
-              <div className="mb-6 rounded border border-zinc-800 bg-[#111115] p-3 text-sm text-gray-500">
+              <div className="mb-6 rounded border border-border bg-surface-raised p-3 text-sm text-content-subtle">
                 No channels linked yet.
               </div>
             ) : (
-              <div className="mb-6 overflow-x-auto rounded border border-zinc-800 bg-[#111115]">
+              <div className="mb-6 overflow-x-auto rounded border border-border bg-surface-raised">
                 <table className="w-full text-sm">
-                  <thead className="border-b border-zinc-800 text-left text-gray-400">
+                  <thead className="border-b border-border text-left text-content-muted">
                     <tr>
                       <th className="px-4 py-2">Channel</th>
                       <th className="px-4 py-2 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-zinc-800">
+                  <tbody className="divide-y divide-border">
                     {profile.channels.map((link) => (
-                      <tr key={link.id} className="hover:bg-zinc-900/40">
+                      <tr key={link.id} className="hover:bg-surface-overlay/40">
                         <td className="px-4 py-2">
                           <Link
                             href={`/content-channels/${link.channel_id}`}
@@ -320,7 +320,7 @@ const ContentProfileDetailPage: React.FC = () => {
                           >
                             {link.channel_slug}
                           </Link>
-                          <div className="text-xs text-gray-500">
+                          <div className="text-xs text-content-subtle">
                             {link.channel_display_name}
                           </div>
                         </td>
@@ -328,7 +328,7 @@ const ContentProfileDetailPage: React.FC = () => {
                           <button
                             onClick={() => handleUnlink(link.channel_id)}
                             disabled={!!profile.deleted_at}
-                            className="inline-flex items-center gap-1 rounded p-1 text-gray-400 hover:text-red-400 disabled:opacity-30"
+                            className="inline-flex items-center gap-1 rounded p-1 text-content-muted hover:text-red-400 disabled:opacity-30"
                           >
                             <Trash2 size={16} />
                           </button>
@@ -341,7 +341,7 @@ const ContentProfileDetailPage: React.FC = () => {
             )}
 
             <div className="mb-2 flex items-center justify-between">
-              <h3 className="text-sm font-medium text-gray-200">
+              <h3 className="text-sm font-medium text-content">
                 Subscriptions ({subscriptions.length})
               </h3>
               {canWrite && (
@@ -357,12 +357,12 @@ const ContentProfileDetailPage: React.FC = () => {
             </div>
 
             {showAddSub && (
-              <div className="mb-3 rounded border border-zinc-800 bg-[#111115] p-3">
+              <div className="mb-3 rounded border border-border bg-surface-raised p-3">
                 <div className="flex flex-wrap items-end gap-3">
-                  <label className="text-xs text-gray-400">
+                  <label className="text-xs text-content-muted">
                     Scope
                     <select
-                      className="mt-1 block rounded bg-black/40 px-2 py-1 text-sm text-gray-100"
+                      className="mt-1 block rounded bg-black/40 px-2 py-1 text-sm text-content"
                       value={subScope}
                       onChange={(e) => setScope(e.target.value as ScopeKind)}
                     >
@@ -371,10 +371,10 @@ const ContentProfileDetailPage: React.FC = () => {
                       <option value="smart_group">Smart group</option>
                     </select>
                   </label>
-                  <label className="flex-1 text-xs text-gray-400">
+                  <label className="flex-1 text-xs text-content-muted">
                     Target
                     <select
-                      className="mt-1 block w-full rounded bg-black/40 px-2 py-1 text-sm text-gray-100"
+                      className="mt-1 block w-full rounded bg-black/40 px-2 py-1 text-sm text-content"
                       value={subTargetId ?? ''}
                       onChange={(e) =>
                         setSubTargetId(e.target.value ? Number(e.target.value) : null)
@@ -403,7 +403,7 @@ const ContentProfileDetailPage: React.FC = () => {
                   </button>
                   <button
                     onClick={() => setShowAddSub(false)}
-                    className="rounded border border-zinc-700 px-3 py-1.5 text-sm text-gray-300 hover:bg-zinc-800"
+                    className="rounded border border-border-strong px-3 py-1.5 text-sm text-content hover:bg-surface-overlay"
                   >
                     Cancel
                   </button>
@@ -412,16 +412,16 @@ const ContentProfileDetailPage: React.FC = () => {
             )}
 
             {subscriptions.length === 0 ? (
-              <div className="mb-6 rounded border border-zinc-800 bg-[#111115] p-3 text-sm text-gray-500">
+              <div className="mb-6 rounded border border-border bg-surface-raised p-3 text-sm text-content-subtle">
                 No subscriptions yet. Use{' '}
-                <span className="text-gray-300">Add subscription</span> above to bind a
+                <span className="text-content">Add subscription</span> above to bind a
                 host, group, or smart group - or assign this profile from a host&apos;s
                 detail page.
               </div>
             ) : (
-              <div className="mb-6 overflow-x-auto rounded border border-zinc-800 bg-[#111115]">
+              <div className="mb-6 overflow-x-auto rounded border border-border bg-surface-raised">
                 <table className="w-full text-sm">
-                  <thead className="border-b border-zinc-800 text-left text-gray-400">
+                  <thead className="border-b border-border text-left text-content-muted">
                     <tr>
                       <th className="px-4 py-2">Scope</th>
                       <th className="px-4 py-2">Label</th>
@@ -429,14 +429,14 @@ const ContentProfileDetailPage: React.FC = () => {
                       <th className="px-4 py-2 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-zinc-800">
+                  <tbody className="divide-y divide-border">
                     {subscriptions.map((s) => (
-                      <tr key={s.id} className="hover:bg-zinc-900/40">
+                      <tr key={s.id} className="hover:bg-surface-overlay/40">
                         <td className="px-4 py-2">
                           <Badge variant="neutral">{s.scope_kind}</Badge>
                         </td>
-                        <td className="px-4 py-2 text-gray-200">{s.scope_label}</td>
-                        <td className="px-4 py-2 text-gray-400">
+                        <td className="px-4 py-2 text-content">{s.scope_label}</td>
+                        <td className="px-4 py-2 text-content-muted">
                           {formatTimestamp(s.created_at)}
                         </td>
                         <td className="px-4 py-2 text-right">
@@ -444,7 +444,7 @@ const ContentProfileDetailPage: React.FC = () => {
                             <button
                               onClick={() => handleRemoveSubscription(s)}
                               disabled={!!profile.deleted_at}
-                              className="inline-flex items-center gap-1 rounded p-1 text-gray-400 hover:text-red-400 disabled:opacity-30"
+                              className="inline-flex items-center gap-1 rounded p-1 text-content-muted hover:text-red-400 disabled:opacity-30"
                               title="Remove subscription"
                             >
                               <Trash2 size={16} />
@@ -458,30 +458,30 @@ const ContentProfileDetailPage: React.FC = () => {
               </div>
             )}
 
-            <h3 className="mb-2 text-sm font-medium text-gray-200">
+            <h3 className="mb-2 text-sm font-medium text-content">
               Effective subscribers ({subscribers.length})
             </h3>
-            <p className="mb-2 text-xs text-gray-500">
+            <p className="mb-2 text-xs text-content-subtle">
               Hosts whose effective resolution lands on this profile. Distinct
               from Subscriptions: hosts in conflict at the direct tier do not
               appear here.
             </p>
             {subscribers.length === 0 ? (
-              <div className="rounded border border-zinc-800 bg-[#111115] p-3 text-sm text-gray-500">
+              <div className="rounded border border-border bg-surface-raised p-3 text-sm text-content-subtle">
                 No effective subscribers yet.
               </div>
             ) : (
-              <div className="overflow-x-auto rounded border border-zinc-800 bg-[#111115]">
+              <div className="overflow-x-auto rounded border border-border bg-surface-raised">
                 <table className="w-full text-sm">
-                  <thead className="border-b border-zinc-800 text-left text-gray-400">
+                  <thead className="border-b border-border text-left text-content-muted">
                     <tr>
                       <th className="px-4 py-2">Host</th>
                       <th className="px-4 py-2">Via</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-zinc-800">
+                  <tbody className="divide-y divide-border">
                     {subscribers.map((s) => (
-                      <tr key={s.host_id} className="hover:bg-zinc-900/40">
+                      <tr key={s.host_id} className="hover:bg-surface-overlay/40">
                         <td className="px-4 py-2">
                           <Link
                             href={`/system-management/system/${s.host_id}`}
@@ -493,7 +493,7 @@ const ContentProfileDetailPage: React.FC = () => {
                         <td className="px-4 py-2">
                           <Badge variant="neutral">{s.via_kind}</Badge>
                           {s.via_label && (
-                            <span className="ml-2 text-xs text-gray-500">
+                            <span className="ml-2 text-xs text-content-subtle">
                               {s.via_label}
                             </span>
                           )}

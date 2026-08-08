@@ -119,12 +119,12 @@ const HealthBanner: React.FC<HealthBannerProps> = ({
   return (
     <Link
       href={state.href}
-      className={`group flex items-start gap-4 ${s.bg} ${s.border} border rounded-lg px-5 py-4 mb-6 transition-colors hover:border-opacity-80 focus:outline-none focus:ring-2 focus:ring-red-500/40`}
+      className={`group flex items-start gap-4 ${s.bg} ${s.border} border rounded-lg px-5 py-4 mb-6 transition-colors hover:border-opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring`}
     >
       <div className={`p-2 rounded-md ${s.icon} shrink-0`}>{state.icon}</div>
       <div className="flex-1 min-w-0">
         <div className={`text-base font-semibold ${s.text} tracking-tight`}>{state.headline}</div>
-        <div className="text-xs text-gray-400 mt-0.5">{state.detail}</div>
+        <div className="text-xs text-content-muted mt-0.5">{state.detail}</div>
       </div>
       <div className={`shrink-0 inline-flex items-center gap-1 text-sm font-medium ${s.cta} transition-colors`}>
         <span className="hidden sm:inline">{state.cta}</span>

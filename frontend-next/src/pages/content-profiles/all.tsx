@@ -99,30 +99,30 @@ const ContentProfilesListPage: React.FC = () => {
         )}
 
         {showCreate && (
-          <div className="mb-4 rounded border border-zinc-800 bg-[#111115] p-4">
-            <h3 className="mb-3 text-sm font-medium text-gray-200">New content profile</h3>
+          <div className="mb-4 rounded border border-border bg-surface-raised p-4">
+            <h3 className="mb-3 text-sm font-medium text-content">New content profile</h3>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              <label className="text-xs text-gray-400">
+              <label className="text-xs text-content-muted">
                 Slug
                 <input
-                  className="mt-1 w-full rounded bg-black/40 px-2 py-1 font-mono text-sm text-gray-100"
+                  className="mt-1 w-full rounded bg-black/40 px-2 py-1 font-mono text-sm text-content"
                   value={form.slug}
                   onChange={(e) => setForm({ ...form, slug: e.target.value })}
                   placeholder="prod-deb"
                 />
               </label>
-              <label className="text-xs text-gray-400">
+              <label className="text-xs text-content-muted">
                 Display name
                 <input
-                  className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-gray-100"
+                  className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-content"
                   value={form.display_name}
                   onChange={(e) => setForm({ ...form, display_name: e.target.value })}
                 />
               </label>
-              <label className="text-xs text-gray-400">
+              <label className="text-xs text-content-muted">
                 Package family
                 <select
-                  className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-gray-100"
+                  className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-content"
                   value={form.package_family}
                   onChange={(e) =>
                     setForm({
@@ -135,10 +135,10 @@ const ContentProfilesListPage: React.FC = () => {
                   <option value="rpm">rpm</option>
                 </select>
               </label>
-              <label className="text-xs text-gray-400 md:col-span-2">
+              <label className="text-xs text-content-muted md:col-span-2">
                 Description (optional)
                 <textarea
-                  className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-gray-100"
+                  className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-content"
                   rows={2}
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
@@ -155,7 +155,7 @@ const ContentProfilesListPage: React.FC = () => {
               </button>
               <button
                 onClick={() => setShowCreate(false)}
-                className="rounded border border-zinc-700 px-3 py-1.5 text-sm text-gray-300 hover:bg-zinc-800"
+                className="rounded border border-border-strong px-3 py-1.5 text-sm text-content hover:bg-surface-overlay"
               >
                 Cancel
               </button>
@@ -166,15 +166,15 @@ const ContentProfilesListPage: React.FC = () => {
         {profiles === null && !error && <LoadingState label="Loading profiles" />}
 
         {profiles !== null && profiles.length === 0 && (
-          <div className="rounded border border-zinc-800 bg-[#111115] p-6 text-sm text-gray-400">
-            No content profiles yet. Click <span className="text-gray-200">New profile</span> to create one.
+          <div className="rounded border border-border bg-surface-raised p-6 text-sm text-content-muted">
+            No content profiles yet. Click <span className="text-content">New profile</span> to create one.
           </div>
         )}
 
         {profiles && profiles.length > 0 && (
-          <div className="overflow-x-auto rounded border border-zinc-800 bg-[#111115]">
+          <div className="overflow-x-auto rounded border border-border bg-surface-raised">
             <table className="w-full text-sm">
-              <thead className="border-b border-zinc-800 text-left text-gray-400">
+              <thead className="border-b border-border text-left text-content-muted">
                 <tr>
                   <th className="px-4 py-2">Slug</th>
                   <th className="px-4 py-2">Family</th>
@@ -183,36 +183,36 @@ const ContentProfilesListPage: React.FC = () => {
                   <th className="px-4 py-2 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-800">
+              <tbody className="divide-y divide-border">
                 {profiles.map((p) => (
-                  <tr key={p.id} className="hover:bg-zinc-900/40">
-                    <td className="px-4 py-2 font-mono text-gray-200">
+                  <tr key={p.id} className="hover:bg-surface-overlay/40">
+                    <td className="px-4 py-2 font-mono text-content">
                       <Link
                         href={`/content-profiles/${p.id}`}
                         className="text-blue-400 hover:text-blue-300"
                       >
                         {p.slug}
                       </Link>
-                      <div className="text-xs text-gray-500">{p.display_name}</div>
+                      <div className="text-xs text-content-subtle">{p.display_name}</div>
                     </td>
                     <td className="px-4 py-2">
                       <Badge variant="neutral">{p.package_family?.toUpperCase()}</Badge>
                     </td>
-                    <td className="px-4 py-2 text-gray-300">{p.channels.length}</td>
-                    <td className="px-4 py-2 text-gray-400">
+                    <td className="px-4 py-2 text-content">{p.channels.length}</td>
+                    <td className="px-4 py-2 text-content-muted">
                       {formatTimestamp(p.created_at)}
                     </td>
                     <td className="px-4 py-2 text-right">
                       <Link
                         href={`/content-profiles/${p.id}`}
-                        className="inline-flex items-center gap-1 rounded p-1 text-gray-400 hover:text-blue-400"
+                        className="inline-flex items-center gap-1 rounded p-1 text-content-muted hover:text-blue-400"
                         title="View detail"
                       >
                         <Eye size={16} />
                       </Link>
                       <button
                         onClick={() => handleDelete(p)}
-                        className="ml-1 inline-flex items-center gap-1 rounded p-1 text-gray-400 hover:text-red-400"
+                        className="ml-1 inline-flex items-center gap-1 rounded p-1 text-content-muted hover:text-red-400"
                         title="Soft-delete"
                       >
                         <Trash2 size={16} />

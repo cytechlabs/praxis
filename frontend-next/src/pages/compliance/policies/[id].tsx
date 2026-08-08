@@ -121,7 +121,7 @@ const CompliancePolicyDetailPage: React.FC = () => {
   if (!Number.isFinite(policyId)) {
     return (
       <MainLayout>
-        <div className="p-6 text-gray-400">Invalid policy id.</div>
+        <div className="p-6 text-content-muted">Invalid policy id.</div>
       </MainLayout>
     );
   }
@@ -144,7 +144,7 @@ const CompliancePolicyDetailPage: React.FC = () => {
             <div className="flex items-center gap-2">
               <Link
                 href="/compliance/policies"
-                className="inline-flex items-center gap-1.5 text-sm text-gray-300 hover:text-gray-100"
+                className="inline-flex items-center gap-1.5 text-sm text-content hover:text-content"
               >
                 <ArrowLeft size={14} /> All policies
               </Link>
@@ -321,7 +321,7 @@ const OverviewTab: React.FC<{
                 label="Remediation guidance"
                 wide
                 value={
-                  <pre className="whitespace-pre-wrap text-sm text-gray-300">
+                  <pre className="whitespace-pre-wrap text-sm text-content">
                     {policy.remediation_guidance}
                   </pre>
                 }
@@ -346,14 +346,14 @@ const OverviewTab: React.FC<{
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Field label="Name">
             <input
-              className="w-full bg-gray-900 border border-gray-800 rounded px-3 py-1.5 text-sm text-gray-100"
+              className="w-full bg-surface-sunken border border-border rounded px-3 py-1.5 text-sm text-content"
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
             />
           </Field>
           <Field label="Severity">
             <select
-              className="w-full bg-gray-900 border border-gray-800 rounded px-3 py-1.5 text-sm text-gray-100"
+              className="w-full bg-surface-sunken border border-border rounded px-3 py-1.5 text-sm text-content"
               value={form.severity}
               onChange={(e) =>
                 setForm((f) => ({ ...f, severity: e.target.value as ComplianceSeverity }))
@@ -368,7 +368,7 @@ const OverviewTab: React.FC<{
           </Field>
           <Field label="Category">
             <input
-              className="w-full bg-gray-900 border border-gray-800 rounded px-3 py-1.5 text-sm text-gray-100"
+              className="w-full bg-surface-sunken border border-border rounded px-3 py-1.5 text-sm text-content"
               value={form.category}
               onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
             />
@@ -377,7 +377,7 @@ const OverviewTab: React.FC<{
             <input
               type="number"
               min={1}
-              className="w-full bg-gray-900 border border-gray-800 rounded px-3 py-1.5 text-sm text-gray-100"
+              className="w-full bg-surface-sunken border border-border rounded px-3 py-1.5 text-sm text-content"
               value={form.schedule_interval_hours}
               onChange={(e) =>
                 setForm((f) => ({
@@ -391,7 +391,7 @@ const OverviewTab: React.FC<{
             <input
               type="number"
               min={1}
-              className="w-full bg-gray-900 border border-gray-800 rounded px-3 py-1.5 text-sm text-gray-100"
+              className="w-full bg-surface-sunken border border-border rounded px-3 py-1.5 text-sm text-content"
               value={form.evidence_retention_days}
               onChange={(e) =>
                 setForm((f) => ({
@@ -404,7 +404,7 @@ const OverviewTab: React.FC<{
           <Field label="Description" wide>
             <textarea
               rows={3}
-              className="w-full bg-gray-900 border border-gray-800 rounded px-3 py-1.5 text-sm text-gray-100"
+              className="w-full bg-surface-sunken border border-border rounded px-3 py-1.5 text-sm text-content"
               value={form.description}
               onChange={(e) =>
                 setForm((f) => ({ ...f, description: e.target.value }))
@@ -414,7 +414,7 @@ const OverviewTab: React.FC<{
           <Field label="Remediation guidance" wide>
             <textarea
               rows={4}
-              className="w-full bg-gray-900 border border-gray-800 rounded px-3 py-1.5 text-sm text-gray-100"
+              className="w-full bg-surface-sunken border border-border rounded px-3 py-1.5 text-sm text-content"
               value={form.remediation_guidance}
               onChange={(e) =>
                 setForm((f) => ({ ...f, remediation_guidance: e.target.value }))
@@ -551,7 +551,7 @@ const ChecksTab: React.FC<{
       <Card>
         <CardBody>
           <div className="flex justify-between items-center mb-3">
-            <h2 className="text-lg font-semibold text-gray-200">Checks</h2>
+            <h2 className="text-lg font-semibold text-content">Checks</h2>
             {canWrite && (
               <Button
                 variant="primary"
@@ -581,7 +581,7 @@ const ChecksTab: React.FC<{
             />
           ) : (
             <table className="w-full text-sm mt-3">
-              <thead className="text-left text-gray-400 border-b border-gray-800">
+              <thead className="text-left text-content-muted border-b border-border">
                 <tr>
                   <th className="py-2 pr-3">Slug</th>
                   <th className="py-2 pr-3">Title</th>
@@ -594,11 +594,11 @@ const ChecksTab: React.FC<{
               </thead>
               <tbody>
                 {policy.checks.map((c) => (
-                  <tr key={c.id} className="border-b border-gray-900/50">
+                  <tr key={c.id} className="border-b border-border/50">
                     <td className="py-2 pr-3 font-mono">{c.slug}</td>
-                    <td className="py-2 pr-3 text-gray-200">{c.title}</td>
+                    <td className="py-2 pr-3 text-content">{c.title}</td>
                     <td className="py-2 pr-3">
-                      <span className="text-xs text-gray-300">
+                      <span className="text-xs text-content">
                         {CHECK_KIND_LABELS[c.kind]}
                       </span>
                     </td>
@@ -624,7 +624,7 @@ const ChecksTab: React.FC<{
                           {SEVERITY_LABELS[c.severity_override]}
                         </Badge>
                       ) : (
-                        <span className="text-xs text-gray-500">inherits</span>
+                        <span className="text-xs text-content-subtle">inherits</span>
                       )}
                     </td>
                     <td className="py-2 pr-3 text-right">
@@ -676,18 +676,18 @@ const CheckForm: React.FC<{
     onChange({ slug, title, def: { ...def, ...patch } });
 
   return (
-    <div className="border border-gray-800 rounded p-4 bg-gray-900/40 mb-4">
+    <div className="border border-border rounded p-4 bg-surface-raised/40 mb-4">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Field label="Slug">
           <input
-            className="w-full bg-gray-900 border border-gray-800 rounded px-3 py-1.5 text-sm text-gray-100"
+            className="w-full bg-surface-sunken border border-border rounded px-3 py-1.5 text-sm text-content"
             value={slug}
             onChange={(e) => onChange({ slug: e.target.value, title, def })}
           />
         </Field>
         <Field label="Title">
           <input
-            className="w-full bg-gray-900 border border-gray-800 rounded px-3 py-1.5 text-sm text-gray-100"
+            className="w-full bg-surface-sunken border border-border rounded px-3 py-1.5 text-sm text-content"
             value={title}
             onChange={(e) => onChange({ slug, title: e.target.value, def })}
           />
@@ -695,7 +695,7 @@ const CheckForm: React.FC<{
         <Field label="Kind">
           <select
             aria-label="Kind"
-            className="w-full bg-gray-900 border border-gray-800 rounded px-3 py-1.5 text-sm text-gray-100"
+            className="w-full bg-surface-sunken border border-border rounded px-3 py-1.5 text-sm text-content"
             value={def.kind}
             onChange={(e) => setDef({ kind: e.target.value as ComplianceCheckKind })}
           >
@@ -712,7 +712,7 @@ const CheckForm: React.FC<{
           def.kind === 'package_version_min') && (
           <Field label="Package">
             <input
-              className="w-full bg-gray-900 border border-gray-800 rounded px-3 py-1.5 text-sm text-gray-100"
+              className="w-full bg-surface-sunken border border-border rounded px-3 py-1.5 text-sm text-content"
               value={def.package}
               onChange={(e) => setDef({ package: e.target.value })}
               placeholder="openssh-server"
@@ -722,7 +722,7 @@ const CheckForm: React.FC<{
         {def.kind === 'package_version_min' && (
           <Field label="Min version">
             <input
-              className="w-full bg-gray-900 border border-gray-800 rounded px-3 py-1.5 text-sm text-gray-100"
+              className="w-full bg-surface-sunken border border-border rounded px-3 py-1.5 text-sm text-content"
               value={def.min_version}
               onChange={(e) => setDef({ min_version: e.target.value })}
               placeholder="3.0.0"
@@ -734,7 +734,7 @@ const CheckForm: React.FC<{
           def.kind === 'fact_absent') && (
           <Field label="Fact key">
             <input
-              className="w-full bg-gray-900 border border-gray-800 rounded px-3 py-1.5 text-sm text-gray-100"
+              className="w-full bg-surface-sunken border border-border rounded px-3 py-1.5 text-sm text-content"
               value={def.fact_key}
               onChange={(e) => setDef({ fact_key: e.target.value })}
               placeholder="host.kernel_version"
@@ -744,7 +744,7 @@ const CheckForm: React.FC<{
         {def.kind === 'fact_equals' && (
           <Field label="Expected">
             <input
-              className="w-full bg-gray-900 border border-gray-800 rounded px-3 py-1.5 text-sm text-gray-100"
+              className="w-full bg-surface-sunken border border-border rounded px-3 py-1.5 text-sm text-content"
               value={def.expected}
               onChange={(e) => setDef({ expected: e.target.value })}
             />
@@ -753,7 +753,7 @@ const CheckForm: React.FC<{
         {(def.kind === 'file_exists' || def.kind === 'file_sha256') && (
           <Field label="Path">
             <input
-              className="w-full bg-gray-900 border border-gray-800 rounded px-3 py-1.5 text-sm text-gray-100"
+              className="w-full bg-surface-sunken border border-border rounded px-3 py-1.5 text-sm text-content"
               value={def.path}
               onChange={(e) => setDef({ path: e.target.value })}
               placeholder="/etc/sudoers"
@@ -763,7 +763,7 @@ const CheckForm: React.FC<{
         {def.kind === 'file_sha256' && (
           <Field label="SHA-256">
             <input
-              className="w-full bg-gray-900 border border-gray-800 rounded px-3 py-1.5 text-sm font-mono text-gray-100"
+              className="w-full bg-surface-sunken border border-border rounded px-3 py-1.5 text-sm font-mono text-content"
               value={def.sha256}
               onChange={(e) => setDef({ sha256: e.target.value })}
             />
@@ -773,7 +773,7 @@ const CheckForm: React.FC<{
           def.kind === 'command_exit_code') && (
           <Field label="Command" wide>
             <input
-              className="w-full bg-gray-900 border border-gray-800 rounded px-3 py-1.5 text-sm font-mono text-gray-100"
+              className="w-full bg-surface-sunken border border-border rounded px-3 py-1.5 text-sm font-mono text-content"
               value={def.command}
               onChange={(e) => setDef({ command: e.target.value })}
             />
@@ -782,7 +782,7 @@ const CheckForm: React.FC<{
         {def.kind === 'command_stdout_contains' && (
           <Field label="Expected substring">
             <input
-              className="w-full bg-gray-900 border border-gray-800 rounded px-3 py-1.5 text-sm text-gray-100"
+              className="w-full bg-surface-sunken border border-border rounded px-3 py-1.5 text-sm text-content"
               value={def.expected_substring}
               onChange={(e) => setDef({ expected_substring: e.target.value })}
             />
@@ -794,7 +794,7 @@ const CheckForm: React.FC<{
               type="number"
               min={0}
               max={255}
-              className="w-full bg-gray-900 border border-gray-800 rounded px-3 py-1.5 text-sm text-gray-100"
+              className="w-full bg-surface-sunken border border-border rounded px-3 py-1.5 text-sm text-content"
               value={def.expected_exit_code}
               onChange={(e) => setDef({ expected_exit_code: e.target.value })}
             />
@@ -893,12 +893,12 @@ const EvidenceTab: React.FC<{
         <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
           <div className="flex items-center gap-3 flex-wrap">
             <div className="flex items-center gap-2">
-              <label className="text-xs text-gray-400 uppercase tracking-wide">
+              <label className="text-xs text-content-muted uppercase tracking-wide">
                 Verdict
               </label>
               <select
                 aria-label="Verdict"
-                className="bg-gray-900 border border-gray-800 rounded px-3 py-1.5 text-sm text-gray-100"
+                className="bg-surface-sunken border border-border rounded px-3 py-1.5 text-sm text-content"
                 value={verdict}
                 onChange={(e) => {
                   setVerdict(e.target.value as Verdict | '');
@@ -914,7 +914,7 @@ const EvidenceTab: React.FC<{
               </select>
             </div>
             <div className="flex items-center gap-2">
-              <label className="text-xs text-gray-400 uppercase tracking-wide">
+              <label className="text-xs text-content-muted uppercase tracking-wide">
                 System ID
               </label>
               <input
@@ -922,7 +922,7 @@ const EvidenceTab: React.FC<{
                 type="number"
                 min={1}
                 placeholder="any"
-                className="w-24 bg-gray-900 border border-gray-800 rounded px-3 py-1.5 text-sm text-gray-100"
+                className="w-24 bg-surface-sunken border border-border rounded px-3 py-1.5 text-sm text-content"
                 value={systemIdText}
                 onChange={(e) => {
                   setSystemIdText(e.target.value);
@@ -961,7 +961,7 @@ const EvidenceTab: React.FC<{
           <>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="text-left text-gray-400 border-b border-gray-800">
+                <thead className="text-left text-content-muted border-b border-border">
                   <tr>
                     <th className="py-2 pr-3">Evaluated</th>
                     <th className="py-2 pr-3">System</th>
@@ -975,8 +975,8 @@ const EvidenceTab: React.FC<{
                 </thead>
                 <tbody>
                   {page.items.map((r) => (
-                    <tr key={r.id} className="border-b border-gray-900/50">
-                      <td className="py-2 pr-3 text-xs text-gray-300">
+                    <tr key={r.id} className="border-b border-border/50">
+                      <td className="py-2 pr-3 text-xs text-content">
                         {formatTimestamp(r.evaluated_at)}
                       </td>
                       <td className="py-2 pr-3">
@@ -995,13 +995,13 @@ const EvidenceTab: React.FC<{
                           {r.status_label}
                         </Badge>
                       </td>
-                      <td className="py-2 pr-3 text-xs text-gray-300">
+                      <td className="py-2 pr-3 text-xs text-content">
                         {r.runner_label}
                       </td>
-                      <td className="py-2 pr-3 text-xs text-gray-400">
+                      <td className="py-2 pr-3 text-xs text-content-muted">
                         {r.verdict_reason_label ?? '-'}
                       </td>
-                      <td className="py-2 pr-3 text-xs text-gray-400 font-mono">
+                      <td className="py-2 pr-3 text-xs text-content-muted font-mono">
                         {r.observed_value ?? '-'}
                       </td>
                       <td className="py-2 pr-3 text-right">
@@ -1015,7 +1015,7 @@ const EvidenceTab: React.FC<{
                 </tbody>
               </table>
             </div>
-            <div className="mt-3 flex items-center justify-between text-xs text-gray-400">
+            <div className="mt-3 flex items-center justify-between text-xs text-content-muted">
               <span>
                 Showing {page.items.length} of {page.total} (offset {page.offset})
               </span>
@@ -1122,9 +1122,9 @@ const SummaryTab: React.FC<{ policyId: number }> = ({ policyId }) => {
 
       <Card>
         <CardBody>
-          <h2 className="text-lg font-semibold text-gray-200 mb-3">Per check</h2>
+          <h2 className="text-lg font-semibold text-content mb-3">Per check</h2>
           <table className="w-full text-sm">
-            <thead className="text-left text-gray-400 border-b border-gray-800">
+            <thead className="text-left text-content-muted border-b border-border">
               <tr>
                 <th className="py-2 pr-3">Check</th>
                 <th className="py-2 pr-3">Kind</th>
@@ -1138,13 +1138,13 @@ const SummaryTab: React.FC<{ policyId: number }> = ({ policyId }) => {
               {summary.per_check.map((c) => (
                 <tr
                   key={`${c.check_slug}-${c.check_id ?? 'deleted'}`}
-                  className="border-b border-gray-900/50"
+                  className="border-b border-border/50"
                 >
                   <td className="py-2 pr-3 font-mono text-xs">{c.check_slug}</td>
-                  <td className="py-2 pr-3 text-xs text-gray-300">
+                  <td className="py-2 pr-3 text-xs text-content">
                     {CHECK_KIND_LABELS[c.check_kind]}
                   </td>
-                  <td className="py-2 pr-3 text-xs text-gray-300">
+                  <td className="py-2 pr-3 text-xs text-content">
                     {c.runner_label}
                   </td>
                   <td className="py-2 pr-3 font-mono text-emerald-400">
@@ -1165,9 +1165,9 @@ const SummaryTab: React.FC<{ policyId: number }> = ({ policyId }) => {
 
       <Card>
         <CardBody>
-          <h2 className="text-lg font-semibold text-gray-200 mb-3">Per host</h2>
+          <h2 className="text-lg font-semibold text-content mb-3">Per host</h2>
           <table className="w-full text-sm">
-            <thead className="text-left text-gray-400 border-b border-gray-800">
+            <thead className="text-left text-content-muted border-b border-border">
               <tr>
                 <th className="py-2 pr-3">System</th>
                 <th className="py-2 pr-3">Pass</th>
@@ -1177,7 +1177,7 @@ const SummaryTab: React.FC<{ policyId: number }> = ({ policyId }) => {
             </thead>
             <tbody>
               {summary.per_host.map((h) => (
-                <tr key={h.system_id} className="border-b border-gray-900/50">
+                <tr key={h.system_id} className="border-b border-border/50">
                   <td className="py-2 pr-3">
                     <Link
                       href={`/compliance/systems/${h.system_id}`}
@@ -1215,8 +1215,8 @@ const Row: React.FC<{
   wide?: boolean;
 }> = ({ label, value, wide }) => (
   <div className={wide ? 'md:col-span-2' : ''}>
-    <p className="text-xs uppercase tracking-wide text-gray-500">{label}</p>
-    <div className="text-sm text-gray-200 mt-0.5">{value}</div>
+    <p className="text-xs uppercase tracking-wide text-content-subtle">{label}</p>
+    <div className="text-sm text-content mt-0.5">{value}</div>
   </div>
 );
 
@@ -1226,7 +1226,7 @@ const Field: React.FC<{
   wide?: boolean;
 }> = ({ label, children, wide }) => (
   <div className={wide ? 'md:col-span-2' : ''}>
-    <label className="block text-xs uppercase tracking-wide text-gray-500 mb-1">
+    <label className="block text-xs uppercase tracking-wide text-content-subtle mb-1">
       {label}
     </label>
     {children}
@@ -1235,8 +1235,8 @@ const Field: React.FC<{
 
 const Stat: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
   <div className="min-w-[8rem]">
-    <p className="text-xs uppercase tracking-wide text-gray-500">{label}</p>
-    <p className="text-lg font-semibold text-gray-100 mt-0.5">{value}</p>
+    <p className="text-xs uppercase tracking-wide text-content-subtle">{label}</p>
+    <p className="text-lg font-semibold text-content mt-0.5">{value}</p>
   </div>
 );
 

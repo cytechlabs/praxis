@@ -141,7 +141,7 @@ const HostContentProfileCard: React.FC<Props> = ({ systemId, canWrite }) => {
       </CardHeader>
       <CardBody>
         {error && <p className="text-sm text-red-400">{error}</p>}
-        {!effective && !error && <p className="text-sm text-gray-400">Loading…</p>}
+        {!effective && !error && <p className="text-sm text-content-muted">Loading…</p>}
 
         {effective?.state === 'conflict' && (
           <div className="rounded border border-red-900/40 bg-red-900/10 p-3 text-sm text-red-300">
@@ -175,7 +175,7 @@ const HostContentProfileCard: React.FC<Props> = ({ systemId, canWrite }) => {
                 >
                   {binding.profile_display_name}
                 </Link>
-                <div className="text-xs text-gray-500">
+                <div className="text-xs text-content-subtle">
                   {binding.profile_slug} · via {humanizeLabel(binding.via_kind).toLowerCase()}
                   {binding.via_label ? ` (${binding.via_label})` : ''}
                 </div>
@@ -205,15 +205,15 @@ const HostContentProfileCard: React.FC<Props> = ({ systemId, canWrite }) => {
             </div>
 
             {resolved && resolved.entries.length > 0 && (
-              <div className="text-xs text-gray-400">
+              <div className="text-xs text-content-muted">
                 Resolves to {resolved.entries.length} mirror source(s):{' '}
                 {resolved.entries.map((e) => e.mirror_slug).join(', ')}
               </div>
             )}
 
             {lastOutcome && (
-              <div className="rounded border border-zinc-800 bg-black/20 p-2 text-xs text-gray-400">
-                Last apply: <span className="text-gray-200">{lastOutcome.state}</span>
+              <div className="rounded border border-border bg-black/20 p-2 text-xs text-content-muted">
+                Last apply: <span className="text-content">{lastOutcome.state}</span>
                 {' · '}
                 {lastOutcome.written_paths.length} written,{' '}
                 {lastOutcome.removed_paths.length} removed
@@ -224,11 +224,11 @@ const HostContentProfileCard: React.FC<Props> = ({ systemId, canWrite }) => {
         )}
 
         {canWrite && effective && effective.state !== 'conflict' && (
-          <div className="mt-4 flex items-end gap-2 border-t border-zinc-800 pt-3">
-            <label className="flex-1 text-xs text-gray-500">
+          <div className="mt-4 flex items-end gap-2 border-t border-border pt-3">
+            <label className="flex-1 text-xs text-content-subtle">
               {binding ? 'Assign a different profile (direct)' : 'Assign a profile'}
               <select
-                className="mt-1 w-full rounded border border-zinc-700 bg-black/30 px-2 py-1.5 text-sm text-gray-200"
+                className="mt-1 w-full rounded border border-border-strong bg-black/30 px-2 py-1.5 text-sm text-content"
                 value={assignId ?? ''}
                 onChange={(e) =>
                   setAssignId(e.target.value ? Number(e.target.value) : null)

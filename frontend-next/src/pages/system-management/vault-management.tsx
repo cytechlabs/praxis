@@ -372,7 +372,7 @@ const VaultManagementPage: React.FC = () => {
       </Head>
       <div className="p-6">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-semibold text-gray-200">Vault Management</h1>
+          <h1 className="text-2xl font-semibold text-content">Vault Management</h1>
           <div className="flex gap-2">
             <Button
               variant="outline"
@@ -401,14 +401,14 @@ const VaultManagementPage: React.FC = () => {
         )}
 
         {showSettings ? (
-          <div className="bg-[#0c0c0f] border border-gray-800/60 rounded-lg p-4">
+          <div className="bg-surface-raised border border-border/60 rounded-lg p-4">
             <VaultSettingsTab onConfigSaved={loadKvStores} />
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             {/* KV Store Selection */}
-            <div className="lg:col-span-3 bg-[#0c0c0f] border border-gray-800/60 rounded-lg p-4">
-              <h2 className="text-sm font-semibold mb-3 text-gray-200 uppercase tracking-wider flex items-center">
+            <div className="lg:col-span-3 bg-surface-raised border border-border/60 rounded-lg p-4">
+              <h2 className="text-sm font-semibold mb-3 text-content uppercase tracking-wider flex items-center">
                 <Key size={16} className="mr-2" />
                 KV Stores
               </h2>
@@ -418,7 +418,7 @@ const VaultManagementPage: React.FC = () => {
                   <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-red-500" />
                 </div>
               ) : kvStores.length === 0 ? (
-                <p className="text-gray-500 text-center py-4 text-sm">No KV stores found</p>
+                <p className="text-content-subtle text-center py-4 text-sm">No KV stores found</p>
               ) : (
                 <div className="space-y-1">
                   {kvStores.map((store, index) => (
@@ -428,7 +428,7 @@ const VaultManagementPage: React.FC = () => {
                       className={`w-full text-left px-3 py-2 rounded-md text-sm truncate transition-colors ${
                         selectedKvStore === store
                           ? 'bg-red-600 text-white'
-                          : 'bg-gray-900/50 text-gray-300 hover:bg-gray-800'
+                          : 'bg-surface-sunken/50 text-content hover:bg-surface-overlay'
                       }`}
                       title={store}
                     >
@@ -440,9 +440,9 @@ const VaultManagementPage: React.FC = () => {
             </div>
 
             {/* Secrets List */}
-            <div className="lg:col-span-4 bg-[#0c0c0f] border border-gray-800/60 rounded-lg p-4 min-w-0">
+            <div className="lg:col-span-4 bg-surface-raised border border-border/60 rounded-lg p-4 min-w-0">
               <div className="flex justify-between items-center mb-3 gap-2">
-                <h2 className="text-sm font-semibold text-gray-200 uppercase tracking-wider flex items-center min-w-0">
+                <h2 className="text-sm font-semibold text-content uppercase tracking-wider flex items-center min-w-0">
                   <Lock size={16} className="mr-2 shrink-0" />
                   <span className="truncate">Secrets</span>
                 </h2>
@@ -465,25 +465,25 @@ const VaultManagementPage: React.FC = () => {
                 <div className="mb-2 flex items-center gap-1">
                   <button
                     onClick={navigateUp}
-                    className="p-1 text-gray-400 hover:text-gray-200 rounded"
+                    className="p-1 text-content-muted hover:text-content rounded"
                     aria-label="Up one level" title="Up one level"
                   >
                     <ChevronLeft size={14} />
                   </button>
-                  <code className="text-xs text-gray-500 truncate font-mono" title={currentPath}>
+                  <code className="text-xs text-content-subtle truncate font-mono" title={currentPath}>
                     {currentPath}
                   </code>
                 </div>
               )}
 
               {!selectedKvStore ? (
-                <p className="text-gray-500 text-center py-4 text-sm">Select a KV store first</p>
+                <p className="text-content-subtle text-center py-4 text-sm">Select a KV store first</p>
               ) : loading && secrets.length === 0 ? (
                 <div className="flex justify-center items-center h-32">
                   <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-red-500" />
                 </div>
               ) : secrets.length === 0 ? (
-                <p className="text-gray-500 text-center py-4 text-sm">No secrets found</p>
+                <p className="text-content-subtle text-center py-4 text-sm">No secrets found</p>
               ) : (
                 <div className="space-y-1 max-h-[60vh] overflow-y-auto pr-1">
                   {secrets.map((secret, index) => {
@@ -508,7 +508,7 @@ const VaultManagementPage: React.FC = () => {
                           className={`flex-1 min-w-0 text-left px-3 py-2 rounded-md text-sm truncate transition-colors ${
                             isSelected
                               ? 'bg-red-600 text-white'
-                              : 'bg-gray-900/50 text-gray-300 hover:bg-gray-800'
+                              : 'bg-surface-sunken/50 text-content hover:bg-surface-overlay'
                           }`}
                           title={secret}
                         >
@@ -517,7 +517,7 @@ const VaultManagementPage: React.FC = () => {
                         {canWrite && !isFolder && (
                           <button
                             onClick={() => setDeleteTarget(fullPath)}
-                            className="p-1.5 bg-gray-900/50 text-gray-500 rounded-md hover:bg-red-700 hover:text-white transition-colors opacity-0 group-hover:opacity-100 shrink-0"
+                            className="p-1.5 bg-surface-sunken/50 text-content-subtle rounded-md hover:bg-red-700 hover:text-white transition-colors opacity-0 group-hover:opacity-100 shrink-0"
                             aria-label="Delete Secret" title="Delete Secret"
                           >
                             <Trash2 size={14} />
@@ -531,14 +531,14 @@ const VaultManagementPage: React.FC = () => {
             </div>
 
             {/* Secret Details */}
-            <div className="lg:col-span-5 bg-[#0c0c0f] border border-gray-800/60 rounded-lg p-4 min-w-0">
-              <h2 className="text-sm font-semibold mb-3 text-gray-200 uppercase tracking-wider flex items-center">
+            <div className="lg:col-span-5 bg-surface-raised border border-border/60 rounded-lg p-4 min-w-0">
+              <h2 className="text-sm font-semibold mb-3 text-content uppercase tracking-wider flex items-center">
                 <Eye size={16} className="mr-2" />
                 Secret Details
               </h2>
 
               {!selectedSecret ? (
-                <p className="text-gray-500 text-center py-8 text-sm">
+                <p className="text-content-subtle text-center py-8 text-sm">
                   Select a secret to view details
                 </p>
               ) : loading && !secretData ? (
@@ -546,13 +546,13 @@ const VaultManagementPage: React.FC = () => {
                   <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-red-500" />
                 </div>
               ) : !secretData ? (
-                <p className="text-gray-500 text-center py-4 text-sm">Failed to load secret data</p>
+                <p className="text-content-subtle text-center py-4 text-sm">Failed to load secret data</p>
               ) : (
                 <div className="space-y-4">
                   {/* Path */}
                   <div>
                     <div className="flex justify-between items-center mb-2 gap-2">
-                      <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                      <h3 className="text-xs font-semibold text-content-muted uppercase tracking-wider">
                         Path
                       </h3>
                       {canWrite && (
@@ -570,7 +570,7 @@ const VaultManagementPage: React.FC = () => {
                         </Button>
                       )}
                     </div>
-                    <code className="block bg-gray-900/50 border border-gray-800 p-2 rounded text-sm text-gray-200 break-all font-mono">
+                    <code className="block bg-surface-sunken/50 border border-border p-2 rounded text-sm text-content break-all font-mono">
                       {secretData.path}
                     </code>
                   </div>
@@ -578,15 +578,15 @@ const VaultManagementPage: React.FC = () => {
                   {/* Data + version */}
                   <div>
                     <div className="flex justify-between items-center mb-2 gap-2">
-                      <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                      <h3 className="text-xs font-semibold text-content-muted uppercase tracking-wider">
                         Data
                       </h3>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-gray-500">Version</span>
+                        <span className="text-xs text-content-subtle">Version</span>
                         <select
                           value={selectedVersion}
                           onChange={(e) => setSelectedVersion(Number(e.target.value))}
-                          className="bg-gray-900/50 text-gray-200 px-2 py-1 rounded-md border border-gray-700 text-xs focus:outline-none focus:border-red-500"
+                          className="bg-surface-sunken/50 text-content px-2 py-1 rounded-md border border-border-strong text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
                         >
                           {secretVersions.map((version) => (
                             <option key={version} value={version}>
@@ -602,22 +602,22 @@ const VaultManagementPage: React.FC = () => {
                         <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-red-500" />
                       </div>
                     ) : !versionData ? (
-                      <p className="text-gray-500 text-center py-2 text-sm">
+                      <p className="text-content-subtle text-center py-2 text-sm">
                         No version data available
                       </p>
                     ) : (
                       <>
-                        <div className="text-xs text-gray-500 mb-2">
+                        <div className="text-xs text-content-subtle mb-2">
                           Created: {formatDate(versionData.created_time)}
                         </div>
-                        <div className="bg-gray-900/50 border border-gray-800 rounded overflow-hidden">
+                        <div className="bg-surface-sunken/50 border border-border rounded overflow-hidden">
                           <table className="w-full text-sm">
                             <thead>
-                              <tr className="border-b border-gray-800 bg-white/[0.02]">
-                                <th scope="col" className="text-left px-3 py-2 text-gray-500 font-medium text-xs uppercase tracking-wider">
+                              <tr className="border-b border-border bg-white/[0.02]">
+                                <th scope="col" className="text-left px-3 py-2 text-content-subtle font-medium text-xs uppercase tracking-wider">
                                   Key
                                 </th>
-                                <th scope="col" className="text-left px-3 py-2 text-gray-500 font-medium text-xs uppercase tracking-wider">
+                                <th scope="col" className="text-left px-3 py-2 text-content-subtle font-medium text-xs uppercase tracking-wider">
                                   Value
                                 </th>
                               </tr>
@@ -627,19 +627,19 @@ const VaultManagementPage: React.FC = () => {
                                 const isPassword = key.toLowerCase().includes('password');
                                 const revealed = revealedPasswords.has(key);
                                 return (
-                                  <tr key={key} className="border-b border-gray-800/50 last:border-0">
-                                    <td className="px-3 py-2 text-gray-300 font-mono align-top whitespace-nowrap">
+                                  <tr key={key} className="border-b border-border/50 last:border-0">
+                                    <td className="px-3 py-2 text-content font-mono align-top whitespace-nowrap">
                                       {key}
                                     </td>
-                                    <td className="px-3 py-2 text-gray-200 break-all">
+                                    <td className="px-3 py-2 text-content break-all">
                                       {isPassword ? (
                                         <div className="flex items-center gap-2 flex-wrap">
-                                          <span className="bg-gray-800 px-2 py-0.5 rounded text-xs font-mono">
+                                          <span className="bg-surface-overlay px-2 py-0.5 rounded text-xs font-mono">
                                             {revealed ? String(value) : '••••••••'}
                                           </span>
                                           <button
                                             onClick={() => togglePasswordReveal(key)}
-                                            className="text-gray-500 hover:text-red-400 transition-colors"
+                                            className="text-content-subtle hover:text-red-400 transition-colors"
                                             title={revealed ? 'Hide' : 'Reveal'}
                                           >
                                             {revealed ? <EyeOff size={14} /> : <Eye size={14} />}
@@ -657,7 +657,7 @@ const VaultManagementPage: React.FC = () => {
                                                 });
                                                 setShowPasswordUpdateModal(true);
                                               }}
-                                              className="text-gray-500 hover:text-red-400 transition-colors"
+                                              className="text-content-subtle hover:text-red-400 transition-colors"
                                               aria-label="Update Password" title="Update Password"
                                             >
                                               <Edit size={14} />
@@ -680,19 +680,19 @@ const VaultManagementPage: React.FC = () => {
 
                   {/* Metadata */}
                   <div>
-                    <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                    <h3 className="text-xs font-semibold text-content-muted uppercase tracking-wider mb-2">
                       Metadata
                     </h3>
-                    <div className="bg-gray-900/50 border border-gray-800 p-3 rounded text-sm">
+                    <div className="bg-surface-sunken/50 border border-border p-3 rounded text-sm">
                       <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5">
-                        <div className="text-gray-500">Created:</div>
-                        <div className="text-gray-200">
+                        <div className="text-content-subtle">Created:</div>
+                        <div className="text-content">
                           {formatDate(secretData.metadata.created_time)}
                         </div>
-                        <div className="text-gray-500">Current version:</div>
-                        <div className="text-gray-200">{secretData.metadata.current_version}</div>
-                        <div className="text-gray-500">Total versions:</div>
-                        <div className="text-gray-200">
+                        <div className="text-content-subtle">Current version:</div>
+                        <div className="text-content">{secretData.metadata.current_version}</div>
+                        <div className="text-content-subtle">Total versions:</div>
+                        <div className="text-content">
                           {Object.keys(secretData.metadata.versions || {}).length}
                         </div>
                       </div>
@@ -714,11 +714,11 @@ const VaultManagementPage: React.FC = () => {
       >
         <div className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">
+            <label className="block text-xs font-medium text-content-muted uppercase tracking-wider mb-1">
               Secret Path
             </label>
             <div className="flex items-center gap-1">
-              <code className="text-sm text-gray-500 font-mono shrink-0 max-w-[40%] truncate" title={currentPath}>
+              <code className="text-sm text-content-subtle font-mono shrink-0 max-w-[40%] truncate" title={currentPath}>
                 {currentPath}/
               </code>
               <input
@@ -726,13 +726,13 @@ const VaultManagementPage: React.FC = () => {
                 value={newSecretPath}
                 onChange={(e) => setNewSecretPath(e.target.value)}
                 placeholder="my-secret"
-                className="flex-1 min-w-0 bg-gray-900/50 text-gray-200 px-3 py-2 rounded-md border border-gray-700 text-sm focus:outline-none focus:border-red-500"
+                className="flex-1 min-w-0 bg-surface-sunken/50 text-content px-3 py-2 rounded-md border border-border-strong text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">
+            <label className="block text-xs font-medium text-content-muted uppercase tracking-wider mb-2">
               Fields
             </label>
             <div className="space-y-2">
@@ -747,19 +747,19 @@ const VaultManagementPage: React.FC = () => {
                       setNewSecretData({ ...rest, [newKey]: oldValue });
                     }}
                     placeholder="Key"
-                    className="w-1/3 bg-gray-900/50 text-gray-200 px-3 py-2 rounded-md border border-gray-700 text-sm focus:outline-none focus:border-red-500"
+                    className="w-1/3 bg-surface-sunken/50 text-content px-3 py-2 rounded-md border border-border-strong text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
                   />
                   <input
                     type={key.toLowerCase().includes('password') ? 'password' : 'text'}
                     value={value}
                     onChange={(e) => handleNewSecretDataChange(key, e.target.value)}
                     placeholder="Value"
-                    className="flex-1 min-w-0 bg-gray-900/50 text-gray-200 px-3 py-2 rounded-md border border-gray-700 text-sm focus:outline-none focus:border-red-500"
+                    className="flex-1 min-w-0 bg-surface-sunken/50 text-content px-3 py-2 rounded-md border border-border-strong text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
                   />
                   {Object.keys(newSecretData).length > 1 && (
                     <button
                       onClick={() => removeNewSecretField(key)}
-                      className="p-2 bg-gray-900/50 text-gray-500 rounded-md hover:bg-red-700 hover:text-white transition-colors"
+                      className="p-2 bg-surface-sunken/50 text-content-subtle rounded-md hover:bg-red-700 hover:text-white transition-colors"
                       aria-label="Remove Field" title="Remove Field"
                     >
                       <Trash2 size={14} />
@@ -770,7 +770,7 @@ const VaultManagementPage: React.FC = () => {
             </div>
             <button
               onClick={addNewSecretField}
-              className="mt-3 text-xs text-gray-400 hover:text-red-400 transition-colors flex items-center gap-1"
+              className="mt-3 text-xs text-content-muted hover:text-red-400 transition-colors flex items-center gap-1"
             >
               <Plus size={14} /> Add Field
             </button>
@@ -873,13 +873,13 @@ const VaultManagementPage: React.FC = () => {
               placeholder="Enter credential name"
             />
             <div>
-              <label className="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">
+              <label className="block text-xs font-medium text-content-muted uppercase tracking-wider mb-1">
                 Vault Path
               </label>
-              <code className="block bg-gray-900/50 text-gray-200 px-3 py-2 rounded-md border border-gray-700 text-sm break-all font-mono">
+              <code className="block bg-surface-sunken/50 text-content px-3 py-2 rounded-md border border-border-strong text-sm break-all font-mono">
                 {selectedSecret}
               </code>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-content-subtle mt-1">
                 The credential will read username and password from this Vault path at use time.
               </p>
             </div>

@@ -101,7 +101,7 @@ const AuthLogsTab = () => {
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-xl mb-1">Auth Logs</h2>
-          <p className="text-sm text-gray-400 max-w-3xl">
+          <p className="text-sm text-content-muted max-w-3xl">
             Access &amp; identity audit events - access sessions, approvals, MFA
             step-up, access requests, reviews, revocations, SSH certificate
             issuance, and enrollment tokens. Login and logout are not recorded as
@@ -127,36 +127,36 @@ const AuthLogsTab = () => {
       )}
 
       {loading && rows.length === 0 ? (
-        <div className="text-gray-400 text-sm">Loading auth logs…</div>
+        <div className="text-content-muted text-sm">Loading auth logs…</div>
       ) : (
-        <div className="bg-[#0c0c0f] border border-gray-800/60 rounded overflow-hidden">
+        <div className="bg-surface-raised border border-border/60 rounded overflow-hidden">
           <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
             <table className="min-w-full">
-              <thead className="sticky top-0 bg-[#0c0c0f]">
-                <tr className="border-b border-gray-800/60">
-                  <th scope="col" className="px-6 py-3 text-left text-sm font-medium text-gray-400">Timestamp</th>
-                  <th scope="col" className="px-6 py-3 text-left text-sm font-medium text-gray-400">Action</th>
-                  <th scope="col" className="px-6 py-3 text-left text-sm font-medium text-gray-400">Actor</th>
-                  <th scope="col" className="px-6 py-3 text-left text-sm font-medium text-gray-400">Outcome</th>
-                  <th scope="col" className="px-6 py-3 text-left text-sm font-medium text-gray-400">Details</th>
+              <thead className="sticky top-0 bg-surface-raised">
+                <tr className="border-b border-border/60">
+                  <th scope="col" className="px-6 py-3 text-left text-sm font-medium text-content-muted">Timestamp</th>
+                  <th scope="col" className="px-6 py-3 text-left text-sm font-medium text-content-muted">Action</th>
+                  <th scope="col" className="px-6 py-3 text-left text-sm font-medium text-content-muted">Actor</th>
+                  <th scope="col" className="px-6 py-3 text-left text-sm font-medium text-content-muted">Outcome</th>
+                  <th scope="col" className="px-6 py-3 text-left text-sm font-medium text-content-muted">Details</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((row) => (
-                  <tr key={row.key} className="border-b border-gray-800/60 hover:bg-red-900/10">
-                    <td className="px-6 py-4 text-sm text-gray-300 whitespace-nowrap">
+                  <tr key={row.key} className="border-b border-border/60 hover:bg-red-900/10">
+                    <td className="px-6 py-4 text-sm text-content whitespace-nowrap">
                       {formatTimestamp(row.timestamp)}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-300 whitespace-nowrap font-mono">
+                    <td className="px-6 py-4 text-sm text-content whitespace-nowrap font-mono">
                       {row.action}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-300 whitespace-nowrap">
+                    <td className="px-6 py-4 text-sm text-content whitespace-nowrap">
                       {row.actor}
                     </td>
                     <td className="px-6 py-4 text-sm whitespace-nowrap">
                       <Badge variant={outcomeVariant(row.outcome)}>{row.outcome}</Badge>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-300 whitespace-nowrap">
+                    <td className="px-6 py-4 text-sm text-content whitespace-nowrap">
                       <button
                         onClick={() => setSelectedDetails(row.details)}
                         className="bg-red-800 hover:bg-red-700 text-white px-3 py-1 rounded text-sm"
@@ -168,7 +168,7 @@ const AuthLogsTab = () => {
                 ))}
                 {rows.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-6 py-4 text-sm text-gray-400 text-center">
+                    <td colSpan={5} className="px-6 py-4 text-sm text-content-muted text-center">
                       No access &amp; identity audit events found
                     </td>
                   </tr>
@@ -180,18 +180,18 @@ const AuthLogsTab = () => {
       )}
 
       {selectedDetails && (
-        <div className="fixed inset-0 bg-[#0c0c0f] bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-[#0c0c0f] border border-gray-800/60 rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-surface/50 flex items-center justify-center p-4">
+          <div className="bg-surface-overlay border border-border/60 rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
             <div className="flex justify-between items-start mb-4">
-              <h3 className="text-lg font-medium text-gray-200">Event Details</h3>
+              <h3 className="text-lg font-medium text-content">Event Details</h3>
               <button
                 onClick={() => setSelectedDetails(null)}
-                className="text-gray-400 hover:text-gray-200"
+                className="text-content-muted hover:text-content"
               >
                 ✕
               </button>
             </div>
-            <pre className="font-mono text-sm text-gray-300 whitespace-pre-wrap">
+            <pre className="font-mono text-sm text-content whitespace-pre-wrap">
               {selectedDetails}
             </pre>
           </div>

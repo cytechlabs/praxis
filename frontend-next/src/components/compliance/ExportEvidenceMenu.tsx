@@ -54,7 +54,7 @@ const ExportEvidenceMenu: React.FC<{ baseOpts?: BaseOpts }> = ({
         type="button"
         disabled
         title="Bulk evidence export is part of the paid Praxis edition"
-        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-slate-800 text-sm text-gray-500 cursor-not-allowed"
+        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-surface-overlay text-sm text-content-subtle cursor-not-allowed"
       >
         <Lock size={14} /> Export evidence (Pro)
       </button>
@@ -66,19 +66,19 @@ const ExportEvidenceMenu: React.FC<{ baseOpts?: BaseOpts }> = ({
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-slate-700 hover:bg-slate-600 text-sm text-gray-100 transition-colors"
+        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-border hover:bg-border-strong text-sm text-content transition-colors"
       >
         <Download size={14} /> Export evidence
         <ChevronDown className="w-3 h-3" />
       </button>
       {open && (
-        <div className="absolute right-0 mt-1 bg-[#0c0c0f] border border-gray-800/60 rounded shadow-lg z-10">
+        <div className="absolute right-0 mt-1 bg-surface-overlay border border-border/60 rounded shadow-lg z-10">
           {formats.map((f) => (
             <a
               key={f.key}
               href={exportEvidenceHref({ ...baseOpts, format: f.key })}
               onClick={() => setOpen(false)}
-              className="block w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-white/[0.03] whitespace-nowrap"
+              className="block w-full text-left px-4 py-2 text-sm text-content hover:bg-white/[0.03] whitespace-nowrap"
             >
               {f.label}
             </a>

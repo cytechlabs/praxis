@@ -7,9 +7,9 @@
 # PRA-321 (Python 3.14 runtime cutover; evaluated in PRA-319, unblocked by PRA-320's
 # broker mTLS fix): pydantic is 2.12.0 (pulls pydantic-core 2.41.1, the first line with
 # a CPython 3.14 wheel) so the backend runs on the Python 3.14 runtime. That was the
-# ONLY pin change required — fastapi 0.109.0 / starlette 0.35.1 / uvicorn 0.27.0 /
-# pydantic-settings 2.1.0 / httpx 0.26.0 / python-multipart 0.0.6 are all unchanged
-# and compatible (v1-style @validator still works across the whole pydantic 2.x line).
+# ONLY web-stack pin change required: fastapi 0.109.0 / starlette 0.35.1 /
+# uvicorn 0.27.0 / pydantic-settings 2.1.0 / httpx 0.26.0 are all unchanged and
+# compatible (v1-style @validator still works across the whole pydantic 2.x line).
 # Everything installs from wheels on 3.14 (no source builds).
 
 # Core
@@ -23,7 +23,10 @@ pydantic-settings==2.1.0
 python-jose[cryptography]==3.5.0
 passlib[bcrypt]==1.7.4
 bcrypt==3.2.0
-python-multipart==0.0.6
+# Form/upload parsing behind Starlette. Starlette 0.35.1 imports the legacy
+# top-level ``multipart`` module, which this line still ships as a shim over the
+# renamed ``python_multipart`` package, so the framework pins stay put.
+python-multipart==0.0.32
 psycopg2-binary==2.9.12
 python-dotenv==1.2.2
 slowapi==0.1.10
@@ -37,12 +40,14 @@ pyotp==2.10.0
 prometheus-client==0.26.0
 
 # Testing
-pytest==7.4.4
-pytest-asyncio==0.23.5
+pytest==9.1.1
+# pytest-asyncio 0.23.x caps pytest below 9, so the runner bump carries this
+# plugin with it.
+pytest-asyncio==1.4.0
 httpx==0.26.0
 docker==7.2.0  # PRA-144 integration test spawns disposable SSH containers
 
 # Code Quality
-black==23.12.1
+black==26.5.1
 pylint==3.0.3
 isort==5.13.2

@@ -335,7 +335,7 @@ const JobTemplates = () => {
         />
 
         {/* Built-in Templates */}
-        <h2 className="text-lg font-medium text-gray-200 mb-3">Built-in Templates</h2>
+        <h2 className="text-lg font-medium text-content mb-3">Built-in Templates</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
           {BUILTIN_TEMPLATES.map(template => (
             <Card
@@ -346,8 +346,8 @@ const JobTemplates = () => {
             >
               <div className="p-5">
                 <div className="text-red-500 mb-3">{template.icon}</div>
-                <h3 className="text-gray-200 font-medium mb-1">{template.name}</h3>
-                <p className="text-gray-400 text-sm mb-3">{template.description}</p>
+                <h3 className="text-content font-medium mb-1">{template.name}</h3>
+                <p className="text-content-muted text-sm mb-3">{template.description}</p>
                 <div className="flex items-center gap-2">
                   <Badge variant="neutral">{getJobTypeBadge(template.job_type)}</Badge>
                   <Badge variant="neutral">
@@ -360,7 +360,7 @@ const JobTemplates = () => {
         </div>
 
         {/* Custom / Saved Templates */}
-        <h2 className="text-lg font-medium text-gray-200 mb-3">Saved Jobs (Use as Templates)</h2>
+        <h2 className="text-lg font-medium text-content mb-3">Saved Jobs (Use as Templates)</h2>
         {customTemplates.length === 0 ? (
           <Card className="mb-8">
             <EmptyState
@@ -376,8 +376,8 @@ const JobTemplates = () => {
                   <div className="text-red-500 mb-3">
                     <Package size={24} />
                   </div>
-                  <h3 className="text-gray-200 font-medium mb-1">{job.name}</h3>
-                  <p className="text-gray-400 text-sm mb-3">{job.description || 'No description'}</p>
+                  <h3 className="text-content font-medium mb-1">{job.name}</h3>
+                  <p className="text-content-muted text-sm mb-3">{job.description || 'No description'}</p>
                   <div className="flex items-center gap-2 mb-4">
                     <Badge variant="neutral">{getJobTypeBadge(job.job_type)}</Badge>
                     <Badge variant="neutral">
@@ -415,36 +415,36 @@ const JobTemplates = () => {
 
         {/* Form Modal */}
         {showForm && (
-          <div className="fixed inset-0 bg-[#0c0c0f]/70 backdrop-blur-sm flex items-center justify-center z-50">
-            <div className="bg-gray-950 border border-gray-800 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          <div className="fixed inset-0 bg-surface/70 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="bg-surface-overlay border border-border rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-medium text-gray-200">
+                <h2 className="text-lg font-medium text-content">
                   {selectedTemplate ? `Create Job from: ${selectedTemplate.name}` : 'Create Custom Job'}
                 </h2>
-                <button onClick={closeForm} className="text-gray-400 hover:text-gray-200 transition-colors">
+                <button onClick={closeForm} className="text-content-muted hover:text-content transition-colors">
                   <X size={20} />
                 </button>
               </div>
 
               {/* Name */}
               <div className="mb-4">
-                <label className="block text-sm text-gray-400 mb-1">Job Name</label>
+                <label className="block text-sm text-content-muted mb-1">Job Name</label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  className="bg-gray-950 border border-gray-800 rounded-lg px-3 py-2 text-gray-200 w-full focus:outline-none focus:border-red-600"
+                  className="bg-surface-sunken border border-border rounded-lg px-3 py-2 text-content w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
                   placeholder="Enter job name"
                 />
               </div>
 
               {/* Description */}
               <div className="mb-4">
-                <label className="block text-sm text-gray-400 mb-1">Description</label>
+                <label className="block text-sm text-content-muted mb-1">Description</label>
                 <textarea
                   value={formData.description || ''}
                   onChange={e => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  className="bg-gray-950 border border-gray-800 rounded-lg px-3 py-2 text-gray-200 w-full focus:outline-none focus:border-red-600"
+                  className="bg-surface-sunken border border-border rounded-lg px-3 py-2 text-content w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
                   rows={3}
                   placeholder="Optional description"
                 />
@@ -452,11 +452,11 @@ const JobTemplates = () => {
 
               {/* Job Type */}
               <div className="mb-4">
-                <label className="block text-sm text-gray-400 mb-1">Job Type</label>
+                <label className="block text-sm text-content-muted mb-1">Job Type</label>
                 <select
                   value={formData.job_type}
                   onChange={e => setFormData(prev => ({ ...prev, job_type: e.target.value }))}
-                  className="bg-gray-950 border border-gray-800 rounded-lg px-3 py-2 text-gray-200 w-full focus:outline-none focus:border-red-600"
+                  className="bg-surface-sunken border border-border rounded-lg px-3 py-2 text-content w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
                 >
                   <option value="update">Update</option>
                   <option value="security_update">Security Update</option>
@@ -480,19 +480,19 @@ const JobTemplates = () => {
                       }`}
                     />
                   </div>
-                  <span className="text-sm text-gray-400">Recurring Job</span>
+                  <span className="text-sm text-content-muted">Recurring Job</span>
                 </label>
               </div>
 
               {/* Schedule */}
               {formData.is_recurring && (
                 <div className="mb-4">
-                  <label className="block text-sm text-gray-400 mb-1">Schedule</label>
+                  <label className="block text-sm text-content-muted mb-1">Schedule</label>
                   <div className="flex items-center gap-2 flex-wrap">
                     <select
                       value={scheduleConfig.frequency}
                       onChange={(e) => setScheduleConfig({ ...scheduleConfig, frequency: e.target.value })}
-                      className="bg-gray-950 border border-gray-800 rounded-lg px-3 py-2 text-gray-200 focus:outline-none focus:border-red-600"
+                      className="bg-surface-sunken border border-border rounded-lg px-3 py-2 text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
                     >
                       <option value="daily">Every day</option>
                       <option value="weekly">Every week on</option>
@@ -502,7 +502,7 @@ const JobTemplates = () => {
                       <select
                         value={scheduleConfig.dayOfWeek}
                         onChange={(e) => setScheduleConfig({ ...scheduleConfig, dayOfWeek: e.target.value })}
-                        className="bg-gray-950 border border-gray-800 rounded-lg px-3 py-2 text-gray-200 focus:outline-none focus:border-red-600"
+                        className="bg-surface-sunken border border-border rounded-lg px-3 py-2 text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
                       >
                         <option value="0">Sunday</option>
                         <option value="1">Monday</option>
@@ -517,19 +517,19 @@ const JobTemplates = () => {
                       <select
                         value={scheduleConfig.dayOfMonth}
                         onChange={(e) => setScheduleConfig({ ...scheduleConfig, dayOfMonth: e.target.value })}
-                        className="bg-gray-950 border border-gray-800 rounded-lg px-3 py-2 text-gray-200 focus:outline-none focus:border-red-600"
+                        className="bg-surface-sunken border border-border rounded-lg px-3 py-2 text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
                       >
                         {Array.from({ length: 28 }, (_, i) => (
                           <option key={i + 1} value={String(i + 1)}>{ordinal(i + 1)}</option>
                         ))}
                       </select>
                     )}
-                    <span className="text-gray-400 text-sm">at</span>
+                    <span className="text-content-muted text-sm">at</span>
                     <input
                       type="time"
                       value={scheduleConfig.time}
                       onChange={(e) => setScheduleConfig({ ...scheduleConfig, time: e.target.value })}
-                      className="bg-gray-950 border border-gray-800 rounded-lg px-3 py-2 text-gray-200 focus:outline-none focus:border-red-600"
+                      className="bg-surface-sunken border border-border rounded-lg px-3 py-2 text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
                     />
                   </div>
                 </div>
@@ -537,11 +537,11 @@ const JobTemplates = () => {
 
               {/* Target Type */}
               <div className="mb-4">
-                <label className="block text-sm text-gray-400 mb-1">Target Type</label>
+                <label className="block text-sm text-content-muted mb-1">Target Type</label>
                 <select
                   value={formData.target_type}
                   onChange={e => setFormData(prev => ({ ...prev, target_type: e.target.value, target_ids: [] }))}
-                  className="bg-gray-950 border border-gray-800 rounded-lg px-3 py-2 text-gray-200 w-full focus:outline-none focus:border-red-600"
+                  className="bg-surface-sunken border border-border rounded-lg px-3 py-2 text-content w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
                 >
                   <option value="all">All Systems</option>
                   <option value="system">Specific Systems</option>
@@ -553,10 +553,10 @@ const JobTemplates = () => {
               {/* System Selection */}
               {formData.target_type === 'system' && (
                 <div className="mb-4">
-                  <label className="block text-sm text-gray-400 mb-1">Select Systems</label>
-                  <div className="bg-gray-950 border border-gray-800 rounded-lg p-3 max-h-40 overflow-y-auto">
+                  <label className="block text-sm text-content-muted mb-1">Select Systems</label>
+                  <div className="bg-surface-sunken border border-border rounded-lg p-3 max-h-40 overflow-y-auto">
                     {systems.length === 0 ? (
-                      <p className="text-gray-500 text-sm">No systems available</p>
+                      <p className="text-content-subtle text-sm">No systems available</p>
                     ) : (
                       systems.map(system => (
                         <label key={system.id} className="flex items-center gap-2 py-1 cursor-pointer">
@@ -566,7 +566,7 @@ const JobTemplates = () => {
                             onChange={() => toggleTargetId(system.id)}
                             className="accent-red-600"
                           />
-                          <span className="text-gray-300 text-sm">{system.hostname}</span>
+                          <span className="text-content text-sm">{system.hostname}</span>
                         </label>
                       ))
                     )}
@@ -577,10 +577,10 @@ const JobTemplates = () => {
               {/* Group Selection */}
               {formData.target_type === 'group' && (
                 <div className="mb-4">
-                  <label className="block text-sm text-gray-400 mb-1">Select Groups</label>
-                  <div className="bg-gray-950 border border-gray-800 rounded-lg p-3 max-h-40 overflow-y-auto">
+                  <label className="block text-sm text-content-muted mb-1">Select Groups</label>
+                  <div className="bg-surface-sunken border border-border rounded-lg p-3 max-h-40 overflow-y-auto">
                     {groups.length === 0 ? (
-                      <p className="text-gray-500 text-sm">No groups available</p>
+                      <p className="text-content-subtle text-sm">No groups available</p>
                     ) : (
                       groups.map(group => (
                         <label key={group.id} className="flex items-center gap-2 py-1 cursor-pointer">
@@ -590,7 +590,7 @@ const JobTemplates = () => {
                             onChange={() => toggleTargetId(group.id)}
                             className="accent-red-600"
                           />
-                          <span className="text-gray-300 text-sm">{group.name}</span>
+                          <span className="text-content text-sm">{group.name}</span>
                         </label>
                       ))
                     )}
@@ -601,10 +601,10 @@ const JobTemplates = () => {
               {/* Tag Selection */}
               {formData.target_type === 'tag' && (
                 <div className="mb-4">
-                  <label className="block text-sm text-gray-400 mb-1">Select Tags</label>
-                  <div className="bg-gray-950 border border-gray-800 rounded-lg p-3 max-h-40 overflow-y-auto">
+                  <label className="block text-sm text-content-muted mb-1">Select Tags</label>
+                  <div className="bg-surface-sunken border border-border rounded-lg p-3 max-h-40 overflow-y-auto">
                     {tags.length === 0 ? (
-                      <p className="text-gray-500 text-sm">No tags available</p>
+                      <p className="text-content-subtle text-sm">No tags available</p>
                     ) : (
                       tags.map(tag => (
                         <label key={tag.id} className="flex items-center gap-2 py-1 cursor-pointer">
@@ -615,7 +615,7 @@ const JobTemplates = () => {
                             className="accent-red-600"
                           />
                           <span className="w-3 h-3 rounded-full inline-block flex-shrink-0" style={{ backgroundColor: tag.color }} />
-                          <span className="text-gray-300 text-sm">{tag.name}</span>
+                          <span className="text-content text-sm">{tag.name}</span>
                         </label>
                       ))
                     )}
@@ -626,7 +626,7 @@ const JobTemplates = () => {
               {/* Tag Match Logic */}
               {formData.target_type === 'tag' && (formData.target_ids?.length || 0) > 1 && (
                 <div className="mb-4">
-                  <label className="block text-sm text-gray-400 mb-1">Match Logic</label>
+                  <label className="block text-sm text-content-muted mb-1">Match Logic</label>
                   <div className="flex gap-3">
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
@@ -637,7 +637,7 @@ const JobTemplates = () => {
                         onChange={() => setFormData(prev => ({ ...prev, tag_match_logic: 'or' }))}
                         className="accent-red-600"
                       />
-                      <span className="text-gray-300 text-sm">Any tag (OR)</span>
+                      <span className="text-content text-sm">Any tag (OR)</span>
                     </label>
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
@@ -648,7 +648,7 @@ const JobTemplates = () => {
                         onChange={() => setFormData(prev => ({ ...prev, tag_match_logic: 'and' }))}
                         className="accent-red-600"
                       />
-                      <span className="text-gray-300 text-sm">All tags (AND)</span>
+                      <span className="text-content text-sm">All tags (AND)</span>
                     </label>
                   </div>
                 </div>
@@ -656,27 +656,27 @@ const JobTemplates = () => {
 
               {/* Package Filter (for update / security_update types) */}
               {(formData.job_type === 'update' || formData.job_type === 'security_update') && (
-                <div className="mb-4 border border-gray-700 rounded-lg p-4">
-                  <h3 className="text-sm font-medium text-gray-300 mb-3">Package Filter (Optional)</h3>
+                <div className="mb-4 border border-border-strong rounded-lg p-4">
+                  <h3 className="text-sm font-medium text-content mb-3">Package Filter (Optional)</h3>
 
                   <div className="mb-3">
-                    <label className="block text-sm text-gray-400 mb-1">Package Names (comma-separated)</label>
+                    <label className="block text-sm text-content-muted mb-1">Package Names (comma-separated)</label>
                     <input
                       type="text"
                       value={packageNames}
                       onChange={e => setPackageNames(e.target.value)}
-                      className="bg-gray-950 border border-gray-800 rounded-lg px-3 py-2 text-gray-200 w-full focus:outline-none focus:border-red-600"
+                      className="bg-surface-sunken border border-border rounded-lg px-3 py-2 text-content w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
                       placeholder="e.g. nginx, openssl, curl"
                     />
                   </div>
 
                   <div className="mb-3">
-                    <label className="block text-sm text-gray-400 mb-1">Keywords (comma-separated)</label>
+                    <label className="block text-sm text-content-muted mb-1">Keywords (comma-separated)</label>
                     <input
                       type="text"
                       value={packageKeywords}
                       onChange={e => setPackageKeywords(e.target.value)}
-                      className="bg-gray-950 border border-gray-800 rounded-lg px-3 py-2 text-gray-200 w-full focus:outline-none focus:border-red-600"
+                      className="bg-surface-sunken border border-border rounded-lg px-3 py-2 text-content w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
                       placeholder="e.g. lib, python, security"
                     />
                   </div>
@@ -688,7 +688,7 @@ const JobTemplates = () => {
                       onChange={e => setSecurityOnly(e.target.checked)}
                       className="accent-red-600"
                     />
-                    <span className="text-sm text-gray-400">Security updates only</span>
+                    <span className="text-sm text-content-muted">Security updates only</span>
                   </label>
                 </div>
               )}

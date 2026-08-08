@@ -306,8 +306,8 @@ const SecurityUpdates = () => {
             />
           </div>
 
-          <div className="border border-gray-800 rounded-lg">
-            <div className="grid grid-cols-[1.4fr_1.6fr_1.6fr_1fr_0.9fr_0.7fr] gap-3 p-4 bg-gray-950 border-b border-gray-800 font-medium text-gray-200">
+          <div className="border border-border rounded-lg">
+            <div className="grid grid-cols-[1.4fr_1.6fr_1.6fr_1fr_0.9fr_0.7fr] gap-3 p-4 bg-surface-sunken border-b border-border font-medium text-content">
               <div>Package Name</div>
               <div>Current Version</div>
               <div>New Version</div>
@@ -321,7 +321,7 @@ const SecurityUpdates = () => {
                 description="Choose a group or smart group above to view its security updates."
               />
             ) : loading ? (
-              <div className="p-4 text-gray-400">Loading security updates...</div>
+              <div className="p-4 text-content-muted">Loading security updates...</div>
             ) : updates.length === 0 ? (
               <EmptyState
                 icon={<ShieldCheck size={24} className="text-emerald-400" />}
@@ -334,18 +334,18 @@ const SecurityUpdates = () => {
                 return (
                   <div
                     key={update.id}
-                    className="grid grid-cols-[1.4fr_1.6fr_1.6fr_1fr_0.9fr_0.7fr] gap-3 p-4 border-b border-gray-800 last:border-b-0 hover:bg-gray-950"
+                    className="grid grid-cols-[1.4fr_1.6fr_1.6fr_1fr_0.9fr_0.7fr] gap-3 p-4 border-b border-border last:border-b-0 hover:bg-surface-overlay"
                   >
-                    <div className="font-medium text-gray-300 break-words">
+                    <div className="font-medium text-content break-words">
                       {update.package_name}
                       {isHeld && (
                         <span className="ml-2 px-1.5 py-0.5 bg-yellow-900 text-yellow-300 rounded text-xs align-middle">Held</span>
                       )}
                     </div>
-                    <div className="text-gray-400 font-mono text-xs break-all">{update.installed_version}</div>
-                    <div className="text-gray-300 font-mono text-xs break-all">{update.available_version}</div>
-                    <div className="text-gray-400">{getSystemHostname(update.system_id)}</div>
-                    <div className="text-gray-400 text-sm">
+                    <div className="text-content-muted font-mono text-xs break-all">{update.installed_version}</div>
+                    <div className="text-content font-mono text-xs break-all">{update.available_version}</div>
+                    <div className="text-content-muted">{getSystemHostname(update.system_id)}</div>
+                    <div className="text-content-muted text-sm">
                       {formatTimestamp(update.discovered_on, { dateOnly: true })}
                     </div>
                     <div>
@@ -380,7 +380,7 @@ const SecurityUpdates = () => {
             />
           )}
 
-          <div className="mt-4 text-sm text-gray-400">
+          <div className="mt-4 text-sm text-content-muted">
             Last scanned: {lastScanned ? formatTimestamp(lastScanned) : 'Never'}
           </div>
         </CardBody>

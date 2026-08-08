@@ -98,7 +98,7 @@ const HostAdvisoryCard = ({ systemId }: Props) => {
 
   const renderBody = () => {
     if (loading && !counts) {
-      return <div className="text-sm text-gray-400">Loading…</div>;
+      return <div className="text-sm text-content-muted">Loading…</div>;
     }
     if (error) {
       return (
@@ -131,13 +131,13 @@ const HostAdvisoryCard = ({ systemId }: Props) => {
               className={`rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
                 stateFilter === s
                   ? 'border-blue-500 bg-blue-900/20'
-                  : 'border-zinc-800 bg-gray-900/30 hover:bg-white/[0.03]'
+                  : 'border-border bg-surface-raised/30 hover:bg-white/[0.03]'
               }`}
             >
-              <div className="text-xs uppercase tracking-wide text-gray-500">
+              <div className="text-xs uppercase tracking-wide text-content-subtle">
                 {APPLICABILITY_STATE_LABELS[s]}
               </div>
-              <div className="text-2xl font-bold text-gray-200 tabular-nums">
+              <div className="text-2xl font-bold text-content tabular-nums">
                 {counts?.counts?.[s] ?? 0}
               </div>
             </button>
@@ -145,15 +145,15 @@ const HostAdvisoryCard = ({ systemId }: Props) => {
         </div>
 
         {(rows?.length ?? 0) === 0 ? (
-          <p className="text-sm text-gray-400">
+          <p className="text-sm text-content-muted">
             {stateFilter
               ? `No advisories in state "${APPLICABILITY_STATE_LABELS[stateFilter as ApplicabilityState]}".`
               : 'No advisory applicability rows have been computed for this host yet.'}
           </p>
         ) : (
-          <div className="overflow-x-auto rounded border border-zinc-800">
+          <div className="overflow-x-auto rounded border border-border">
             <table className="w-full text-sm">
-              <thead className="border-b border-zinc-800 text-left text-gray-400">
+              <thead className="border-b border-border text-left text-content-muted">
                 <tr>
                   <th className="px-3 py-2">Advisory</th>
                   <th className="px-3 py-2">Severity</th>
@@ -165,9 +165,9 @@ const HostAdvisoryCard = ({ systemId }: Props) => {
                   <th className="px-3 py-2">Reason</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-800">
+              <tbody className="divide-y divide-border">
                 {rows!.map((r) => (
-                  <tr key={r.id} className="hover:bg-zinc-900/40">
+                  <tr key={r.id} className="hover:bg-surface-overlay/40">
                     <td className="px-3 py-1.5">
                       <Link
                         href={`/patch-advisories/${r.advisory_id}`}
@@ -176,19 +176,19 @@ const HostAdvisoryCard = ({ systemId }: Props) => {
                         {r.advisory.source_advisory_id}
                       </Link>
                     </td>
-                    <td className="px-3 py-1.5 text-gray-300">
+                    <td className="px-3 py-1.5 text-content">
                       {SEVERITY_LABELS[r.advisory.severity]}
                     </td>
-                    <td className="px-3 py-1.5 text-gray-300">
+                    <td className="px-3 py-1.5 text-content">
                       {r.advisory.advisory_class}
                     </td>
-                    <td className="px-3 py-1.5 font-mono text-gray-200">
+                    <td className="px-3 py-1.5 font-mono text-content">
                       {r.package_name}
                     </td>
-                    <td className="px-3 py-1.5 font-mono text-gray-300">
+                    <td className="px-3 py-1.5 font-mono text-content">
                       {r.installed_version ?? '-'}
                     </td>
-                    <td className="px-3 py-1.5 font-mono text-gray-300">
+                    <td className="px-3 py-1.5 font-mono text-content">
                       {r.required_version ?? '-'}
                     </td>
                     <td className="px-3 py-1.5">
@@ -196,7 +196,7 @@ const HostAdvisoryCard = ({ systemId }: Props) => {
                         {APPLICABILITY_STATE_LABELS[r.state]}
                       </Badge>
                     </td>
-                    <td className="px-3 py-1.5 text-xs text-gray-500">
+                    <td className="px-3 py-1.5 text-xs text-content-subtle">
                       {r.reason ?? ''}
                     </td>
                   </tr>
@@ -226,7 +226,7 @@ const HostAdvisoryCard = ({ systemId }: Props) => {
       >
         <div>
           <div>Patch advisories</div>
-          <div className="mt-0.5 text-xs font-normal text-gray-500">
+          <div className="mt-0.5 text-xs font-normal text-content-subtle">
             Joined applicability state from advisory data + host facts
             + installed packages. Recompute updates only this host.
           </div>

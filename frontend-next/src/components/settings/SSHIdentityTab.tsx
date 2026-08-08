@@ -137,51 +137,51 @@ const SSHIdentityTab: React.FC = () => {
       <div className="flex items-center gap-3 mb-6">
         <Key className="text-red-500" size={24} />
         <div>
-          <h2 className="text-lg font-semibold text-gray-200">SSH Identity (Zero-Trust CA)</h2>
-          <p className="text-sm text-gray-400">
+          <h2 className="text-lg font-semibold text-content">SSH Identity (Zero-Trust CA)</h2>
+          <p className="text-sm text-content-muted">
             Configure the Vault-signed SSH certificate issued for each connection.
           </p>
         </div>
       </div>
 
       {/* Settings */}
-      <div className="bg-[#0c0c0f] border border-gray-800/60 rounded-lg p-4 mb-6">
+      <div className="bg-surface-raised border border-border/60 rounded-lg p-4 mb-6">
         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-200 mb-1">User Certificate TTL (seconds)</label>
-          <p className="text-xs text-gray-400 mb-2">How long each signed user certificate is valid. Short TTLs are preferred (300s = 5 min).</p>
+          <label className="block text-sm font-medium text-content mb-1">User Certificate TTL (seconds)</label>
+          <p className="text-xs text-content-muted mb-2">How long each signed user certificate is valid. Short TTLs are preferred (300s = 5 min).</p>
           <div className="flex items-center gap-2">
             <input type="number" value={ttl} onChange={(e) => setTtl(parseInt(e.target.value) || 60)}
               min={60} max={3600}
-              className="w-32 bg-[#09090b] border border-gray-700/60 rounded px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-600" />
-            <span className="text-xs text-gray-500">Range: 60 – 3600</span>
+              className="w-32 bg-surface-sunken border border-border-strong/60 rounded px-3 py-1.5 text-sm text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong" />
+            <span className="text-xs text-content-subtle">Range: 60 – 3600</span>
           </div>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-200 mb-1">Default Principal</label>
-          <p className="text-xs text-gray-400 mb-2">
+          <label className="block text-sm font-medium text-content mb-1">Default Principal</label>
+          <p className="text-xs text-content-muted mb-2">
             Linux username authorized by the signed cert. Leave blank to use each system&apos;s credential username.
           </p>
           <input value={principal} onChange={(e) => setPrincipal(e.target.value)}
             placeholder="e.g. praxis-agent (blank = per-credential username)"
-            className="w-full bg-[#09090b] border border-gray-700/60 rounded px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-600" />
+            className="w-full bg-surface-sunken border border-border-strong/60 rounded px-3 py-1.5 text-sm text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong" />
         </div>
       </div>
 
       {/* CA info (read-only) */}
-      <div className="bg-[#0c0c0f] border border-gray-800/60 rounded-lg p-4 mb-6">
-        <h3 className="text-sm font-semibold text-gray-300 mb-3">Vault SSH CA</h3>
+      <div className="bg-surface-raised border border-border/60 rounded-lg p-4 mb-6">
+        <h3 className="text-sm font-semibold text-content mb-3">Vault SSH CA</h3>
 
         <div className="mb-3">
-          <label className="block text-xs text-gray-400 mb-1">CA Identifier</label>
-          <code className="block text-xs bg-[#09090b] px-3 py-2 rounded text-gray-300">
+          <label className="block text-xs text-content-muted mb-1">CA Identifier</label>
+          <code className="block text-xs bg-surface-sunken px-3 py-2 rounded text-content">
             {settings?.ca_identifier || '(not set)'}
           </code>
         </div>
 
         <div>
           <div className="flex items-center justify-between mb-1">
-            <label className="text-xs text-gray-400">CA Public Key</label>
+            <label className="text-xs text-content-muted">CA Public Key</label>
             {settings?.ca_public_key && (
               <Button variant="ghost" size="sm" onClick={() => copyToClipboard(settings.ca_public_key!)}
                 icon={<Copy size={12} />}>
@@ -190,18 +190,18 @@ const SSHIdentityTab: React.FC = () => {
             )}
           </div>
           {settings?.ca_public_key ? (
-            <code className="block text-xs bg-[#09090b] px-3 py-2 rounded text-gray-300 break-all font-mono">
+            <code className="block text-xs bg-surface-sunken px-3 py-2 rounded text-content break-all font-mono">
               {settings.ca_public_key}
             </code>
           ) : (
-            <div className="text-xs text-yellow-500 bg-[#09090b] px-3 py-2 rounded">
+            <div className="text-xs text-yellow-500 bg-surface-sunken px-3 py-2 rounded">
               Vault SSH CA not available - check Vault configuration.
             </div>
           )}
         </div>
       </div>
 
-      <div className="flex justify-end pt-4 border-t border-gray-800/60">
+      <div className="flex justify-end pt-4 border-t border-border/60">
         <Button variant="primary" onClick={handleSave} disabled={!hasChanges || saving}
           loading={saving} icon={<Save size={14} />}>
           {saving ? 'Saving...' : 'Save Settings'}
@@ -219,7 +219,7 @@ const SSHIdentityTab: React.FC = () => {
             Revoke all user certs
           </Button>
         </div>
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-content-subtle">
           Rotating regenerates the Vault SSH CA and flags every system for redeploy. Revoking drops pooled SSH
           sessions so new operations force fresh cert signing - existing short-lived certs complete their TTL.
         </p>
@@ -227,12 +227,12 @@ const SSHIdentityTab: React.FC = () => {
 
       {/* Rotation history */}
       {rotations.length > 0 && (
-        <div className="mt-6 border border-gray-800/60 rounded-lg overflow-hidden">
-          <div className="px-4 py-2 bg-[#0c0c0f] border-b border-gray-800/60 flex items-center gap-2 text-sm text-gray-300">
+        <div className="mt-6 border border-border/60 rounded-lg overflow-hidden">
+          <div className="px-4 py-2 bg-surface-raised border-b border-border/60 flex items-center gap-2 text-sm text-content">
             <History size={14} /> Rotation history
           </div>
-          <table className="w-full text-xs text-gray-300">
-            <thead className="bg-[#0c0c0f] text-gray-500">
+          <table className="w-full text-xs text-content">
+            <thead className="bg-surface-raised text-content-subtle">
               <tr>
                 <th className="px-3 py-2 text-left">When</th>
                 <th className="px-3 py-2 text-left">Event</th>
@@ -240,10 +240,10 @@ const SSHIdentityTab: React.FC = () => {
                 <th className="px-3 py-2 text-left">By (user id)</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-800/50">
+            <tbody className="divide-y divide-border/50">
               {rotations.map(r => (
                 <tr key={r.id} className="hover:bg-white/[0.03]">
-                  <td className="px-3 py-2 text-gray-400">{r.performed_at || '-'}</td>
+                  <td className="px-3 py-2 text-content-muted">{r.performed_at || '-'}</td>
                   <td className="px-3 py-2">
                     <span className={`px-1.5 py-0.5 rounded text-xs ${r.event_type === 'rotate' ? 'bg-red-900/50 text-red-200' : 'bg-amber-900/50 text-amber-200'}`}>
                       {r.event_type}
@@ -261,9 +261,9 @@ const SSHIdentityTab: React.FC = () => {
       {/* Confirm modals */}
       {confirmRotate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70" onClick={() => setConfirmRotate(false)}>
-          <div className="bg-[#0c0c0f] border border-red-900/60 rounded-lg p-6 max-w-md space-y-4" onClick={e => e.stopPropagation()}>
+          <div className="bg-surface-overlay border border-red-900/60 rounded-lg p-6 max-w-md space-y-4" onClick={e => e.stopPropagation()}>
             <h3 className="text-lg font-bold text-red-300">Rotate SSH CA?</h3>
-            <p className="text-sm text-gray-300">
+            <p className="text-sm text-content">
               This regenerates the Vault SSH CA keypair. All existing signed user certs become unusable
               immediately. Every system is flagged for redeploy - admins must redeploy CA trust to restore
               cert-based SSH. Password auth is unaffected.
@@ -278,9 +278,9 @@ const SSHIdentityTab: React.FC = () => {
 
       {confirmRevoke && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70" onClick={() => setConfirmRevoke(false)}>
-          <div className="bg-[#0c0c0f] border border-amber-900/60 rounded-lg p-6 max-w-md space-y-4" onClick={e => e.stopPropagation()}>
+          <div className="bg-surface-overlay border border-amber-900/60 rounded-lg p-6 max-w-md space-y-4" onClick={e => e.stopPropagation()}>
             <h3 className="text-lg font-bold text-amber-300">Revoke all user certs?</h3>
-            <p className="text-sm text-gray-300">
+            <p className="text-sm text-content">
               Drops every pooled SSH session so new operations force fresh cert signing. Existing short-lived
               certs complete their TTL naturally. The Vault CA is unchanged.
             </p>

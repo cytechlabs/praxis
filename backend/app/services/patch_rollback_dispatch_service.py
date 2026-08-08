@@ -926,9 +926,11 @@ def _process_host(
                 host_row,
                 pkg_name,
                 outcome=PACKAGE_OUTCOME_SKIPPED,
-                error_code="pre_step_failed"
-                if pkg_name in pre_step_failed_packages
-                else "missing_primary_command",
+                error_code=(
+                    "pre_step_failed"
+                    if pkg_name in pre_step_failed_packages
+                    else "missing_primary_command"
+                ),
                 details={"phase": "primary", "argv": list(argv)},
             )
             continue
@@ -1292,9 +1294,7 @@ def cancel_rollback_execution(
 # ---------------------------------------------------------------------------
 
 
-def get_latest_dispatch_for_execution(
-    db: Session, execution_id: int
-) -> Tuple[
+def get_latest_dispatch_for_execution(db: Session, execution_id: int) -> Tuple[
     PatchUpdateExecution,
     Optional[PatchRollbackDispatchRun],
     List[PatchRollbackDispatchHost],

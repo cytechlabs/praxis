@@ -88,7 +88,7 @@ const ComplianceDashboardPage: React.FC = () => {
             <div className="flex items-center gap-2">
               <Link
                 href="/compliance/remediation"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-gray-300 hover:text-gray-100 hover:bg-white/5"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-content hover:text-content hover:bg-white/5"
               >
                 <ClipboardCheck size={14} /> Remediation
               </Link>
@@ -125,9 +125,9 @@ const ComplianceDashboardPage: React.FC = () => {
                     value={
                       <span className="font-mono">
                         <span className="text-emerald-400">{summary.pass_count}</span>
-                        <span className="text-gray-500"> / </span>
+                        <span className="text-content-subtle"> / </span>
                         <span className="text-red-400">{summary.fail_count}</span>
-                        <span className="text-gray-500"> / </span>
+                        <span className="text-content-subtle"> / </span>
                         <span className="text-yellow-400">{summary.error_count}</span>
                       </span>
                     }
@@ -135,7 +135,7 @@ const ComplianceDashboardPage: React.FC = () => {
                   <Stat
                     label="Generated"
                     value={
-                      <span className="text-xs text-gray-300">
+                      <span className="text-xs text-content">
                         {formatTimestamp(summary.generated_at)}
                       </span>
                     }
@@ -146,7 +146,7 @@ const ComplianceDashboardPage: React.FC = () => {
 
             <Card>
               <CardBody>
-                <h2 className="text-lg font-semibold text-gray-200 mb-3">
+                <h2 className="text-lg font-semibold text-content mb-3">
                   Policies
                 </h2>
                 {summary.per_policy.length === 0 ? (
@@ -157,7 +157,7 @@ const ComplianceDashboardPage: React.FC = () => {
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
-                      <thead className="text-left text-gray-400 border-b border-gray-800">
+                      <thead className="text-left text-content-muted border-b border-border">
                         <tr>
                           <th className="py-2 pr-3">Policy</th>
                           <th className="py-2 pr-3">Severity</th>
@@ -174,7 +174,7 @@ const ComplianceDashboardPage: React.FC = () => {
                         {summary.per_policy.map((row) => (
                           <tr
                             key={row.policy_id}
-                            className="border-b border-gray-900/50 hover:bg-gray-900/30"
+                            className="border-b border-border/50 hover:bg-surface-overlay/30"
                           >
                             <td className="py-2 pr-3">
                               <Link
@@ -184,7 +184,7 @@ const ComplianceDashboardPage: React.FC = () => {
                                 {row.policy_slug}
                               </Link>
                               {!row.enabled && (
-                                <span className="ml-2 text-xs text-gray-500">(disabled)</span>
+                                <span className="ml-2 text-xs text-content-subtle">(disabled)</span>
                               )}
                             </td>
                             <td className="py-2 pr-3">
@@ -205,12 +205,12 @@ const ComplianceDashboardPage: React.FC = () => {
                                 <Badge variant="success">Up to date</Badge>
                               )}
                             </td>
-                            <td className="py-2 pr-3 text-gray-300 text-xs">
+                            <td className="py-2 pr-3 text-content text-xs">
                               {row.last_run_at
                                 ? formatTimestamp(row.last_run_at)
                                 : '-'}
                             </td>
-                            <td className="py-2 pr-3 text-gray-400 text-xs">
+                            <td className="py-2 pr-3 text-content-muted text-xs">
                               {row.next_run_at
                                 ? formatTimestamp(row.next_run_at)
                                 : row.enabled
@@ -246,7 +246,7 @@ const ComplianceDashboardPage: React.FC = () => {
                                 )}
                                 <Link
                                   href={`/compliance/policies/${row.policy_id}`}
-                                  className="inline-flex items-center gap-1 text-xs text-gray-300 hover:text-gray-100"
+                                  className="inline-flex items-center gap-1 text-xs text-content hover:text-content"
                                 >
                                   Open <ExternalLink size={12} />
                                 </Link>
@@ -264,14 +264,14 @@ const ComplianceDashboardPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Card>
                 <CardBody>
-                  <h2 className="text-lg font-semibold text-gray-200 mb-3">
+                  <h2 className="text-lg font-semibold text-content mb-3">
                     By severity
                   </h2>
                   {summary.per_severity.length === 0 ? (
-                    <p className="text-gray-500 text-sm">No evaluations yet.</p>
+                    <p className="text-content-subtle text-sm">No evaluations yet.</p>
                   ) : (
                     <table className="w-full text-sm">
-                      <thead className="text-left text-gray-400 border-b border-gray-800">
+                      <thead className="text-left text-content-muted border-b border-border">
                         <tr>
                           <th className="py-2 pr-3">Severity</th>
                           <th className="py-2 pr-3">Pass</th>
@@ -283,7 +283,7 @@ const ComplianceDashboardPage: React.FC = () => {
                         {summary.per_severity.map((row) => (
                           <tr
                             key={row.severity}
-                            className="border-b border-gray-900/50"
+                            className="border-b border-border/50"
                           >
                             <td className="py-2 pr-3">
                               <Badge variant={severityBadgeVariant(row.severity)}>
@@ -309,16 +309,16 @@ const ComplianceDashboardPage: React.FC = () => {
 
               <Card>
                 <CardBody>
-                  <h2 className="text-lg font-semibold text-gray-200 mb-3">
+                  <h2 className="text-lg font-semibold text-content mb-3">
                     By host
                   </h2>
                   {summary.per_host.length === 0 ? (
-                    <p className="text-gray-500 text-sm">
+                    <p className="text-content-subtle text-sm">
                       No evaluations yet.
                     </p>
                   ) : (
                     <table className="w-full text-sm">
-                      <thead className="text-left text-gray-400 border-b border-gray-800">
+                      <thead className="text-left text-content-muted border-b border-border">
                         <tr>
                           <th className="py-2 pr-3">System</th>
                           <th className="py-2 pr-3">Pass</th>
@@ -330,7 +330,7 @@ const ComplianceDashboardPage: React.FC = () => {
                         {summary.per_host.map((row) => (
                           <tr
                             key={row.system_id}
-                            className="border-b border-gray-900/50"
+                            className="border-b border-border/50"
                           >
                             <td className="py-2 pr-3">
                               <Link
@@ -369,8 +369,8 @@ const Stat: React.FC<{ label: string; value: React.ReactNode }> = ({
   value,
 }) => (
   <div className="min-w-[7rem]">
-    <p className="text-xs uppercase tracking-wide text-gray-500">{label}</p>
-    <p className="text-2xl font-semibold text-gray-100 mt-0.5">{value}</p>
+    <p className="text-xs uppercase tracking-wide text-content-subtle">{label}</p>
+    <p className="text-2xl font-semibold text-content mt-0.5">{value}</p>
   </div>
 );
 

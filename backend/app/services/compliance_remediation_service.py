@@ -247,9 +247,7 @@ def remediation_request_read_envelope(
 # ---------------------------------------------------------------------------
 
 
-def _resolve_snapshot_from_evidence(
-    db: Session, evidence_id: int
-) -> Tuple[
+def _resolve_snapshot_from_evidence(db: Session, evidence_id: int) -> Tuple[
     CompliancePolicy,
     Optional[CompliancePolicyCheck],
     CompliancePolicyEvidence,

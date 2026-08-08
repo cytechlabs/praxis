@@ -55,9 +55,9 @@ def _view_to_dict(view: SavedView) -> Dict[str, Any]:
         "id": view.id,
         "name": view.name,
         "user_id": view.user_id,
-        "filters": json.loads(view.filters)
-        if isinstance(view.filters, str)
-        else view.filters,
+        "filters": (
+            json.loads(view.filters) if isinstance(view.filters, str) else view.filters
+        ),
         "is_default": view.is_default,
         "is_shared": view.is_shared,
         "created_at": view.created_at.isoformat() + "Z" if view.created_at else None,

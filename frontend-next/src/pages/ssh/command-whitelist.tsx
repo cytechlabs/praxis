@@ -240,14 +240,14 @@ const CommandWhitelistPage: React.FC = () => {
         <Card className="mb-6">
           <CardBody>
             <div className="flex items-center gap-2 mb-3">
-              <Search size={18} className="text-gray-400" />
-              <span className="text-sm font-medium text-gray-300">Pattern Tester</span>
+              <Search size={18} className="text-content-muted" />
+              <span className="text-sm font-medium text-content">Pattern Tester</span>
             </div>
             <div className="flex gap-2">
               <input value={testCommand} onChange={(e) => setTestCommand(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleTest()}
                 placeholder="Enter a command to test (e.g. apt-get install nginx)"
-                className="flex-1 bg-white/[0.02] border border-gray-700 rounded px-3 py-2 text-sm text-gray-200 focus:border-red-500 focus:outline-none" />
+                className="flex-1 bg-white/[0.02] border border-border-strong rounded px-3 py-2 text-sm text-content focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong focus:outline-none" />
               <Button variant="outline" onClick={handleTest} disabled={testing}>
                 {testing ? 'Testing...' : 'Test'}
               </Button>
@@ -258,12 +258,12 @@ const CommandWhitelistPage: React.FC = () => {
                   {testResult.allowed ? 'ALLOWED' : 'DENIED'}
                 </div>
                 {testResult.whitelist_matches.length > 0 && (
-                  <div className="text-gray-400 mt-1">Whitelist matches: {testResult.whitelist_matches.map(m => m.name).join(', ')}</div>
+                  <div className="text-content-muted mt-1">Whitelist matches: {testResult.whitelist_matches.map(m => m.name).join(', ')}</div>
                 )}
                 {testResult.rule_matches.length > 0 && (
                   <div className="text-yellow-400 mt-1">Rule triggers: {testResult.rule_matches.map(r => `${r.name} (${r.severity})`).join(', ')}</div>
                 )}
-                {testResult.whitelist_matches.length === 0 && <div className="text-gray-600 mt-1">No whitelist match found</div>}
+                {testResult.whitelist_matches.length === 0 && <div className="text-content-subtle mt-1">No whitelist match found</div>}
               </div>
             )}
           </CardBody>
@@ -272,17 +272,17 @@ const CommandWhitelistPage: React.FC = () => {
         {/* Filters */}
         <div className="flex gap-4 mb-4">
           <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}
-            className="bg-white/[0.02] border border-gray-700 rounded px-3 py-1.5 text-sm text-gray-200">
+            className="bg-white/[0.02] border border-border-strong rounded px-3 py-1.5 text-sm text-content">
             <option value="">All Categories</option>
             {CATEGORIES.map(c => <option key={c} value={c}>{humanizeLabel(c)}</option>)}
           </select>
           <select value={filterRisk} onChange={(e) => setFilterRisk(e.target.value)}
-            className="bg-white/[0.02] border border-gray-700 rounded px-3 py-1.5 text-sm text-gray-200">
+            className="bg-white/[0.02] border border-border-strong rounded px-3 py-1.5 text-sm text-content">
             <option value="">All Risk Levels</option>
             {RISK_LEVELS.map(r => <option key={r} value={r}>{r}</option>)}
           </select>
           <select value={filterActive} onChange={(e) => setFilterActive(e.target.value)}
-            className="bg-white/[0.02] border border-gray-700 rounded px-3 py-1.5 text-sm text-gray-200">
+            className="bg-white/[0.02] border border-border-strong rounded px-3 py-1.5 text-sm text-content">
             <option value="">All Status</option>
             <option value="true">Active</option>
             <option value="false">Inactive</option>
@@ -293,8 +293,8 @@ const CommandWhitelistPage: React.FC = () => {
         <Card>
           <CardBody className="p-0">
             <table className="w-full text-sm">
-              <thead className="bg-gray-950">
-                <tr className="text-left text-gray-400 border-b border-gray-800">
+              <thead className="bg-surface-sunken">
+                <tr className="text-left text-content-muted border-b border-border">
                   <th scope="col" className="px-4 py-3">Name</th>
                   <th scope="col" className="px-4 py-3">Pattern</th>
                   <th scope="col" className="px-4 py-3">Category</th>
@@ -306,20 +306,20 @@ const CommandWhitelistPage: React.FC = () => {
               </thead>
               <tbody>
                 {entries.map((entry) => (
-                  <tr key={entry.id} className="border-b border-gray-800/50 hover:bg-gray-800/30">
+                  <tr key={entry.id} className="border-b border-border/50 hover:bg-surface-overlay/30">
                     <td className="px-4 py-3">
-                      <div className="font-medium text-gray-100">{entry.name}</div>
-                      {entry.description && <div className="text-xs text-gray-600 mt-0.5">{entry.description}</div>}
+                      <div className="font-medium text-content">{entry.name}</div>
+                      {entry.description && <div className="text-xs text-content-subtle mt-0.5">{entry.description}</div>}
                     </td>
                     <td className="px-4 py-3">
-                      <code className="text-xs bg-gray-950 px-2 py-1 rounded text-gray-300">
+                      <code className="text-xs bg-surface-sunken px-2 py-1 rounded text-content">
                         {entry.command_pattern}
                       </code>
-                      {entry.is_regex && <span className="ml-2 text-xs text-slate-300">regex</span>}
+                      {entry.is_regex && <span className="ml-2 text-xs text-content">regex</span>}
                       {entry.requires_sudo && <span className="ml-2 text-xs text-yellow-500">sudo</span>}
                       {entry.requires_approval && <span className="ml-2 text-xs text-purple-400">approval{entry.required_approvals > 1 ? ` × ${entry.required_approvals}` : ''}</span>}
                     </td>
-                    <td className="px-4 py-3 text-gray-400">{humanizeLabel(entry.category)}</td>
+                    <td className="px-4 py-3 text-content-muted">{humanizeLabel(entry.category)}</td>
                     <td className="px-4 py-3">
                       <span className={`text-xs px-2 py-0.5 rounded border ${RISK_COLORS[entry.risk_level] || ''}`}>
                         {entry.risk_level}
@@ -329,17 +329,17 @@ const CommandWhitelistPage: React.FC = () => {
                       <button onClick={() => handleToggle(entry)} title={entry.is_active ? 'Active' : 'Inactive'}>
                         {entry.is_active
                           ? <ToggleRight size={20} className="text-green-400" />
-                          : <ToggleLeft size={20} className="text-gray-600" />}
+                          : <ToggleLeft size={20} className="text-content-subtle" />}
                       </button>
                     </td>
-                    <td className="px-4 py-3 text-xs text-gray-400">
+                    <td className="px-4 py-3 text-xs text-content-muted">
                       {entry.distro_mappings.length > 0
                         ? entry.distro_mappings.map(m => m.distro_name).join(', ')
-                        : <span className="text-gray-600">All</span>}
+                        : <span className="text-content-subtle">All</span>}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <button onClick={() => openEdit(entry)} className="text-gray-400 hover:text-gray-100 mr-3"><Pencil size={14} /></button>
-                      <button onClick={() => { setDeleteTargetId(entry.id); setShowDeleteConfirm(true); }} className="text-gray-400 hover:text-red-400"><Trash2 size={14} /></button>
+                      <button onClick={() => openEdit(entry)} className="text-content-muted hover:text-content mr-3"><Pencil size={14} /></button>
+                      <button onClick={() => { setDeleteTargetId(entry.id); setShowDeleteConfirm(true); }} className="text-content-muted hover:text-red-400"><Trash2 size={14} /></button>
                     </td>
                   </tr>
                 ))}
@@ -353,77 +353,77 @@ const CommandWhitelistPage: React.FC = () => {
 
         {/* Modal */}
         {modalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0c0c0f]/60">
-            <div className="bg-gray-950 border border-gray-800 rounded-lg w-full max-w-2xl max-h-[85vh] overflow-y-auto p-6">
-              <h2 className="text-lg font-semibold text-gray-100 mb-4">{editing ? 'Edit Entry' : 'New Whitelist Entry'}</h2>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-surface/60">
+            <div className="bg-surface-overlay border border-border rounded-lg w-full max-w-2xl max-h-[85vh] overflow-y-auto p-6">
+              <h2 className="text-lg font-semibold text-content mb-4">{editing ? 'Edit Entry' : 'New Whitelist Entry'}</h2>
 
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div>
-                  <label className="block text-xs text-gray-400 mb-1">Name</label>
+                  <label className="block text-xs text-content-muted mb-1">Name</label>
                   <input value={formName} onChange={(e) => setFormName(e.target.value)}
-                    className="w-full bg-white/[0.02] border border-gray-700 rounded px-3 py-2 text-sm text-gray-200 focus:border-red-500 focus:outline-none" />
+                    className="w-full bg-white/[0.02] border border-border-strong rounded px-3 py-2 text-sm text-content focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong focus:outline-none" />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-400 mb-1">Category</label>
+                  <label className="block text-xs text-content-muted mb-1">Category</label>
                   <select value={formCategory} onChange={(e) => setFormCategory(e.target.value)}
-                    className="w-full bg-white/[0.02] border border-gray-700 rounded px-3 py-2 text-sm text-gray-200">
+                    className="w-full bg-white/[0.02] border border-border-strong rounded px-3 py-2 text-sm text-content">
                     {CATEGORIES.map(c => <option key={c} value={c}>{humanizeLabel(c)}</option>)}
                   </select>
                 </div>
               </div>
 
               <div className="mb-4">
-                <label className="block text-xs text-gray-400 mb-1">Description</label>
+                <label className="block text-xs text-content-muted mb-1">Description</label>
                 <input value={formDescription} onChange={(e) => setFormDescription(e.target.value)}
-                  className="w-full bg-white/[0.02] border border-gray-700 rounded px-3 py-2 text-sm text-gray-200 focus:border-red-500 focus:outline-none" />
+                  className="w-full bg-white/[0.02] border border-border-strong rounded px-3 py-2 text-sm text-content focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong focus:outline-none" />
               </div>
 
               <div className="mb-4">
-                <label className="block text-xs text-gray-400 mb-1">Command Pattern</label>
+                <label className="block text-xs text-content-muted mb-1">Command Pattern</label>
                 <input value={formPattern} onChange={(e) => setFormPattern(e.target.value)}
                   placeholder="e.g. apt-get install * or ^apt-get\s+install\s+\S+$"
-                  className="w-full bg-white/[0.02] border border-gray-700 rounded px-3 py-2 text-sm text-gray-200 font-mono focus:border-red-500 focus:outline-none" />
+                  className="w-full bg-white/[0.02] border border-border-strong rounded px-3 py-2 text-sm text-content font-mono focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong focus:outline-none" />
               </div>
 
               <div className="grid grid-cols-3 gap-4 mb-4">
                 <div>
-                  <label className="block text-xs text-gray-400 mb-1">Risk Level</label>
+                  <label className="block text-xs text-content-muted mb-1">Risk Level</label>
                   <select value={formRiskLevel} onChange={(e) => setFormRiskLevel(e.target.value)}
-                    className="w-full bg-white/[0.02] border border-gray-700 rounded px-3 py-2 text-sm text-gray-200">
+                    className="w-full bg-white/[0.02] border border-border-strong rounded px-3 py-2 text-sm text-content">
                     {RISK_LEVELS.map(r => <option key={r} value={r}>{r}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-400 mb-1">Timeout (seconds)</label>
+                  <label className="block text-xs text-content-muted mb-1">Timeout (seconds)</label>
                   <input type="number" value={formTimeout} onChange={(e) => setFormTimeout(parseInt(e.target.value) || 30)}
                     min={1} max={3600}
-                    className="w-full bg-white/[0.02] border border-gray-700 rounded px-3 py-2 text-sm text-gray-200 focus:border-red-500 focus:outline-none" />
+                    className="w-full bg-white/[0.02] border border-border-strong rounded px-3 py-2 text-sm text-content focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong focus:outline-none" />
                 </div>
                 <div className="flex flex-col justify-end gap-2">
-                  <label className="flex items-center gap-2 text-sm text-gray-300">
+                  <label className="flex items-center gap-2 text-sm text-content">
                     <input type="checkbox" checked={formIsRegex} onChange={(e) => setFormIsRegex(e.target.checked)}
-                      className="rounded border-gray-700" /> Regex pattern
+                      className="rounded border-border-strong" /> Regex pattern
                   </label>
-                  <label className="flex items-center gap-2 text-sm text-gray-300">
+                  <label className="flex items-center gap-2 text-sm text-content">
                     <input type="checkbox" checked={formRequiresSudo} onChange={(e) => setFormRequiresSudo(e.target.checked)}
-                      className="rounded border-gray-700" /> Requires sudo
+                      className="rounded border-border-strong" /> Requires sudo
                   </label>
-                  <label className="flex items-center gap-2 text-sm text-gray-300">
+                  <label className="flex items-center gap-2 text-sm text-content">
                     <input type="checkbox" checked={formRequiresApproval} onChange={(e) => setFormRequiresApproval(e.target.checked)}
-                      className="rounded border-gray-700" /> Requires approval
+                      className="rounded border-border-strong" /> Requires approval
                   </label>
                   {formRequiresApproval && (
-                    <label className="flex items-center gap-2 text-sm text-gray-300 pl-6">
-                      <span className="text-xs text-gray-400">Required approvals</span>
+                    <label className="flex items-center gap-2 text-sm text-content pl-6">
+                      <span className="text-xs text-content-muted">Required approvals</span>
                       <input
                         type="number"
                         min={1}
                         max={10}
                         value={formRequiredApprovals}
                         onChange={(e) => setFormRequiredApprovals(Math.max(1, parseInt(e.target.value) || 1))}
-                        className="w-16 bg-white/[0.02] border border-gray-700 rounded px-2 py-1 text-xs text-gray-200 focus:border-red-500 focus:outline-none"
+                        className="w-16 bg-white/[0.02] border border-border-strong rounded px-2 py-1 text-xs text-content focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong focus:outline-none"
                       />
-                      <span className="text-xs text-gray-500">distinct admins</span>
+                      <span className="text-xs text-content-subtle">distinct admins</span>
                     </label>
                   )}
                 </div>
@@ -432,26 +432,26 @@ const CommandWhitelistPage: React.FC = () => {
               {/* Distro Mappings */}
               <div className="mb-4">
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-xs text-gray-400">Distribution Support</label>
+                  <label className="text-xs text-content-muted">Distribution Support</label>
                   <button onClick={addDistroMapping} className="text-xs text-red-400 hover:text-red-300">+ Add Distribution</button>
                 </div>
                 {formDistroMappings.length === 0 && (
-                  <div className="text-xs text-gray-600 bg-gray-950 rounded p-3">No distribution restrictions -- command applies to all distributions.</div>
+                  <div className="text-xs text-content-subtle bg-surface-sunken rounded p-3">No distribution restrictions -- command applies to all distributions.</div>
                 )}
                 {formDistroMappings.map((m, idx) => (
-                  <div key={idx} className="flex gap-2 items-start mb-2 bg-gray-950 rounded p-3">
+                  <div key={idx} className="flex gap-2 items-start mb-2 bg-surface-sunken rounded p-3">
                     <select value={m.distro_id} onChange={(e) => updateDistroMapping(idx, 'distro_id', parseInt(e.target.value))}
-                      className="bg-white/[0.02] border border-gray-700 rounded px-2 py-1 text-xs text-gray-200">
+                      className="bg-white/[0.02] border border-border-strong rounded px-2 py-1 text-xs text-content">
                       {distros.map(d => <option key={d.id} value={d.id}>{d.name} {d.version}</option>)}
                     </select>
                     <input value={m.command_override || ''} onChange={(e) => updateDistroMapping(idx, 'command_override', e.target.value || null)}
-                      placeholder="Command override" className="flex-1 bg-white/[0.02] border border-gray-700 rounded px-2 py-1 text-xs text-gray-200 font-mono" />
-                    <button onClick={() => removeDistroMapping(idx)} className="text-gray-600 hover:text-red-400 mt-0.5"><Trash2 size={12} /></button>
+                      placeholder="Command override" className="flex-1 bg-white/[0.02] border border-border-strong rounded px-2 py-1 text-xs text-content font-mono" />
+                    <button onClick={() => removeDistroMapping(idx)} className="text-content-subtle hover:text-red-400 mt-0.5"><Trash2 size={12} /></button>
                   </div>
                 ))}
               </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-800">
+              <div className="flex justify-end gap-3 pt-4 border-t border-border">
                 <Button variant="ghost" onClick={() => setModalOpen(false)}>Cancel</Button>
                 <Button variant="primary" onClick={handleSave} disabled={!formName || !formPattern}>
                   {editing ? 'Update' : 'Create'}

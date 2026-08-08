@@ -149,15 +149,15 @@ const RecordingPlayerPage = () => {
       <Head><title>Replay | Praxis</title></Head>
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-lg font-semibold text-gray-100">
+          <h1 className="text-lg font-semibold text-content">
             Recording {rec ? `#${rec.id}` : ''}
           </h1>
-          <div className="text-xs text-gray-500 mt-1">
+          <div className="text-xs text-content-subtle mt-1">
             {rec && (
               <>
                 session #{rec.session_id} ·{' '}
-                {rec.hostname && <span className="font-mono text-gray-400">{rec.hostname}</span>}{' '}
-                {rec.login && <span className="font-mono text-gray-400">as {rec.login}</span>} ·
+                {rec.hostname && <span className="font-mono text-content-muted">{rec.hostname}</span>}{' '}
+                {rec.login && <span className="font-mono text-content-muted">as {rec.login}</span>} ·
                 <Badge variant="info" className="ml-2">{humanizeStatus(rec.status)}</Badge>
               </>
             )}
@@ -180,25 +180,25 @@ const RecordingPlayerPage = () => {
           <SkipForward size={14} className="mr-1" /> To end
         </Button>
         <div className="flex items-center gap-1 ml-4">
-          <span className="text-xs uppercase tracking-wide text-gray-500 mr-1">Speed</span>
+          <span className="text-xs uppercase tracking-wide text-content-subtle mr-1">Speed</span>
           {SPEEDS.map(s => (
             <button
               key={s}
               onClick={() => setSpeed(s)}
               className={`px-2 py-1 rounded text-xs font-mono ${
-                s === speed ? 'bg-red-700/30 text-red-200 border border-red-700/60' : 'text-gray-400 hover:text-gray-200'
+                s === speed ? 'bg-red-700/30 text-red-200 border border-red-700/60' : 'text-content-muted hover:text-content'
               }`}
             >
               {s}x
             </button>
           ))}
         </div>
-        <div className="ml-auto text-xs text-gray-500 tabular-nums">
+        <div className="ml-auto text-xs text-content-subtle tabular-nums">
           {currentElapsed.toFixed(1)}s / {cast ? cast.duration.toFixed(1) : '-'}s
         </div>
       </div>
 
-      <div className="mb-3 h-1 rounded-full bg-gray-800 overflow-hidden">
+      <div className="mb-3 h-1 rounded-full bg-surface-overlay overflow-hidden">
         <div className="h-full bg-red-600 transition-[width] duration-150 ease-linear" style={{ width: `${progress}%` }} />
       </div>
 
@@ -208,7 +208,7 @@ const RecordingPlayerPage = () => {
         </CardBody>
       </Card>
 
-      {loading && <div className="text-sm text-gray-500 mt-3">Loading recording…</div>}
+      {loading && <div className="text-sm text-content-subtle mt-3">Loading recording…</div>}
     </MainLayout>
   );
 };

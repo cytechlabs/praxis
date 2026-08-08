@@ -272,7 +272,7 @@ def _system_descriptor(db: Session, system_id: int) -> Dict[str, Any]:
 
 
 def _fingerprint_check_definition(
-    definition: Optional[Dict[str, Any]]
+    definition: Optional[Dict[str, Any]],
 ) -> Optional[str]:
     """Return a deterministic 64-char SHA-256 hex digest of the
     canonical-JSON form of ``definition``, or ``None`` when the

@@ -112,7 +112,7 @@ const SecurityTab = () => {
     }
   };
 
-  if (loading) return <div className="text-gray-500 text-sm">Loading…</div>;
+  if (loading) return <div className="text-content-subtle text-sm">Loading…</div>;
 
   const enrolled = !!status?.enrolled;
 
@@ -124,7 +124,7 @@ const SecurityTab = () => {
             {enrolled ? <ShieldCheck className="text-green-400" size={18} /> : <ShieldOff className="text-gray-500" size={18} />}
             <div>
               <div>Two-Factor Authentication (TOTP)</div>
-              <div className="text-xs font-normal text-gray-500 mt-0.5">
+              <div className="text-xs font-normal text-content-subtle mt-0.5">
                 Required for sensitive fleet roles (session open / command exec with <code className="font-mono">totp_required</code>).
               </div>
             </div>
@@ -133,7 +133,7 @@ const SecurityTab = () => {
         <CardBody>
           {!enrolled && !enrolling && (
             <div className="flex items-center justify-between gap-4">
-              <p className="text-sm text-gray-300">
+              <p className="text-sm text-content">
                 Add an authenticator app (Authy, 1Password, Aegis, Bitwarden, etc.) to protect
                 privileged actions with a 6-digit second factor.
               </p>
@@ -146,14 +146,14 @@ const SecurityTab = () => {
 
           {enrolling && (
             <div className="space-y-4">
-              <p className="text-sm text-gray-300">
+              <p className="text-sm text-content">
                 Add the following to your authenticator app, then enter the 6-digit code below.
               </p>
               <div className="space-y-2">
                 <div>
-                  <label className="block text-xs uppercase tracking-wide text-gray-500 mb-1">Secret</label>
+                  <label className="block text-xs uppercase tracking-wide text-content-subtle mb-1">Secret</label>
                   <div className="flex gap-2">
-                    <div className="flex-1 font-mono text-sm text-gray-200 bg-black/40 border border-gray-800 rounded px-3 py-2 break-all">
+                    <div className="flex-1 font-mono text-sm text-content bg-black/40 border border-border rounded px-3 py-2 break-all">
                       {enrolling.secret}
                     </div>
                     <Button variant="ghost" size="sm" onClick={() => copyToClipboard(enrolling.secret, 'Secret')}>
@@ -162,11 +162,11 @@ const SecurityTab = () => {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs uppercase tracking-wide text-gray-500 mb-1">otpauth URI (tap on mobile)</label>
+                  <label className="block text-xs uppercase tracking-wide text-content-subtle mb-1">otpauth URI (tap on mobile)</label>
                   <div className="flex gap-2">
                     <a
                       href={enrolling.uri}
-                      className="flex-1 font-mono text-xs text-slate-300 bg-black/40 border border-gray-800 rounded px-3 py-2 break-all hover:text-slate-100 transition-colors"
+                      className="flex-1 font-mono text-xs text-content bg-black/40 border border-border rounded px-3 py-2 break-all hover:text-content transition-colors"
                     >
                       {enrolling.uri}
                     </a>
@@ -177,7 +177,7 @@ const SecurityTab = () => {
                 </div>
               </div>
               <div>
-                <label className="block text-xs uppercase tracking-wide text-gray-500 mb-1">Enter 6-digit code</label>
+                <label className="block text-xs uppercase tracking-wide text-content-subtle mb-1">Enter 6-digit code</label>
                 <div className="flex gap-2">
                   <Input
                     value={code}
@@ -200,10 +200,10 @@ const SecurityTab = () => {
           {enrolled && (
             <div className="flex items-center justify-between">
               <div className="text-sm">
-                <div className="text-gray-300">
+                <div className="text-content">
                   Enrolled {status?.enrolled_at ? formatTimestamp(status.enrolled_at, { dateOnly: true }) : ''}.
                 </div>
-                <div className="text-xs text-gray-500 mt-0.5">
+                <div className="text-xs text-content-subtle mt-0.5">
                   {status?.recovery_codes_remaining ?? 0} recovery code{status?.recovery_codes_remaining === 1 ? '' : 's'} remaining.
                 </div>
               </div>
@@ -237,7 +237,7 @@ const SecurityTab = () => {
           </div>
           <div className="grid grid-cols-2 gap-2 font-mono text-sm">
             {recoveryCodes?.map((c, i) => (
-              <div key={i} className="bg-black/40 border border-gray-800 rounded px-3 py-1.5 text-gray-200">{c}</div>
+              <div key={i} className="bg-black/40 border border-border rounded px-3 py-1.5 text-content">{c}</div>
             ))}
           </div>
           <div className="flex justify-end gap-2">
@@ -258,7 +258,7 @@ const SecurityTab = () => {
       {/* Disable modal */}
       <Modal open={showDisable} onClose={() => { setShowDisable(false); setConfirmCode(''); }} title="Disable TOTP" maxWidth="max-w-md">
         <div className="space-y-4">
-          <p className="text-sm text-gray-300">
+          <p className="text-sm text-content">
             Enter your current TOTP code to disable two-factor authentication.
           </p>
           <Input value={confirmCode} onChange={e => setConfirmCode(e.target.value)} placeholder="123456" className="font-mono" />
@@ -272,7 +272,7 @@ const SecurityTab = () => {
       {/* Rotate recovery codes modal */}
       <Modal open={showRotate} onClose={() => { setShowRotate(false); setConfirmCode(''); }} title="Rotate recovery codes" maxWidth="max-w-md">
         <div className="space-y-4">
-          <p className="text-sm text-gray-300">
+          <p className="text-sm text-content">
             Enter your current TOTP code. Existing recovery codes will be invalidated and a new set issued.
           </p>
           <Input value={confirmCode} onChange={e => setConfirmCode(e.target.value)} placeholder="123456" className="font-mono" />

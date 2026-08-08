@@ -766,9 +766,9 @@ def _login_detail(
         "active_grants": active_ctx,
         "expired_grants": expired_ctx,
         "expiry_state": expiry_state,
-        "nearest_active_expiry": _iso(min(active_expiries))
-        if active_expiries
-        else None,
+        "nearest_active_expiry": (
+            _iso(min(active_expiries)) if active_expiries else None
+        ),
         "host_state": _host_state_ctx(hs),
         "revocation": _revocation_ctx(db, user.id, system.id, login),
     }
@@ -863,9 +863,9 @@ def build_effective_access_summary(
         "scoped_api_access": {
             "allowed": api_allowed,
             "code": None if api_allowed else "out_of_scope",
-            "reason": None
-            if api_allowed
-            else "user has no active grant on this system",
+            "reason": (
+                None if api_allowed else "user has no active grant on this system"
+            ),
         },
         "capabilities": capabilities,
         "logins": [_login_detail(db, target, system, lg, now) for lg in logins],

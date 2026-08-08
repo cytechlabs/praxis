@@ -147,7 +147,7 @@ const ComplianceRemediationRequestDetailPage: React.FC = () => {
   if (!Number.isFinite(requestId)) {
     return (
       <MainLayout>
-        <div className="p-6 text-gray-400">Invalid remediation request id.</div>
+        <div className="p-6 text-content-muted">Invalid remediation request id.</div>
       </MainLayout>
     );
   }
@@ -169,14 +169,14 @@ const ComplianceRemediationRequestDetailPage: React.FC = () => {
             <div className="flex items-center gap-2">
               <Link
                 href="/compliance/remediation"
-                className="inline-flex items-center gap-1.5 text-sm text-gray-300 hover:text-gray-100"
+                className="inline-flex items-center gap-1.5 text-sm text-content hover:text-content"
               >
                 <ArrowLeft size={14} /> Fleet remediation
               </Link>
               {request && (
                 <Link
                   href={`/compliance/systems/${request.system_id}/remediation`}
-                  className="inline-flex items-center gap-1.5 text-sm text-gray-300 hover:text-gray-100"
+                  className="inline-flex items-center gap-1.5 text-sm text-content hover:text-content"
                 >
                   System inventory →
                 </Link>
@@ -263,7 +263,7 @@ const ComplianceRemediationRequestDetailPage: React.FC = () => {
                           evidence #{request.evidence_id}
                         </Link>
                       ) : (
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-content-subtle">
                           (evidence row deleted)
                         </span>
                       )
@@ -272,7 +272,7 @@ const ComplianceRemediationRequestDetailPage: React.FC = () => {
                   <Row
                     label="Evaluation run"
                     value={
-                      <span className="font-mono text-xs text-gray-400">
+                      <span className="font-mono text-xs text-content-muted">
                         {request.evaluation_run_id ?? '-'}
                       </span>
                     }
@@ -294,7 +294,7 @@ const ComplianceRemediationRequestDetailPage: React.FC = () => {
                           user #{request.decided_by}
                         </span>
                       ) : (
-                        <span className="text-xs text-gray-500">-</span>
+                        <span className="text-xs text-content-subtle">-</span>
                       )
                     }
                   />
@@ -311,7 +311,7 @@ const ComplianceRemediationRequestDetailPage: React.FC = () => {
                       label="Verdict reason"
                       wide
                       value={
-                        <span className="text-xs text-gray-300">
+                        <span className="text-xs text-content">
                           {request.verdict_reason_snapshot_label}
                         </span>
                       }
@@ -322,7 +322,7 @@ const ComplianceRemediationRequestDetailPage: React.FC = () => {
                       label="Remediation guidance"
                       wide
                       value={
-                        <pre className="whitespace-pre-wrap text-sm text-gray-300">
+                        <pre className="whitespace-pre-wrap text-sm text-content">
                           {request.remediation_guidance_snapshot}
                         </pre>
                       }
@@ -333,7 +333,7 @@ const ComplianceRemediationRequestDetailPage: React.FC = () => {
                       label="Justification"
                       wide
                       value={
-                        <pre className="whitespace-pre-wrap text-sm text-gray-300">
+                        <pre className="whitespace-pre-wrap text-sm text-content">
                           {request.justification}
                         </pre>
                       }
@@ -344,7 +344,7 @@ const ComplianceRemediationRequestDetailPage: React.FC = () => {
                       label="Decision reason"
                       wide
                       value={
-                        <pre className="whitespace-pre-wrap text-sm text-gray-300">
+                        <pre className="whitespace-pre-wrap text-sm text-content">
                           {request.decided_reason}
                         </pre>
                       }
@@ -363,7 +363,7 @@ const ComplianceRemediationRequestDetailPage: React.FC = () => {
 
             <Card>
               <CardBody>
-                <h2 className="text-lg font-semibold text-gray-200 mb-3">
+                <h2 className="text-lg font-semibold text-content mb-3">
                   Plan preview
                 </h2>
                 {plan ? (
@@ -392,12 +392,12 @@ const ComplianceRemediationRequestDetailPage: React.FC = () => {
             <Card>
               <CardBody>
                 <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-                  <h2 className="text-lg font-semibold text-gray-200">
+                  <h2 className="text-lg font-semibold text-content">
                     Execution attempts
                   </h2>
                   <div className="flex items-center gap-3">
                     {rollup && (
-                      <span className="text-xs text-gray-400">
+                      <span className="text-xs text-content-muted">
                         {rollup.total_attempts} total
                       </span>
                     )}
@@ -460,7 +460,7 @@ const PlanSummary: React.FC<PlanSummaryProps> = ({
         <Row
           label="Plan kind"
           value={
-            <span className="text-sm text-gray-200">
+            <span className="text-sm text-content">
               {PLAN_KIND_LABELS[plan.plan_kind] ?? plan.plan_kind}
             </span>
           }
@@ -479,10 +479,10 @@ const PlanSummary: React.FC<PlanSummaryProps> = ({
           label="Acknowledged"
           value={
             plan.acknowledged_at ? (
-              <span className="text-xs text-gray-300">
+              <span className="text-xs text-content">
                 {formatTimestamp(plan.acknowledged_at)}
                 {plan.acknowledged_by !== null && (
-                  <span className="text-gray-500">
+                  <span className="text-content-subtle">
                     {' '}
                     · user #{plan.acknowledged_by}
                   </span>
@@ -711,7 +711,7 @@ const PlanActions: React.FC<PlanActionsProps> = ({
 
   return (
     <>
-      <div className="border-t border-gray-800 pt-4 space-y-2">
+      <div className="border-t border-border pt-4 space-y-2">
         <div className="flex flex-wrap items-center gap-2">
           {canWrite && showRebuild && (
             <Button
@@ -746,7 +746,7 @@ const PlanActions: React.FC<PlanActionsProps> = ({
           )}
           {!isAdmin && canWrite && (
             <span
-              className="text-[11px] text-gray-500"
+              className="text-[11px] text-content-subtle"
               title="Plan acknowledgement and attempt creation require the admin role."
             >
               Acknowledge / create attempt requires admin
@@ -765,7 +765,7 @@ const PlanActions: React.FC<PlanActionsProps> = ({
             {createBlocked}
           </div>
         )}
-        <p className="text-[11px] text-gray-500">
+        <p className="text-[11px] text-content-subtle">
           Rebuild, acknowledge, and create-attempt all flip metadata only -
           they never run commands, dispatch attempts, mutate hosts, or
           refresh facts. Dispatch happens from the execution detail page or
@@ -834,7 +834,7 @@ const BuildPlanEmptyState: React.FC<BuildPlanEmptyStateProps> = ({
           </Button>
         </div>
       ) : (
-        <p className="text-[11px] text-gray-500 text-right">
+        <p className="text-[11px] text-content-subtle text-right">
           Build requires the admin or maintainer role.
         </p>
       )}
@@ -959,7 +959,7 @@ const RollupTable: React.FC<{
   }
   return (
     <>
-      <div className="flex flex-wrap gap-4 text-xs text-gray-300 mb-3">
+      <div className="flex flex-wrap gap-4 text-xs text-content mb-3">
         {Object.entries(rollup.counts_by_state).map(([state, count]) => (
           <span key={state}>
             <Badge variant={remediationExecutionStateBadgeVariant(state)}>
@@ -969,7 +969,7 @@ const RollupTable: React.FC<{
           </span>
         ))}
         {Object.keys(rollup.counts_by_failure_reason).length > 0 && (
-          <span className="text-gray-400">
+          <span className="text-content-muted">
             failure reasons:{' '}
             <span className="font-mono">
               {Object.entries(rollup.counts_by_failure_reason)
@@ -981,7 +981,7 @@ const RollupTable: React.FC<{
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="text-left text-gray-400 border-b border-gray-800">
+          <thead className="text-left text-content-muted border-b border-border">
             <tr>
               <th className="py-2 pr-3">Attempt</th>
               <th className="py-2 pr-3">State</th>
@@ -995,14 +995,14 @@ const RollupTable: React.FC<{
           </thead>
           <tbody>
             {rollup.attempts.map((a) => (
-              <tr key={a.id} className="border-b border-gray-900/50">
+              <tr key={a.id} className="border-b border-border/50">
                 <td className="py-2 pr-3 font-mono">#{a.id}</td>
                 <td className="py-2 pr-3">
                   <Badge variant={remediationExecutionStateBadgeVariant(a.state)}>
                     {a.state}
                   </Badge>
                 </td>
-                <td className="py-2 pr-3 text-xs text-gray-300">
+                <td className="py-2 pr-3 text-xs text-content">
                   {PLAN_KIND_LABELS[
                     a.plan_kind_snapshot as keyof typeof PLAN_KIND_LABELS
                   ] ?? a.plan_kind_snapshot}
@@ -1011,19 +1011,19 @@ const RollupTable: React.FC<{
                   {a.package_name ?? '-'}
                   {a.package_version_target ? ` @ ${a.package_version_target}` : ''}
                 </td>
-                <td className="py-2 pr-3 text-xs text-gray-300">
+                <td className="py-2 pr-3 text-xs text-content">
                   {a.dispatched_at ? formatTimestamp(a.dispatched_at) : '-'}
                 </td>
-                <td className="py-2 pr-3 text-xs text-gray-300">
+                <td className="py-2 pr-3 text-xs text-content">
                   {a.completed_at ? formatTimestamp(a.completed_at) : '-'}
                 </td>
-                <td className="py-2 pr-3 font-mono text-xs text-gray-400">
+                <td className="py-2 pr-3 font-mono text-xs text-content-muted">
                   {a.failure_reason ?? '-'}
                 </td>
                 <td className="py-2 pr-3 text-right">
                   <Link
                     href={`/compliance/remediation/executions/${a.id}`}
-                    className="inline-flex items-center gap-1 text-xs text-gray-300 hover:text-gray-100"
+                    className="inline-flex items-center gap-1 text-xs text-content hover:text-content"
                   >
                     Open <ExternalLink size={12} />
                   </Link>
@@ -1033,7 +1033,7 @@ const RollupTable: React.FC<{
           </tbody>
         </table>
       </div>
-      <div className="mt-3 flex items-center justify-between text-xs text-gray-400">
+      <div className="mt-3 flex items-center justify-between text-xs text-content-muted">
         <span>
           Showing {rollup.returned_count} of {rollup.total_attempts} (offset{' '}
           {rollup.offset})
@@ -1069,8 +1069,8 @@ const Row: React.FC<{
   wide?: boolean;
 }> = ({ label, value, wide }) => (
   <div className={wide ? 'md:col-span-3' : ''}>
-    <p className="text-xs uppercase tracking-wide text-gray-500">{label}</p>
-    <div className="text-sm text-gray-200 mt-0.5">{value}</div>
+    <p className="text-xs uppercase tracking-wide text-content-subtle">{label}</p>
+    <div className="text-sm text-content mt-0.5">{value}</div>
   </div>
 );
 
@@ -1103,9 +1103,9 @@ const DecisionControls: React.FC<DecisionControlsProps> = ({
     return (
       <Card>
         <CardBody>
-          <div className="text-sm text-gray-400">
+          <div className="text-sm text-content-muted">
             This request is{' '}
-            <span className="font-semibold text-gray-200">{request.state}</span>
+            <span className="font-semibold text-content">{request.state}</span>
             . Lifecycle decisions are closed; open a new request from a
             failing evidence row if remediation is still needed.
           </div>
@@ -1169,10 +1169,10 @@ const DecisionControls: React.FC<DecisionControlsProps> = ({
         <CardBody>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="text-lg font-semibold text-gray-200">
+              <h2 className="text-lg font-semibold text-content">
                 Lifecycle decision
               </h2>
-              <p className="text-xs text-gray-500 mt-1 max-w-xl">
+              <p className="text-xs text-content-subtle mt-1 max-w-xl">
                 Approval flips request state only - it never builds a plan,
                 dispatches an attempt, mutates a host, refreshes facts,
                 scans packages, or auto-installs/removes anything.
@@ -1237,7 +1237,7 @@ const DecisionControls: React.FC<DecisionControlsProps> = ({
         title={pending ? labelFor(pending) : ''}
       >
         <div className="space-y-4">
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-content-muted">
             Optional reason recorded in the audit row as{' '}
             <code className="font-mono">decided_reason</code>. Maximum 4096
             characters.
@@ -1245,7 +1245,7 @@ const DecisionControls: React.FC<DecisionControlsProps> = ({
           <textarea
             rows={4}
             maxLength={4096}
-            className="w-full bg-gray-900 border border-gray-800 rounded px-3 py-1.5 text-sm text-gray-100"
+            className="w-full bg-surface-sunken border border-border rounded px-3 py-1.5 text-sm text-content"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder="Reason (optional)"

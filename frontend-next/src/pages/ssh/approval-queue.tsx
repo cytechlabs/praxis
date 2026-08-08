@@ -40,7 +40,7 @@ const STATUS_COLORS: Record<string, string> = {
   pending: 'bg-yellow-900/50 text-yellow-400 border-yellow-700',
   approved: 'bg-green-900/50 text-green-400 border-green-700',
   rejected: 'bg-red-900/50 text-red-400 border-red-700',
-  expired: 'bg-gray-800 text-gray-400 border-gray-700',
+  expired: 'bg-surface-overlay text-content-muted border-border-strong',
 };
 
 function expiryCountdown(iso: string | null): { label: string; urgent: boolean } | null {
@@ -155,8 +155,8 @@ const ApprovalQueuePage: React.FC = () => {
                       <span className={`text-xs px-2 py-0.5 rounded border ${STATUS_COLORS[a.status] || ''}`}>
                         {a.status}
                       </span>
-                      <span className="text-xs text-gray-600">#{a.id}</span>
-                      <span className="text-xs text-gray-600">
+                      <span className="text-xs text-content-subtle">#{a.id}</span>
+                      <span className="text-xs text-content-subtle">
                         <Clock size={12} className="inline mr-1" />
                         {timeAgo(a.requested_at)}
                       </span>
@@ -175,18 +175,18 @@ const ApprovalQueuePage: React.FC = () => {
                         );
                       })()}
                     </div>
-                    <code className="block text-sm bg-gray-950 px-3 py-2 rounded text-gray-200 font-mono mb-2">
+                    <code className="block text-sm bg-surface-sunken px-3 py-2 rounded text-content font-mono mb-2">
                       {a.command}
                     </code>
-                    <div className="flex gap-4 text-xs text-gray-400">
-                      <span>System: <strong className="text-gray-300">{a.system_hostname || `#${a.system_id}`}</strong></span>
-                      <span>Requested by: <strong className="text-gray-300">{a.requester_username || `#${a.requested_by}`}</strong></span>
+                    <div className="flex gap-4 text-xs text-content-muted">
+                      <span>System: <strong className="text-content">{a.system_hostname || `#${a.system_id}`}</strong></span>
+                      <span>Requested by: <strong className="text-content">{a.requester_username || `#${a.requested_by}`}</strong></span>
                       {a.decider_username && (
-                        <span>{a.status === 'approved' ? 'Approved' : 'Rejected'} by: <strong className="text-gray-300">{a.decider_username}</strong></span>
+                        <span>{a.status === 'approved' ? 'Approved' : 'Rejected'} by: <strong className="text-content">{a.decider_username}</strong></span>
                       )}
                     </div>
                     {a.comment && (
-                      <div className="mt-2 text-xs text-gray-400 flex items-start gap-1">
+                      <div className="mt-2 text-xs text-content-muted flex items-start gap-1">
                         <MessageSquare size={12} className="mt-0.5 shrink-0" />
                         <span>{a.comment}</span>
                       </div>
@@ -228,16 +228,16 @@ const ApprovalQueuePage: React.FC = () => {
 
         {/* Comment Modal */}
         {commentModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0c0c0f]/60">
-            <div className="bg-gray-950 border border-gray-800 rounded-lg w-full max-w-md p-6">
-              <h2 className="text-lg font-semibold text-gray-100 mb-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-surface/60">
+            <div className="bg-surface-overlay border border-border rounded-lg w-full max-w-md p-6">
+              <h2 className="text-lg font-semibold text-content mb-4">
                 {commentModal.action === 'approve' ? 'Approve Command' : 'Reject Command'}
               </h2>
               <div className="mb-4">
-                <label className="block text-xs text-gray-400 mb-1">Comment (optional)</label>
+                <label className="block text-xs text-content-muted mb-1">Comment (optional)</label>
                 <textarea value={comment} onChange={(e) => setComment(e.target.value)}
                   rows={3} placeholder={commentModal.action === 'reject' ? 'Reason for rejection...' : 'Optional note...'}
-                  className="w-full bg-white/[0.02] border border-gray-700 rounded px-3 py-2 text-sm text-gray-200 focus:border-red-500 focus:outline-none" />
+                  className="w-full bg-white/[0.02] border border-border-strong rounded px-3 py-2 text-sm text-content focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong focus:outline-none" />
               </div>
               <div className="flex justify-end gap-3">
                 <Button variant="ghost" onClick={() => { setCommentModal(null); setComment(''); }}>

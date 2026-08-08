@@ -44,12 +44,15 @@ red()   { printf '  \033[31mFAIL\033[0m %s\n' "$1"; FAIL=$((FAIL + 1)); }
 # --- 1. Disallowed private paths must not be tracked ------------------------
 printf 'Tracked-path hygiene\n'
 DISALLOWED_RE='(^|/)claude-codex/|(^|/)project-docs/|(^|/)\.secrets/|(^|/)id_rsa|(^|/)ssh_host_|\.pem$|\.key$|\.log$|(^|/)test-results/|praxis-do-import|(^|/)\.env$|(^|/)praxis[_-]ee/|(^|/)license_private'
-bad_paths="$(git ls-files | grep -E "${DISALLOWED_RE}" || true)"
-if [ -z "${bad_paths}" ]; then
+# Read into an array so each offending path stays one whole line: tracked
+# paths may contain spaces or glob metacharacters, and an unquoted expansion
+# would word-split and pathname-expand them into misleading output.
+mapfile -t bad_paths < <(git ls-files | grep -E "${DISALLOWED_RE}" || true)
+if [ "${#bad_paths[@]}" -eq 0 ]; then
     green "no disallowed private paths are tracked"
 else
     red "disallowed private paths are tracked:"
-    printf '        %s\n' ${bad_paths}
+    printf '        %s\n' "${bad_paths[@]}"
 fi
 
 # --- 2. Namespace: no cfreeman29 -------------------------------------------

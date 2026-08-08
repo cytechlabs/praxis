@@ -55,7 +55,7 @@ const validationBadgeClass = (statusRaw: string | null | undefined): string => {
   if (['bypassed', 'skipped'].includes(status)) {
     return 'bg-orange-900 text-orange-200 border-orange-700';
   }
-  return 'bg-gray-800 text-gray-300 border-gray-600';
+  return 'bg-surface-overlay text-content border-border-strong';
 };
 
 const riskBadgeClass = (riskRaw: string | null | undefined): string => {
@@ -333,7 +333,7 @@ const CommandExecutionPage: React.FC = () => {
         <Head>
           <title>Command Execution | Praxis</title>
         </Head>
-        <div className="text-gray-400">Loading...</div>
+        <div className="text-content-muted">Loading...</div>
       </MainLayout>
     );
   }
@@ -361,7 +361,7 @@ const CommandExecutionPage: React.FC = () => {
           <CardBody className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="md:col-span-2">
-                <label className="block text-xs text-gray-400 uppercase tracking-wide mb-1">
+                <label className="block text-xs text-content-muted uppercase tracking-wide mb-1">
                   Target System
                 </label>
                 <select
@@ -369,7 +369,7 @@ const CommandExecutionPage: React.FC = () => {
                   onChange={(e) =>
                     setSelectedSystemId(e.target.value ? parseInt(e.target.value, 10) : null)
                   }
-                  className="w-full bg-white/[0.02] border border-gray-700 text-gray-200 rounded px-3 py-2"
+                  className="w-full bg-white/[0.02] border border-border-strong text-content rounded px-3 py-2"
                 >
                   <option value="">-- select a system --</option>
                   {systems.map((s) => (
@@ -380,7 +380,7 @@ const CommandExecutionPage: React.FC = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-gray-400 uppercase tracking-wide mb-1">
+                <label className="block text-xs text-content-muted uppercase tracking-wide mb-1">
                   Timeout (seconds, optional)
                 </label>
                 <input
@@ -389,13 +389,13 @@ const CommandExecutionPage: React.FC = () => {
                   value={timeoutSeconds}
                   onChange={(e) => setTimeoutSeconds(e.target.value)}
                   placeholder="default"
-                  className="w-full bg-white/[0.02] border border-gray-700 text-gray-200 rounded px-3 py-2"
+                  className="w-full bg-white/[0.02] border border-border-strong text-content rounded px-3 py-2"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs text-gray-400 uppercase tracking-wide mb-1">
+              <label className="block text-xs text-content-muted uppercase tracking-wide mb-1">
                 Command (Ctrl+Enter to execute)
               </label>
               <textarea
@@ -404,14 +404,14 @@ const CommandExecutionPage: React.FC = () => {
                 onKeyDown={handleKeyDown}
                 rows={4}
                 spellCheck={false}
-                className="w-full bg-white/[0.02] border border-gray-700 text-gray-200 rounded px-3 py-2 font-mono text-sm"
+                className="w-full bg-white/[0.02] border border-border-strong text-content rounded px-3 py-2 font-mono text-sm"
                 placeholder="uname -a"
               />
             </div>
 
             <div className="flex items-center justify-between flex-wrap gap-3">
               {isAdmin ? (
-                <label className="flex items-center gap-2 text-sm text-gray-300">
+                <label className="flex items-center gap-2 text-sm text-content">
                   <input
                     type="checkbox"
                     checked={bypassValidation}
@@ -453,10 +453,10 @@ const CommandExecutionPage: React.FC = () => {
                     label={`risk: ${result.risk_level || 'unknown'}`}
                     className={riskBadgeClass(result.risk_level)}
                   />
-                  <span className="text-xs text-gray-400">
+                  <span className="text-xs text-content-muted">
                     exit code: {result.exit_code ?? '-'}
                   </span>
-                  <span className="text-xs text-gray-400">
+                  <span className="text-xs text-content-muted">
                     time: {result.execution_time_ms ?? '-'} ms
                   </span>
                   {result.requires_sudo && (
@@ -482,36 +482,36 @@ const CommandExecutionPage: React.FC = () => {
               )}
 
               <div>
-                <div className="text-xs text-gray-400 uppercase mb-1">Command</div>
-                <pre className="bg-gray-950 border border-gray-800 rounded p-2 font-mono text-sm text-gray-200 whitespace-pre-wrap">
+                <div className="text-xs text-content-muted uppercase mb-1">Command</div>
+                <pre className="bg-surface-sunken border border-border rounded p-2 font-mono text-sm text-content whitespace-pre-wrap">
                   {result.command}
                 </pre>
               </div>
 
               <div>
-                <div className="text-xs text-gray-400 uppercase mb-1">stdout</div>
-                <pre className="bg-gray-950 border border-gray-800 rounded p-2 font-mono text-xs text-gray-200 max-h-64 overflow-auto whitespace-pre-wrap">
-                  {result.stdout || <span className="text-gray-600">(empty)</span>}
+                <div className="text-xs text-content-muted uppercase mb-1">stdout</div>
+                <pre className="bg-surface-sunken border border-border rounded p-2 font-mono text-xs text-content max-h-64 overflow-auto whitespace-pre-wrap">
+                  {result.stdout || <span className="text-content-subtle">(empty)</span>}
                 </pre>
               </div>
 
               <div>
-                <div className="text-xs text-gray-400 uppercase mb-1">stderr</div>
-                <pre className="bg-gray-950 border border-gray-800 rounded p-2 font-mono text-xs text-red-300 max-h-64 overflow-auto whitespace-pre-wrap">
-                  {result.stderr || <span className="text-gray-600">(empty)</span>}
+                <div className="text-xs text-content-muted uppercase mb-1">stderr</div>
+                <pre className="bg-surface-sunken border border-border rounded p-2 font-mono text-xs text-red-300 max-h-64 overflow-auto whitespace-pre-wrap">
+                  {result.stderr || <span className="text-content-subtle">(empty)</span>}
                 </pre>
               </div>
 
-              <div className="text-xs text-gray-600">
+              <div className="text-xs text-content-subtle">
                 started: {formatDateTime(result.started_at)} &middot; completed:{' '}
                 {formatDateTime(result.completed_at)}
               </div>
 
               {analysis && (
-                <div className="border border-gray-700 rounded">
+                <div className="border border-border-strong rounded">
                   <button
                     onClick={() => setAnalysisOpen((v) => !v)}
-                    className="w-full flex items-center justify-between px-3 py-2 text-sm text-gray-200 hover:bg-gray-800"
+                    className="w-full flex items-center justify-between px-3 py-2 text-sm text-content hover:bg-surface-overlay"
                   >
                     <span className="flex items-center gap-2">
                       <Sparkles size={14} />
@@ -522,26 +522,26 @@ const CommandExecutionPage: React.FC = () => {
                   {analysisOpen && (
                     <div className="px-3 py-2 space-y-3 text-xs">
                       <div>
-                        <div className="text-gray-400 uppercase mb-1">Parsed output</div>
-                        <pre className="bg-gray-950 border border-gray-800 rounded p-2 text-gray-200 max-h-48 overflow-auto">
+                        <div className="text-content-muted uppercase mb-1">Parsed output</div>
+                        <pre className="bg-surface-sunken border border-border rounded p-2 text-content max-h-48 overflow-auto">
                           {JSON.stringify(analysis.parsed_output, null, 2)}
                         </pre>
                       </div>
                       <div>
-                        <div className="text-gray-400 uppercase mb-1">Error analysis</div>
-                        <pre className="bg-gray-950 border border-gray-800 rounded p-2 text-gray-200 max-h-48 overflow-auto">
+                        <div className="text-content-muted uppercase mb-1">Error analysis</div>
+                        <pre className="bg-surface-sunken border border-border rounded p-2 text-content max-h-48 overflow-auto">
                           {JSON.stringify(analysis.error_analysis, null, 2)}
                         </pre>
                       </div>
                       <div>
-                        <div className="text-gray-400 uppercase mb-1">Formatted result</div>
-                        <pre className="bg-gray-950 border border-gray-800 rounded p-2 text-gray-200 max-h-48 overflow-auto">
+                        <div className="text-content-muted uppercase mb-1">Formatted result</div>
+                        <pre className="bg-surface-sunken border border-border rounded p-2 text-content max-h-48 overflow-auto">
                           {JSON.stringify(analysis.formatted_result, null, 2)}
                         </pre>
                       </div>
                       <div>
-                        <div className="text-gray-400 uppercase mb-1">Status info</div>
-                        <pre className="bg-gray-950 border border-gray-800 rounded p-2 text-gray-200 max-h-48 overflow-auto">
+                        <div className="text-content-muted uppercase mb-1">Status info</div>
+                        <pre className="bg-surface-sunken border border-border rounded p-2 text-content max-h-48 overflow-auto">
                           {JSON.stringify(analysis.status_info, null, 2)}
                         </pre>
                       </div>
@@ -558,22 +558,22 @@ const CommandExecutionPage: React.FC = () => {
           <div>
             <button
               onClick={() => setActiveOpen((v) => !v)}
-              className="w-full flex items-center justify-between px-4 py-3 text-gray-200 hover:bg-gray-800/50"
+              className="w-full flex items-center justify-between px-4 py-3 text-content hover:bg-surface-overlay/50"
             >
               <span className="flex items-center gap-2">
                 <Activity size={16} className="text-red-400" />
                 <span className="font-semibold">Active executions</span>
-                <span className="text-xs text-gray-600">({activeExecutions.length})</span>
+                <span className="text-xs text-content-subtle">({activeExecutions.length})</span>
               </span>
               {activeOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
             </button>
             {activeOpen && (
               <div className="px-4 pb-3">
                 {activeExecutions.length === 0 ? (
-                  <div className="text-sm text-gray-600 py-2">None running.</div>
+                  <div className="text-sm text-content-subtle py-2">None running.</div>
                 ) : (
                   <table className="w-full text-sm">
-                    <thead className="text-gray-400 uppercase text-xs">
+                    <thead className="text-content-muted uppercase text-xs">
                       <tr>
                         <th scope="col" className="text-left py-1">ID</th>
                         <th scope="col" className="text-left py-1">System</th>
@@ -583,9 +583,9 @@ const CommandExecutionPage: React.FC = () => {
                         <th scope="col" className="text-right py-1"></th>
                       </tr>
                     </thead>
-                    <tbody className="text-gray-200">
+                    <tbody className="text-content">
                       {activeExecutions.map((e) => (
-                        <tr key={e.execution_id} className="border-t border-gray-800">
+                        <tr key={e.execution_id} className="border-t border-border">
                           <td className="py-1">{e.execution_id}</td>
                           <td className="py-1">{e.system_hostname}</td>
                           <td className="py-1 font-mono text-xs truncate max-w-xs">{e.command}</td>
@@ -616,7 +616,7 @@ const CommandExecutionPage: React.FC = () => {
         <Card>
           <CardBody>
             <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2 text-gray-200">
+              <div className="flex items-center gap-2 text-content">
                 <HistoryIcon size={16} className="text-red-400" />
                 <span className="font-semibold">Recent history</span>
               </div>
@@ -640,13 +640,13 @@ const CommandExecutionPage: React.FC = () => {
               </div>
             </div>
             {historyLoading ? (
-              <div className="text-sm text-gray-600">Loading...</div>
+              <div className="text-sm text-content-subtle">Loading...</div>
             ) : history.length === 0 ? (
-              <div className="text-sm text-gray-600">No history yet.</div>
+              <div className="text-sm text-content-subtle">No history yet.</div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="text-gray-400 uppercase text-xs">
+                  <thead className="text-content-muted uppercase text-xs">
                     <tr>
                       <th scope="col" className="text-left py-1">Time</th>
                       <th scope="col" className="text-left py-1">System</th>
@@ -657,12 +657,12 @@ const CommandExecutionPage: React.FC = () => {
                       <th scope="col" className="text-left py-1">Risk</th>
                     </tr>
                   </thead>
-                  <tbody className="text-gray-200">
+                  <tbody className="text-content">
                     {history.map((h) => (
                       <tr
                         key={h.id}
                         onClick={() => loadHistoryItem(h.id)}
-                        className="border-t border-gray-800 hover:bg-gray-800 cursor-pointer"
+                        className="border-t border-border hover:bg-surface-overlay cursor-pointer"
                       >
                         <td className="py-1 text-xs">{formatDateTime(h.started_at)}</td>
                         <td className="py-1 text-xs">

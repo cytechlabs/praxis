@@ -138,8 +138,9 @@ def _run_upload(sftp: _FakeSFTP, chunks, remote_path: str = REMOTE):
 
     result = None
     raised = None
-    with patch.object(fts, "_open_sftp", return_value=_CtxSFTP(sftp)), patch.object(
-        fts, "_finish_audit", side_effect=_capture_finish
+    with (
+        patch.object(fts, "_open_sftp", return_value=_CtxSFTP(sftp)),
+        patch.object(fts, "_finish_audit", side_effect=_capture_finish),
     ):
         try:
             result = fts._upload_via_ssh(

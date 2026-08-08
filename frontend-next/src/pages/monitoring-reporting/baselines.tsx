@@ -148,9 +148,9 @@ const BaselinesPage: React.FC = () => {
         actions={<div className="flex items-center gap-2"><Button variant="primary" icon={<Plus size={16} />} onClick={openCreate}>New Baseline</Button><HelpLink slug="monitoring-and-alerts" /></div>}
       />
 
-      <div className="border border-zinc-800 rounded-lg overflow-hidden">
-        <table className="w-full text-sm text-gray-200">
-          <thead className="bg-red-900/30 text-gray-300 text-xs uppercase">
+      <div className="border border-border rounded-lg overflow-hidden">
+        <table className="w-full text-sm text-content">
+          <thead className="bg-red-900/30 text-content text-xs uppercase">
             <tr>
               <th className="px-4 py-3 text-left">Name</th>
               <th className="px-4 py-3 text-left">Scope</th>
@@ -162,7 +162,7 @@ const BaselinesPage: React.FC = () => {
               <th className="px-4 py-3 text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-800">
+          <tbody className="divide-y divide-border">
             {loading ? (
               <tr><td colSpan={8}><LoadingState label="Loading baselines" /></td></tr>
             ) : baselines.length === 0 ? (
@@ -177,21 +177,21 @@ const BaselinesPage: React.FC = () => {
             ) : baselines.map(b => (
               <tr key={b.id} className="hover:bg-white/[0.03]">
                 <td className="px-4 py-3 font-medium flex items-center gap-2"><ClipboardCheck size={14} className="text-red-400" />{b.name}</td>
-                <td className="px-4 py-3 text-gray-400">
+                <td className="px-4 py-3 text-content-muted">
                   {b.scope_smart_group_id
                     ? (smartGroups.find(g => g.id === b.scope_smart_group_id)?.name || `#${b.scope_smart_group_id}`)
                     : 'Entire fleet'}
                 </td>
-                <td className="px-4 py-3 text-gray-400">every {b.schedule_interval_hours}h</td>
+                <td className="px-4 py-3 text-content-muted">every {b.schedule_interval_hours}h</td>
                 <td className="px-4 py-3 text-center text-green-400">{b.status_counts.compliant}</td>
                 <td className="px-4 py-3 text-center text-red-400">{b.status_counts.drifted}</td>
                 <td className="px-4 py-3 text-center text-amber-400">{b.status_counts.error}</td>
-                <td className="px-4 py-3 text-gray-400 text-xs">{b.last_run_at ? formatTimestamp(b.last_run_at) : 'never'}</td>
+                <td className="px-4 py-3 text-content-muted text-xs">{b.last_run_at ? formatTimestamp(b.last_run_at) : 'never'}</td>
                 <td className="px-4 py-3 text-right">
                   <div className="flex justify-end gap-2">
-                    <button onClick={() => runNow(b)} className="p-1 text-gray-400 hover:text-green-400" title="Run now"><Play size={16} /></button>
-                    <button onClick={() => openEdit(b)} className="p-1 text-gray-400 hover:text-slate-300" title="Edit"><Pencil size={16} /></button>
-                    <button onClick={() => remove(b)} className="p-1 text-gray-400 hover:text-red-400" title="Delete"><Trash2 size={16} /></button>
+                    <button onClick={() => runNow(b)} className="p-1 text-content-muted hover:text-green-400" title="Run now"><Play size={16} /></button>
+                    <button onClick={() => openEdit(b)} className="p-1 text-content-muted hover:text-content" title="Edit"><Pencil size={16} /></button>
+                    <button onClick={() => remove(b)} className="p-1 text-content-muted hover:text-red-400" title="Delete"><Trash2 size={16} /></button>
                   </div>
                 </td>
               </tr>
@@ -201,23 +201,23 @@ const BaselinesPage: React.FC = () => {
       </div>
 
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0c0c0f]/70">
-          <div className="bg-[#0c0c0f] border border-zinc-800 rounded-lg w-full max-w-3xl p-6 space-y-5 max-h-[92vh] overflow-y-auto">
-            <h2 className="text-lg font-bold text-gray-100">{editing ? 'Edit Baseline' : 'Create Baseline'}</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-surface/70">
+          <div className="bg-surface-overlay border border-border rounded-lg w-full max-w-3xl p-6 space-y-5 max-h-[92vh] overflow-y-auto">
+            <h2 className="text-lg font-bold text-content">{editing ? 'Edit Baseline' : 'Create Baseline'}</h2>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Name</label>
+                <label className="block text-sm text-content-muted mb-1">Name</label>
                 <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                  className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded text-gray-200 focus:outline-none focus:border-red-600"
+                  className="w-full px-3 py-2 bg-surface-sunken border border-border rounded text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
                   placeholder="e.g. Production baseline" />
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Scope</label>
+                <label className="block text-sm text-content-muted mb-1">Scope</label>
                 <select
                   value={form.scope_smart_group_id ?? ''}
                   onChange={e => setForm(f => ({ ...f, scope_smart_group_id: e.target.value ? Number(e.target.value) : null }))}
-                  className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded text-gray-200 focus:outline-none focus:border-red-600"
+                  className="w-full px-3 py-2 bg-surface-sunken border border-border rounded text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
                 >
                   <option value="">Entire fleet</option>
                   {smartGroups.map(g => <option key={g.id} value={g.id}>{g.name} ({g.member_count} members)</option>)}
@@ -226,76 +226,76 @@ const BaselinesPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Description</label>
+              <label className="block text-sm text-content-muted mb-1">Description</label>
               <input value={form.description || ''} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded text-gray-200 focus:outline-none focus:border-red-600" />
+                className="w-full px-3 py-2 bg-surface-sunken border border-border rounded text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong" />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Check every (hours)</label>
+                <label className="block text-sm text-content-muted mb-1">Check every (hours)</label>
                 <input type="number" min={1} max={720} value={form.schedule_interval_hours}
                   onChange={e => setForm(f => ({ ...f, schedule_interval_hours: Number(e.target.value) || 24 }))}
-                  className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded text-gray-200 focus:outline-none focus:border-red-600" />
+                  className="w-full px-3 py-2 bg-surface-sunken border border-border rounded text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong" />
               </div>
               <div className="flex items-end gap-2">
                 <input id="bl-enabled" type="checkbox" checked={form.enabled} onChange={e => setForm(f => ({ ...f, enabled: e.target.checked }))} className="accent-red-600" />
-                <label htmlFor="bl-enabled" className="text-sm text-gray-300 pb-2">Enabled</label>
+                <label htmlFor="bl-enabled" className="text-sm text-content pb-2">Enabled</label>
               </div>
             </div>
 
             {/* Packages section */}
-            <div className="border border-zinc-800 rounded p-3">
+            <div className="border border-border rounded p-3">
               <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2 text-sm font-semibold text-gray-200"><PackageIcon size={14} className="text-red-400" /> Packages</div>
+                <div className="flex items-center gap-2 text-sm font-semibold text-content"><PackageIcon size={14} className="text-red-400" /> Packages</div>
                 <Button variant="outline" onClick={addPkg} icon={<Plus size={12} />}>Add</Button>
               </div>
               {(form.rules_json.packages || []).length === 0 && (
-                <div className="text-xs text-gray-600 italic">No package rules - click Add to require, forbid, or pin versions.</div>
+                <div className="text-xs text-content-subtle italic">No package rules - click Add to require, forbid, or pin versions.</div>
               )}
               <div className="space-y-2">
                 {(form.rules_json.packages || []).map((r, i) => (
                   <div key={i} className="flex items-center gap-2">
                     <input value={r.name} onChange={e => setPkg(i, { name: e.target.value })} placeholder="package name (e.g. openssh-server)"
-                      className="flex-1 bg-zinc-950 border border-zinc-800 rounded text-xs text-gray-200 px-2 py-1 focus:outline-none focus:border-red-600" />
+                      className="flex-1 bg-surface-sunken border border-border rounded text-xs text-content px-2 py-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong" />
                     <select value={r.check} onChange={e => setPkg(i, { check: e.target.value as PkgCheck })}
-                      className="bg-zinc-950 border border-zinc-800 rounded text-xs text-gray-200 px-2 py-1 focus:outline-none focus:border-red-600">
+                      className="bg-surface-sunken border border-border rounded text-xs text-content px-2 py-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong">
                       <option value="required">required</option>
                       <option value="forbidden">forbidden</option>
                       <option value="version_pin">version_pin</option>
                     </select>
                     {r.check === 'version_pin' && (
                       <input value={r.version || ''} onChange={e => setPkg(i, { version: e.target.value })} placeholder="exact version"
-                        className="w-32 bg-zinc-950 border border-zinc-800 rounded text-xs text-gray-200 px-2 py-1 focus:outline-none focus:border-red-600" />
+                        className="w-32 bg-surface-sunken border border-border rounded text-xs text-content px-2 py-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong" />
                     )}
-                    <button onClick={() => delPkg(i)} className="text-gray-500 hover:text-red-400"><X size={14} /></button>
+                    <button onClick={() => delPkg(i)} className="text-content-subtle hover:text-red-400"><X size={14} /></button>
                   </div>
                 ))}
               </div>
             </div>
 
             {/* Services section */}
-            <div className="border border-zinc-800 rounded p-3">
+            <div className="border border-border rounded p-3">
               <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2 text-sm font-semibold text-gray-200"><Cog size={14} className="text-red-400" /> Services</div>
+                <div className="flex items-center gap-2 text-sm font-semibold text-content"><Cog size={14} className="text-red-400" /> Services</div>
                 <Button variant="outline" onClick={addSvc} icon={<Plus size={12} />}>Add</Button>
               </div>
               {(form.rules_json.services || []).length === 0 && (
-                <div className="text-xs text-gray-600 italic">No service rules - click Add to require running, stopped, enabled, or disabled.</div>
+                <div className="text-xs text-content-subtle italic">No service rules - click Add to require running, stopped, enabled, or disabled.</div>
               )}
               <div className="space-y-2">
                 {(form.rules_json.services || []).map((r, i) => (
                   <div key={i} className="flex items-center gap-2">
                     <input value={r.name} onChange={e => setSvc(i, { name: e.target.value })} placeholder="service unit (e.g. sshd, nginx)"
-                      className="flex-1 bg-zinc-950 border border-zinc-800 rounded text-xs text-gray-200 px-2 py-1 focus:outline-none focus:border-red-600" />
+                      className="flex-1 bg-surface-sunken border border-border rounded text-xs text-content px-2 py-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong" />
                     <select value={r.check} onChange={e => setSvc(i, { check: e.target.value as SvcCheck })}
-                      className="bg-zinc-950 border border-zinc-800 rounded text-xs text-gray-200 px-2 py-1 focus:outline-none focus:border-red-600">
+                      className="bg-surface-sunken border border-border rounded text-xs text-content px-2 py-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong">
                       <option value="running">running</option>
                       <option value="stopped">stopped</option>
                       <option value="enabled">enabled</option>
                       <option value="disabled">disabled</option>
                     </select>
-                    <button onClick={() => delSvc(i)} className="text-gray-500 hover:text-red-400"><X size={14} /></button>
+                    <button onClick={() => delSvc(i)} className="text-content-subtle hover:text-red-400"><X size={14} /></button>
                   </div>
                 ))}
               </div>

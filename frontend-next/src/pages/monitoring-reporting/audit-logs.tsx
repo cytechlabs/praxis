@@ -150,15 +150,15 @@ const AuditLogs: React.FC = () => {
             {/* Filters */}
             <div className="flex flex-wrap items-end gap-4 mb-4">
               <div className="flex items-center gap-2">
-                <Filter className="w-4 h-4 text-gray-400" />
-                <span className="text-sm text-gray-400">Filters:</span>
+                <Filter className="w-4 h-4 text-content-muted" />
+                <span className="text-sm text-content-muted">Filters:</span>
               </div>
               <div>
-                <label className="block text-xs text-gray-400 mb-1">System</label>
+                <label className="block text-xs text-content-muted mb-1">System</label>
                 <select
                   value={systemFilter}
                   onChange={(e) => { setSystemFilter(e.target.value); setPage(1); }}
-                  className="bg-gray-950 border border-gray-800 rounded px-2 py-1 text-gray-200 text-sm"
+                  className="bg-surface-sunken border border-border rounded px-2 py-1 text-content text-sm"
                 >
                   <option value="">All</option>
                   {options?.systems.map((s) => (
@@ -167,11 +167,11 @@ const AuditLogs: React.FC = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-gray-400 mb-1">User</label>
+                <label className="block text-xs text-content-muted mb-1">User</label>
                 <select
                   value={userFilter}
                   onChange={(e) => { setUserFilter(e.target.value); setPage(1); }}
-                  className="bg-gray-950 border border-gray-800 rounded px-2 py-1 text-gray-200 text-sm"
+                  className="bg-surface-sunken border border-border rounded px-2 py-1 text-content text-sm"
                 >
                   <option value="">All</option>
                   {options?.users.map((u) => (
@@ -180,11 +180,11 @@ const AuditLogs: React.FC = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-gray-400 mb-1">Operation</label>
+                <label className="block text-xs text-content-muted mb-1">Operation</label>
                 <select
                   value={operationFilter}
                   onChange={(e) => { setOperationFilter(e.target.value); setPage(1); }}
-                  className="bg-gray-950 border border-gray-800 rounded px-2 py-1 text-gray-200 text-sm"
+                  className="bg-surface-sunken border border-border rounded px-2 py-1 text-content text-sm"
                 >
                   <option value="">All</option>
                   {options?.operations.map((o) => (
@@ -193,11 +193,11 @@ const AuditLogs: React.FC = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-gray-400 mb-1">Audit Type</label>
+                <label className="block text-xs text-content-muted mb-1">Audit Type</label>
                 <select
                   value={auditTypeFilter}
                   onChange={(e) => { setAuditTypeFilter(e.target.value); setPage(1); }}
-                  className="bg-gray-950 border border-gray-800 rounded px-2 py-1 text-gray-200 text-sm"
+                  className="bg-surface-sunken border border-border rounded px-2 py-1 text-content text-sm"
                 >
                   <option value="">All</option>
                   {options?.audit_types.map((t) => (
@@ -206,21 +206,21 @@ const AuditLogs: React.FC = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-gray-400 mb-1">From</label>
+                <label className="block text-xs text-content-muted mb-1">From</label>
                 <input
                   type="date"
                   value={fromDate}
                   onChange={(e) => { setFromDate(e.target.value); setPage(1); }}
-                  className="bg-gray-950 border border-gray-800 rounded px-2 py-1 text-gray-200 text-sm"
+                  className="bg-surface-sunken border border-border rounded px-2 py-1 text-content text-sm"
                 />
               </div>
               <div>
-                <label className="block text-xs text-gray-400 mb-1">To</label>
+                <label className="block text-xs text-content-muted mb-1">To</label>
                 <input
                   type="date"
                   value={toDate}
                   onChange={(e) => { setToDate(e.target.value); setPage(1); }}
-                  className="bg-gray-950 border border-gray-800 rounded px-2 py-1 text-gray-200 text-sm"
+                  className="bg-surface-sunken border border-border rounded px-2 py-1 text-content text-sm"
                 />
               </div>
               <Button variant="outline" size="sm" onClick={resetFilters}>
@@ -229,7 +229,7 @@ const AuditLogs: React.FC = () => {
             </div>
 
             {/* Table header */}
-            <div className="grid grid-cols-12 gap-2 p-3 bg-gray-950 border-b border-gray-800 font-medium text-gray-200 text-sm rounded-t-lg">
+            <div className="grid grid-cols-12 gap-2 p-3 bg-surface-sunken border-b border-border font-medium text-content text-sm rounded-t-lg">
               <div className="col-span-1"></div>
               <div className="col-span-2">Timestamp</div>
               <div className="col-span-2">User</div>
@@ -239,7 +239,7 @@ const AuditLogs: React.FC = () => {
               <div className="col-span-2">Change</div>
             </div>
 
-            {loading && <div className="p-4 text-gray-400">Loading...</div>}
+            {loading && <div className="p-4 text-content-muted">Loading...</div>}
             {!loading && items.length === 0 && (
               <EmptyState
                 title="No audit entries"
@@ -253,10 +253,10 @@ const AuditLogs: React.FC = () => {
               return (
                 <div
                   key={a.id}
-                  className={`border-b border-gray-800 ${isDestructive ? 'border-l-2 border-l-red-600/70' : 'border-l-2 border-l-transparent'} ${rowIdx % 2 === 1 ? 'bg-white/[0.012]' : ''}`}
+                  className={`border-b border-border ${isDestructive ? 'border-l-2 border-l-red-600/70' : 'border-l-2 border-l-transparent'} ${rowIdx % 2 === 1 ? 'bg-white/[0.012]' : ''}`}
                 >
                   <div
-                    className="grid grid-cols-12 gap-2 p-3 text-gray-300 hover:bg-gray-950/50 text-sm items-center cursor-pointer"
+                    className="grid grid-cols-12 gap-2 p-3 text-content hover:bg-surface-overlay/50 text-sm items-center cursor-pointer"
                     onClick={() => toggleExpanded(a.id)}
                   >
                     <div className="col-span-1">
@@ -269,20 +269,20 @@ const AuditLogs: React.FC = () => {
                     <div className="col-span-1 truncate">{a.operation}</div>
                     <div className="col-span-2 truncate text-xs">
                       <span className="text-red-400">{truncate(a.old_value, 20)}</span>
-                      <span className="text-gray-500 mx-1">&rarr;</span>
+                      <span className="text-content-subtle mx-1">&rarr;</span>
                       <span className="text-green-400">{truncate(a.new_value, 20)}</span>
                     </div>
                   </div>
                   {isOpen && (
-                    <div className="p-4 bg-gray-950/50 border-t border-gray-800 text-sm">
+                    <div className="p-4 bg-surface-sunken/50 border-t border-border text-sm">
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <div className="text-xs text-gray-400 mb-1">Old Value</div>
-                          <pre className="bg-gray-950 p-2 rounded border border-gray-800 text-red-300 whitespace-pre-wrap break-all">{a.old_value || '(none)'}</pre>
+                          <div className="text-xs text-content-muted mb-1">Old Value</div>
+                          <pre className="bg-surface-sunken p-2 rounded border border-border text-red-300 whitespace-pre-wrap break-all">{a.old_value || '(none)'}</pre>
                         </div>
                         <div>
-                          <div className="text-xs text-gray-400 mb-1">New Value</div>
-                          <pre className="bg-gray-950 p-2 rounded border border-gray-800 text-green-300 whitespace-pre-wrap break-all">{a.new_value || '(none)'}</pre>
+                          <div className="text-xs text-content-muted mb-1">New Value</div>
+                          <pre className="bg-surface-sunken p-2 rounded border border-border text-green-300 whitespace-pre-wrap break-all">{a.new_value || '(none)'}</pre>
                         </div>
                       </div>
                     </div>
@@ -292,7 +292,7 @@ const AuditLogs: React.FC = () => {
             })}
 
             <div className="flex items-center justify-between pt-4">
-              <span className="text-sm text-gray-400">
+              <span className="text-sm text-content-muted">
                 {total > 0
                   ? `Showing ${(page - 1) * pageSize + 1}-${Math.min(page * pageSize, total)} of ${total}`
                   : 'No results'}
@@ -306,7 +306,7 @@ const AuditLogs: React.FC = () => {
                 >
                   Previous
                 </Button>
-                <span className="text-sm text-gray-400 self-center">Page {page} of {totalPages}</span>
+                <span className="text-sm text-content-muted self-center">Page {page} of {totalPages}</span>
                 <Button
                   variant="outline"
                   size="sm"

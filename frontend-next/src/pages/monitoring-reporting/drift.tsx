@@ -21,7 +21,7 @@ const cellIcon = (s: Cell['status']) => {
   if (s === 'compliant') return <CheckCircle size={14} className="text-green-500" />;
   if (s === 'drifted') return <XCircle size={14} className="text-red-500" />;
   if (s === 'error') return <AlertTriangle size={14} className="text-amber-400" />;
-  return <HelpCircle size={14} className="text-gray-600" />;
+  return <HelpCircle size={14} className="text-content-subtle" />;
 };
 
 const DriftPage: React.FC = () => {
@@ -104,9 +104,9 @@ const DriftPage: React.FC = () => {
               No drift detected - every system matches its baselines.
             </div>
           )}
-          <div className="border border-zinc-800 rounded-lg overflow-auto">
-            <table className="w-full text-sm text-gray-200">
-              <thead className="bg-red-900/30 text-gray-300 text-xs uppercase">
+          <div className="border border-border rounded-lg overflow-auto">
+            <table className="w-full text-sm text-content">
+              <thead className="bg-red-900/30 text-content text-xs uppercase">
                 <tr>
                   <th className="px-4 py-3 text-left">System</th>
                   {baselines.map(b => (
@@ -114,7 +114,7 @@ const DriftPage: React.FC = () => {
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-800">
+              <tbody className="divide-y divide-border">
                 {rows.map(r => (
                   <tr key={r.system_id} className="hover:bg-white/[0.03]">
                     <td className="px-4 py-3 font-medium">{r.hostname}</td>
@@ -139,15 +139,15 @@ const DriftPage: React.FC = () => {
       )}
 
       {drawer && (
-        <div className="fixed inset-0 z-40 flex justify-end bg-[#0c0c0f]/70" onClick={() => setDrawer(null)}>
-          <div className="bg-[#0c0c0f] border-l border-zinc-800 w-full max-w-lg h-full overflow-y-auto p-5 space-y-3" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-40 flex justify-end bg-surface/70" onClick={() => setDrawer(null)}>
+          <div className="bg-surface-overlay border-l border-border w-full max-w-lg h-full overflow-y-auto p-5 space-y-3" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-100">
+              <h3 className="text-lg font-semibold text-content">
                 {drawer.row.hostname} · {drawer.bname}
               </h3>
-              <button onClick={() => setDrawer(null)} className="text-gray-500 hover:text-gray-300"><X size={18} /></button>
+              <button onClick={() => setDrawer(null)} className="text-content-subtle hover:text-content"><X size={18} /></button>
             </div>
-            <div className="text-xs text-gray-500">Last check {drawer.cell.run_at ? formatTimestamp(drawer.cell.run_at) : 'never'}</div>
+            <div className="text-xs text-content-subtle">Last check {drawer.cell.run_at ? formatTimestamp(drawer.cell.run_at) : 'never'}</div>
             {drawer.cell.status === 'error' ? (
               <div className="p-3 border border-amber-900/50 rounded bg-amber-900/10 text-amber-300 text-sm">
                 Check could not complete - see backend logs. A transient SSH failure will clear on next run.
@@ -157,10 +157,10 @@ const DriftPage: React.FC = () => {
                 {(drawer.cell.drift_details || []).map((d, i) => (
                   <div key={i} className="p-3 border border-red-900/50 rounded bg-red-900/10">
                     <div className="flex items-center justify-between">
-                      <div className="font-mono text-sm text-gray-200">{d.rule.name}</div>
+                      <div className="font-mono text-sm text-content">{d.rule.name}</div>
                       <div className="text-xs text-red-300 uppercase">{d.category} · {d.rule.check}{d.rule.version ? ` @ ${d.rule.version}` : ''}</div>
                     </div>
-                    <div className="text-xs text-gray-400 mt-1">{d.reason}</div>
+                    <div className="text-xs text-content-muted mt-1">{d.reason}</div>
                   </div>
                 ))}
               </div>

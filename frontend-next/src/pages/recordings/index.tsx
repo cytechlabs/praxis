@@ -62,10 +62,10 @@ const RecordingsPage = () => {
       <Head><title>Session Recordings | Praxis</title></Head>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-semibold text-gray-100 flex items-center gap-2">
+          <h1 className="text-xl font-semibold text-content flex items-center gap-2">
             <Video size={18} /> Session Recordings
           </h1>
-          <p className="text-sm text-gray-400 mt-1">
+          <p className="text-sm text-content-muted mt-1">
             Every interactive session is recorded. Output only - keystrokes are never captured.
           </p>
         </div>
@@ -80,14 +80,14 @@ const RecordingsPage = () => {
         <CardHeader>Captures</CardHeader>
         <CardBody>
           {loading ? (
-            <div className="text-gray-500 text-sm">Loading…</div>
+            <div className="text-content-subtle text-sm">Loading…</div>
           ) : rows.length === 0 ? (
             <EmptyState title="No recordings" description="Open an interactive session to start recording." icon={<Clock size={28} />} />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left text-xs uppercase tracking-wide text-gray-500 border-b border-gray-800">
+                  <tr className="text-left text-xs uppercase tracking-wide text-content-subtle border-b border-border">
                     <th className="py-2 pr-4">Session</th>
                     <th className="py-2 pr-4">Started</th>
                     <th className="py-2 pr-4">Frames</th>
@@ -99,12 +99,12 @@ const RecordingsPage = () => {
                 </thead>
                 <tbody>
                   {rows.map(r => (
-                    <tr key={r.id} className="border-b border-gray-900 hover:bg-white/5">
-                      <td className="py-3 pr-4 font-mono text-xs text-gray-300">#{r.session_id}</td>
-                      <td className="py-3 pr-4 text-xs text-gray-400">{formatTimestamp(r.started_at)}</td>
-                      <td className="py-3 pr-4 text-xs text-gray-400 tabular-nums">{r.frame_count}</td>
-                      <td className="py-3 pr-4 text-xs text-gray-400 tabular-nums">{fmtBytes(r.size_bytes)}</td>
-                      <td className="py-3 pr-4 text-xs text-gray-500">{formatTimestamp(r.retention_expires_at, { dateOnly: true })}</td>
+                    <tr key={r.id} className="border-b border-border hover:bg-white/5">
+                      <td className="py-3 pr-4 font-mono text-xs text-content">#{r.session_id}</td>
+                      <td className="py-3 pr-4 text-xs text-content-muted">{formatTimestamp(r.started_at)}</td>
+                      <td className="py-3 pr-4 text-xs text-content-muted tabular-nums">{r.frame_count}</td>
+                      <td className="py-3 pr-4 text-xs text-content-muted tabular-nums">{fmtBytes(r.size_bytes)}</td>
+                      <td className="py-3 pr-4 text-xs text-content-subtle">{formatTimestamp(r.retention_expires_at, { dateOnly: true })}</td>
                       <td className="py-3 pr-4"><Badge variant={statusVariant(r.status)}>{humanizeStatus(r.status)}</Badge></td>
                       <td className="py-3 pr-4 text-right">
                         <div className="flex gap-1 justify-end">
@@ -112,7 +112,7 @@ const RecordingsPage = () => {
                             onClick={() => router.push(`/recordings/${r.id}`)}
                             disabled={r.status === 'pruned'}
                             aria-label="Play"
-                            className="p-1.5 rounded-md text-gray-500 hover:text-emerald-400 hover:bg-emerald-500/10 disabled:opacity-30 disabled:cursor-not-allowed"
+                            className="p-1.5 rounded-md text-content-subtle hover:text-emerald-400 hover:bg-emerald-500/10 disabled:opacity-30 disabled:cursor-not-allowed"
                           >
                             <Play size={14} />
                           </button>
@@ -120,7 +120,7 @@ const RecordingsPage = () => {
                             <button
                               onClick={() => handleDelete(r.id)}
                               aria-label="Delete"
-                              className="p-1.5 rounded-md text-gray-500 hover:text-red-400 hover:bg-red-500/10"
+                              className="p-1.5 rounded-md text-content-subtle hover:text-red-400 hover:bg-red-500/10"
                             >
                               <Trash2 size={14} />
                             </button>

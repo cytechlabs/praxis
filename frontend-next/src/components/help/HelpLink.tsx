@@ -21,7 +21,7 @@ const HelpLink: React.FC<HelpLinkProps> = ({ slug, label = 'Help', className = '
       href={`/help/${slug}`}
       aria-label={label}
       title={label}
-      className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-colors ${className}`}
+      className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-content-subtle hover:text-red-400 hover:bg-red-500/10 transition-colors ${className}`}
     >
       <HelpCircle size={16} />
     </Link>

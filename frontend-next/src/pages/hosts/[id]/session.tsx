@@ -493,13 +493,13 @@ const SessionPage = () => {
       <Head><title>Session | Praxis</title></Head>
       <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
         <div className="min-w-0">
-          <h1 className="text-lg font-semibold text-gray-100">
+          <h1 className="text-lg font-semibold text-content">
             Session {session ? `#${session.id}` : ''}
           </h1>
-          <div className="text-xs text-gray-500 mt-1 flex flex-wrap items-center gap-x-1">
+          <div className="text-xs text-content-subtle mt-1 flex flex-wrap items-center gap-x-1">
             {session ? (
               <>
-                <span>as <span className="font-mono text-gray-300">{session.login}</span></span>
+                <span>as <span className="font-mono text-content">{session.login}</span></span>
                 <span>·</span>
                 <span title="Interactive sessions connect over SSH">over SSH</span>
                 <span>·</span>
@@ -515,9 +515,9 @@ const SessionPage = () => {
         </div>
         <div className="flex gap-1 items-center">
           {/* Font controls */}
-          <div className="flex items-center border border-gray-800 rounded-md mr-2 bg-black/30" title="Font size">
+          <div className="flex items-center border border-border rounded-md mr-2 bg-black/30" title="Font size">
             <button
-              className="px-2 py-1 text-gray-400 hover:text-gray-100 disabled:opacity-30"
+              className="px-2 py-1 text-content-muted hover:text-content disabled:opacity-30"
               onClick={() => setFontSize((n) => Math.max(MIN_FONT, n - 1))}
               disabled={fontSize <= MIN_FONT}
               aria-label="Decrease font size"
@@ -525,14 +525,14 @@ const SessionPage = () => {
               <Minus size={13} />
             </button>
             <button
-              className="px-2 py-1 text-xs text-gray-500 hover:text-gray-200 tabular-nums"
+              className="px-2 py-1 text-xs text-content-subtle hover:text-content tabular-nums"
               onClick={() => setFontSize(DEFAULT_FONT)}
               title="Reset font size"
             >
               {fontSize}
             </button>
             <button
-              className="px-2 py-1 text-gray-400 hover:text-gray-100 disabled:opacity-30"
+              className="px-2 py-1 text-content-muted hover:text-content disabled:opacity-30"
               onClick={() => setFontSize((n) => Math.min(MAX_FONT, n + 1))}
               disabled={fontSize >= MAX_FONT}
               aria-label="Increase font size"
@@ -610,33 +610,33 @@ const SessionPage = () => {
         <CardBody className="p-0">
           <div className="relative">
             {searchOpen && (
-              <div className="absolute top-2 right-2 z-10 flex items-center gap-1 rounded-md border border-gray-800 bg-[#12121a] p-1 shadow-lg">
-                <Search size={13} className="ml-1 text-gray-500" />
+              <div className="absolute top-2 right-2 z-10 flex items-center gap-1 rounded-md border border-border bg-surface-overlay p-1 shadow-lg">
+                <Search size={13} className="ml-1 text-content-subtle" />
                 <input
                   autoFocus
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   onKeyDown={handleSearchKey}
                   placeholder="Find in scrollback"
-                  className="bg-transparent px-2 py-1 text-sm text-gray-200 focus:outline-none w-60 font-mono"
+                  className="bg-transparent px-2 py-1 text-sm text-content focus:outline-none w-60 font-mono"
                 />
                 <button
                   onClick={() => searchRef.current?.findPrevious(searchTerm)}
-                  className="px-1.5 py-0.5 text-xs text-gray-500 hover:text-gray-200"
+                  className="px-1.5 py-0.5 text-xs text-content-subtle hover:text-content"
                   title="Previous (Shift+Enter)"
                 >
                   ↑
                 </button>
                 <button
                   onClick={() => searchRef.current?.findNext(searchTerm)}
-                  className="px-1.5 py-0.5 text-xs text-gray-500 hover:text-gray-200"
+                  className="px-1.5 py-0.5 text-xs text-content-subtle hover:text-content"
                   title="Next (Enter)"
                 >
                   ↓
                 </button>
                 <button
                   onClick={() => { setSearchOpen(false); setSearchTerm(''); termRef.current?.focus(); }}
-                  className="px-1 py-0.5 text-gray-500 hover:text-gray-200"
+                  className="px-1 py-0.5 text-content-subtle hover:text-content"
                   aria-label="Close search"
                 >
                   <X size={13} />
@@ -652,7 +652,7 @@ const SessionPage = () => {
         </CardBody>
       </Card>
 
-      <div className="mt-2 text-[11px] text-gray-600">
+      <div className="mt-2 text-[11px] text-content-subtle">
         Ctrl+Shift+F search · Ctrl+Shift+C/V copy/paste · Ctrl+= / Ctrl+- / Ctrl+0 font · selection auto-copies
       </div>
 
@@ -663,7 +663,7 @@ const SessionPage = () => {
         maxWidth="max-w-md"
       >
         <div className="space-y-4">
-          <div className="flex gap-2 text-sm text-gray-300">
+          <div className="flex gap-2 text-sm text-content">
             <KeyRound size={16} className="mt-0.5 shrink-0 text-yellow-400" />
             <p>This fleet role requires a second factor. Enter your authenticator code to continue.</p>
           </div>

@@ -62,23 +62,23 @@ const RoleSelectionDialog = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-[#0c0c0f] bg-opacity-50 flex items-center justify-center z-40">
-      <div className="bg-[#0c0c0f] rounded-lg p-6 w-[800px] border border-gray-800/60">
-        <h2 className="text-xl mb-4 text-gray-200">Manage Roles for {username}</h2>
+    <div className="fixed inset-0 bg-surface/50 flex items-center justify-center z-40">
+      <div className="bg-surface-overlay rounded-lg p-6 w-[800px] border border-border/60">
+        <h2 className="text-xl mb-4 text-content">Manage Roles for {username}</h2>
 
         <form onSubmit={handleSubmit}>
           <div className="flex gap-4 mb-6">
             {/* Available Roles */}
             <div className="flex-1">
-              <h3 className="text-sm font-medium text-gray-300 mb-2">Available Roles</h3>
-              <div className="bg-gray-800 border border-gray-800/60 rounded p-4 min-h-[200px]">
+              <h3 className="text-sm font-medium text-content mb-2">Available Roles</h3>
+              <div className="bg-surface-sunken border border-border/60 rounded p-4 min-h-[200px]">
                 {unassignedRoles.map(role => (
                   <div
                     key={role}
                     className="flex items-center justify-between p-2 hover:bg-white/[0.05] rounded cursor-pointer group"
                     onClick={() => handleAddRole(role)}
                   >
-                    <span className="text-gray-300">{role}</span>
+                    <span className="text-content">{role}</span>
                     <span className="text-green-500 opacity-0 group-hover:opacity-100">→</span>
                   </div>
                 ))}
@@ -87,8 +87,8 @@ const RoleSelectionDialog = ({
 
             {/* Selected Roles */}
             <div className="flex-1">
-              <h3 className="text-sm font-medium text-gray-300 mb-2">Current Roles</h3>
-              <div className="bg-gray-800 border border-gray-800/60 rounded p-4 min-h-[200px]">
+              <h3 className="text-sm font-medium text-content mb-2">Current Roles</h3>
+              <div className="bg-surface-sunken border border-border/60 rounded p-4 min-h-[200px]">
                 {selectedRoles.map(role => (
                   <div
                     key={role}
@@ -96,7 +96,7 @@ const RoleSelectionDialog = ({
                     onClick={() => handleRemoveRole(role)}
                   >
                     <span className="text-red-500 opacity-0 group-hover:opacity-100">←</span>
-                    <span className="text-gray-300">{role}</span>
+                    <span className="text-content">{role}</span>
                   </div>
                 ))}
               </div>
@@ -111,7 +111,7 @@ const RoleSelectionDialog = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white"
+              className="px-4 py-2 text-sm font-medium text-content hover:text-white"
               disabled={loading}
             >
               Cancel

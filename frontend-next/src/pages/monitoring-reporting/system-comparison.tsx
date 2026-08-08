@@ -180,8 +180,8 @@ const SystemComparison: React.FC = () => {
         <Card className="mb-6">
           <CardBody>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg text-gray-200 font-medium">Select Systems to Compare</h2>
-              <span className="text-sm text-gray-400">{selectedIds.length} selected (2-10 required)</span>
+              <h2 className="text-lg text-content font-medium">Select Systems to Compare</h2>
+              <span className="text-sm text-content-muted">{selectedIds.length} selected (2-10 required)</span>
             </div>
 
             <div className="mb-4">
@@ -194,19 +194,19 @@ const SystemComparison: React.FC = () => {
 
             <div className="flex flex-wrap items-end gap-4">
               <div>
-                <label className="block text-xs text-gray-400 mb-1">Package name filter</label>
+                <label className="block text-xs text-content-muted mb-1">Package name filter</label>
                 <div className="relative">
-                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-content-subtle" />
                   <input
                     type="text"
                     value={nameFilter}
                     onChange={(e) => setNameFilter(e.target.value)}
                     placeholder="Filter by name..."
-                    className="bg-gray-950 border border-gray-800 rounded pl-8 pr-3 py-1 text-gray-200 text-sm w-48"
+                    className="bg-surface-sunken border border-border rounded pl-8 pr-3 py-1 text-content text-sm w-48"
                   />
                 </div>
               </div>
-              <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer pb-1">
+              <label className="flex items-center gap-2 text-sm text-content-muted cursor-pointer pb-1">
                 <input
                   type="checkbox"
                   checked={securityOnly}
@@ -272,8 +272,8 @@ const SystemComparison: React.FC = () => {
             <Card className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="bg-gray-950 border-b border-gray-800 text-gray-200">
-                    <th scope="col" className="px-4 py-3 text-left sticky left-0 bg-gray-950 z-10">Package</th>
+                  <tr className="bg-surface-sunken border-b border-border text-content">
+                    <th scope="col" className="px-4 py-3 text-left sticky left-0 bg-surface-sunken z-10">Package</th>
                     {result.systems.map((s) => (
                       <th scope="col" key={s.id} className="px-4 py-3 text-left">{s.hostname}</th>
                     ))}
@@ -283,7 +283,7 @@ const SystemComparison: React.FC = () => {
                 <tbody>
                   {visiblePkgs.length === 0 && (
                     <tr>
-                      <td colSpan={result.systems.length + 2} className="px-4 py-8 text-center text-gray-400">
+                      <td colSpan={result.systems.length + 2} className="px-4 py-8 text-center text-content-muted">
                         No packages to display for this view.
                       </td>
                     </tr>
@@ -291,8 +291,8 @@ const SystemComparison: React.FC = () => {
                   {visiblePkgs.map((pkg) => {
                     const isMissing = !!pkg.missing_from && pkg.missing_from.length > 0;
                     return (
-                      <tr key={pkg.name} className="border-b border-gray-800/30 hover:bg-gray-950/50">
-                        <td className="px-4 py-2 text-gray-200 font-medium sticky left-0 bg-gray-950">{pkg.name}</td>
+                      <tr key={pkg.name} className="border-b border-border/30 hover:bg-surface-overlay/50">
+                        <td className="px-4 py-2 text-content font-medium sticky left-0 bg-surface-sunken">{pkg.name}</td>
                         {result.systems.map((s) => (
                           <td key={s.id} className="px-4 py-2 font-mono text-xs">
                             {versionCell(pkg, s.id)}

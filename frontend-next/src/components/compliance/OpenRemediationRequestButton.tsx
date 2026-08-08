@@ -63,7 +63,7 @@ const OpenRemediationRequestButton: React.FC<OpenRemediationRequestButtonProps> 
         : 'Error - re-evaluate first';
     return (
       <span
-        className="text-[11px] text-gray-500"
+        className="text-[11px] text-content-subtle"
         title="Remediation requests open from failing evidence rows only."
         data-testid="remediation-not-applicable"
       >
@@ -75,7 +75,7 @@ const OpenRemediationRequestButton: React.FC<OpenRemediationRequestButtonProps> 
   if (!canWrite) {
     return (
       <span
-        className="text-[11px] text-gray-500"
+        className="text-[11px] text-content-subtle"
         title="Opening a remediation request requires the admin or maintainer role."
         data-testid="remediation-rbac-required"
       >
@@ -129,25 +129,25 @@ const OpenRemediationRequestButton: React.FC<OpenRemediationRequestButtonProps> 
         title="Open remediation request"
       >
         <div className="space-y-4">
-          <div className="text-xs text-gray-400 space-y-1">
+          <div className="text-xs text-content-muted space-y-1">
             <div>
               Policy:{' '}
-              <span className="font-mono text-gray-200">{row.policy_slug}</span>
+              <span className="font-mono text-content">{row.policy_slug}</span>
             </div>
             <div>
               Check:{' '}
-              <span className="font-mono text-gray-200">{row.check_slug}</span>
+              <span className="font-mono text-content">{row.check_slug}</span>
             </div>
             <div>
               System:{' '}
-              <span className="font-mono text-gray-200">#{row.system_id}</span>
+              <span className="font-mono text-content">#{row.system_id}</span>
             </div>
             <div>
               Evidence row:{' '}
-              <span className="font-mono text-gray-200">#{row.id}</span>
+              <span className="font-mono text-content">#{row.id}</span>
             </div>
           </div>
-          <p className="text-xs text-gray-500 leading-relaxed">
+          <p className="text-xs text-content-subtle leading-relaxed">
             Opening a request records intent for an admin to approve. It does
             not run anything on the host. Approve / reject / cancel, plan
             build and acknowledge, and dispatch are all available from the
@@ -156,7 +156,7 @@ const OpenRemediationRequestButton: React.FC<OpenRemediationRequestButtonProps> 
           <div>
             <label
               htmlFor="remediation-justification"
-              className="block text-xs uppercase tracking-wide text-gray-500 mb-1"
+              className="block text-xs uppercase tracking-wide text-content-subtle mb-1"
             >
               Justification (optional, ≤ 4096 chars)
             </label>
@@ -164,7 +164,7 @@ const OpenRemediationRequestButton: React.FC<OpenRemediationRequestButtonProps> 
               id="remediation-justification"
               rows={4}
               maxLength={4096}
-              className="w-full bg-gray-900 border border-gray-800 rounded px-3 py-1.5 text-sm text-gray-100"
+              className="w-full bg-surface-sunken border border-border rounded px-3 py-1.5 text-sm text-content"
               value={justification}
               onChange={(e) => setJustification(e.target.value)}
               placeholder="Why does this need remediation?"

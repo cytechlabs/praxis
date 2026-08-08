@@ -122,9 +122,9 @@ def create_distros(db: Session):
             created_distros[f"{distro_data['name']}-{distro_data['version']}"] = distro
             print(f"Created distro: {distro.name} {distro.version}")
         else:
-            created_distros[
-                f"{distro_data['name']}-{distro_data['version']}"
-            ] = existing
+            created_distros[f"{distro_data['name']}-{distro_data['version']}"] = (
+                existing
+            )
 
     return created_distros
 

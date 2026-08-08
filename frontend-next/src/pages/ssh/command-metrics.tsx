@@ -116,11 +116,11 @@ const CommandMetricsPage: React.FC = () => {
           title="Command Metrics"
           actions={
             <div className="flex items-center gap-2">
-              <label className="text-sm text-gray-400">Range:</label>
+              <label className="text-sm text-content-muted">Range:</label>
               <select
                 value={days}
                 onChange={(e) => setDays(parseInt(e.target.value, 10))}
-                className="bg-white/[0.02] border border-gray-700 text-gray-200 rounded px-2 py-1 text-sm"
+                className="bg-white/[0.02] border border-border-strong text-content rounded px-2 py-1 text-sm"
               >
                 <option value={7}>7 days</option>
                 <option value={14}>14 days</option>
@@ -150,28 +150,28 @@ const CommandMetricsPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
               <Card>
                 <CardBody>
-                  <div className="text-gray-400 text-xs uppercase">Successful</div>
-                  <div className="text-gray-100 text-lg">{successful}</div>
+                  <div className="text-content-muted text-xs uppercase">Successful</div>
+                  <div className="text-content text-lg">{successful}</div>
                 </CardBody>
               </Card>
               <Card>
                 <CardBody>
-                  <div className="text-gray-400 text-xs uppercase">Failed</div>
-                  <div className="text-gray-100 text-lg">{failed}</div>
+                  <div className="text-content-muted text-xs uppercase">Failed</div>
+                  <div className="text-content text-lg">{failed}</div>
                 </CardBody>
               </Card>
               <Card>
                 <CardBody>
-                  <div className="text-gray-400 text-xs uppercase">Error Rate</div>
-                  <div className="text-gray-100 text-lg">
+                  <div className="text-content-muted text-xs uppercase">Error Rate</div>
+                  <div className="text-content text-lg">
                     {errorPatterns ? `${errorPatterns.error_rate.toFixed(1)}%` : '-'}
                   </div>
                 </CardBody>
               </Card>
               <Card>
                 <CardBody>
-                  <div className="text-gray-400 text-xs uppercase">Total Errors</div>
-                  <div className="text-gray-100 text-lg">
+                  <div className="text-content-muted text-xs uppercase">Total Errors</div>
+                  <div className="text-content text-lg">
                     {errorPatterns ? errorPatterns.total_errors : '-'}
                   </div>
                 </CardBody>
@@ -183,7 +183,7 @@ const CommandMetricsPage: React.FC = () => {
               <CardHeader>Performance Trends</CardHeader>
               <CardBody>
                 {chartData.length === 0 ? (
-                  <div className="text-gray-600 text-sm h-64 flex items-center justify-center">
+                  <div className="text-content-subtle text-sm h-64 flex items-center justify-center">
                     Not enough data to display chart
                   </div>
                 ) : (
@@ -233,11 +233,11 @@ const CommandMetricsPage: React.FC = () => {
               <CardHeader>Common Error Patterns</CardHeader>
               <CardBody>
                 {errorRows.length === 0 ? (
-                  <div className="text-gray-600 text-sm">No error patterns detected.</div>
+                  <div className="text-content-subtle text-sm">No error patterns detected.</div>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
-                      <thead className="text-gray-400 uppercase text-xs">
+                      <thead className="text-content-muted uppercase text-xs">
                         <tr>
                           <th scope="col" className="text-left py-1">Category</th>
                           <th scope="col" className="text-right py-1">Count</th>
@@ -245,9 +245,9 @@ const CommandMetricsPage: React.FC = () => {
                           <th scope="col" className="text-left py-1">Suggested Fixes</th>
                         </tr>
                       </thead>
-                      <tbody className="text-gray-200">
+                      <tbody className="text-content">
                         {errorRows.map((r) => (
-                          <tr key={r.category} className="border-t border-gray-800">
+                          <tr key={r.category} className="border-t border-border">
                             <td className="py-1 font-mono text-xs">{r.category}</td>
                             <td className="py-1 text-right">{r.count}</td>
                             <td className="py-1 text-right">{r.percentage.toFixed(1)}%</td>

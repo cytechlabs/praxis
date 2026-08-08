@@ -180,10 +180,10 @@ const EditCredentialPage: React.FC = () => {
                     )}
                   </div>
                   <div>
-                    <div className="text-xs uppercase tracking-wider text-gray-500">
+                    <div className="text-xs uppercase tracking-wider text-content-subtle">
                       {authMethod === 'ssh_key' ? 'SSH Key Credential' : 'Password Credential'}
                     </div>
-                    <div className="text-lg font-semibold text-gray-100">
+                    <div className="text-lg font-semibold text-content">
                       {formData.name || '-'}
                     </div>
                   </div>
@@ -191,15 +191,15 @@ const EditCredentialPage: React.FC = () => {
               </div>
 
               {vaultPath && (
-                <div className="bg-gray-900/50 border border-gray-800 rounded-md px-3 py-2.5 flex items-center gap-2">
-                  <Database size={14} className="text-slate-300 shrink-0" />
+                <div className="bg-surface-raised/50 border border-border rounded-md px-3 py-2.5 flex items-center gap-2">
+                  <Database size={14} className="text-content shrink-0" />
                   <div className="min-w-0 flex-1">
-                    <div className="text-xs text-gray-500 mb-0.5">Vault Path</div>
-                    <code className="text-sm text-gray-200 break-all font-mono">{vaultPath}</code>
+                    <div className="text-xs text-content-subtle mb-0.5">Vault Path</div>
+                    <code className="text-sm text-content break-all font-mono">{vaultPath}</code>
                   </div>
                   <Link
                     href="/system-management/vault-management"
-                    className="shrink-0 inline-flex items-center gap-1 text-xs text-gray-400 hover:text-red-400 transition-colors"
+                    className="shrink-0 inline-flex items-center gap-1 text-xs text-content-muted hover:text-red-400 transition-colors"
                     title="Open Vault Management"
                   >
                     <ExternalLink size={14} />
@@ -213,7 +213,7 @@ const EditCredentialPage: React.FC = () => {
           {/* Identity + secret rotation */}
           <Card>
             <CardBody>
-              <h2 className="text-sm font-semibold text-gray-200 uppercase tracking-wider mb-4">
+              <h2 className="text-sm font-semibold text-content uppercase tracking-wider mb-4">
                 Identity & Secret
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -261,7 +261,7 @@ const EditCredentialPage: React.FC = () => {
                       />
                     </div>
                     <div className="md:col-span-2">
-                      <label className="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">
+                      <label className="block text-xs font-medium text-content-muted uppercase tracking-wider mb-1">
                         New SSH Key
                       </label>
                       <textarea
@@ -270,13 +270,13 @@ const EditCredentialPage: React.FC = () => {
                         onChange={handleChange}
                         rows={8}
                         placeholder="Leave blank to keep current key. Paste a new private key to rotate."
-                        className="w-full px-3 py-2 bg-gray-900/50 border border-gray-700 rounded-md text-sm text-gray-200 font-mono placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-600"
+                        className="w-full px-3 py-2 bg-surface-sunken/50 border border-border-strong rounded-md text-sm text-content font-mono placeholder:text-content-subtle focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
                       />
                     </div>
                   </>
                 )}
               </div>
-              <p className="text-xs text-gray-500 mt-3">
+              <p className="text-xs text-content-subtle mt-3">
                 Updating the secret writes a new version to Vault. Previous versions remain accessible
                 via Vault Management.
               </p>
@@ -286,7 +286,7 @@ const EditCredentialPage: React.FC = () => {
           {/* Sudo */}
           <Card>
             <CardBody>
-              <h2 className="text-sm font-semibold text-gray-200 uppercase tracking-wider mb-4">
+              <h2 className="text-sm font-semibold text-content uppercase tracking-wider mb-4">
                 Sudo Configuration
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -339,12 +339,12 @@ const EditCredentialPage: React.FC = () => {
                 </h2>
                 <div className="flex items-start justify-between gap-4 flex-wrap">
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm text-gray-300 font-medium">Delete this credential</p>
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-sm text-content font-medium">Delete this credential</p>
+                    <p className="text-xs text-content-subtle mt-1">
                       {hasAttachedSystems ? (
                         <>
                           This credential is in use by{' '}
-                          <span className="text-gray-300">{attachedSystemNames.length}</span> system
+                          <span className="text-content">{attachedSystemNames.length}</span> system
                           {attachedSystemNames.length === 1 ? '' : 's'}. Detach it first before
                           deleting.
                         </>

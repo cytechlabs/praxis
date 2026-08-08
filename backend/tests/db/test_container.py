@@ -38,16 +38,12 @@ def test_database_persistence(db_engine):
     """Test that data persists after writing."""
     # Create a test table
     with db_engine.connect() as conn:
-        conn.execute(
-            text(
-                """
+        conn.execute(text("""
             CREATE TABLE IF NOT EXISTS test_persistence (
                 id serial PRIMARY KEY,
                 value TEXT
             )
-        """
-            )
-        )
+        """))
         conn.execute(text("INSERT INTO test_persistence (value) VALUES ('test_value')"))
         conn.commit()
 

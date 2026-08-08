@@ -45,8 +45,8 @@ def main():
         # Backfill any system missing a policy
         orphans = db.query(System).filter(System.ssh_security_policy_id.is_(None)).all()
         if orphans:
-            for sys in orphans:
-                sys.ssh_security_policy_id = policy.id
+            for system in orphans:
+                system.ssh_security_policy_id = policy.id
             db.commit()
             print(f"Attached Default policy to {len(orphans)} existing system(s).")
     finally:

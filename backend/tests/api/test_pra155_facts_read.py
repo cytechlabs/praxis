@@ -232,13 +232,13 @@ def test_read_does_not_trigger_collection_or_mutate_row(authed_client, db, host)
         db.query(AuditEvent).filter(AuditEvent.target_system_id == host.id).count()
     )
 
-    with patch(
-        "app.services.ssh_facts_collector_service.collect_and_ingest"
-    ) as ssh_mock, patch(
-        "app.services.broker_client.BrokerClient.facts"
-    ) as broker_facts_mock, patch(
-        "app.services.facts_service.ingest"
-    ) as ingest_mock:
+    with (
+        patch(
+            "app.services.ssh_facts_collector_service.collect_and_ingest"
+        ) as ssh_mock,
+        patch("app.services.broker_client.BrokerClient.facts") as broker_facts_mock,
+        patch("app.services.facts_service.ingest") as ingest_mock,
+    ):
         resp = authed_client.get(f"/systems/{host.id}/facts")
 
     assert resp.status_code == 200

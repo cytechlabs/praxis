@@ -59,7 +59,7 @@ const TransportPreferenceToggle: React.FC<Props> = ({ value, onChange, disabled 
   return (
     <>
       <div
-        className="inline-flex rounded-md border border-gray-700 bg-gray-900/40 p-0.5"
+        className="inline-flex rounded-md border border-border-strong bg-surface-raised/40 p-0.5"
         role="group"
         aria-label="Transport preference"
       >
@@ -76,7 +76,7 @@ const TransportPreferenceToggle: React.FC<Props> = ({ value, onChange, disabled 
                 'px-3 py-1.5 text-sm font-medium rounded transition-colors',
                 active
                   ? 'bg-emerald-600 text-white'
-                  : 'text-gray-300 hover:bg-gray-800 hover:text-white',
+                  : 'text-content hover:bg-surface-overlay hover:text-white',
                 disabled || submitting ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer',
               ].join(' ')}
               aria-pressed={active}

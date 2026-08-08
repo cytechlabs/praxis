@@ -232,17 +232,20 @@ class TestCommandValidationService:
         mock_db.add.return_value = None
         mock_db.commit.return_value = None
 
-        with patch.object(
-            service, "_normalize_command", return_value="apt-get update"
-        ), patch.object(
-            service,
-            "_check_whitelist",
-            return_value={"status": "allowed", "command_id": 1},
-        ), patch.object(
-            service, "_check_validation_rules", return_value={"status": "allowed"}
-        ), patch(
-            "app.services.command_validation_service.CommandValidationLog",
-            return_value=mock_log,
+        with (
+            patch.object(service, "_normalize_command", return_value="apt-get update"),
+            patch.object(
+                service,
+                "_check_whitelist",
+                return_value={"status": "allowed", "command_id": 1},
+            ),
+            patch.object(
+                service, "_check_validation_rules", return_value={"status": "allowed"}
+            ),
+            patch(
+                "app.services.command_validation_service.CommandValidationLog",
+                return_value=mock_log,
+            ),
         ):
             result = service.validate_command("apt-get update", 1, 1)
 

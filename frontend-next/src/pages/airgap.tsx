@@ -175,10 +175,10 @@ const AirgapPage: React.FC = () => {
         {/* Section A - Bundle Signing Keys (export / connected side)         */}
         {/* ---------------------------------------------------------------- */}
         <section className="mb-8">
-          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-300">
+          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-content">
             Bundle signing keys
           </h2>
-          <p className="mb-3 text-xs text-gray-500">
+          <p className="mb-3 text-xs text-content-subtle">
             This is the export/connected side. The active key signs every bundle
             you export. Rotating mints a new active key; the old one keeps
             verifying already-exported bundles until you retire it.
@@ -191,11 +191,11 @@ const AirgapPage: React.FC = () => {
           )}
 
           {signingKeys === null && !signingError && (
-            <div className="text-gray-400">Loading…</div>
+            <div className="text-content-muted">Loading…</div>
           )}
 
           {signingKeys !== null && signingKeys.length === 0 && !signingError && (
-            <div className="rounded border border-zinc-800 bg-[#111115] p-6 text-sm text-gray-400">
+            <div className="rounded border border-border bg-surface-raised p-6 text-sm text-content-muted">
               <div className="mb-3">No signing key yet.</div>
               {isAdmin ? (
                 <button
@@ -206,33 +206,33 @@ const AirgapPage: React.FC = () => {
                   <KeyRound size={16} /> {bootstrapping ? 'Bootstrapping…' : 'Bootstrap key'}
                 </button>
               ) : (
-                <span className="text-gray-500">An admin must bootstrap the signing key.</span>
+                <span className="text-content-subtle">An admin must bootstrap the signing key.</span>
               )}
             </div>
           )}
 
           {activeKey && (
-            <div className="mb-4 rounded border border-zinc-800 bg-[#111115] p-4">
+            <div className="mb-4 rounded border border-border bg-surface-raised p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="mb-1 flex items-center gap-2">
                     <Badge variant={signingKeyStatusVariant(activeKey.status)}>
                       {signingKeyStatusLabel(activeKey.status)}
                     </Badge>
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-content-subtle">
                       Created {formatTimestamp(activeKey.created_at) || '-'}
                     </span>
                   </div>
-                  <div className="break-all font-mono text-sm text-gray-200">
+                  <div className="break-all font-mono text-sm text-content">
                     {activeKey.fingerprint}
                   </div>
-                  <div className="break-all text-xs text-gray-500">{activeKey.key_uid}</div>
+                  <div className="break-all text-xs text-content-subtle">{activeKey.key_uid}</div>
                 </div>
                 {isAdmin && (
                   <button
                     onClick={() => setConfirmRotate(true)}
                     disabled={rotating}
-                    className="inline-flex items-center gap-1 rounded border border-zinc-700 px-3 py-1.5 text-sm text-gray-200 hover:bg-zinc-800 disabled:opacity-40"
+                    className="inline-flex items-center gap-1 rounded border border-border-strong px-3 py-1.5 text-sm text-content hover:bg-surface-overlay disabled:opacity-40"
                   >
                     <RefreshCw size={16} className={rotating ? 'animate-spin' : ''} /> Rotate
                   </button>
@@ -246,7 +246,7 @@ const AirgapPage: React.FC = () => {
                       onClick={() =>
                         copyToClipboard(activeKey.armored_public_key ?? '', 'Public key')
                       }
-                      className="inline-flex items-center gap-1 rounded border border-zinc-700 px-2.5 py-1 text-xs text-gray-200 hover:bg-zinc-800"
+                      className="inline-flex items-center gap-1 rounded border border-border-strong px-2.5 py-1 text-xs text-content hover:bg-surface-overlay"
                     >
                       <Copy size={14} /> Copy public key
                     </button>
@@ -256,7 +256,7 @@ const AirgapPage: React.FC = () => {
                     >
                       {showActiveKey ? 'Hide public key' : 'Show public key'}
                     </button>
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-content-subtle">
                       Distribute this to the airgapped instance and pin it below.
                     </span>
                   </div>
@@ -265,7 +265,7 @@ const AirgapPage: React.FC = () => {
                       readOnly
                       value={activeKey.armored_public_key}
                       rows={8}
-                      className="mt-2 w-full rounded bg-black/40 px-2 py-1 font-mono text-xs text-gray-300"
+                      className="mt-2 w-full rounded bg-black/40 px-2 py-1 font-mono text-xs text-content"
                     />
                   )}
                 </div>
@@ -292,7 +292,7 @@ const AirgapPage: React.FC = () => {
                     <button
                       onClick={() => setConfirmRotate(false)}
                       disabled={rotating}
-                      className="rounded border border-zinc-700 px-3 py-1.5 text-sm text-gray-300 hover:bg-zinc-800 disabled:opacity-40"
+                      className="rounded border border-border-strong px-3 py-1.5 text-sm text-content hover:bg-surface-overlay disabled:opacity-40"
                     >
                       Cancel
                     </button>
@@ -303,9 +303,9 @@ const AirgapPage: React.FC = () => {
           )}
 
           {otherKeys.length > 0 && (
-            <div className="overflow-x-auto rounded border border-zinc-800 bg-[#111115]">
+            <div className="overflow-x-auto rounded border border-border bg-surface-raised">
               <table className="w-full text-sm">
-                <thead className="border-b border-zinc-800 text-left text-gray-400">
+                <thead className="border-b border-border text-left text-content-muted">
                   <tr>
                     <th className="px-4 py-2">Fingerprint</th>
                     <th className="px-4 py-2">Status</th>
@@ -313,19 +313,19 @@ const AirgapPage: React.FC = () => {
                     <th className="px-4 py-2 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-800">
+                <tbody className="divide-y divide-border">
                   {otherKeys.map((k) => (
-                    <tr key={k.id} className="hover:bg-zinc-900/40">
-                      <td className="px-4 py-2 font-mono text-gray-300">
+                    <tr key={k.id} className="hover:bg-surface-overlay/40">
+                      <td className="px-4 py-2 font-mono text-content">
                         <div className="break-all">{k.fingerprint}</div>
-                        <div className="break-all text-xs text-gray-500">{k.key_uid}</div>
+                        <div className="break-all text-xs text-content-subtle">{k.key_uid}</div>
                       </td>
                       <td className="px-4 py-2">
                         <Badge variant={signingKeyStatusVariant(k.status)}>
                           {signingKeyStatusLabel(k.status)}
                         </Badge>
                       </td>
-                      <td className="px-4 py-2 text-gray-400">
+                      <td className="px-4 py-2 text-content-muted">
                         {formatTimestamp(k.created_at) || '-'}
                       </td>
                       <td className="px-4 py-2 text-right">
@@ -334,7 +334,7 @@ const AirgapPage: React.FC = () => {
                             onClick={() =>
                               copyToClipboard(k.armored_public_key ?? '', 'Public key')
                             }
-                            className="inline-flex items-center gap-1 rounded p-1 text-gray-400 hover:text-blue-400"
+                            className="inline-flex items-center gap-1 rounded p-1 text-content-muted hover:text-blue-400"
                             title="Copy public key"
                           >
                             <Copy size={16} />
@@ -344,7 +344,7 @@ const AirgapPage: React.FC = () => {
                           <button
                             onClick={() => handleRetire(k)}
                             disabled={retiringId === k.id}
-                            className="ml-1 inline-flex items-center gap-1 rounded p-1 text-gray-400 hover:text-red-400 disabled:opacity-30"
+                            className="ml-1 inline-flex items-center gap-1 rounded p-1 text-content-muted hover:text-red-400 disabled:opacity-30"
                             title="Retire key"
                           >
                             <Trash2 size={16} />
@@ -363,10 +363,10 @@ const AirgapPage: React.FC = () => {
         {/* Section B - Import Trust Pins (airgapped / import side)           */}
         {/* ---------------------------------------------------------------- */}
         <section>
-          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-300">
+          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-content">
             Import trust pins
           </h2>
-          <p className="mb-3 text-xs text-gray-500">
+          <p className="mb-3 text-xs text-content-subtle">
             This is the airgapped/import side. Pin the new public key{' '}
             <strong>before</strong> importing bundles signed by it; remove the old pin only
             after you no longer import bundles signed by that key.
@@ -379,11 +379,11 @@ const AirgapPage: React.FC = () => {
           )}
 
           {isAdmin && (
-            <div className="mb-4 rounded border border-zinc-800 bg-[#111115] p-4">
-              <label className="text-xs text-gray-400">
+            <div className="mb-4 rounded border border-border bg-surface-raised p-4">
+              <label className="text-xs text-content-muted">
                 Armored PGP public key block
                 <textarea
-                  className="mt-1 w-full rounded bg-black/40 px-2 py-1 font-mono text-xs text-gray-100"
+                  className="mt-1 w-full rounded bg-black/40 px-2 py-1 font-mono text-xs text-content"
                   rows={6}
                   value={pinText}
                   onChange={(e) => {
@@ -411,7 +411,7 @@ const AirgapPage: React.FC = () => {
           )}
 
           <div className="mb-2 flex items-center justify-between">
-            <label className="flex items-center gap-2 text-xs text-gray-400">
+            <label className="flex items-center gap-2 text-xs text-content-muted">
               <input
                 type="checkbox"
                 checked={showDeletedPins}
@@ -422,11 +422,11 @@ const AirgapPage: React.FC = () => {
           </div>
 
           {trustKeys === null && !trustError && (
-            <div className="text-gray-400">Loading…</div>
+            <div className="text-content-muted">Loading…</div>
           )}
 
           {trustKeys !== null && trustKeys.length === 0 && !trustError && (
-            <div className="rounded border border-zinc-800 bg-[#111115] p-6 text-sm text-gray-400">
+            <div className="rounded border border-border bg-surface-raised p-6 text-sm text-content-muted">
               No import trust pins yet.
               {isAdmin
                 ? ' Paste an armored public key above to pin one.'
@@ -435,9 +435,9 @@ const AirgapPage: React.FC = () => {
           )}
 
           {trustKeys && trustKeys.length > 0 && (
-            <div className="overflow-x-auto rounded border border-zinc-800 bg-[#111115]">
+            <div className="overflow-x-auto rounded border border-border bg-surface-raised">
               <table className="w-full text-sm">
-                <thead className="border-b border-zinc-800 text-left text-gray-400">
+                <thead className="border-b border-border text-left text-content-muted">
                   <tr>
                     <th className="px-4 py-2">Fingerprint</th>
                     <th className="px-4 py-2">Key UID</th>
@@ -445,24 +445,24 @@ const AirgapPage: React.FC = () => {
                     <th className="px-4 py-2 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-800">
+                <tbody className="divide-y divide-border">
                   {trustKeys.map((pin) => {
                     const removed = pin.deleted_at !== null;
                     return (
                       <tr
                         key={pin.id}
-                        className={removed ? 'opacity-50' : 'hover:bg-zinc-900/40'}
+                        className={removed ? 'opacity-50' : 'hover:bg-surface-overlay/40'}
                       >
-                        <td className="px-4 py-2 font-mono text-gray-300">
+                        <td className="px-4 py-2 font-mono text-content">
                           <div className="break-all">{pin.gpg_fingerprint}</div>
                           {removed && (
-                            <div className="text-xs text-gray-500">
+                            <div className="text-xs text-content-subtle">
                               Removed {formatTimestamp(pin.deleted_at) || '-'}
                             </div>
                           )}
                         </td>
-                        <td className="px-4 py-2 break-all text-gray-400">{pin.key_uid}</td>
-                        <td className="px-4 py-2 text-gray-400">
+                        <td className="px-4 py-2 break-all text-content-muted">{pin.key_uid}</td>
+                        <td className="px-4 py-2 text-content-muted">
                           {formatTimestamp(pin.added_at) || '-'}
                         </td>
                         <td className="px-4 py-2 text-right">
@@ -470,7 +470,7 @@ const AirgapPage: React.FC = () => {
                             <button
                               onClick={() => handleRemovePin(pin)}
                               disabled={removingId === pin.id}
-                              className="inline-flex items-center gap-1 rounded p-1 text-gray-400 hover:text-red-400 disabled:opacity-30"
+                              className="inline-flex items-center gap-1 rounded p-1 text-content-muted hover:text-red-400 disabled:opacity-30"
                               title="Remove trust pin"
                             >
                               <Trash2 size={16} />

@@ -23,22 +23,22 @@ const UserDetailsTab: React.FC<UserDetailsTabProps> = ({ user }) => {
   return (
     <div>
       <div className="mb-4">
-        <div className="text-sm text-gray-600">User ID</div>
+        <div className="text-sm text-content-subtle">User ID</div>
         <div>{user.id}</div>
       </div>
 
       <div className="mb-4">
-        <div className="text-sm text-gray-600">Name</div>
+        <div className="text-sm text-content-subtle">Name</div>
         <div>{user.username}</div>
       </div>
 
       <div className="mb-4">
-        <div className="text-sm text-gray-600">Email</div>
+        <div className="text-sm text-content-subtle">Email</div>
         <div>{user.email}</div>
       </div>
 
       <div className="mb-4">
-        <div className="text-sm text-gray-600">Group Membership</div>
+        <div className="text-sm text-content-subtle">Group Membership</div>
         <div>
           {user.roles?.length > 0 ? (
             user.roles.join(', ')
@@ -51,7 +51,7 @@ const UserDetailsTab: React.FC<UserDetailsTabProps> = ({ user }) => {
       <div className="mt-8">
         <button
           onClick={() => setIsPasswordDialogOpen(true)}
-          className="px-4 py-2 text-sm font-medium text-gray-400 bg-[#0c0c0f] border border-gray-800/60 rounded hover:text-white hover:border-red-500 transition-colors"
+          className="px-4 py-2 text-sm font-medium text-content-muted bg-action-secondary border border-border/60 rounded hover:text-white hover:border-red-500 transition-colors"
         >
           Change Password
         </button>

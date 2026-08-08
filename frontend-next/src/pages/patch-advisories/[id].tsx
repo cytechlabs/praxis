@@ -108,40 +108,40 @@ const PatchAdvisoryDetailPage: React.FC = () => {
           <CardBody>
             <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm md:grid-cols-3">
               <div>
-                <dt className="text-xs text-gray-500">Source</dt>
-                <dd className="text-gray-200">
+                <dt className="text-xs text-content-subtle">Source</dt>
+                <dd className="text-content">
                   {SOURCE_KIND_LABELS[advisory.source_kind]}
                 </dd>
               </div>
               <div>
-                <dt className="text-xs text-gray-500">Class</dt>
-                <dd className="text-gray-200">
+                <dt className="text-xs text-content-subtle">Class</dt>
+                <dd className="text-content">
                   {ADVISORY_CLASS_LABELS[advisory.advisory_class]}
                 </dd>
               </div>
               <div>
-                <dt className="text-xs text-gray-500">Severity</dt>
+                <dt className="text-xs text-content-subtle">Severity</dt>
                 <dd>
                   <Badge>{SEVERITY_LABELS[advisory.severity]}</Badge>
                 </dd>
               </div>
               <div>
-                <dt className="text-xs text-gray-500">Distro family</dt>
-                <dd className="text-gray-200">
+                <dt className="text-xs text-content-subtle">Distro family</dt>
+                <dd className="text-content">
                   {DISTRO_FAMILY_LABELS[advisory.distro_family]}
                 </dd>
               </div>
               <div>
-                <dt className="text-xs text-gray-500">Published</dt>
-                <dd className="text-gray-200">
+                <dt className="text-xs text-content-subtle">Published</dt>
+                <dd className="text-content">
                   {advisory.published_at
                     ? formatTimestamp(advisory.published_at)
                     : '-'}
                 </dd>
               </div>
               <div>
-                <dt className="text-xs text-gray-500">Source updated</dt>
-                <dd className="text-gray-200">
+                <dt className="text-xs text-content-subtle">Source updated</dt>
+                <dd className="text-content">
                   {advisory.source_updated_at
                     ? formatTimestamp(advisory.source_updated_at)
                     : '-'}
@@ -149,19 +149,19 @@ const PatchAdvisoryDetailPage: React.FC = () => {
               </div>
             </dl>
             {advisory.summary && (
-              <div className="mt-4 text-sm text-gray-300">
-                <div className="mb-1 text-xs text-gray-500">Summary</div>
+              <div className="mt-4 text-sm text-content">
+                <div className="mb-1 text-xs text-content-subtle">Summary</div>
                 <p className="whitespace-pre-wrap">{advisory.summary}</p>
               </div>
             )}
             {advisory.cve_ids && advisory.cve_ids.length > 0 && (
               <div className="mt-4">
-                <div className="mb-1 text-xs text-gray-500">CVE references</div>
+                <div className="mb-1 text-xs text-content-subtle">CVE references</div>
                 <div className="flex flex-wrap gap-1">
                   {advisory.cve_ids.map((c) => (
                     <span
                       key={c}
-                      className="inline-flex items-center rounded border border-zinc-700 bg-zinc-900/40 px-1.5 py-0.5 font-mono text-xs text-gray-300"
+                      className="inline-flex items-center rounded border border-border-strong bg-surface-raised/40 px-1.5 py-0.5 font-mono text-xs text-content"
                     >
                       {c}
                     </span>
@@ -171,7 +171,7 @@ const PatchAdvisoryDetailPage: React.FC = () => {
             )}
             {advisory.external_refs && advisory.external_refs.length > 0 && (
               <div className="mt-4">
-                <div className="mb-1 text-xs text-gray-500">External references</div>
+                <div className="mb-1 text-xs text-content-subtle">External references</div>
                 <ul className="list-inside list-disc text-xs text-blue-400">
                   {advisory.external_refs.map((url) => (
                     <li key={url}>
@@ -195,14 +195,14 @@ const PatchAdvisoryDetailPage: React.FC = () => {
           <CardHeader>Fixed-package targets</CardHeader>
           <CardBody>
             {advisory.fixed_packages.length === 0 ? (
-              <p className="text-sm text-gray-400">
+              <p className="text-sm text-content-muted">
                 No per-release fixed-package targets were imported with this
                 advisory.
               </p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="border-b border-zinc-800 text-left text-gray-400">
+                  <thead className="border-b border-border text-left text-content-muted">
                     <tr>
                       <th className="px-2 py-2">Distro</th>
                       <th className="px-2 py-2">Release</th>
@@ -210,17 +210,17 @@ const PatchAdvisoryDetailPage: React.FC = () => {
                       <th className="px-2 py-2">Fixed version</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-zinc-800">
+                  <tbody className="divide-y divide-border">
                     {advisory.fixed_packages.map((fp) => (
                       <tr key={fp.id}>
-                        <td className="px-2 py-1 text-gray-300">{fp.distro_id}</td>
-                        <td className="px-2 py-1 text-gray-300">{fp.distro_release}</td>
-                        <td className="px-2 py-1 font-mono text-gray-200">
+                        <td className="px-2 py-1 text-content">{fp.distro_id}</td>
+                        <td className="px-2 py-1 text-content">{fp.distro_release}</td>
+                        <td className="px-2 py-1 font-mono text-content">
                           {fp.package_name}
                         </td>
-                        <td className="px-2 py-1 font-mono text-gray-200">
+                        <td className="px-2 py-1 font-mono text-content">
                           {fp.fixed_version ?? (
-                            <span className="text-gray-500" title="No published fix">
+                            <span className="text-content-subtle" title="No published fix">
                               (none)
                             </span>
                           )}
@@ -239,7 +239,7 @@ const PatchAdvisoryDetailPage: React.FC = () => {
             action={
               <button
                 onClick={() => setShowRaw((s) => !s)}
-                className="rounded border border-zinc-700 px-2 py-0.5 text-xs text-gray-300 hover:bg-zinc-800"
+                className="rounded border border-border-strong px-2 py-0.5 text-xs text-content hover:bg-surface-overlay"
               >
                 {showRaw ? 'Hide' : 'Show'}
               </button>
@@ -247,14 +247,14 @@ const PatchAdvisoryDetailPage: React.FC = () => {
           >
             <div>
               <div>Raw source payload</div>
-              <div className="mt-0.5 text-xs font-normal text-gray-500">
+              <div className="mt-0.5 text-xs font-normal text-content-subtle">
                 Native source dict as imported. Forensic only.
               </div>
             </div>
           </CardHeader>
           {showRaw && (
             <CardBody>
-              <pre className="overflow-x-auto rounded bg-black/40 p-3 font-mono text-xs text-gray-300">
+              <pre className="overflow-x-auto rounded bg-black/40 p-3 font-mono text-xs text-content">
                 {JSON.stringify(advisory.raw, null, 2)}
               </pre>
             </CardBody>

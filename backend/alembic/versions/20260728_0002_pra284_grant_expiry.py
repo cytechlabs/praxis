@@ -40,14 +40,12 @@ def upgrade() -> None:
     )
     # Backfill effective expiry from the source binding. Grants with no binding
     # (implicit app-admin) stay NULL.
-    op.execute(
-        """
+    op.execute("""
         UPDATE access_grants ag
         SET expires_at = ab.expires_at
         FROM access_bindings ab
         WHERE ag.via_binding_id = ab.id
-        """
-    )
+        """)
 
 
 def downgrade() -> None:

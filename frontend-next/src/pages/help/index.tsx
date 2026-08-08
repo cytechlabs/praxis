@@ -26,8 +26,8 @@ const HelpIndexPage: React.FC<HelpIndexProps> = ({ index }) => {
         </aside>
 
         <main className="flex-1 min-w-0 max-w-3xl">
-          <h1 className="text-2xl font-bold text-gray-100 mb-2">Help</h1>
-          <p className="text-gray-400 mb-6">
+          <h1 className="text-2xl font-bold text-content mb-2">Help</h1>
+          <p className="text-content-muted mb-6">
             Pick a guide from the navigation to get started. Every page is linkable -
             copy a URL and paste it anywhere.
           </p>
@@ -36,10 +36,10 @@ const HelpIndexPage: React.FC<HelpIndexProps> = ({ index }) => {
               <li key={item.slug}>
                 <Link
                   href={`/help/${item.slug}`}
-                  className="block p-4 rounded-md border border-gray-800 hover:border-red-500/50 hover:bg-white/[0.02] transition-colors"
+                  className="block p-4 rounded-md border border-border hover:border-red-500/50 hover:bg-white/[0.02] transition-colors"
                 >
-                  <div className="text-sm font-semibold text-gray-200 mb-1">{item.title}</div>
-                  <div className="text-xs text-gray-500">{item.description}</div>
+                  <div className="text-sm font-semibold text-content mb-1">{item.title}</div>
+                  <div className="text-xs text-content-subtle">{item.description}</div>
                 </Link>
               </li>
             ))}

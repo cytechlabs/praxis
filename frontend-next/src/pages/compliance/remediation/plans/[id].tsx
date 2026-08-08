@@ -109,7 +109,7 @@ const ComplianceRemediationPlanDetailPage: React.FC = () => {
   if (!Number.isFinite(planId)) {
     return (
       <MainLayout>
-        <div className="p-6 text-gray-400">Invalid plan id.</div>
+        <div className="p-6 text-content-muted">Invalid plan id.</div>
       </MainLayout>
     );
   }
@@ -134,14 +134,14 @@ const ComplianceRemediationPlanDetailPage: React.FC = () => {
               {plan && (
                 <Link
                   href={`/compliance/remediation/requests/${plan.request_id}`}
-                  className="inline-flex items-center gap-1.5 text-sm text-gray-300 hover:text-gray-100"
+                  className="inline-flex items-center gap-1.5 text-sm text-content hover:text-content"
                 >
                   <ArrowLeft size={14} /> Request #{plan.request_id}
                 </Link>
               )}
               <Link
                 href="/compliance/remediation"
-                className="inline-flex items-center gap-1.5 text-sm text-gray-300 hover:text-gray-100"
+                className="inline-flex items-center gap-1.5 text-sm text-content hover:text-content"
               >
                 Fleet remediation →
               </Link>
@@ -175,7 +175,7 @@ const ComplianceRemediationPlanDetailPage: React.FC = () => {
                   <Row
                     label="Plan kind"
                     value={
-                      <span className="text-sm text-gray-200">
+                      <span className="text-sm text-content">
                         {PLAN_KIND_LABELS[plan.plan_kind] ?? plan.plan_kind}
                       </span>
                     }
@@ -232,10 +232,10 @@ const ComplianceRemediationPlanDetailPage: React.FC = () => {
                     label="Acknowledged"
                     value={
                       plan.acknowledged_at ? (
-                        <span className="text-xs text-gray-300">
+                        <span className="text-xs text-content">
                           {formatTimestamp(plan.acknowledged_at)}
                           {plan.acknowledged_by !== null && (
-                            <span className="text-gray-500">
+                            <span className="text-content-subtle">
                               {' '}
                               · user #{plan.acknowledged_by}
                             </span>
@@ -282,7 +282,7 @@ const ComplianceRemediationPlanDetailPage: React.FC = () => {
                   <Row
                     label="Fingerprint"
                     value={
-                      <span className="font-mono text-[10px] text-gray-400 break-all">
+                      <span className="font-mono text-[10px] text-content-muted break-all">
                         {plan.check_definition_fingerprint ?? '-'}
                       </span>
                     }
@@ -344,10 +344,10 @@ const ComplianceRemediationPlanDetailPage: React.FC = () => {
 
             <Card>
               <CardBody>
-                <h2 className="text-lg font-semibold text-gray-200 mb-3">
+                <h2 className="text-lg font-semibold text-content mb-3">
                   Plan steps
                 </h2>
-                <p className="text-xs text-gray-500 mb-3">
+                <p className="text-xs text-content-subtle mb-3">
                   Structured intent only - not executable shell. Dispatch
                   consumes these for ready package plans;
                   review-required and unsupported kinds always require manual
@@ -363,22 +363,22 @@ const ComplianceRemediationPlanDetailPage: React.FC = () => {
                     {plan.plan_steps.map((step, idx) => (
                       <li
                         key={idx}
-                        className="border border-gray-800 rounded p-3 bg-gray-900/40"
+                        className="border border-border rounded p-3 bg-surface-raised/40"
                       >
                         <div className="flex items-center gap-2 mb-2">
-                          <span className="text-xs text-gray-500 font-mono">
+                          <span className="text-xs text-content-subtle font-mono">
                             step {idx + 1}
                           </span>
                           {typeof step.action_intent === 'string' && (
                             <Badge variant="info">{step.action_intent}</Badge>
                           )}
                           {typeof step.safety_notes === 'string' && (
-                            <span className="text-xs text-gray-400">
+                            <span className="text-xs text-content-muted">
                               {step.safety_notes}
                             </span>
                           )}
                         </div>
-                        <pre className="text-xs font-mono text-gray-300 whitespace-pre-wrap overflow-x-auto">
+                        <pre className="text-xs font-mono text-content whitespace-pre-wrap overflow-x-auto">
                           {JSON.stringify(step, null, 2)}
                         </pre>
                       </li>
@@ -449,7 +449,7 @@ const AcknowledgeAction: React.FC<AcknowledgeActionProps> = ({
 
   if (!isAdmin) {
     return (
-      <div className="border-t border-gray-800 pt-4 mt-4 text-[11px] text-gray-500">
+      <div className="border-t border-border pt-4 mt-4 text-[11px] text-content-subtle">
         Plan acknowledgement requires the admin role.
       </div>
     );
@@ -472,10 +472,10 @@ const AcknowledgeAction: React.FC<AcknowledgeActionProps> = ({
   };
 
   return (
-    <div className="border-t border-gray-800 pt-4 mt-4 space-y-2">
+    <div className="border-t border-border pt-4 mt-4 space-y-2">
       <div className="flex flex-wrap items-center gap-3">
         {request && (
-          <span className="text-xs text-gray-400">
+          <span className="text-xs text-content-muted">
             Source request:{' '}
             <Link
               href={`/compliance/remediation/requests/${request.id}`}
@@ -505,7 +505,7 @@ const AcknowledgeAction: React.FC<AcknowledgeActionProps> = ({
           {blocked}
         </div>
       )}
-      <p className="text-[11px] text-gray-500">
+      <p className="text-[11px] text-content-subtle">
         Acknowledgement flips operator-intent metadata only - it never
         runs commands, dispatches anything, or mutates a host.
       </p>
@@ -519,8 +519,8 @@ const Row: React.FC<{
   wide?: boolean;
 }> = ({ label, value, wide }) => (
   <div className={wide ? 'md:col-span-3' : ''}>
-    <p className="text-xs uppercase tracking-wide text-gray-500">{label}</p>
-    <div className="text-sm text-gray-200 mt-0.5">{value}</div>
+    <p className="text-xs uppercase tracking-wide text-content-subtle">{label}</p>
+    <div className="text-sm text-content mt-0.5">{value}</div>
   </div>
 );
 

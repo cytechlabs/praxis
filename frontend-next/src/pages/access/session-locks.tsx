@@ -134,10 +134,10 @@ const SessionLocksPage = () => {
 
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-semibold text-gray-100 flex items-center gap-2">
+          <h1 className="text-xl font-semibold text-content flex items-center gap-2">
             <Lock size={18} /> Session Locks
           </h1>
-          <p className="text-sm text-gray-400 mt-1">
+          <p className="text-sm text-content-muted mt-1">
             Emergency cut-off. While a lock is active, every gated action is denied for the subject and any live sessions are killed immediately.
           </p>
         </div>
@@ -150,14 +150,14 @@ const SessionLocksPage = () => {
         <CardHeader>{rows.length} {rows.length === 1 ? 'lock' : 'locks'}</CardHeader>
         <CardBody>
           {loading ? (
-            <div className="text-gray-500 text-sm">Loading…</div>
+            <div className="text-content-subtle text-sm">Loading…</div>
           ) : rows.length === 0 ? (
             <EmptyState title="No locks" description="No subject is currently locked out." icon={<Lock size={28} />} />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left text-xs uppercase tracking-wide text-gray-500 border-b border-gray-800">
+                  <tr className="text-left text-xs uppercase tracking-wide text-content-subtle border-b border-border">
                     <th className="py-2 pr-4">Subject</th>
                     <th className="py-2 pr-4">Reason</th>
                     <th className="py-2 pr-4">Created by</th>
@@ -169,21 +169,21 @@ const SessionLocksPage = () => {
                 </thead>
                 <tbody>
                   {rows.map((r) => (
-                    <tr key={r.id} className="border-b border-gray-900 hover:bg-white/5">
+                    <tr key={r.id} className="border-b border-border hover:bg-white/5">
                       <td className="py-3 pr-4 text-xs">
                         {r.subject_username
                           ? <span><Badge variant="neutral">user</Badge> <span className="font-mono ml-1">{r.subject_username}</span></span>
                           : <span><Badge variant="info">role</Badge> <span className="font-mono ml-1">{r.subject_role_name}</span></span>}
                       </td>
-                      <td className="py-3 pr-4 text-xs text-gray-300 max-w-md truncate" title={r.reason}>{r.reason}</td>
-                      <td className="py-3 pr-4 text-xs text-gray-400">{r.created_by_username || '-'}</td>
-                      <td className="py-3 pr-4 text-xs text-gray-500">{formatTimestamp(r.created_at)}</td>
+                      <td className="py-3 pr-4 text-xs text-content max-w-md truncate" title={r.reason}>{r.reason}</td>
+                      <td className="py-3 pr-4 text-xs text-content-muted">{r.created_by_username || '-'}</td>
+                      <td className="py-3 pr-4 text-xs text-content-subtle">{formatTimestamp(r.created_at)}</td>
                       <td className="py-3 pr-4 text-xs">
                         {r.active
                           ? <Badge variant="danger">active</Badge>
                           : <Badge variant="neutral">released</Badge>}
                       </td>
-                      <td className="py-3 pr-4 text-xs text-gray-500">
+                      <td className="py-3 pr-4 text-xs text-content-subtle">
                         {r.released_at
                           ? `${r.released_by_username || '?'} · ${formatTimestamp(r.released_at)}`
                           : '-'}
@@ -193,7 +193,7 @@ const SessionLocksPage = () => {
                           <button
                             onClick={() => setReleaseId(r.id)}
                             aria-label="Release lock"
-                            className="p-1.5 rounded-md text-gray-500 hover:text-emerald-400 hover:bg-emerald-500/10"
+                            className="p-1.5 rounded-md text-content-subtle hover:text-emerald-400 hover:bg-emerald-500/10"
                           >
                             <Unlock size={14} />
                           </button>
@@ -214,22 +214,22 @@ const SessionLocksPage = () => {
           <div className="flex gap-2 text-xs">
             <button
               onClick={() => setSubjectKind('user')}
-              className={`px-3 py-1.5 rounded-md border ${subjectKind === 'user' ? 'border-red-500 bg-red-500/10 text-red-300' : 'border-gray-800 text-gray-400 hover:text-gray-200'}`}
+              className={`px-3 py-1.5 rounded-md border ${subjectKind === 'user' ? 'border-red-500 bg-red-500/10 text-red-300' : 'border-border text-content-muted hover:text-content'}`}
             >Lock a user</button>
             <button
               onClick={() => setSubjectKind('role')}
-              className={`px-3 py-1.5 rounded-md border ${subjectKind === 'role' ? 'border-red-500 bg-red-500/10 text-red-300' : 'border-gray-800 text-gray-400 hover:text-gray-200'}`}
+              className={`px-3 py-1.5 rounded-md border ${subjectKind === 'role' ? 'border-red-500 bg-red-500/10 text-red-300' : 'border-border text-content-muted hover:text-content'}`}
             >Lock a role</button>
           </div>
 
           {subjectKind === 'user' ? (
             <div>
-              <label className="block text-xs text-gray-400 mb-1">User</label>
+              <label className="block text-xs text-content-muted mb-1">User</label>
               {users && users.length > 0 ? (
                 <select
                   value={subjectUserId}
                   onChange={(e) => setSubjectUserId(e.target.value)}
-                  className="w-full bg-[#0c0c0f] border border-gray-800 rounded-md px-2 py-2 text-sm text-gray-200"
+                  className="w-full bg-surface-sunken border border-border rounded-md px-2 py-2 text-sm text-content"
                 >
                   <option value="">Pick a user…</option>
                   {users.map((u) => <option key={u.id} value={u.id}>{u.username} (#{u.id})</option>)}
@@ -239,17 +239,17 @@ const SessionLocksPage = () => {
                   value={subjectUserId}
                   onChange={(e) => setSubjectUserId(e.target.value)}
                   placeholder="Username or numeric user ID"
-                  className="w-full bg-[#0c0c0f] border border-gray-800 rounded-md px-2 py-2 text-sm text-gray-200"
+                  className="w-full bg-surface-sunken border border-border rounded-md px-2 py-2 text-sm text-content"
                 />
               )}
             </div>
           ) : (
             <div>
-              <label className="block text-xs text-gray-400 mb-1">Role</label>
+              <label className="block text-xs text-content-muted mb-1">Role</label>
               <select
                 value={subjectRoleName}
                 onChange={(e) => setSubjectRoleName(e.target.value)}
-                className="w-full bg-[#0c0c0f] border border-gray-800 rounded-md px-2 py-2 text-sm text-gray-200"
+                className="w-full bg-surface-sunken border border-border rounded-md px-2 py-2 text-sm text-content"
               >
                 <option value="">Pick a role…</option>
                 {(roles || []).map((r) => <option key={r} value={r}>{r}</option>)}
@@ -258,7 +258,7 @@ const SessionLocksPage = () => {
           )}
 
           <div>
-            <label className="block text-xs text-gray-400 mb-1">
+            <label className="block text-xs text-content-muted mb-1">
               Reason <span className="text-red-400">*</span>
             </label>
             <textarea
@@ -266,10 +266,10 @@ const SessionLocksPage = () => {
               onChange={(e) => setReason(e.target.value)}
               rows={3}
               placeholder="Why is this lock being created? (recorded in audit log)"
-              className="w-full bg-[#0c0c0f] border border-gray-800 rounded-md px-2 py-2 text-sm text-gray-200"
+              className="w-full bg-surface-sunken border border-border rounded-md px-2 py-2 text-sm text-content"
               required
             />
-            <p className="text-[11px] text-gray-500 mt-1">
+            <p className="text-[11px] text-content-subtle mt-1">
               Required - surfaces in the audit log and on the lock list.
             </p>
           </div>

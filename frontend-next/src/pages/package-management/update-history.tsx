@@ -167,8 +167,8 @@ const UpdateHistory = () => {
             <StatCard label="Removals" value={stats.removals} subtitle="Packages removed" />
           </div>
 
-          <div className="border border-gray-800 rounded-lg">
-            <div className="grid grid-cols-[0.9fr_1fr_1.2fr_2fr_0.7fr_0.7fr_1fr] gap-3 p-4 bg-gray-950 border-b border-gray-800 font-medium text-gray-200">
+          <div className="border border-border rounded-lg">
+            <div className="grid grid-cols-[0.9fr_1fr_1.2fr_2fr_0.7fr_0.7fr_1fr] gap-3 p-4 bg-surface-sunken border-b border-border font-medium text-content">
               <div>Date</div>
               <div>System</div>
               <div>Package</div>
@@ -178,20 +178,20 @@ const UpdateHistory = () => {
               <div>Performed By</div>
             </div>
             {!scopeReady ? (
-              <div className="p-4 text-gray-400">
+              <div className="p-4 text-content-muted">
                 Select a group or smart group above to view its update history.
               </div>
             ) : loading ? (
-              <div className="p-4 text-gray-400">Loading history...</div>
+              <div className="p-4 text-content-muted">Loading history...</div>
             ) : history.length === 0 ? (
-              <div className="p-4 text-gray-400">
+              <div className="p-4 text-content-muted">
                 No update history available. History will appear here after operations are performed.
               </div>
             ) : (
               history.map((item) => (
                 <div key={item.id}>
                   <div
-                    className={`grid grid-cols-[0.9fr_1fr_1.2fr_2fr_0.7fr_0.7fr_1fr] gap-3 p-4 border-b border-gray-800 last:border-b-0 hover:bg-gray-950 ${
+                    className={`grid grid-cols-[0.9fr_1fr_1.2fr_2fr_0.7fr_0.7fr_1fr] gap-3 p-4 border-b border-border last:border-b-0 hover:bg-surface-overlay ${
                       item.status === 'failed' && item.error_message ? 'cursor-pointer' : ''
                     }`}
                     onClick={() => {
@@ -200,12 +200,12 @@ const UpdateHistory = () => {
                       }
                     }}
                   >
-                    <div className="text-sm text-gray-400">{formatDate(item.performed_at)}</div>
-                    <div className="font-medium text-gray-300">
+                    <div className="text-sm text-content-muted">{formatDate(item.performed_at)}</div>
+                    <div className="font-medium text-content">
                       {systemMap.get(item.system_id) || `System #${item.system_id}`}
                     </div>
-                    <div className="font-medium text-gray-300 break-words">{item.package_name}</div>
-                    <div className="text-gray-400 font-mono text-xs break-all">
+                    <div className="font-medium text-content break-words">{item.package_name}</div>
+                    <div className="text-content-muted font-mono text-xs break-all">
                       {item.old_version && item.new_version
                         ? `${item.old_version} → ${item.new_version}`
                         : item.new_version
@@ -235,12 +235,12 @@ const UpdateHistory = () => {
                         <AlertCircle size={14} className="text-red-400" />
                       )}
                     </div>
-                    <div className="text-sm text-gray-400">
+                    <div className="text-sm text-content-muted">
                       {item.performed_by || 'System'}
                     </div>
                   </div>
                   {expandedError === item.id && item.error_message && (
-                    <div className="px-4 py-3 bg-red-950/30 border-b border-gray-800 text-sm text-red-300">
+                    <div className="px-4 py-3 bg-red-950/30 border-b border-border text-sm text-red-300">
                       <span className="font-medium">Error: </span>{item.error_message}
                     </div>
                   )}
@@ -250,7 +250,7 @@ const UpdateHistory = () => {
           </div>
 
           {totalPages > 1 && (
-            <div className="mt-4 flex justify-between items-center text-sm text-gray-400">
+            <div className="mt-4 flex justify-between items-center text-sm text-content-muted">
               <div>
                 Showing {offset + 1}-{Math.min(offset + limit, total)} of {total} entries
               </div>
@@ -263,7 +263,7 @@ const UpdateHistory = () => {
                 >
                   Previous
                 </Button>
-                <span className="px-3 py-1 text-gray-300">
+                <span className="px-3 py-1 text-content">
                   Page {currentPage} of {totalPages}
                 </span>
                 <Button

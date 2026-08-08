@@ -99,9 +99,9 @@ const MirrorsListPage: React.FC = () => {
         {mirrors === null && !error && <LoadingState label="Loading mirrors" />}
 
         {mirrors !== null && mirrors.length === 0 && !error && (
-          <div className="rounded border border-zinc-800 bg-[#111115] p-8 text-center">
-            <p className="text-sm text-gray-300">No mirrors yet.</p>
-            <p className="mt-1 text-sm text-gray-500">
+          <div className="rounded border border-border bg-surface-raised p-8 text-center">
+            <p className="text-sm text-content">No mirrors yet.</p>
+            <p className="mt-1 text-sm text-content-subtle">
               A mirror is the first step of the content workflow (Mirror → Channel →
               Profile → Host). Create one to pull upstream apt/yum content and serve
               it to your fleet.
@@ -113,7 +113,7 @@ const MirrorsListPage: React.FC = () => {
                 </Button>
               </div>
             ) : (
-              <p className="mt-4 text-xs text-gray-500">
+              <p className="mt-4 text-xs text-content-subtle">
                 Ask an admin or maintainer to create the first mirror.
               </p>
             )}
@@ -121,9 +121,9 @@ const MirrorsListPage: React.FC = () => {
         )}
 
         {mirrors && mirrors.length > 0 && (
-          <div className="overflow-x-auto rounded border border-zinc-800 bg-[#111115]">
+          <div className="overflow-x-auto rounded border border-border bg-surface-raised">
             <table className="w-full text-sm">
-              <thead className="border-b border-zinc-800 text-left text-gray-400">
+              <thead className="border-b border-border text-left text-content-muted">
                 <tr>
                   <th className="px-4 py-2">Slug</th>
                   <th className="px-4 py-2">Family</th>
@@ -135,10 +135,10 @@ const MirrorsListPage: React.FC = () => {
                   <th className="px-4 py-2 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-800">
+              <tbody className="divide-y divide-border">
                 {mirrors.map((m) => (
-                  <tr key={m.id} className="hover:bg-zinc-900/40">
-                    <td className="px-4 py-2 font-mono text-gray-200">
+                  <tr key={m.id} className="hover:bg-surface-overlay/40">
+                    <td className="px-4 py-2 font-mono text-content">
                       <Link
                         href={`/mirrors/${m.id}`}
                         className="text-blue-400 hover:text-blue-300"
@@ -156,8 +156,8 @@ const MirrorsListPage: React.FC = () => {
                         </Badge>
                       )}
                     </td>
-                    <td className="px-4 py-2 text-gray-300">{m.package_family}</td>
-                    <td className="px-4 py-2 text-gray-300">{m.distribution}</td>
+                    <td className="px-4 py-2 text-content">{m.package_family}</td>
+                    <td className="px-4 py-2 text-content">{m.distribution}</td>
                     <td className="px-4 py-2">
                       <Badge
                         variant={syncStatusVariant(m.last_sync_status)}
@@ -171,10 +171,10 @@ const MirrorsListPage: React.FC = () => {
                         {signingStatusLabel(m.signing_status)}
                       </Badge>
                     </td>
-                    <td className="px-4 py-2 text-gray-400">
+                    <td className="px-4 py-2 text-content-muted">
                       {formatTimestamp(m.last_sync_finished_at) || '-'}
                     </td>
-                    <td className="px-4 py-2 text-gray-400">
+                    <td className="px-4 py-2 text-content-muted">
                       {formatBytes(m.current_disk_bytes)}
                     </td>
                     <td className="px-4 py-2 text-right">
@@ -186,7 +186,7 @@ const MirrorsListPage: React.FC = () => {
                           !m.enabled ||
                           m.last_sync_status === 'running'
                         }
-                        className="inline-flex items-center gap-1 rounded p-1 text-gray-400 hover:text-green-400 disabled:opacity-30 disabled:hover:text-gray-400"
+                        className="inline-flex items-center gap-1 rounded p-1 text-content-muted hover:text-green-400 disabled:opacity-30 disabled:hover:text-content-muted"
                         title={
                           m.source_mode === 'imported_offline'
                             ? 'Imported-offline mirrors do not sync upstream'
@@ -204,7 +204,7 @@ const MirrorsListPage: React.FC = () => {
                       </button>
                       <Link
                         href={`/mirrors/${m.id}`}
-                        className="ml-1 inline-flex items-center gap-1 rounded p-1 text-gray-400 hover:text-blue-400"
+                        className="ml-1 inline-flex items-center gap-1 rounded p-1 text-content-muted hover:text-blue-400"
                         title="View detail"
                       >
                         <Eye size={16} />

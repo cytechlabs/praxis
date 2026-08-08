@@ -508,9 +508,9 @@ def revocation_status(db: Session) -> Dict[str, object]:
             "status": w.status,
             "attempt_count": w.attempt_count,
             "last_error": w.last_error,
-            "next_retry_at": w.next_retry_at.isoformat() + "Z"
-            if w.next_retry_at
-            else None,
+            "next_retry_at": (
+                w.next_retry_at.isoformat() + "Z" if w.next_retry_at else None
+            ),
         }
         for w in outstanding
     ]

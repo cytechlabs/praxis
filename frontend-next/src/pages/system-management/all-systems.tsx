@@ -641,39 +641,39 @@ const AllSystems = () => {
           <CardBody>
           {/* Saved Views Bar */}
           {savedViews.length > 0 && (
-            <div className="flex items-center gap-3 mb-4 pb-4 border-b border-gray-800/50">
-              <span className="text-sm text-gray-400">Views:</span>
+            <div className="flex items-center gap-3 mb-4 pb-4 border-b border-border/50">
+              <span className="text-sm text-content-muted">Views:</span>
               <div className="relative">
                 <button
                   onClick={() => setShowViewSelector(!showViewSelector)}
-                  className="px-3 py-1.5 bg-gray-950 border border-gray-800 rounded text-sm text-gray-200 hover:bg-gray-800"
+                  className="px-3 py-1.5 bg-surface-sunken border border-border rounded text-sm text-content hover:bg-surface-overlay"
                 >
                   {activeViewId ? savedViews.find(v => v.id === activeViewId)?.name || 'Select View' : 'Select View'}
                 </button>
                 {showViewSelector && (
-                  <div className="absolute left-0 mt-1 w-64 bg-gray-950 border border-gray-800 rounded-lg shadow-lg z-20 p-2">
+                  <div className="absolute left-0 mt-1 w-64 bg-surface-overlay border border-border rounded-lg shadow-lg z-20 p-2">
                     {savedViews.filter(v => !v.is_shared).length > 0 && (
                       <>
-                        <div className="text-xs text-gray-500 px-2 py-1 font-medium uppercase">My Views</div>
+                        <div className="text-xs text-content-subtle px-2 py-1 font-medium uppercase">My Views</div>
                         {savedViews.filter(v => !v.is_shared).map(v => (
                           <button
                             key={v.id}
                             onClick={() => applyView(v)}
-                            className={`w-full text-left px-2 py-1.5 text-sm rounded hover:bg-gray-800 ${activeViewId === v.id ? 'text-red-400 bg-gray-800' : 'text-gray-300'}`}
+                            className={`w-full text-left px-2 py-1.5 text-sm rounded hover:bg-border ${activeViewId === v.id ? 'text-red-400 bg-border' : 'text-content'}`}
                           >
-                            {v.name} {v.is_default && <span className="text-xs text-gray-500">(default)</span>}
+                            {v.name} {v.is_default && <span className="text-xs text-content-subtle">(default)</span>}
                           </button>
                         ))}
                       </>
                     )}
                     {savedViews.filter(v => v.is_shared).length > 0 && (
                       <>
-                        <div className="text-xs text-gray-500 px-2 py-1 mt-1 font-medium uppercase border-t border-gray-700 pt-2">Shared Views</div>
+                        <div className="text-xs text-content-subtle px-2 py-1 mt-1 font-medium uppercase border-t border-border-strong pt-2">Shared Views</div>
                         {savedViews.filter(v => v.is_shared).map(v => (
                           <button
                             key={v.id}
                             onClick={() => applyView(v)}
-                            className={`w-full text-left px-2 py-1.5 text-sm rounded hover:bg-gray-800 ${activeViewId === v.id ? 'text-red-400 bg-gray-800' : 'text-gray-300'}`}
+                            className={`w-full text-left px-2 py-1.5 text-sm rounded hover:bg-border ${activeViewId === v.id ? 'text-red-400 bg-border' : 'text-content'}`}
                           >
                             {v.name}
                           </button>
@@ -682,7 +682,7 @@ const AllSystems = () => {
                     )}
                     <button
                       onClick={() => { setActiveViewId(null); setSearchTerm(''); setStatusFilter('all'); setEnvironmentFilter('all'); setTagFilter([]); setLifecycleFilter('all'); setShowViewSelector(false); }}
-                      className="w-full text-left px-2 py-1.5 text-sm text-gray-400 hover:text-gray-200 border-t border-gray-700 mt-1 pt-1"
+                      className="w-full text-left px-2 py-1.5 text-sm text-content-muted hover:text-content border-t border-border-strong mt-1 pt-1"
                     >
                       Clear view
                     </button>
@@ -691,13 +691,13 @@ const AllSystems = () => {
               </div>
               <button
                 onClick={() => setShowSaveViewPrompt(true)}
-                className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded text-sm"
+                className="px-3 py-1.5 bg-border hover:bg-border-strong text-content rounded text-sm"
               >
                 Save Current Filters
               </button>
               <button
                 onClick={() => setShowManageViews(!showManageViews)}
-                className="px-3 py-1.5 text-gray-400 hover:text-gray-200 text-sm"
+                className="px-3 py-1.5 text-content-muted hover:text-content text-sm"
               >
                 Manage
               </button>
@@ -706,30 +706,30 @@ const AllSystems = () => {
 
           {/* Save View Prompt */}
           {showSaveViewPrompt && (
-            <div className="flex items-center gap-3 mb-4 p-3 bg-[#0c0c0f] border border-gray-800/60 rounded-lg">
+            <div className="flex items-center gap-3 mb-4 p-3 bg-surface-raised border border-border/60 rounded-lg">
               <input
                 type="text"
                 placeholder="View name..."
                 value={saveViewName}
                 onChange={(e) => setSaveViewName(e.target.value)}
-                className="px-3 py-1.5 bg-white/[0.02] border border-gray-700 rounded text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500/30 flex-1 max-w-xs"
+                className="px-3 py-1.5 bg-white/[0.02] border border-border-strong rounded text-sm text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring flex-1 max-w-xs"
                 onKeyDown={(e) => e.key === 'Enter' && handleSaveView()}
               />
               <button onClick={handleSaveView} className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded text-sm">Save</button>
-              <button onClick={() => { setShowSaveViewPrompt(false); setSaveViewName(''); }} className="px-3 py-1.5 text-gray-400 hover:text-gray-200 text-sm">Cancel</button>
+              <button onClick={() => { setShowSaveViewPrompt(false); setSaveViewName(''); }} className="px-3 py-1.5 text-content-muted hover:text-content text-sm">Cancel</button>
             </div>
           )}
 
           {/* Manage Views */}
           {showManageViews && savedViews.length > 0 && (
-            <div className="mb-4 p-3 bg-[#0c0c0f] border border-gray-800/60 rounded-lg">
-              <div className="text-sm font-medium text-gray-200 mb-2">Manage Saved Views</div>
+            <div className="mb-4 p-3 bg-surface-raised border border-border/60 rounded-lg">
+              <div className="text-sm font-medium text-content mb-2">Manage Saved Views</div>
               <div className="space-y-1">
                 {savedViews.map(v => (
                   <div key={v.id} className="flex items-center gap-3 py-1">
-                    <span className="text-sm text-gray-300 flex-1">{v.name} {v.is_default && <span className="text-xs text-gray-500">(default)</span>} {v.is_shared && <span className="text-xs text-slate-300">(shared)</span>}</span>
+                    <span className="text-sm text-content flex-1">{v.name} {v.is_default && <span className="text-xs text-content-subtle">(default)</span>} {v.is_shared && <span className="text-xs text-content">(shared)</span>}</span>
                     {!v.is_default && (
-                      <button onClick={() => handleSetDefaultView(v.id)} className="text-xs text-gray-400 hover:text-gray-200">Set Default</button>
+                      <button onClick={() => handleSetDefaultView(v.id)} className="text-xs text-content-muted hover:text-content">Set Default</button>
                     )}
                     <button onClick={() => handleDeleteView(v.id)} className="text-xs text-red-400 hover:text-red-300">Delete</button>
                   </div>
@@ -743,7 +743,7 @@ const AllSystems = () => {
             <div className="mb-4">
               <button
                 onClick={() => setShowSaveViewPrompt(true)}
-                className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded text-sm"
+                className="px-3 py-1.5 bg-border hover:bg-border-strong text-content rounded text-sm"
               >
                 Save Current Filters as View
               </button>
@@ -804,17 +804,17 @@ const AllSystems = () => {
               <div className="relative">
                 <button
                   onClick={() => setShowTagDropdown(!showTagDropdown)}
-                  className="px-3 py-2 bg-white/[0.02] border border-gray-700 rounded-md text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500/30 whitespace-nowrap"
+                  className="px-3 py-2 bg-white/[0.02] border border-border-strong rounded-md text-sm text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring whitespace-nowrap"
                 >
                   Tags{tagFilter.length > 0 ? ` (${tagFilter.length})` : ''}
                 </button>
                 {showTagDropdown && (
-                  <div className="absolute right-0 mt-1 w-56 bg-gray-950 border border-gray-800 rounded-lg shadow-lg z-20 p-2">
+                  <div className="absolute right-0 mt-1 w-56 bg-surface-overlay border border-border rounded-lg shadow-lg z-20 p-2">
                     {allTags.length === 0 ? (
-                      <p className="text-gray-500 text-sm p-2">No tags available</p>
+                      <p className="text-content-subtle text-sm p-2">No tags available</p>
                     ) : (
                       allTags.map(tag => (
-                        <label key={tag.id} className="flex items-center gap-2 py-1.5 px-2 cursor-pointer hover:bg-gray-800 rounded">
+                        <label key={tag.id} className="flex items-center gap-2 py-1.5 px-2 cursor-pointer hover:bg-border rounded">
                           <input
                             type="checkbox"
                             checked={tagFilter.includes(tag.id)}
@@ -822,14 +822,14 @@ const AllSystems = () => {
                             className="accent-red-600"
                           />
                           <span className="w-3 h-3 rounded-full inline-block flex-shrink-0" style={{ backgroundColor: tag.color }} />
-                          <span className="text-gray-300 text-sm">{tag.name}</span>
+                          <span className="text-content text-sm">{tag.name}</span>
                         </label>
                       ))
                     )}
                     {tagFilter.length > 0 && (
                       <button
                         onClick={() => setTagFilter([])}
-                        className="w-full mt-1 px-2 py-1.5 text-xs text-gray-400 hover:text-gray-200 border-t border-gray-700"
+                        className="w-full mt-1 px-2 py-1.5 text-xs text-content-muted hover:text-content border-t border-border-strong"
                       >
                         Clear tag filter
                       </button>
@@ -842,32 +842,32 @@ const AllSystems = () => {
 
           {/* Bulk Action Toolbar */}
           {selectedSystems.length > 0 && canWrite && (
-            <div className="flex items-center gap-3 mb-4 p-3 bg-[#0c0c0f] border border-gray-800/60 rounded-lg">
-              <span className="text-gray-200 text-sm font-medium">
+            <div className="flex items-center gap-3 mb-4 p-3 bg-surface-raised border border-border/60 rounded-lg">
+              <span className="text-content text-sm font-medium">
                 {selectedSystems.length} selected
               </span>
               <div className="flex gap-2 ml-auto">
                 <button
                   onClick={() => setShowBulkAction('status')}
-                  className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded text-sm"
+                  className="px-3 py-1.5 bg-border hover:bg-border-strong text-content rounded text-sm"
                 >
                   Change Status
                 </button>
                 <button
                   onClick={() => setShowBulkAction('group')}
-                  className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded text-sm"
+                  className="px-3 py-1.5 bg-border hover:bg-border-strong text-content rounded text-sm"
                 >
                   Change Group
                 </button>
                 <button
                   onClick={() => setShowBulkAction('credential')}
-                  className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded text-sm"
+                  className="px-3 py-1.5 bg-border hover:bg-border-strong text-content rounded text-sm"
                 >
                   Assign Credential
                 </button>
                 <button
                   onClick={() => setShowBulkAction('deploy-ca')}
-                  className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded text-sm"
+                  className="px-3 py-1.5 bg-border hover:bg-border-strong text-content rounded text-sm"
                 >
                   Deploy CA Trust
                 </button>
@@ -879,7 +879,7 @@ const AllSystems = () => {
                 </button>
                 <button
                   onClick={() => setSelectedSystems([])}
-                  className="px-3 py-1.5 text-gray-400 hover:text-gray-200 text-sm"
+                  className="px-3 py-1.5 text-content-muted hover:text-content text-sm"
                 >
                   Clear
                 </button>
@@ -900,8 +900,8 @@ const AllSystems = () => {
             />
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-800">
-                <thead className="bg-gray-900">
+              <table className="min-w-full divide-y divide-border">
+                <thead className="bg-surface-raised">
                   <tr>
                     {canWrite && (
                       <th scope="col" className="px-4 py-3 text-left">
@@ -913,42 +913,42 @@ const AllSystems = () => {
                         />
                       </th>
                     )}
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-content uppercase tracking-wider">
                       Hostname
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-content uppercase tracking-wider">
                       IP Address
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-content uppercase tracking-wider">
                       Status
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-content uppercase tracking-wider">
                       Distribution
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-content uppercase tracking-wider">
                       Group
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-content uppercase tracking-wider">
                       Tags
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-content uppercase tracking-wider">
                       Environment
                     </th>
-                    <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap" title="Vault SSH CA trust deployed">
+                    <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-content uppercase tracking-wider whitespace-nowrap" title="Vault SSH CA trust deployed">
                       Zero-Trust
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider" title="Effective transport per host">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-content uppercase tracking-wider" title="Effective transport per host">
                       Transport
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-content uppercase tracking-wider">
                       Registered
                     </th>
-                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-content uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-[#0c0c0f] divide-y divide-gray-800">
+                <tbody className="bg-surface-raised divide-y divide-border">
                   {paginatedSystems.map((system) => {
                     const isUnreachable = system.status === 'Unreachable';
                     return (
@@ -963,24 +963,24 @@ const AllSystems = () => {
                           />
                         </td>
                       )}
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-200">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-content">
                         <button
                           onClick={() => setDrawerSystem(system)}
-                          className="text-gray-100 hover:text-red-400 transition-colors text-left focus:outline-none focus:ring-2 focus:ring-red-500/40 rounded"
+                          className="text-content hover:text-red-400 transition-colors text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring rounded"
                           title="Open quick view"
                         >
                           {system.hostname}
                         </button>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-content">
                         {system.ip_address}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <StatusBadge status={system.status} />
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-content">
                         <span className="font-medium">{system.distro_name}</span>
-                        <span className="ml-1 text-gray-400">{system.os_version}</span>
+                        <span className="ml-1 text-content-muted">{system.os_version}</span>
                         {eolMap[system.id] !== undefined && eolMap[system.id] < 0 && (
                           <span className="ml-2 px-1.5 py-0.5 text-xs rounded bg-red-900 text-red-300 border border-red-700">EOL</span>
                         )}
@@ -988,7 +988,7 @@ const AllSystems = () => {
                           <span className="ml-2 px-1.5 py-0.5 text-xs rounded bg-yellow-900 text-yellow-300 border border-yellow-700">EOL Soon</span>
                         )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-content">
                         {system.group_name}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -1004,11 +1004,11 @@ const AllSystems = () => {
                               </span>
                             ))
                           ) : (
-                            <span className="text-gray-500 text-xs">-</span>
+                            <span className="text-content-subtle text-xs">-</span>
                           )}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-content">
                         {system.environment_type || 'N/A'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-center">
@@ -1017,7 +1017,7 @@ const AllSystems = () => {
                             enabled
                           </span>
                         ) : (
-                          <span className="inline-block px-2 py-0.5 text-xs rounded bg-gray-800 text-gray-500 border border-gray-700" title="Not yet deployed">
+                          <span className="inline-block px-2 py-0.5 text-xs rounded bg-surface-overlay text-content-subtle border border-border-strong" title="Not yet deployed">
                             off
                           </span>
                         )}
@@ -1028,7 +1028,7 @@ const AllSystems = () => {
                           badgeState={agentHealth[system.id]?.badge_state}
                         />
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-content">
                         {formatTimestamp(system.registered_at, { dateOnly: true })}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -1049,7 +1049,7 @@ const AllSystems = () => {
                           {canWrite && (
                             <button
                               onClick={() => handleDeleteClick(system)}
-                              className="text-gray-400 hover:text-red-400"
+                              className="text-content-muted hover:text-red-400"
                             >
                               Delete
                             </button>
@@ -1088,16 +1088,16 @@ const AllSystems = () => {
 
       {/* Bulk Change Status Modal */}
       {showBulkAction === 'status' && (
-        <div className="fixed inset-0 bg-[#0c0c0f]/70 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-gray-950 border border-gray-800 rounded-lg p-6 max-w-lg w-full">
-            <h3 className="text-xl font-semibold text-gray-200 mb-4">Change Status</h3>
-            <p className="text-gray-300 mb-4">
+        <div className="fixed inset-0 bg-surface/70 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-surface-overlay border border-border rounded-lg p-6 max-w-lg w-full">
+            <h3 className="text-xl font-semibold text-content mb-4">Change Status</h3>
+            <p className="text-content mb-4">
               Update the status of <span className="font-semibold text-white">{selectedSystems.length}</span> selected system{selectedSystems.length !== 1 ? 's' : ''}.
             </p>
             <select
               value={bulkStatusValue}
               onChange={(e) => setBulkStatusValue(e.target.value)}
-              className="w-full mb-6 px-3 py-2 bg-gray-800 border border-gray-800 rounded-md text-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500"
+              className="w-full mb-6 px-3 py-2 bg-surface-sunken border border-border rounded-md text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring"
             >
               <option value="Active">Active</option>
               <option value="Inactive">Inactive</option>
@@ -1108,7 +1108,7 @@ const AllSystems = () => {
               <button
                 onClick={() => setShowBulkAction(null)}
                 disabled={bulkLoading}
-                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-md"
+                className="px-4 py-2 bg-border hover:bg-border-strong text-content rounded-md"
               >
                 Cancel
               </button>
@@ -1126,16 +1126,16 @@ const AllSystems = () => {
 
       {/* Bulk Change Group Modal */}
       {showBulkAction === 'group' && (
-        <div className="fixed inset-0 bg-[#0c0c0f]/70 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-gray-950 border border-gray-800 rounded-lg p-6 max-w-lg w-full">
-            <h3 className="text-xl font-semibold text-gray-200 mb-4">Change Group</h3>
-            <p className="text-gray-300 mb-4">
+        <div className="fixed inset-0 bg-surface/70 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-surface-overlay border border-border rounded-lg p-6 max-w-lg w-full">
+            <h3 className="text-xl font-semibold text-content mb-4">Change Group</h3>
+            <p className="text-content mb-4">
               Move <span className="font-semibold text-white">{selectedSystems.length}</span> selected system{selectedSystems.length !== 1 ? 's' : ''} to a new group.
             </p>
             <select
               value={bulkGroupValue}
               onChange={(e) => setBulkGroupValue(Number(e.target.value))}
-              className="w-full mb-6 px-3 py-2 bg-gray-800 border border-gray-800 rounded-md text-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500"
+              className="w-full mb-6 px-3 py-2 bg-surface-sunken border border-border rounded-md text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring"
             >
               <option value={0}>Select a group...</option>
               {groups.map(g => (
@@ -1146,7 +1146,7 @@ const AllSystems = () => {
               <button
                 onClick={() => setShowBulkAction(null)}
                 disabled={bulkLoading}
-                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-md"
+                className="px-4 py-2 bg-border hover:bg-border-strong text-content rounded-md"
               >
                 Cancel
               </button>
@@ -1164,16 +1164,16 @@ const AllSystems = () => {
 
       {/* Bulk Assign Credential Modal */}
       {showBulkAction === 'credential' && (
-        <div className="fixed inset-0 bg-[#0c0c0f]/70 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-gray-950 border border-gray-800 rounded-lg p-6 max-w-lg w-full">
-            <h3 className="text-xl font-semibold text-gray-200 mb-4">Assign Credential</h3>
-            <p className="text-gray-300 mb-4">
+        <div className="fixed inset-0 bg-surface/70 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-surface-overlay border border-border rounded-lg p-6 max-w-lg w-full">
+            <h3 className="text-xl font-semibold text-content mb-4">Assign Credential</h3>
+            <p className="text-content mb-4">
               Assign a credential to <span className="font-semibold text-white">{selectedSystems.length}</span> selected system{selectedSystems.length !== 1 ? 's' : ''}.
             </p>
             <select
               value={bulkCredentialValue}
               onChange={(e) => setBulkCredentialValue(Number(e.target.value))}
-              className="w-full mb-6 px-3 py-2 bg-gray-800 border border-gray-800 rounded-md text-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500"
+              className="w-full mb-6 px-3 py-2 bg-surface-sunken border border-border rounded-md text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring"
             >
               <option value={0}>Select a credential...</option>
               {credentials.map(c => (
@@ -1184,7 +1184,7 @@ const AllSystems = () => {
               <button
                 onClick={() => setShowBulkAction(null)}
                 disabled={bulkLoading}
-                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-md"
+                className="px-4 py-2 bg-border hover:bg-border-strong text-content rounded-md"
               >
                 Cancel
               </button>
@@ -1202,15 +1202,15 @@ const AllSystems = () => {
 
       {/* Bulk Deploy CA Trust Confirmation Modal */}
       {showBulkAction === 'deploy-ca' && (
-        <div className="fixed inset-0 bg-[#0c0c0f]/70 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-gray-950 border border-gray-800 rounded-lg p-6 max-w-lg w-full">
-            <h3 className="text-xl font-semibold text-gray-200 mb-4">Deploy CA Trust</h3>
-            <div className="mb-6 p-3 bg-gray-800 border border-gray-700 rounded text-sm text-gray-300">
+        <div className="fixed inset-0 bg-surface/70 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-surface-overlay border border-border rounded-lg p-6 max-w-lg w-full">
+            <h3 className="text-xl font-semibold text-content mb-4">Deploy CA Trust</h3>
+            <div className="mb-6 p-3 bg-surface-sunken border border-border-strong rounded text-sm text-content">
               Deploy the Vault SSH CA public key to <span className="font-semibold text-white">{selectedSystems.length}</span> system{selectedSystems.length !== 1 ? 's' : ''}. Each system will have its sshd_config updated and reloaded. Systems already deployed will be skipped silently.
             </div>
             <div className="flex justify-end space-x-4">
               <button onClick={() => setShowBulkAction(null)} disabled={bulkLoading}
-                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-md">
+                className="px-4 py-2 bg-border hover:bg-border-strong text-content rounded-md">
                 Cancel
               </button>
               <button onClick={handleBulkDeployCA} disabled={bulkLoading}
@@ -1224,9 +1224,9 @@ const AllSystems = () => {
 
       {/* Bulk Delete Confirmation Modal */}
       {showBulkAction === 'delete' && (
-        <div className="fixed inset-0 bg-[#0c0c0f]/70 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-gray-950 border border-gray-800 rounded-lg p-6 max-w-lg w-full">
-            <h3 className="text-xl font-semibold text-gray-200 mb-4">Delete Systems</h3>
+        <div className="fixed inset-0 bg-surface/70 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-surface-overlay border border-border rounded-lg p-6 max-w-lg w-full">
+            <h3 className="text-xl font-semibold text-content mb-4">Delete Systems</h3>
             <div className="mb-6 p-3 bg-red-900/30 border border-red-700 rounded text-sm text-red-300">
               You are about to permanently delete <span className="font-semibold text-white">{selectedSystems.length}</span> system{selectedSystems.length !== 1 ? 's' : ''}. This action cannot be undone.
             </div>
@@ -1234,7 +1234,7 @@ const AllSystems = () => {
               <button
                 onClick={() => setShowBulkAction(null)}
                 disabled={bulkLoading}
-                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-md"
+                className="px-4 py-2 bg-border hover:bg-border-strong text-content rounded-md"
               >
                 Cancel
               </button>
@@ -1252,37 +1252,37 @@ const AllSystems = () => {
 
       {/* Import Systems Modal */}
       {showBulkAction === 'import' && (
-        <div className="fixed inset-0 bg-[#0c0c0f]/70 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-gray-950 border border-gray-800 rounded-lg p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-            <h3 className="text-xl font-semibold text-gray-200 mb-4">Import Systems</h3>
-            <p className="text-gray-400 text-sm mb-4">
-              Provide a JSON array of systems. Required: <code className="text-red-400">hostname</code>, <code className="text-red-400">ip_address</code>, <code className="text-red-400">distro</code>, <code className="text-red-400">group</code>, <code className="text-red-400">credential</code>. Optional: <code className="text-gray-500">status</code>, <code className="text-gray-500">environment</code>, <code className="text-gray-500">tags</code>. You can also use IDs (distro_id, group_id, credentials_id) instead of names.
+        <div className="fixed inset-0 bg-surface/70 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-surface-overlay border border-border rounded-lg p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <h3 className="text-xl font-semibold text-content mb-4">Import Systems</h3>
+            <p className="text-content-muted text-sm mb-4">
+              Provide a JSON array of systems. Required: <code className="text-red-400">hostname</code>, <code className="text-red-400">ip_address</code>, <code className="text-red-400">distro</code>, <code className="text-red-400">group</code>, <code className="text-red-400">credential</code>. Optional: <code className="text-content-subtle">status</code>, <code className="text-content-subtle">environment</code>, <code className="text-content-subtle">tags</code>. You can also use IDs (distro_id, group_id, credentials_id) instead of names.
             </p>
 
             <div className="mb-4">
-              <label className="block text-gray-300 text-sm font-medium mb-2">Upload JSON file</label>
+              <label className="block text-content text-sm font-medium mb-2">Upload JSON file</label>
               <input
                 ref={fileInputRef}
                 type="file"
                 accept=".json"
                 onChange={handleImportFileUpload}
-                className="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:bg-gray-700 file:text-gray-200 hover:file:bg-gray-600"
+                className="block w-full text-sm text-content-muted file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:bg-border file:text-content hover:file:bg-border-strong"
               />
             </div>
 
             <div className="mb-4">
-              <label className="block text-gray-300 text-sm font-medium mb-2">Or paste JSON</label>
+              <label className="block text-content text-sm font-medium mb-2">Or paste JSON</label>
               <textarea
                 value={importText}
                 onChange={(e) => setImportText(e.target.value)}
                 rows={8}
                 placeholder='[{"hostname": "web-01", "ip_address": "10.0.0.1", "distro": "Ubuntu", "group": "All Systems", "credential": "default"}]'
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-800 rounded-md text-gray-200 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                className="w-full px-3 py-2 bg-surface-sunken border border-border rounded-md text-content font-mono text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring"
               />
               <button
                 onClick={() => parseImportJson(importText)}
                 disabled={!importText.trim()}
-                className={`mt-2 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded text-sm ${!importText.trim() ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className={`mt-2 px-3 py-1.5 bg-border hover:bg-border-strong text-content rounded text-sm ${!importText.trim() ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 Parse JSON
               </button>
@@ -1296,22 +1296,22 @@ const AllSystems = () => {
 
             {importParsed.length > 0 && !importResults && (
               <div className="mb-4">
-                <h4 className="text-gray-200 text-sm font-medium mb-2">Preview ({importParsed.length} system{importParsed.length !== 1 ? 's' : ''})</h4>
-                <div className="overflow-x-auto max-h-48 overflow-y-auto border border-gray-700 rounded">
+                <h4 className="text-content text-sm font-medium mb-2">Preview ({importParsed.length} system{importParsed.length !== 1 ? 's' : ''})</h4>
+                <div className="overflow-x-auto max-h-48 overflow-y-auto border border-border-strong rounded">
                   <table className="min-w-full text-sm">
-                    <thead className="bg-gray-800">
+                    <thead className="bg-surface-sunken">
                       <tr>
-                        <th scope="col" className="px-3 py-2 text-left text-xs text-gray-400">Hostname</th>
-                        <th scope="col" className="px-3 py-2 text-left text-xs text-gray-400">IP Address</th>
-                        <th scope="col" className="px-3 py-2 text-left text-xs text-gray-400">Distro</th>
-                        <th scope="col" className="px-3 py-2 text-left text-xs text-gray-400">Group</th>
-                        <th scope="col" className="px-3 py-2 text-left text-xs text-gray-400">Credential</th>
-                        <th scope="col" className="px-3 py-2 text-left text-xs text-gray-400">Status</th>
+                        <th scope="col" className="px-3 py-2 text-left text-xs text-content-muted">Hostname</th>
+                        <th scope="col" className="px-3 py-2 text-left text-xs text-content-muted">IP Address</th>
+                        <th scope="col" className="px-3 py-2 text-left text-xs text-content-muted">Distro</th>
+                        <th scope="col" className="px-3 py-2 text-left text-xs text-content-muted">Group</th>
+                        <th scope="col" className="px-3 py-2 text-left text-xs text-content-muted">Credential</th>
+                        <th scope="col" className="px-3 py-2 text-left text-xs text-content-muted">Status</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-700">
+                    <tbody className="divide-y divide-border-strong">
                       {importParsed.map((sys, idx) => (
-                        <tr key={idx} className="text-gray-300">
+                        <tr key={idx} className="text-content">
                           <td className="px-3 py-2">{sys.hostname}</td>
                           <td className="px-3 py-2">{sys.ip_address}</td>
                           <td className="px-3 py-2">{sys.distro || sys.distro_id}</td>
@@ -1328,24 +1328,24 @@ const AllSystems = () => {
 
             {importResults && (
               <div className="mb-4">
-                <h4 className="text-gray-200 text-sm font-medium mb-2">Results</h4>
-                <div className="overflow-x-auto max-h-48 overflow-y-auto border border-gray-700 rounded">
+                <h4 className="text-content text-sm font-medium mb-2">Results</h4>
+                <div className="overflow-x-auto max-h-48 overflow-y-auto border border-border-strong rounded">
                   <table className="min-w-full text-sm">
-                    <thead className="bg-gray-800">
+                    <thead className="bg-surface-sunken">
                       <tr>
-                        <th scope="col" className="px-3 py-2 text-left text-xs text-gray-400">Hostname</th>
-                        <th scope="col" className="px-3 py-2 text-left text-xs text-gray-400">Status</th>
-                        <th scope="col" className="px-3 py-2 text-left text-xs text-gray-400">Message</th>
+                        <th scope="col" className="px-3 py-2 text-left text-xs text-content-muted">Hostname</th>
+                        <th scope="col" className="px-3 py-2 text-left text-xs text-content-muted">Status</th>
+                        <th scope="col" className="px-3 py-2 text-left text-xs text-content-muted">Message</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-700">
+                    <tbody className="divide-y divide-border-strong">
                       {importResults.map((r, idx) => (
-                        <tr key={idx} className="text-gray-300">
+                        <tr key={idx} className="text-content">
                           <td className="px-3 py-2">{r.hostname}</td>
                           <td className="px-3 py-2">
                             <StatusBadge status={r.status} />
                           </td>
-                          <td className="px-3 py-2 text-gray-400">{r.message}</td>
+                          <td className="px-3 py-2 text-content-muted">{r.message}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -1358,7 +1358,7 @@ const AllSystems = () => {
               <button
                 onClick={closeImportModal}
                 disabled={bulkLoading}
-                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-md"
+                className="px-4 py-2 bg-border hover:bg-border-strong text-content rounded-md"
               >
                 {importResults ? 'Close' : 'Cancel'}
               </button>
@@ -1367,7 +1367,7 @@ const AllSystems = () => {
                   <button
                     onClick={handleImportDryRun}
                     disabled={bulkLoading}
-                    className={`px-4 py-2 bg-gray-600 hover:bg-gray-500 text-gray-200 rounded-md ${bulkLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    className={`px-4 py-2 bg-border hover:bg-border-strong text-content rounded-md ${bulkLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     {bulkLoading ? 'Running...' : 'Dry Run'}
                   </button>
@@ -1411,34 +1411,34 @@ const AllSystems = () => {
           <div className="space-y-5">
             <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
               <div>
-                <div className="text-xs text-gray-500 uppercase tracking-wider">Status</div>
+                <div className="text-xs text-content-subtle uppercase tracking-wider">Status</div>
                 <div className="mt-1"><StatusBadge status={drawerSystem.status} /></div>
               </div>
               <div>
-                <div className="text-xs text-gray-500 uppercase tracking-wider">Group</div>
-                <div className="mt-1 text-gray-200">{drawerSystem.group_name}</div>
+                <div className="text-xs text-content-subtle uppercase tracking-wider">Group</div>
+                <div className="mt-1 text-content">{drawerSystem.group_name}</div>
               </div>
               <div>
-                <div className="text-xs text-gray-500 uppercase tracking-wider">Environment</div>
-                <div className="mt-1 text-gray-200">{drawerSystem.environment_type || '-'}</div>
+                <div className="text-xs text-content-subtle uppercase tracking-wider">Environment</div>
+                <div className="mt-1 text-content">{drawerSystem.environment_type || '-'}</div>
               </div>
               <div>
-                <div className="text-xs text-gray-500 uppercase tracking-wider">Registered</div>
-                <div className="mt-1 text-gray-200">{formatTimestamp(drawerSystem.registered_at)}</div>
+                <div className="text-xs text-content-subtle uppercase tracking-wider">Registered</div>
+                <div className="mt-1 text-content">{formatTimestamp(drawerSystem.registered_at)}</div>
               </div>
               <div>
-                <div className="text-xs text-gray-500 uppercase tracking-wider">CA Trust</div>
-                <div className="mt-1 text-gray-200">
+                <div className="text-xs text-content-subtle uppercase tracking-wider">CA Trust</div>
+                <div className="mt-1 text-content">
                   {drawerSystem.ca_trust_deployed ? (
                     <span className="text-emerald-400">Deployed</span>
                   ) : (
-                    <span className="text-gray-500">Off</span>
+                    <span className="text-content-subtle">Off</span>
                   )}
                 </div>
               </div>
               {eolMap[drawerSystem.id] !== undefined && (
                 <div>
-                  <div className="text-xs text-gray-500 uppercase tracking-wider">EOL Status</div>
+                  <div className="text-xs text-content-subtle uppercase tracking-wider">EOL Status</div>
                   <div className="mt-1">
                     {eolMap[drawerSystem.id] < 0 ? (
                       <span className="text-red-400">EOL ({Math.abs(eolMap[drawerSystem.id])} days ago)</span>
@@ -1452,7 +1452,7 @@ const AllSystems = () => {
 
             {drawerSystem.tags && drawerSystem.tags.length > 0 && (
               <div>
-                <div className="text-xs text-gray-500 uppercase tracking-wider mb-2">Tags</div>
+                <div className="text-xs text-content-subtle uppercase tracking-wider mb-2">Tags</div>
                 <div className="flex flex-wrap gap-1.5">
                   {drawerSystem.tags.map((t) => (
                     <span

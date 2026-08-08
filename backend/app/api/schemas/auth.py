@@ -6,11 +6,20 @@ from pydantic import BaseModel, EmailStr, Field, constr
 
 
 class Token(BaseModel):
-    """Schema for authentication token response."""
+    """Schema for authentication token response.
+
+    ``expires_in`` and ``refresh_expires_in`` are whole seconds of remaining
+    lifetime for the tokens in this response, taken from the same deadlines the
+    server used to sign and persist them. They make the server the single
+    source of truth for token lifetime, so a client storing the tokens (for
+    example in browser cookies) does not have to restate the policy.
+    """
 
     access_token: str
     token_type: str
     refresh_token: str
+    expires_in: int
+    refresh_expires_in: int
 
 
 class TokenData(BaseModel):

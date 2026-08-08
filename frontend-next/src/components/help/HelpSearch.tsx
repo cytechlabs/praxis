@@ -26,19 +26,19 @@ const HelpSearch: React.FC<HelpSearchProps> = ({ items }) => {
   return (
     <div className="relative">
       <div className="relative">
-        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-content-subtle" />
         <input
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search help…"
-          className="w-full pl-9 pr-9 py-2 text-sm bg-gray-900/60 border border-gray-800 rounded-md text-gray-200 placeholder-gray-600 focus:outline-none focus:border-red-500/50 focus:ring-1 focus:ring-red-500/30"
+          className="w-full pl-9 pr-9 py-2 text-sm bg-surface-sunken/60 border border-border rounded-md text-content placeholder-content-subtle focus:outline-none focus-visible:border-border-strong focus-visible:ring-2 focus-visible:ring-focusring"
         />
         {query && (
           <button
             type="button"
             onClick={() => setQuery('')}
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-500 hover:text-gray-300"
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-content-subtle hover:text-content"
             aria-label="Clear search"
           >
             <X size={14} />
@@ -47,11 +47,11 @@ const HelpSearch: React.FC<HelpSearchProps> = ({ items }) => {
       </div>
 
       {q && (
-        <div className="absolute left-0 right-0 mt-1 rounded-md shadow-2xl bg-[#0c0c0f] border border-gray-800/60 overflow-hidden z-20">
+        <div className="absolute left-0 right-0 mt-1 rounded-md shadow-2xl bg-surface-overlay border border-border/60 overflow-hidden z-20">
           {results.length === 0 ? (
-            <div className="px-3 py-3 text-sm text-gray-500">No matches.</div>
+            <div className="px-3 py-3 text-sm text-content-subtle">No matches.</div>
           ) : (
-            <ul className="divide-y divide-gray-800/60">
+            <ul className="divide-y divide-border/60">
               {results.map((item) => (
                 <li key={item.slug}>
                   <Link
@@ -59,8 +59,8 @@ const HelpSearch: React.FC<HelpSearchProps> = ({ items }) => {
                     onClick={() => setQuery('')}
                     className="block px-3 py-2 hover:bg-white/[0.03] transition-colors"
                   >
-                    <div className="text-sm text-gray-200">{item.title}</div>
-                    <div className="text-xs text-gray-500 truncate">{item.description}</div>
+                    <div className="text-sm text-content">{item.title}</div>
+                    <div className="text-xs text-content-subtle truncate">{item.description}</div>
                   </Link>
                 </li>
               ))}

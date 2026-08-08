@@ -216,7 +216,7 @@ const SystemStatus: React.FC = () => {
           title="System Status"
           actions={
             <>
-              <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
+              <label className="flex items-center gap-2 text-sm text-content-muted cursor-pointer">
                 <input
                   type="checkbox"
                   checked={autoRefresh}
@@ -262,7 +262,7 @@ const SystemStatus: React.FC = () => {
                     Distro EOL Warnings: {eolData.eol_systems.length} past EOL, {eolData.warning_systems.length} within 90 days
                   </span>
                 </div>
-                {eolExpanded ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                {eolExpanded ? <ChevronUp className="w-4 h-4 text-content-muted" /> : <ChevronDown className="w-4 h-4 text-content-muted" />}
               </button>
               {eolExpanded && (
                 <div className="mt-4 space-y-2">
@@ -272,10 +272,10 @@ const SystemStatus: React.FC = () => {
                       {eolData.eol_systems.map((e) => (
                         <div key={e.system_id} className="flex items-center gap-3 py-1 text-sm">
                           <Badge variant="danger">EOL</Badge>
-                          <button onClick={() => router.push(`/system-management/system/${e.system_id}`)} className="text-gray-300 hover:text-white underline">
+                          <button onClick={() => router.push(`/system-management/system/${e.system_id}`)} className="text-content hover:text-white underline">
                             {e.hostname}
                           </button>
-                          <span className="text-gray-500">{e.distro_name} {e.distro_version}</span>
+                          <span className="text-content-subtle">{e.distro_name} {e.distro_version}</span>
                           <span className="text-red-400 text-xs">EOL {Math.abs(e.days_until_eol)}d ago</span>
                         </div>
                       ))}
@@ -287,10 +287,10 @@ const SystemStatus: React.FC = () => {
                       {eolData.warning_systems.map((e) => (
                         <div key={e.system_id} className="flex items-center gap-3 py-1 text-sm">
                           <Badge variant="warning">EOL Soon</Badge>
-                          <button onClick={() => router.push(`/system-management/system/${e.system_id}`)} className="text-gray-300 hover:text-white underline">
+                          <button onClick={() => router.push(`/system-management/system/${e.system_id}`)} className="text-content hover:text-white underline">
                             {e.hostname}
                           </button>
-                          <span className="text-gray-500">{e.distro_name} {e.distro_version}</span>
+                          <span className="text-content-subtle">{e.distro_name} {e.distro_version}</span>
                           <span className="text-yellow-400 text-xs">{e.days_until_eol}d remaining</span>
                         </div>
                       ))}
@@ -308,11 +308,11 @@ const SystemStatus: React.FC = () => {
             {/* Filters */}
             <div className="flex flex-wrap items-end gap-4 mb-4">
               <div>
-                <label className="block text-xs text-gray-400 mb-1">Status</label>
+                <label className="block text-xs text-content-muted mb-1">Status</label>
                 <select
                   value={statusFilter}
                   onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-                  className="bg-gray-950 border border-gray-800 rounded px-2 py-1 text-gray-200 text-sm"
+                  className="bg-surface-sunken border border-border rounded px-2 py-1 text-content text-sm"
                 >
                   <option value="">All</option>
                   <option value="Active">Active</option>
@@ -323,11 +323,11 @@ const SystemStatus: React.FC = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-gray-400 mb-1">Connection</label>
+                <label className="block text-xs text-content-muted mb-1">Connection</label>
                 <select
                   value={connFilter}
                   onChange={(e) => { setConnFilter(e.target.value); setPage(1); }}
-                  className="bg-gray-950 border border-gray-800 rounded px-2 py-1 text-gray-200 text-sm"
+                  className="bg-surface-sunken border border-border rounded px-2 py-1 text-content text-sm"
                 >
                   <option value="">All</option>
                   <option value="connected">Connected</option>
@@ -337,11 +337,11 @@ const SystemStatus: React.FC = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-gray-400 mb-1">Group</label>
+                <label className="block text-xs text-content-muted mb-1">Group</label>
                 <select
                   value={groupFilter}
                   onChange={(e) => { setGroupFilter(e.target.value); setPage(1); }}
-                  className="bg-gray-950 border border-gray-800 rounded px-2 py-1 text-gray-200 text-sm"
+                  className="bg-surface-sunken border border-border rounded px-2 py-1 text-content text-sm"
                 >
                   <option value="">All</option>
                   {groups.map((g) => (
@@ -362,7 +362,7 @@ const SystemStatus: React.FC = () => {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="bg-gray-950 border-b border-gray-800 text-gray-200">
+                  <tr className="bg-surface-sunken border-b border-border text-content">
                     <th scope="col" className="px-4 py-3 text-left cursor-pointer" onClick={() => handleSort('hostname')}>
                       Hostname <SortIcon col="hostname" />
                     </th>
@@ -381,25 +381,25 @@ const SystemStatus: React.FC = () => {
                 </thead>
                 <tbody>
                   {loading && (
-                    <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">Loading...</td></tr>
+                    <tr><td colSpan={8} className="px-4 py-8 text-center text-content-muted">Loading...</td></tr>
                   )}
                   {!loading && systems.length === 0 && (
-                    <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">No systems found.</td></tr>
+                    <tr><td colSpan={8} className="px-4 py-8 text-center text-content-muted">No systems found.</td></tr>
                   )}
                   {!loading && systems.map((s) => (
                     <tr
                       key={s.id}
-                      className="border-b border-gray-800/50 hover:bg-gray-950/50 cursor-pointer"
+                      className="border-b border-border/50 hover:bg-surface-overlay/50 cursor-pointer"
                       onClick={() => router.push(`/system-management/system/${s.id}`)}
                     >
-                      <td className="px-4 py-3 text-gray-200 font-medium">{s.hostname}</td>
-                      <td className="px-4 py-3 text-gray-300">{s.ip_address}</td>
+                      <td className="px-4 py-3 text-content font-medium">{s.hostname}</td>
+                      <td className="px-4 py-3 text-content">{s.ip_address}</td>
                       <td className="px-4 py-3"><Badge variant={statusToBadgeVariant(s.status)}>{s.status}</Badge></td>
                       <td className="px-4 py-3">{connBadge(s.connection_status)}</td>
-                      <td className="px-4 py-3 text-gray-400">{timeAgo(s.last_connection)}</td>
-                      <td className="px-4 py-3 text-gray-400">{timeAgo(s.last_audited)}</td>
-                      <td className="px-4 py-3 text-gray-300">{s.distro_name || '-'}</td>
-                      <td className="px-4 py-3 text-gray-300">{s.group_name || '-'}</td>
+                      <td className="px-4 py-3 text-content-muted">{timeAgo(s.last_connection)}</td>
+                      <td className="px-4 py-3 text-content-muted">{timeAgo(s.last_audited)}</td>
+                      <td className="px-4 py-3 text-content">{s.distro_name || '-'}</td>
+                      <td className="px-4 py-3 text-content">{s.group_name || '-'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -408,7 +408,7 @@ const SystemStatus: React.FC = () => {
 
             {/* Pagination */}
             <div className="flex items-center justify-between pt-4">
-              <span className="text-sm text-gray-400">
+              <span className="text-sm text-content-muted">
                 {total > 0
                   ? `Showing ${(page - 1) * pageSize + 1}-${Math.min(page * pageSize, total)} of ${total}`
                   : 'No results'}
@@ -422,7 +422,7 @@ const SystemStatus: React.FC = () => {
                 >
                   Previous
                 </Button>
-                <span className="text-sm text-gray-400 self-center">Page {page} of {totalPages}</span>
+                <span className="text-sm text-content-muted self-center">Page {page} of {totalPages}</span>
                 <Button
                   variant="outline"
                   size="sm"

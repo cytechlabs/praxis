@@ -31,12 +31,12 @@ const DeleteConfirmationDialog = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-[#0c0c0f] bg-opacity-50 flex items-center justify-center z-40">
-      <div className="bg-[#0c0c0f] rounded-lg p-6 w-[500px] border border-gray-800/60">
-        <h2 className="text-xl mb-4 text-gray-200">Delete User</h2>
+    <div className="fixed inset-0 bg-surface/50 flex items-center justify-center z-40">
+      <div className="bg-surface-overlay rounded-lg p-6 w-[500px] border border-border/60">
+        <h2 className="text-xl mb-4 text-content">Delete User</h2>
 
         <div className="mb-6">
-          <p className="text-gray-300 mb-2">
+          <p className="text-content mb-2">
             Are you sure you want to delete user <span className="font-semibold">{username}</span>?
           </p>
           <p className="text-red-500 text-sm">
@@ -50,7 +50,7 @@ const DeleteConfirmationDialog = ({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white"
+            className="px-4 py-2 text-sm font-medium text-content hover:text-white"
             disabled={loading}
           >
             Cancel

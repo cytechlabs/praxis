@@ -139,7 +139,7 @@ const ActionMenu: React.FC<ActionMenuProps> = ({ items, triggerLabel, align = 'r
         aria-expanded={open}
         aria-label={triggerLabel}
         onClick={() => (open ? close() : setOpen(true))}
-        className="text-gray-400 hover:text-gray-100 px-2 py-1 rounded focus:outline-none focus:ring-2 focus:ring-danger/40"
+        className="text-content-muted hover:text-content px-2 py-1 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring"
       >
         •••
       </button>
@@ -159,7 +159,7 @@ const ActionMenu: React.FC<ActionMenuProps> = ({ items, triggerLabel, align = 'r
               // Hidden until measured/positioned to avoid a first-paint flash.
               visibility: pos ? 'visible' : 'hidden',
             }}
-            className="w-48 bg-gray-950 border border-gray-800 rounded-md shadow-lg z-[100] py-1"
+            className="w-48 bg-surface-overlay border border-border rounded-md shadow-lg z-[100] py-1"
           >
             {items.map((item, i) => (
               <button
@@ -171,8 +171,8 @@ const ActionMenu: React.FC<ActionMenuProps> = ({ items, triggerLabel, align = 'r
                 role="menuitem"
                 tabIndex={-1}
                 onClick={() => handleSelect(item)}
-                className={`block w-full text-left px-4 py-2 text-sm hover:bg-gray-800 focus:bg-gray-800 focus:outline-none ${
-                  item.danger ? 'text-danger' : 'text-gray-300'
+                className={`block w-full text-left px-4 py-2 text-sm hover:bg-surface-overlay focus:bg-surface-overlay focus:outline-none ${
+                  item.danger ? 'text-danger' : 'text-content'
                 }`}
               >
                 {item.label}

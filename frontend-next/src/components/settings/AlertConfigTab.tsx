@@ -263,7 +263,7 @@ const AlertConfigTab: React.FC = () => {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Bell className="text-red-500" size={20} />
-          <h2 className="text-lg font-semibold text-gray-100">Alert Configuration</h2>
+          <h2 className="text-lg font-semibold text-content">Alert Configuration</h2>
         </div>
         <Button variant="primary" onClick={openCreateModal} icon={<Plus size={16} />}>
           New Alert Config
@@ -271,9 +271,9 @@ const AlertConfigTab: React.FC = () => {
       </div>
 
       {/* Configs Table */}
-      <div className="border border-gray-800/60 rounded-lg overflow-hidden">
-        <table className="w-full text-sm text-gray-200">
-          <thead className="bg-red-900/30 text-gray-300 text-xs uppercase">
+      <div className="border border-border/60 rounded-lg overflow-hidden">
+        <table className="w-full text-sm text-content">
+          <thead className="bg-red-900/30 text-content text-xs uppercase">
             <tr>
               <th scope="col" className="px-4 py-3 text-left">Name</th>
               <th scope="col" className="px-4 py-3 text-left">Type</th>
@@ -282,11 +282,11 @@ const AlertConfigTab: React.FC = () => {
               <th scope="col" className="px-4 py-3 text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-800/50">
+          <tbody className="divide-y divide-border/50">
             {loading ? (
-              <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-500">Loading...</td></tr>
+              <tr><td colSpan={5} className="px-4 py-8 text-center text-content-subtle">Loading...</td></tr>
             ) : configs.length === 0 ? (
-              <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-500">No alert configs yet. Create one to get started.</td></tr>
+              <tr><td colSpan={5} className="px-4 py-8 text-center text-content-subtle">No alert configs yet. Create one to get started.</td></tr>
             ) : configs.map(config => (
               <tr key={config.id} className="hover:bg-white/[0.03]">
                 <td className="px-4 py-3 font-medium">{config.name}</td>
@@ -300,10 +300,10 @@ const AlertConfigTab: React.FC = () => {
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap gap-1">
                     {config.events.slice(0, 3).map(evt => (
-                      <span key={evt} className="px-1.5 py-0.5 bg-gray-800 text-gray-300 rounded text-xs">{evt}</span>
+                      <span key={evt} className="px-1.5 py-0.5 bg-surface-overlay text-content rounded text-xs">{evt}</span>
                     ))}
                     {config.events.length > 3 && (
-                      <span className="px-1.5 py-0.5 bg-gray-800 text-gray-400 rounded text-xs">+{config.events.length - 3} more</span>
+                      <span className="px-1.5 py-0.5 bg-surface-overlay text-content-muted rounded text-xs">+{config.events.length - 3} more</span>
                     )}
                   </div>
                 </td>
@@ -316,13 +316,13 @@ const AlertConfigTab: React.FC = () => {
                 </td>
                 <td className="px-4 py-3 text-right">
                   <div className="flex items-center justify-end gap-2">
-                    <button onClick={() => handleTest(config)} className="p-1 text-gray-400 hover:text-yellow-400" aria-label="Test" title="Test">
+                    <button onClick={() => handleTest(config)} className="p-1 text-content-muted hover:text-yellow-400" aria-label="Test" title="Test">
                       <TestTube size={16} />
                     </button>
-                    <button onClick={() => openEditModal(config)} className="p-1 text-gray-400 hover:text-slate-300" aria-label="Edit" title="Edit">
+                    <button onClick={() => openEditModal(config)} className="p-1 text-content-muted hover:text-content" aria-label="Edit" title="Edit">
                       <Pencil size={16} />
                     </button>
-                    <button onClick={() => handleDelete(config)} className="p-1 text-gray-400 hover:text-red-400" aria-label="Delete" title="Delete">
+                    <button onClick={() => handleDelete(config)} className="p-1 text-content-muted hover:text-red-400" aria-label="Delete" title="Delete">
                       <Trash2 size={16} />
                     </button>
                   </div>
@@ -334,18 +334,18 @@ const AlertConfigTab: React.FC = () => {
       </div>
 
       {/* Alert History Section */}
-      <div className="border border-gray-800/60 rounded-lg overflow-hidden">
+      <div className="border border-border/60 rounded-lg overflow-hidden">
         <button
           onClick={() => setShowHistory(!showHistory)}
-          className="w-full flex items-center justify-between px-4 py-3 bg-red-900/20 text-gray-200 hover:bg-red-900/30 transition-colors"
+          className="w-full flex items-center justify-between px-4 py-3 bg-red-900/20 text-content hover:bg-red-900/30 transition-colors"
         >
           <span className="font-semibold">Alert History</span>
           {showHistory ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
         </button>
         {showHistory && (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm text-gray-200">
-              <thead className="bg-red-900/20 text-gray-400 text-xs uppercase">
+            <table className="w-full text-sm text-content">
+              <thead className="bg-red-900/20 text-content-muted text-xs uppercase">
                 <tr>
                   <th scope="col" className="px-4 py-2 text-left">Sent At</th>
                   <th scope="col" className="px-4 py-2 text-left">Event Type</th>
@@ -354,16 +354,16 @@ const AlertConfigTab: React.FC = () => {
                   <th scope="col" className="px-4 py-2 text-left">Error</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-800/30">
+              <tbody className="divide-y divide-border/30">
                 {history.length === 0 ? (
-                  <tr><td colSpan={5} className="px-4 py-6 text-center text-gray-500">No alert history yet.</td></tr>
+                  <tr><td colSpan={5} className="px-4 py-6 text-center text-content-subtle">No alert history yet.</td></tr>
                 ) : history.map(h => (
                   <tr key={h.id} className="hover:bg-white/[0.03]">
-                    <td className="px-4 py-2 whitespace-nowrap text-gray-400 text-xs">
+                    <td className="px-4 py-2 whitespace-nowrap text-content-muted text-xs">
                       {formatTimestamp(h.sent_at)}
                     </td>
                     <td className="px-4 py-2">
-                      <span className="px-1.5 py-0.5 bg-gray-800 text-gray-300 rounded text-xs">{h.event_type}</span>
+                      <span className="px-1.5 py-0.5 bg-surface-overlay text-content rounded text-xs">{h.event_type}</span>
                     </td>
                     <td className="px-4 py-2 max-w-xs truncate">{h.message}</td>
                     <td className="px-4 py-2 text-center">
@@ -377,7 +377,7 @@ const AlertConfigTab: React.FC = () => {
                         <span title={`Failed (attempt ${h.attempt_count})`}><XCircle size={16} className="inline text-red-500" /></span>
                       )}
                       {h.attempt_count > 1 && (
-                        <span className="ml-1 text-xs text-gray-500">x{h.attempt_count}</span>
+                        <span className="ml-1 text-xs text-content-subtle">x{h.attempt_count}</span>
                       )}
                     </td>
                     <td className="px-4 py-2 text-red-400 text-xs max-w-xs truncate">
@@ -388,7 +388,7 @@ const AlertConfigTab: React.FC = () => {
                             const cfg = configs.find(c => c.id === h.alert_config_id);
                             if (cfg) handleRetry(cfg, h.id);
                           }}
-                          className="ml-2 p-1 text-gray-400 hover:text-amber-400"
+                          className="ml-2 p-1 text-content-muted hover:text-amber-400"
                           title="Retry delivery"
                         >
                           <RefreshCw size={12} />
@@ -405,28 +405,28 @@ const AlertConfigTab: React.FC = () => {
 
       {/* Modal */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0c0c0f]/70">
-          <div className="bg-[#0c0c0f] border border-gray-800/60 rounded-lg w-full max-w-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto">
-            <h2 className="text-lg font-bold text-gray-100">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-surface/70">
+          <div className="bg-surface-overlay border border-border/60 rounded-lg w-full max-w-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+            <h2 className="text-lg font-bold text-content">
               {editingConfig ? 'Edit Alert Config' : 'Create Alert Config'}
             </h2>
 
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Name</label>
+              <label className="block text-sm text-content-muted mb-1">Name</label>
               <input
                 value={formName}
                 onChange={e => setFormName(e.target.value)}
-                className="w-full px-3 py-2 bg-[#0c0c0f] border border-gray-800/60 rounded text-gray-200 focus:outline-none focus:border-red-600"
+                className="w-full px-3 py-2 bg-surface-sunken border border-border/60 rounded text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
                 placeholder="e.g. Production Slack Alerts"
               />
             </div>
 
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Type</label>
+              <label className="block text-sm text-content-muted mb-1">Type</label>
               <select
                 value={formType}
                 onChange={e => setFormType(e.target.value as 'slack' | 'webhook')}
-                className="w-full px-3 py-2 bg-[#0c0c0f] border border-gray-800/60 rounded text-gray-200 focus:outline-none focus:border-red-600"
+                className="w-full px-3 py-2 bg-surface-sunken border border-border/60 rounded text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
               >
                 <option value="slack">Slack Webhook</option>
                 <option value="webhook">Generic Webhook</option>
@@ -434,20 +434,20 @@ const AlertConfigTab: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Destination URL</label>
+              <label className="block text-sm text-content-muted mb-1">Destination URL</label>
               <input
                 value={formDestination}
                 onChange={e => setFormDestination(e.target.value)}
-                className="w-full px-3 py-2 bg-[#0c0c0f] border border-gray-800/60 rounded text-gray-200 focus:outline-none focus:border-red-600"
+                className="w-full px-3 py-2 bg-surface-sunken border border-border/60 rounded text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
                 placeholder={formType === 'slack' ? 'https://hooks.slack.com/services/...' : 'https://your-webhook-url.com/...'}
               />
             </div>
 
             <div>
-              <label className="block text-sm text-gray-400 mb-2">Events</label>
+              <label className="block text-sm text-content-muted mb-2">Events</label>
               <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
                 {ALL_EVENT_TYPES.map(evt => (
-                  <label key={evt} className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+                  <label key={evt} className="flex items-center gap-2 text-sm text-content cursor-pointer">
                     <input
                       type="checkbox"
                       checked={formEvents.includes(evt)}
@@ -461,9 +461,9 @@ const AlertConfigTab: React.FC = () => {
             </div>
 
             <div>
-              <label className="flex items-center gap-2 text-sm text-gray-400 mb-1">
+              <label className="flex items-center gap-2 text-sm text-content-muted mb-1">
                 <Key size={14} /> HMAC Secret
-                <span className="text-gray-600 font-normal">
+                <span className="text-content-subtle font-normal">
                   (optional - signs requests with X-Praxis-Signature: sha256=...)
                 </span>
               </label>
@@ -472,13 +472,13 @@ const AlertConfigTab: React.FC = () => {
                   type="password"
                   value={formSecret}
                   onChange={e => { setFormSecret(e.target.value); setFormClearSecret(false); }}
-                  className="flex-1 px-3 py-2 bg-[#0c0c0f] border border-gray-800/60 rounded text-gray-200 focus:outline-none focus:border-red-600 font-mono text-xs"
+                  className="flex-1 px-3 py-2 bg-surface-sunken border border-border/60 rounded text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong font-mono text-xs"
                   placeholder={editingConfig?.has_secret ? '••• existing secret ••• (leave blank to keep)' : 'Paste or generate a shared secret'}
                 />
                 <Button variant="outline" onClick={generateSecret} type="button">Generate</Button>
               </div>
               {editingConfig?.has_secret && (
-                <label className="flex items-center gap-2 text-xs text-gray-500 mt-2 cursor-pointer">
+                <label className="flex items-center gap-2 text-xs text-content-subtle mt-2 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={formClearSecret}
@@ -491,13 +491,13 @@ const AlertConfigTab: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Scope (smart group)
-                <span className="text-gray-600 font-normal"> - only dispatch for events from members</span>
+              <label className="block text-sm text-content-muted mb-1">Scope (smart group)
+                <span className="text-content-subtle font-normal"> - only dispatch for events from members</span>
               </label>
               <select
                 value={formScopeId}
                 onChange={e => setFormScopeId(e.target.value ? Number(e.target.value) : '')}
-                className="w-full px-3 py-2 bg-[#0c0c0f] border border-gray-800/60 rounded text-gray-200 focus:outline-none focus:border-red-600"
+                className="w-full px-3 py-2 bg-surface-sunken border border-border/60 rounded text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
               >
                 <option value="">Fleet-wide (no scope)</option>
                 {smartGroups.map(g => (
@@ -514,7 +514,7 @@ const AlertConfigTab: React.FC = () => {
                 className="accent-red-600"
                 id="form-enabled"
               />
-              <label htmlFor="form-enabled" className="text-sm text-gray-300">Enabled</label>
+              <label htmlFor="form-enabled" className="text-sm text-content">Enabled</label>
             </div>
 
             <div className="flex justify-end gap-3 pt-2">

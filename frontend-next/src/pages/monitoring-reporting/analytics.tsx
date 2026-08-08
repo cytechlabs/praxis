@@ -42,7 +42,7 @@ interface Failure {
 }
 
 const EmptyChart: React.FC<{ message?: string }> = ({ message = 'Not enough data to display chart' }) => (
-  <div className="flex items-center justify-center h-64 text-gray-500 text-sm">
+  <div className="flex items-center justify-center h-64 text-content-subtle text-sm">
     {message}
   </div>
 );
@@ -118,7 +118,7 @@ const AnalyticsDashboard: React.FC = () => {
           }
         />
 
-        {loading && <div className="p-4 text-gray-400">Loading analytics...</div>}
+        {loading && <div className="p-4 text-content-muted">Loading analytics...</div>}
 
         {!loading && (
           <>
@@ -138,7 +138,7 @@ const AnalyticsDashboard: React.FC = () => {
               {/* System Health */}
               <Card>
                 <CardBody>
-                  <h2 className="text-lg font-semibold text-gray-200 mb-4">System Health Snapshot</h2>
+                  <h2 className="text-lg font-semibold text-content mb-4">System Health Snapshot</h2>
                   {snapshotData.length === 0 ? (
                     <EmptyChart />
                   ) : (
@@ -156,7 +156,7 @@ const AnalyticsDashboard: React.FC = () => {
                   )}
                   {health?.daily_changes && health.daily_changes.length > 0 && (
                     <>
-                      <h3 className="text-sm font-medium text-gray-400 mt-4 mb-2">Daily Status Changes (30d)</h3>
+                      <h3 className="text-sm font-medium text-content-muted mt-4 mb-2">Daily Status Changes (30d)</h3>
                       <ResponsiveContainer width="100%" height={150}>
                         <AreaChart data={health.daily_changes}>
                           <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
@@ -170,14 +170,14 @@ const AnalyticsDashboard: React.FC = () => {
                       </ResponsiveContainer>
                     </>
                   )}
-                  {health?.note && <p className="text-xs text-gray-500 mt-2">{health.note}</p>}
+                  {health?.note && <p className="text-xs text-content-subtle mt-2">{health.note}</p>}
                 </CardBody>
               </Card>
 
               {/* Compliance Trend */}
               <Card>
                 <CardBody>
-                  <h2 className="text-lg font-semibold text-gray-200 mb-4">Package Operations Trend</h2>
+                  <h2 className="text-lg font-semibold text-content mb-4">Package Operations Trend</h2>
                   {complianceData.length === 0 ? (
                     <EmptyChart message={compliance?.note || 'Not enough data to display chart'} />
                   ) : (
@@ -200,7 +200,7 @@ const AnalyticsDashboard: React.FC = () => {
               {/* Top Active Systems */}
               <Card>
                 <CardBody>
-                  <h2 className="text-lg font-semibold text-gray-200 mb-4">Top Active Systems (30d)</h2>
+                  <h2 className="text-lg font-semibold text-content mb-4">Top Active Systems (30d)</h2>
                   {topSystems.length === 0 ? (
                     <EmptyChart />
                   ) : (
@@ -222,7 +222,7 @@ const AnalyticsDashboard: React.FC = () => {
               {/* Common Failures */}
               <Card>
                 <CardBody>
-                  <h2 className="text-lg font-semibold text-gray-200 mb-4">Common Failures (30d)</h2>
+                  <h2 className="text-lg font-semibold text-content mb-4">Common Failures (30d)</h2>
                   {failures.length === 0 ? (
                     <EmptyChart message="No failures recorded in the last 30 days" />
                   ) : (
@@ -230,12 +230,12 @@ const AnalyticsDashboard: React.FC = () => {
                       {failures.map((f, idx) => (
                         <div key={idx} className="flex items-center gap-3">
                           <div className="flex-1 min-w-0">
-                            <div className="w-full bg-gray-800 rounded-full h-6 overflow-hidden relative">
+                            <div className="w-full bg-surface-overlay rounded-full h-6 overflow-hidden relative">
                               <div
                                 className="h-full bg-red-700 rounded-full"
                                 style={{ width: `${Math.min(100, (f.count / (failures[0]?.count || 1)) * 100)}%` }}
                               />
-                              <span className="absolute inset-0 flex items-center px-2 text-xs text-gray-200 truncate">
+                              <span className="absolute inset-0 flex items-center px-2 text-xs text-content truncate">
                                 {f.error.length > 80 ? f.error.slice(0, 80) + '...' : f.error}
                               </span>
                             </div>

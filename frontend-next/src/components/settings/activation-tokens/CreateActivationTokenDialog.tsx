@@ -112,7 +112,7 @@ const CreateActivationTokenDialog = ({ open, onClose, onCreated }: Props) => {
           />
 
           <div className="space-y-1">
-            <label className="block text-xs font-medium uppercase tracking-wider text-gray-400">
+            <label className="block text-xs font-medium uppercase tracking-wider text-content-muted">
               Target system
             </label>
             <input
@@ -120,7 +120,7 @@ const CreateActivationTokenDialog = ({ open, onClose, onCreated }: Props) => {
               placeholder="Search by hostname, IP, or group…"
               value={systemSearch}
               onChange={(e) => setSystemSearch(e.target.value)}
-              className="w-full rounded-md border border-gray-700 bg-gray-900/50 px-3 py-2 text-sm text-gray-200 focus:border-red-600 focus:outline-none focus:ring-2 focus:ring-red-500/30"
+              className="w-full rounded-md border border-border-strong bg-surface-sunken/50 px-3 py-2 text-sm text-content focus-visible:border-border-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring"
             />
             <select
               value={systemId === '' ? '' : String(systemId)}
@@ -128,7 +128,7 @@ const CreateActivationTokenDialog = ({ open, onClose, onCreated }: Props) => {
                 setSystemId(e.target.value === '' ? '' : Number(e.target.value))
               }
               size={6}
-              className="w-full rounded-md border border-gray-700 bg-gray-900/50 px-3 py-2 text-sm text-gray-200 focus:border-red-600 focus:outline-none focus:ring-2 focus:ring-red-500/30"
+              className="w-full rounded-md border border-border-strong bg-surface-sunken/50 px-3 py-2 text-sm text-content focus-visible:border-border-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring"
             >
               {filteredSystems.length === 0 ? (
                 <option value="" disabled>
@@ -143,15 +143,15 @@ const CreateActivationTokenDialog = ({ open, onClose, onCreated }: Props) => {
               )}
             </select>
             {targetSystem && (
-              <p className="text-xs text-slate-400">
-                Will enroll <strong className="text-slate-200">{targetSystem.hostname}</strong> in
-                group <strong className="text-slate-200">{targetSystem.group_name}</strong>.
+              <p className="text-xs text-content-muted">
+                Will enroll <strong className="text-content">{targetSystem.hostname}</strong> in
+                group <strong className="text-content">{targetSystem.group_name}</strong>.
               </p>
             )}
           </div>
 
           <div className="space-y-1">
-            <label className="block text-xs font-medium uppercase tracking-wider text-gray-400">
+            <label className="block text-xs font-medium uppercase tracking-wider text-content-muted">
               Default tags (optional)
             </label>
             <select
@@ -161,7 +161,7 @@ const CreateActivationTokenDialog = ({ open, onClose, onCreated }: Props) => {
               onChange={(e) =>
                 setTagIds(Array.from(e.target.selectedOptions, (o) => Number(o.value)))
               }
-              className="w-full rounded-md border border-gray-700 bg-gray-900/50 px-3 py-2 text-sm text-gray-200 focus:border-red-600 focus:outline-none focus:ring-2 focus:ring-red-500/30"
+              className="w-full rounded-md border border-border-strong bg-surface-sunken/50 px-3 py-2 text-sm text-content focus-visible:border-border-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring"
             >
               {tags.map((t) => (
                 <option key={t.id} value={t.id}>
@@ -169,7 +169,7 @@ const CreateActivationTokenDialog = ({ open, onClose, onCreated }: Props) => {
                 </option>
               ))}
             </select>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-content-subtle">
               Tags are added to the host on successful enrollment, in addition to whatever is
               already attached.
             </p>
@@ -187,7 +187,7 @@ const CreateActivationTokenDialog = ({ open, onClose, onCreated }: Props) => {
             ))}
           </Select>
 
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-content-subtle">
             This token enrolls one host. After redemption it cannot be reused for a different
             system.
           </p>

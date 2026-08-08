@@ -287,8 +287,7 @@ def upgrade() -> None:
     #   admin     — full access, wheel group, NOPASSWD sudo
     #   maintainer— full access, no OS group by default, NOPASSWD sudo
     #   auditor   — read-only session, no sudo, no exec, no transfer
-    op.execute(
-        """
+    op.execute("""
         INSERT INTO fleet_roles (
             name, description, login_mode, role_account_name,
             allowed_actions_json, session_requires_approval, totp_required,
@@ -325,8 +324,7 @@ def upgrade() -> None:
             NULL,
             true
         );
-        """
-    )
+        """)
 
 
 def downgrade() -> None:

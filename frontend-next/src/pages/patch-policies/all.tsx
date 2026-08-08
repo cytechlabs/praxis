@@ -155,31 +155,31 @@ const PatchPoliciesListPage: React.FC = () => {
         )}
 
         {showCreate && (
-          <div className="mb-4 rounded border border-zinc-800 bg-[#111115] p-4">
-            <h3 className="mb-3 text-sm font-medium text-gray-200">New patch policy</h3>
+          <div className="mb-4 rounded border border-border bg-surface-raised p-4">
+            <h3 className="mb-3 text-sm font-medium text-content">New patch policy</h3>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              <label className="text-xs text-gray-400">
+              <label className="text-xs text-content-muted">
                 Slug
                 <input
-                  className="mt-1 w-full rounded bg-black/40 px-2 py-1 font-mono text-sm text-gray-100"
+                  className="mt-1 w-full rounded bg-black/40 px-2 py-1 font-mono text-sm text-content"
                   value={form.slug}
                   onChange={(e) => setForm({ ...form, slug: e.target.value })}
                   placeholder="weekly-security"
                 />
               </label>
-              <label className="text-xs text-gray-400">
+              <label className="text-xs text-content-muted">
                 Name
                 <input
-                  className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-gray-100"
+                  className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-content"
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                   placeholder="Weekly security"
                 />
               </label>
-              <label className="text-xs text-gray-400">
+              <label className="text-xs text-content-muted">
                 Scope
                 <select
-                  className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-gray-100"
+                  className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-content"
                   value={form.scope_kind}
                   onChange={(e) =>
                     setForm({
@@ -204,14 +204,14 @@ const PatchPoliciesListPage: React.FC = () => {
                 </select>
               </label>
               {requiresPackages && (
-                <label className="text-xs text-gray-400 md:col-span-2">
+                <label className="text-xs text-content-muted md:col-span-2">
                   Packages{' '}
-                  <span className="text-gray-500">
+                  <span className="text-content-subtle">
                     (comma-separated; required for{' '}
                     {SCOPE_KIND_LABELS[form.scope_kind].toLowerCase()})
                   </span>
                   <input
-                    className="mt-1 w-full rounded bg-black/40 px-2 py-1 font-mono text-sm text-gray-100"
+                    className="mt-1 w-full rounded bg-black/40 px-2 py-1 font-mono text-sm text-content"
                     value={form.scope_packages_text}
                     onChange={(e) =>
                       setForm({ ...form, scope_packages_text: e.target.value })
@@ -220,17 +220,17 @@ const PatchPoliciesListPage: React.FC = () => {
                   />
                 </label>
               )}
-              <label className="text-xs text-gray-400 md:col-span-2">
+              <label className="text-xs text-content-muted md:col-span-2">
                 Description (optional)
                 <textarea
-                  className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-gray-100"
+                  className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-content"
                   rows={2}
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
                 />
               </label>
             </div>
-            <p className="mt-3 text-xs text-gray-500">
+            <p className="mt-3 text-xs text-content-subtle">
               {requiresPackages
                 ? 'Allowlist / denylist scopes need at least one package now; you can add more on the detail page.'
                 : 'Reboot policy, windows, approval, cadence, and bindings can be set on the policy detail page after creation.'}
@@ -245,7 +245,7 @@ const PatchPoliciesListPage: React.FC = () => {
               </button>
               <button
                 onClick={() => setShowCreate(false)}
-                className="rounded border border-zinc-700 px-3 py-1.5 text-sm text-gray-300 hover:bg-zinc-800"
+                className="rounded border border-border-strong px-3 py-1.5 text-sm text-content hover:bg-surface-overlay"
               >
                 Cancel
               </button>
@@ -256,16 +256,16 @@ const PatchPoliciesListPage: React.FC = () => {
         {policies === null && !error && <LoadingState label="Loading policies" />}
 
         {policies !== null && policies.length === 0 && (
-          <div className="rounded border border-zinc-800 bg-[#111115] p-6 text-sm text-gray-400">
+          <div className="rounded border border-border bg-surface-raised p-6 text-sm text-content-muted">
             No patch policies yet. Click{' '}
-            <span className="text-gray-200">New policy</span> to create one.
+            <span className="text-content">New policy</span> to create one.
           </div>
         )}
 
         {policies && policies.length > 0 && (
-          <div className="overflow-x-auto rounded border border-zinc-800 bg-[#111115]">
+          <div className="overflow-x-auto rounded border border-border bg-surface-raised">
             <table className="w-full text-sm">
-              <thead className="border-b border-zinc-800 text-left text-gray-400">
+              <thead className="border-b border-border text-left text-content-muted">
                 <tr>
                   <th className="px-4 py-2">Slug / name</th>
                   <th className="px-4 py-2">Scope</th>
@@ -278,9 +278,9 @@ const PatchPoliciesListPage: React.FC = () => {
                   <th className="px-4 py-2 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-800">
+              <tbody className="divide-y divide-border">
                 {policies.map((p) => (
-                  <tr key={p.id} className="hover:bg-zinc-900/40">
+                  <tr key={p.id} className="hover:bg-surface-overlay/40">
                     <td className="px-4 py-2">
                       <Link
                         href={`/patch-policies/${p.id}`}
@@ -288,23 +288,23 @@ const PatchPoliciesListPage: React.FC = () => {
                       >
                         {p.slug}
                       </Link>
-                      <div className="text-xs text-gray-500">{p.name}</div>
+                      <div className="text-xs text-content-subtle">{p.name}</div>
                     </td>
-                    <td className="px-4 py-2 text-gray-300">
+                    <td className="px-4 py-2 text-content">
                       <Badge variant="neutral">
                         {SCOPE_KIND_LABELS[p.scope_kind]}
                       </Badge>
                     </td>
-                    <td className="px-4 py-2 text-gray-300">
+                    <td className="px-4 py-2 text-content">
                       {REBOOT_POLICY_LABELS[p.reboot_policy]}
                     </td>
-                    <td className="px-4 py-2 text-gray-300">
+                    <td className="px-4 py-2 text-content">
                       {p.requires_approval ? `Required (${p.required_approvals})` : '-'}
                     </td>
-                    <td className="px-4 py-2 text-gray-300">
+                    <td className="px-4 py-2 text-content">
                       {ROLLOUT_CADENCE_LABELS[p.rollout_cadence]}
                     </td>
-                    <td className="px-4 py-2 text-gray-300">
+                    <td className="px-4 py-2 text-content">
                       {FAILURE_POLICY_LABELS[p.failure_policy]}
                     </td>
                     <td className="px-4 py-2">
@@ -325,20 +325,20 @@ const PatchPoliciesListPage: React.FC = () => {
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-2 text-gray-400">
+                    <td className="px-4 py-2 text-content-muted">
                       {formatTimestamp(p.created_at)}
                     </td>
                     <td className="px-4 py-2 text-right">
                       <Link
                         href={`/patch-policies/${p.id}`}
-                        className="inline-flex items-center gap-1 rounded p-1 text-gray-400 hover:text-blue-400"
+                        className="inline-flex items-center gap-1 rounded p-1 text-content-muted hover:text-blue-400"
                         title="View detail"
                       >
                         <Eye size={16} />
                       </Link>
                       <button
                         onClick={() => setConfirmDelete(p)}
-                        className="ml-1 inline-flex items-center gap-1 rounded p-1 text-gray-400 hover:text-red-400"
+                        className="ml-1 inline-flex items-center gap-1 rounded p-1 text-content-muted hover:text-red-400"
                         title="Delete"
                       >
                         <Trash2 size={16} />

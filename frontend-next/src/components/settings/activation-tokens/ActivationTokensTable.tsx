@@ -73,9 +73,9 @@ const ActivationTokensTable = ({
   }
 
   return (
-    <div className="overflow-x-auto rounded-md border border-slate-800">
-      <table className="min-w-full divide-y divide-slate-800 text-sm">
-        <thead className="bg-slate-900/40 text-xs uppercase tracking-wider text-slate-400">
+    <div className="overflow-x-auto rounded-md border border-border">
+      <table className="min-w-full divide-y divide-border text-sm">
+        <thead className="bg-surface-raised/40 text-xs uppercase tracking-wider text-content-muted">
           <tr>
             <th className="px-3 py-2 text-left">Name</th>
             <th className="px-3 py-2 text-left">Target</th>
@@ -88,7 +88,7 @@ const ActivationTokensTable = ({
             <th className="px-3 py-2 text-right">Actions</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-800 text-slate-200">
+        <tbody className="divide-y divide-border text-content">
           {tokens.map((t) => {
             const rel = formatRelative(t.ttl_expires_at);
             const expiresAbs = new Date(t.ttl_expires_at).toISOString();
@@ -98,24 +98,24 @@ const ActivationTokensTable = ({
             const groupName = groupNamesById[t.default_group_id] ?? `#${t.default_group_id}`;
             const createdBy = usernamesById[t.created_by_user_id] ?? `user #${t.created_by_user_id}`;
             return (
-              <tr key={t.id} className="hover:bg-slate-900/30">
+              <tr key={t.id} className="hover:bg-surface-overlay/30">
                 <td className="px-3 py-2">{t.name}</td>
                 <td className="px-3 py-2">
                   {t.target_system_hostname ? (
                     <Link
                       href={`/system-management/system/${t.target_system_id}`}
-                      className="text-slate-200 underline-offset-2 hover:underline"
+                      className="text-content underline-offset-2 hover:underline"
                     >
                       {t.target_system_hostname}
                     </Link>
                   ) : (
-                    <span className="text-slate-500">-</span>
+                    <span className="text-content-subtle">-</span>
                   )}
                 </td>
-                <td className="px-3 py-2 text-slate-300">{groupName}</td>
+                <td className="px-3 py-2 text-content">{groupName}</td>
                 <td className="px-3 py-2">
                   {t.default_tag_ids.length === 0 ? (
-                    <span className="text-xs text-slate-500">-</span>
+                    <span className="text-xs text-content-subtle">-</span>
                   ) : (
                     <div className="flex flex-wrap gap-1">
                       {t.default_tag_ids.map((tid) => {
@@ -123,7 +123,7 @@ const ActivationTokensTable = ({
                         return (
                           <span
                             key={tid}
-                            className="inline-flex items-center rounded border border-slate-700 px-1.5 py-0.5 text-xs text-slate-300"
+                            className="inline-flex items-center rounded border border-border-strong px-1.5 py-0.5 text-xs text-content"
                             style={tag?.color ? { borderColor: tag.color } : undefined}
                           >
                             {tag?.name ?? `#${tid}`}
@@ -133,7 +133,7 @@ const ActivationTokensTable = ({
                     </div>
                   )}
                 </td>
-                <td className="px-3 py-2 font-mono text-xs text-slate-400">
+                <td className="px-3 py-2 font-mono text-xs text-content-muted">
                   praxis_{t.token_prefix}…
                 </td>
                 <td className="px-3 py-2">
@@ -142,7 +142,7 @@ const ActivationTokensTable = ({
                 <td className="px-3 py-2" title={expiresAbs}>
                   {expiresPhrase}
                 </td>
-                <td className="px-3 py-2 text-slate-300">{createdBy}</td>
+                <td className="px-3 py-2 text-content">{createdBy}</td>
                 <td className="px-3 py-2 text-right">
                   {t.status === 'active' ? (
                     <Button
@@ -156,7 +156,7 @@ const ActivationTokensTable = ({
                       Revoke
                     </Button>
                   ) : (
-                    <span className="text-xs text-slate-500">-</span>
+                    <span className="text-xs text-content-subtle">-</span>
                   )}
                 </td>
               </tr>
