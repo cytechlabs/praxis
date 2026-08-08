@@ -27,7 +27,7 @@ jobs:
           cache: 'pip'
 
       - name: Install linting tools
-        run: pip install "black==23.12.1" "isort==5.13.2"
+        run: pip install "black==26.5.1" "isort==5.13.2"
 
       - name: Check formatting (black)
         run: black --check .
