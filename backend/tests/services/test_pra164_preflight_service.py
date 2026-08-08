@@ -71,8 +71,6 @@ from app.db.models import (
     MirrorSyncRunPackage,
     Package,
     PackageUpdate,
-    PatchPolicy,
-    PatchUpdatePlanHost,
     PatchUpdatePlanPreflightSnapshot,
     System,
 )

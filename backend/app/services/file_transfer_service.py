@@ -46,7 +46,7 @@ from .access_authorization_service import (
     cert_principal_for_user,
     has_fresh_totp,
 )
-from .broker_client import BrokerClient, BrokerError
+from .broker_client import BrokerClient
 from .ssh_service import (
     SSHConnectionError,
     SSHService,

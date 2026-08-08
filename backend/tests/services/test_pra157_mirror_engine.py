@@ -23,7 +23,6 @@ from app.db.models import MirrorRepo, MirrorSyncRun
 from app.services import mirror_paths
 from app.services.mirror_lock import MIRROR_LOCK_NAMESPACE, claim_mirror_for_sync
 from app.services.mirror_sweep import (
-    ClaimResult,
     _persist_claim_for_mirror,
     _stale_recover_running_runs_for_mirror,
 )

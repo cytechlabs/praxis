@@ -26,7 +26,7 @@ Covers:
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, List
 
 import pytest
 
@@ -36,14 +36,12 @@ from app.db.models import (
     HostFacts,
     Package,
     PackageUpdate,
-    PatchPolicy,
     PatchUpdateExecutionReboot,
     System,
 )
 from app.services import (
     patch_execution_service,
     patch_policy_service,
-    patch_reboot_service,
     patch_reboot_verify_service,
     patch_update_plan_service,
 )
@@ -58,7 +56,6 @@ from app.services.patch_reboot_service import (
     PatchUpdateRebootError,
 )
 from app.services.patch_reboot_verify_service import (
-    DEFAULT_GRACE_SECONDS,
     PAUSE_REASON_REBOOT_VERIFY_THRESHOLD_EXCEEDED,
     VERIFY_REASON_KERNEL_CHANGED,
     VERIFY_REASON_NO_BASELINE,

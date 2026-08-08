@@ -32,7 +32,7 @@ Slice 3 contract verified:
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Callable, Dict, List, Optional
+from typing import Callable, List, Optional
 
 import pytest
 
@@ -60,12 +60,9 @@ from app.services.patch_execution_dispatch_service import (
     dispatch_next_batch,
 )
 from app.services.patch_execution_service import (
-    EXECUTION_HOST_STATE_FAILED,
     EXECUTION_HOST_STATE_PENDING,
-    EXECUTION_HOST_STATE_SUCCEEDED,
     EXECUTION_STATE_FAILED,
     EXECUTION_STATE_PAUSED,
-    EXECUTION_STATE_RUNNING,
     EXECUTION_STATE_SUCCEEDED,
     PatchUpdateExecutionError,
 )

@@ -17,7 +17,6 @@ test_pra153_force_mode_integration.py).
 from __future__ import annotations
 
 from datetime import date
-from typing import Optional
 from unittest.mock import patch
 
 import pytest

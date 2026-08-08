@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from ...core.auth import get_current_user
 from ...core.timeutil import utc_iso
-from ...db.models import FleetOperation, FleetOperationResult, System, User
+from ...db.models import FleetOperation, FleetOperationResult, User
 from ...db.session import get_db
 from ...services.access_authorization_service import scoped_system_ids
 

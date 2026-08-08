@@ -31,7 +31,7 @@ Design rules:
 from __future__ import annotations
 
 import os
-from typing import Iterable, Optional
+from typing import Optional
 
 # Closed set of accepted ``ENVIRONMENT`` values. Both ``test`` and
 # ``testing`` are included because pytest paths in this repo use

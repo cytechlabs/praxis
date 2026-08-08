@@ -55,7 +55,6 @@ from app.services.compliance_probe_runner_service import (
     REASON_UNSUPPORTED_KIND,
     TRUNCATION_SUFFIX,
     WIRE_STDOUT_BYTE_CAP,
-    ProbeOutcome,
     UnsupportedProbeKind,
     _build_file_exists_command,
     _build_file_sha256_command,

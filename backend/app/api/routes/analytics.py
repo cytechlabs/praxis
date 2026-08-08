@@ -15,7 +15,6 @@ from ...core.auth import get_current_user
 from ...db.models import (
     FleetOperation,
     FleetOperationResult,
-    Job,
     JobHistory,
     Notification,
     Package,

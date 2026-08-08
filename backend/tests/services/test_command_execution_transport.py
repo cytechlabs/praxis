@@ -19,10 +19,7 @@ a real SSH server, agent, broker, OR a live database. The focus is:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
 from unittest.mock import MagicMock, patch
-
-import pytest
 
 from app.services.command_execution_service import CommandExecutionService
 from app.services.transport import (
@@ -211,8 +208,6 @@ def test_default_constructor_does_not_persist_broker_client():
     call. Constructor without broker_client must leave the field
     None so the executor builds + tears down a fresh client per call.
     """
-    from app.services.command_execution_service import CommandExecutionService
-
     svc = CommandExecutionService(db=MagicMock())
     assert svc.broker_client is None
 
@@ -220,8 +215,6 @@ def test_default_constructor_does_not_persist_broker_client():
 def test_format_execution_result_includes_transport():
     """API/history responses must surface the transport
     field so UI / dashboards don't have to re-query the model."""
-    from app.services.command_execution_service import CommandExecutionService
-
     svc = CommandExecutionService(db=MagicMock())
     # _format_execution_result queries the db for user + system; mock both.
     svc.db.query.return_value.filter.return_value.first.return_value = MagicMock(

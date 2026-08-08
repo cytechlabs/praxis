@@ -39,7 +39,6 @@ from app.db.models import (
     DistroLifecycle,
     DistroLifecycleOverride,
     Group,
-    HostFacts,
     LifecycleNotificationState,
     SmartGroup,
     SmartGroupMembership,

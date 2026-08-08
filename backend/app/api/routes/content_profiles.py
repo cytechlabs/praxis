@@ -27,7 +27,6 @@ from app.api.schemas.content_profiles import (
     ContentProfileCreate,
     ContentProfileRead,
     ContentProfileUpdate,
-    EffectiveProfileBindingRead,
     EffectiveProfileRead,
     ProfileChannelAdd,
     ProfileGroupSubscriptionAdd,
@@ -40,7 +39,6 @@ from app.api.schemas.content_serve import (
     ProfileDiffRead,
     ProfileManifestRead,
     ResolvedContentRead,
-    ResolvedMirrorEntryRead,
 )
 from app.core.auth import get_current_user, require_role
 from app.db.models import (

@@ -25,7 +25,7 @@ from typing import List
 
 import pytest
 
-from app.db.models import CompliancePolicyEvidence, Credential, Group, Package, System
+from app.db.models import CompliancePolicyEvidence, Credential, Group, System
 from app.services import (
     compliance_evaluation_service,
     compliance_remediation_plan_service,

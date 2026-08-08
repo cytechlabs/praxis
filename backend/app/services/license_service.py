@@ -47,7 +47,6 @@ from app.core.entitlements import (
     LICENSE_STATE_WRONG_INSTANCE,
     PAID_ENTITLEMENTS,
     PAID_TIERS,
-    TIER_FREE,
     edition_snapshot,
     registry,
 )

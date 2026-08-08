@@ -830,6 +830,47 @@ creates an admin with `admin-reserved@example.invalid`, hits
 `/auth/me` and `/users`, asserts both return 200 with the email
 round-tripped unchanged.
 
+## Audit File Sink Confinement
+
+A `file` audit sink appends newline-delimited JSON to local disk. The delivery
+worker writes that path from inside the trust boundary, so every file sink is
+confined to one operator-approved directory:
+
+- `AUDIT_FILE_SINK_ROOT` sets the root. It defaults to
+  `/data/praxis/audit-sinks`, backed by the dedicated `audit_sink_data` named
+  volume that `docker-compose.yml` mounts into the **backend only**. Sink output
+  therefore survives backend recreation, and no other service can read or write
+  it. The production image pre-creates the mount point owned by the non-root
+  runtime user (UID 1000), so the volume keeps that ownership on first mount.
+- Sink targets are **relative paths beneath the root**, for example
+  `exports/audit.jsonl`. Missing intermediate directories are created on first
+  delivery.
+- Absolute paths, empty or directory-only targets, `.` and `..` segments,
+  repeated or trailing separators, and any symlinked path component are
+  rejected. Rejection happens when the sink is created or updated (HTTP 400)
+  and independently on every delivery. Saving a sink also refuses an
+  already-existing symlink in the target's parents or at the target itself, a
+  parent that is not a directory, and an existing target that is not a regular
+  file.
+- Both checks walk the root and the target one component at a time from a
+  descriptor on the filesystem root, with pinned directory descriptors and
+  no-follow opens. Paths are never resolved before the policy is applied and are
+  never reopened by name, so a symlink planted after the sink was saved cannot
+  redirect the write outside the root.
+- The root must be an absolute path with no `.` or `..` segments, must not be
+  the filesystem root, and must not be `/app`, `/boot`, `/dev`, `/etc`,
+  `/proc`, `/root`, `/run`, `/sys`, `/vault`, or anything beneath them. A root
+  that is itself a symlink, or that sits behind a symlinked ancestor, is
+  refused rather than followed. Change the root only together with the compose
+  mount.
+
+Operator action for existing sinks: a `file` sink saved before this
+confinement keeps its stored target and stays visible in **Settings > Audit
+Export**, but its deliveries fail with an explanatory `last_error` and follow
+the normal retry then dead-letter path. Nothing is rewritten or silently
+redirected. Replace the target with a relative path under the root, then retry
+the dead-lettered deliveries.
+
 ## Bundled-vs-External Data Tier Boundary
 
 The bundled `db`, `vault`, and `db_backup` services share a single

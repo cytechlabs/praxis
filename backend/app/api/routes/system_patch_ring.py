@@ -25,7 +25,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.schemas.patch_rings import EffectiveRingRead, PatchRingRead
+from app.api.schemas.patch_rings import EffectiveRingRead
 from app.core.auth import get_current_user, require_system_access
 from app.db.session import get_db
 from app.services import patch_ring_service

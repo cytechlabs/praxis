@@ -23,7 +23,6 @@ import pytest
 from app.db.access_models import HostUserState
 from app.db.models import Credential, Group, System, SystemMetadata
 from app.services import fleet_reconciliation_service as frs
-from app.services import ssh_service
 from app.services.ssh_service import (
     HostCoolingDownError,
     SSHService,

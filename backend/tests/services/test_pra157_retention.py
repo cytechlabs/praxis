@@ -10,8 +10,6 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 
-import pytest
-
 from app.db.models import MirrorRepo, MirrorSyncRun
 from app.services.mirror_retention import apply_retention_for_mirror
 

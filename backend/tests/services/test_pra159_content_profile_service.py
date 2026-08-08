@@ -15,7 +15,6 @@ from datetime import datetime
 import pytest
 
 from app.db.models import (
-    ContentChannel,
     ContentProfile,
     Credential,
     Group,
@@ -31,7 +30,6 @@ from app.db.models import (
 from app.services.content_profile_service import (
     ContentProfileError,
     ContentProfileService,
-    EffectiveProfile,
 )
 
 # ---------------------------------------------------------------------------

@@ -10,7 +10,6 @@ from __future__ import annotations
 import pytest
 from sqlalchemy.exc import IntegrityError
 
-from app.db.models import MirrorUpstreamKey
 from app.services.mirror_gpg import (
     ephemeral_gnupg_home,
     export_public_armored,

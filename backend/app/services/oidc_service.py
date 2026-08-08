@@ -10,7 +10,6 @@ from typing import Any, Dict, Optional
 from urllib.parse import urlencode
 
 from jose import JWTError, jwt
-from jose.utils import base64url_decode
 from sqlalchemy import delete as sa_delete
 from sqlalchemy.orm import Session
 

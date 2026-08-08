@@ -16,14 +16,7 @@ from datetime import datetime
 
 import pytest
 
-from app.db.models import (
-    ContentChannel,
-    ContentChannelRepo,
-    ContentProfile,
-    ContentProfileChannel,
-    MirrorRepo,
-    MirrorSyncRun,
-)
+from app.db.models import ContentChannel, ContentChannelRepo, MirrorRepo, MirrorSyncRun
 
 
 @pytest.fixture

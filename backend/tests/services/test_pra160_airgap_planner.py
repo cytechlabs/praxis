@@ -29,7 +29,6 @@ from app.db.models import (
 from app.services.airgap.planner import (
     AirgapPlanner,
     ConflictingPins,
-    DeltaNotImplemented,
     EmptyProfile,
     HistoricalBytesUnavailable,
     InvalidOverrideRun,

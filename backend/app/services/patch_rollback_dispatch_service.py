@@ -66,7 +66,7 @@ import logging
 import shlex
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy.orm import Session
 
@@ -78,8 +78,6 @@ from ..db.models import (
     PatchUpdateExecution,
     PatchUpdateExecutionRollback,
     PatchUpdateExecutionRollbackApproval,
-    PatchUpdateExecutionRollbackHost,
-    PatchUpdateExecutionRollbackPackage,
     System,
     User,
 )
@@ -89,14 +87,12 @@ from .patch_execution_dispatch_service import (
     ERROR_CODE_PACKAGE_MANAGER_FAILED,
     ERROR_CODE_TRANSPORT_ERROR,
     ERROR_CODE_TRANSPORT_UNAVAILABLE,
-    ERROR_CODE_UNSUPPORTED_FAMILY,
     MAX_OUTPUT_BYTES,
     DispatchCallable,
     DispatchResult,
     default_dispatch,
 )
 from .patch_rollback_service import (
-    ROLLBACK_PACKAGE_STATE_FEASIBLE,
     ROLLBACK_PLAN_STATE_EVALUATED,
     PatchUpdateRollbackError,
     _latest_rollback_approval_link,

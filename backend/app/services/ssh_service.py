@@ -288,48 +288,57 @@ def configure_host_key_policy(
       :class:`SSHConnectionError`.
     - verification required + no verified key -> :class:`HostKeyPromptPolicy`
       (trust-on-first-use, capturing and verifying the first key).
-    - verification disabled -> ``AutoAddPolicy`` (unchanged permissive behavior).
+    - verification explicitly disabled on a *persisted* policy -> ``AutoAddPolicy``
+      (the administrator opt-out; unchanged permissive behavior).
+    - **no policy at all** -> verification required. A missing policy
+      relationship is absent security configuration, not an opt-out, so it fails
+      closed through the same verified-key / first-use-capture path above and can
+      never reach ``AutoAddPolicy``.
     """
-    if (
-        system.ssh_security_policy
-        and system.ssh_security_policy.require_host_key_verification
-    ):
-        known_host = (
-            db.query(SSHHostKey).filter(SSHHostKey.system_id == system.id).first()
-        )
-        if known_host and known_host.verified:
-            # Reject anything that doesn't match the preloaded verified key.
-            client.set_missing_host_key_policy(paramiko.RejectPolicy())
-            try:
-                key_data = base64.b64decode(known_host.public_key)
-                if known_host.key_type == "ssh-rsa":
-                    key = paramiko.RSAKey(data=key_data)
-                elif known_host.key_type == "ssh-ed25519":
-                    key = paramiko.Ed25519Key(data=key_data)
-                elif known_host.key_type == "ssh-dss":
-                    key = paramiko.DSSKey(data=key_data)
-                else:
-                    logger.warning("Unsupported key type: %s", known_host.key_type)
-                    raise SSHConnectionError(
-                        f"Unsupported host key type: {known_host.key_type}"
-                    )
+    security_policy = system.ssh_security_policy
 
-                client.get_host_keys().add(system.hostname, known_host.key_type, key)
-                client.get_host_keys().add(system.ip_address, known_host.key_type, key)
-                logger.info("Added verified host key for %s", system.hostname)
-            except Exception as e:
-                logger.error(
-                    "Error loading host key for %s: %s", system.hostname, str(e)
-                )
-                raise SSHConnectionError(
-                    f"Error loading host key for {system.hostname}: {str(e)}"
-                ) from e
-        else:
-            # No verified host key yet -> TOFU capture on first use.
-            client.set_missing_host_key_policy(HostKeyPromptPolicy(db, system))
-    else:
-        # Host-key verification disabled -> permissive auto-add (unchanged).
+    # Only a persisted policy row that *explicitly* clears the flag may waive
+    # host-key verification. A ``None`` relationship (e.g. a system created
+    # before its default policy was attached) is absent security configuration,
+    # not an administrator opt-out, so it must not be conflated with one; an
+    # unset/NULL flag is likewise not an opt-out. Both fall through to the
+    # verifying path below.
+    if (
+        security_policy is not None
+        and security_policy.require_host_key_verification is False
+    ):
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        return
+
+    known_host = db.query(SSHHostKey).filter(SSHHostKey.system_id == system.id).first()
+    if known_host and known_host.verified:
+        # Reject anything that doesn't match the preloaded verified key.
+        client.set_missing_host_key_policy(paramiko.RejectPolicy())
+        try:
+            key_data = base64.b64decode(known_host.public_key)
+            if known_host.key_type == "ssh-rsa":
+                key = paramiko.RSAKey(data=key_data)
+            elif known_host.key_type == "ssh-ed25519":
+                key = paramiko.Ed25519Key(data=key_data)
+            elif known_host.key_type == "ssh-dss":
+                key = paramiko.DSSKey(data=key_data)
+            else:
+                logger.warning("Unsupported key type: %s", known_host.key_type)
+                raise SSHConnectionError(
+                    f"Unsupported host key type: {known_host.key_type}"
+                )
+
+            client.get_host_keys().add(system.hostname, known_host.key_type, key)
+            client.get_host_keys().add(system.ip_address, known_host.key_type, key)
+            logger.info("Added verified host key for %s", system.hostname)
+        except Exception as e:
+            logger.error("Error loading host key for %s: %s", system.hostname, str(e))
+            raise SSHConnectionError(
+                f"Error loading host key for {system.hostname}: {str(e)}"
+            ) from e
+    else:
+        # No verified host key yet -> TOFU capture on first use.
+        client.set_missing_host_key_policy(HostKeyPromptPolicy(db, system))
 
 
 class SSHService:  # pylint: disable=too-many-instance-attributes

@@ -4,9 +4,7 @@ import hashlib
 import hmac
 import json
 from datetime import datetime, timedelta
-from unittest.mock import MagicMock, patch
-
-import pytest
+from unittest.mock import patch
 
 from app.db.models import AlertConfig, AlertHistory
 from app.services import alert_service

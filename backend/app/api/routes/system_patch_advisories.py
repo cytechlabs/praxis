@@ -29,7 +29,6 @@ from app.api.schemas.patch_advisories import (
     ApplicabilityResultRead,
     HostAdvisoryCountsRead,
     HostAdvisoryRowRead,
-    PatchAdvisoryRead,
 )
 from app.core.auth import get_current_user, require_role, require_system_access
 from app.db.models import HostFacts, PatchAdvisory, System

@@ -1,10 +1,10 @@
 """PRA-151 task #13: broker mTLS handshake + peer cert validation.
 
 Narrow scope: prove the broker process requires mTLS, accepts WSS,
-extracts the peer cert via the websockets-lib transport (NOT Uvicorn —
-see spike_peer_cert_uvicorn.py), validates it against the System
-identity, and rejects invalid cases. No registry, heartbeat, nonce, or
-op flow yet.
+extracts the peer cert via the websockets-lib transport (NOT Uvicorn,
+which does not surface peer certs in ASGI scope), validates it against
+the System identity, and rejects invalid cases. No registry,
+heartbeat, nonce, or op flow yet.
 
 These tests run a real broker on a high port for each test, drive it
 with a real ``websockets`` client presenting various certs (good /
@@ -31,13 +31,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.x509.oid import NameOID
 
-from app.broker.handlers import (
-    REJECT_FINGERPRINT_MISMATCH,
-    REJECT_NOT_ACTIVE,
-    REJECT_SERIAL_MISMATCH,
-    BrokerRejection,
-    tunnel_handler,
-)
+from app.broker.handlers import REJECT_FINGERPRINT_MISMATCH, BrokerRejection
 from app.broker.main import serve
 from app.broker.tls import PeerIdentity
 
@@ -439,7 +433,6 @@ async def test_db_validator_accepts_vault_style_colon_serial(
     Validator must normalise both sides before comparing or every real
     Vault-issued cert is rejected as serial_mismatch."""
     from app.broker.handlers import make_db_validator
-    from app.broker.tls import extract_peer_identity
 
     client_key, client_cert = _mk_client_cert(
         trust_setup["ca_key"], trust_setup["ca_cert"], san_uri="praxis://system/77"

@@ -33,7 +33,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict, dataclass, field
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 # Bumped only on incompatible structural change. Slice #1 ships v1.
 BUNDLE_SCHEMA_VERSION = "v1"

@@ -15,6 +15,7 @@ import TransportBadge from '../../../components/transport/TransportBadge';
 import TransportPreferenceToggle from '../../../components/transport/TransportPreferenceToggle';
 import { fetchTags, createTag, assignTagToSystems, removeTagFromSystems, Tag } from '../../../services/tagService';
 import { apiFetch, formatApiError } from '../../../utils/api';
+import { systemPackageInventoryHref } from '../../../services/packageScope';
 import { ShieldCheck, ShieldOff } from 'lucide-react';
 import Head from 'next/head';
 import { useFormatTimestamp } from '@/context/TimestampPreferencesContext';
@@ -783,7 +784,7 @@ const SystemDetails = () => {
                   <Button variant="secondary" onClick={() => router.push(`/system-management/edit/${system.id}`)}>
                     Edit System
                   </Button>
-                  <Button variant="secondary" onClick={() => router.push(`/system-management/packages/${system.id}`)}>
+                  <Button variant="secondary" onClick={() => router.push(systemPackageInventoryHref(system.id))}>
                     View Packages
                   </Button>
                 </div>

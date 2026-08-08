@@ -18,7 +18,7 @@ import asyncio
 from fastapi.testclient import TestClient
 
 from app.broker.internal_api import build_internal_app
-from app.broker.ops import Operation, OperationState
+from app.broker.ops import OperationState
 from app.broker.registry import AgentRegistry
 
 from .test_internal_ops_api import _FakeManager, _make_op

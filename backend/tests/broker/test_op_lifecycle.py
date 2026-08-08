@@ -33,10 +33,8 @@ from app.broker.ops import (
     NonceExpired,
     NonceInvalid,
     NonceLimitExceeded,
-    Operation,
     OperationManager,
     OperationState,
-    OpNotFound,
 )
 from app.broker.protocol import (
     Channel,
@@ -1029,8 +1027,6 @@ async def test_complete_skips_inbound_sentinel_for_streaming_ops():
 
     # Push some "real" frames into both inboxes to mimic frames the
     # bridge has delivered ahead of op_complete.
-    from app.broker.protocol import Channel, Frame, FrameOp
-
     for op in (streaming_op, accumulator_op):
         op.inbound.put_nowait(
             Frame(op=FrameOp.DATA, channel=Channel.STDOUT, flags=0, payload=b"x")

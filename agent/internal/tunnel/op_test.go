@@ -114,11 +114,28 @@ type dualBroker struct {
 	tunnelScript func(t *testing.T, ctx context.Context, c *websocket.Conn, hello map[string]any)
 	opScript     func(t *testing.T, ctx context.Context, c *websocket.Conn, r *http.Request)
 
+	// correlateOps replaces opScript on /agent/op with a handler that
+	// reads the leading op_attach itself, so the nonce presented in the
+	// request header and the operation ID announced on that same
+	// connection are recorded as one pair. Tests that assert nonce
+	// routing set this instead of supplying an opScript.
+	correlateOps bool
+
 	tunnelConns atomic.Int32
 	opConns     atomic.Int32
 
-	mu             sync.Mutex
-	noncesAccepted []string // for assertions in tests that care
+	mu        sync.Mutex
+	opRecords []opConnRecord
+}
+
+// opConnRecord is one accepted /agent/op connection: the nonce the
+// agent presented in X-Praxis-Op-Nonce paired with the operation ID it
+// announced in op_attach on that same connection. err is set instead of
+// opID when the connection never produced a usable op_attach.
+type opConnRecord struct {
+	nonce string
+	opID  int
+	err   error
 }
 
 func (d *dualBroker) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -156,9 +173,6 @@ func (d *dualBroker) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	case "/agent/op":
 		nonce := r.Header.Get("X-Praxis-Op-Nonce")
-		d.mu.Lock()
-		d.noncesAccepted = append(d.noncesAccepted, nonce)
-		d.mu.Unlock()
 		c, err := websocket.Accept(w, r, &websocket.AcceptOptions{InsecureSkipVerify: true})
 		if err != nil {
 			return
@@ -166,9 +180,12 @@ func (d *dualBroker) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		c.SetReadLimit(int64(DefaultMaxFramePayload + FrameHeaderSize + 1024))
 		defer c.CloseNow() //nolint:errcheck
 		d.opConns.Add(1)
-		if d.opScript != nil {
+		switch {
+		case d.correlateOps:
+			d.serveCorrelatedOp(r.Context(), c, nonce)
+		case d.opScript != nil:
 			d.opScript(d.t, r.Context(), c, r)
-		} else {
+		default:
 			<-r.Context().Done()
 		}
 	default:
@@ -176,12 +193,107 @@ func (d *dualBroker) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (d *dualBroker) acceptedNonces() []string {
+// serveCorrelatedOp records the nonce-to-operation-ID relationship for
+// one accepted /agent/op connection, then drains frames until the agent
+// closes the stream. Problems are recorded rather than reported from
+// this goroutine so the owning test decides how and when to fail.
+func (d *dualBroker) serveCorrelatedOp(ctx context.Context, c *websocket.Conn, nonce string) {
+	mt, raw, err := c.Read(ctx)
+	if err != nil {
+		d.recordOpConn(opConnRecord{nonce: nonce, err: fmt.Errorf("read op_attach: %w", err)})
+		return
+	}
+	if mt != websocket.MessageText {
+		d.recordOpConn(opConnRecord{nonce: nonce, err: fmt.Errorf("first op message was %v, want text op_attach", mt)})
+		return
+	}
+	var attach map[string]any
+	if err := json.Unmarshal(raw, &attach); err != nil {
+		d.recordOpConn(opConnRecord{nonce: nonce, err: fmt.Errorf("decode op_attach: %w", err)})
+		return
+	}
+	if msgType, _ := attach["type"].(string); msgType != "op_attach" {
+		d.recordOpConn(opConnRecord{nonce: nonce, err: fmt.Errorf("first op message type %q, want op_attach", msgType)})
+		return
+	}
+	opID, ok := attach["operation_id"].(float64)
+	if !ok {
+		d.recordOpConn(opConnRecord{nonce: nonce, err: fmt.Errorf("op_attach operation_id %v is not a number", attach["operation_id"])})
+		return
+	}
+	d.recordOpConn(opConnRecord{nonce: nonce, opID: int(opID)})
+	drainFramesUntil(ctx, c, FrameOpClose)
+}
+
+// recordOpConn appends one observation under the harness mutex so
+// concurrent op connections cannot race each other.
+func (d *dualBroker) recordOpConn(rec opConnRecord) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	cp := make([]string, len(d.noncesAccepted))
-	copy(cp, d.noncesAccepted)
-	return cp
+	d.opRecords = append(d.opRecords, rec)
+}
+
+// opConnRecords returns a snapshot of the observations recorded so far.
+func (d *dualBroker) opConnRecords() []opConnRecord {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	return append([]opConnRecord(nil), d.opRecords...)
+}
+
+// waitForOpConnRecords polls until at least n op connections have been
+// recorded. op_complete can reach the control WSS before the broker
+// goroutine has finished reading op_attach, so tests wait on the
+// records themselves instead of assuming an arrival order.
+func waitForOpConnRecords(t *testing.T, d *dualBroker, n int, timeout time.Duration) []opConnRecord {
+	t.Helper()
+	deadline := time.Now().Add(timeout)
+	for {
+		recs := d.opConnRecords()
+		if len(recs) >= n {
+			return recs
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("recorded %d op connection(s); want %d (records=%v)", len(recs), n, recs)
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+}
+
+// assertOpConnPairings checks that the accepted op connections carry
+// exactly the wanted nonce-to-operation-ID relationships. It compares
+// pairs, not the set of nonces: two nonces swapped between operations
+// produce the same set but must still fail here. Ordering is not part
+// of the comparison, so parallel connections may arrive either way
+// round.
+func assertOpConnPairings(t *testing.T, recs []opConnRecord, want map[string]int) {
+	t.Helper()
+	got := make(map[string]int, len(recs))
+	for _, rec := range recs {
+		if rec.err != nil {
+			t.Errorf("op connection with nonce %q produced no usable op_attach: %v", rec.nonce, rec.err)
+			continue
+		}
+		if prev, dup := got[rec.nonce]; dup {
+			t.Errorf("nonce %q was accepted on two op connections (operation %d then %d)", rec.nonce, prev, rec.opID)
+			continue
+		}
+		got[rec.nonce] = rec.opID
+	}
+	for nonce, wantID := range want {
+		gotID, ok := got[nonce]
+		if !ok {
+			t.Errorf("no op connection presented nonce %q; recorded pairings=%v", nonce, got)
+			continue
+		}
+		if gotID != wantID {
+			t.Errorf("nonce %q attached to operation %d; want operation %d", nonce, gotID, wantID)
+		}
+	}
+	for nonce, gotID := range got {
+		if _, ok := want[nonce]; !ok {
+			t.Errorf("unexpected op connection: nonce %q attached to operation %d", nonce, gotID)
+		}
+	}
 }
 
 // startDualBroker mirrors startBroker (tunnel_test.go) but routes
@@ -220,8 +332,13 @@ func startDualBroker(t *testing.T, h *dualBroker) Config {
 	}
 }
 
-// drive runs Run with sub-second tunables, lets the test inspect the
-// async behavior, and cancels at the end.
+// driveAgent runs Run with sub-second tunables, lets the test inspect
+// the async behavior, and cancels at the end.
+//
+// Cancelling only asks Run to stop. Until it actually returns it keeps
+// reading package-level state that other tests in this package
+// override, so cleanup waits for the goroutine to finish instead of
+// letting it outlive the test that started it.
 func driveAgent(t *testing.T, cfg Config, opts RunOptions) (cancel func()) {
 	t.Helper()
 	if opts.Logger == nil {
@@ -231,7 +348,19 @@ func driveAgent(t *testing.T, cfg Config, opts RunOptions) (cancel func()) {
 		opts.OpPairTimeout = 1 * time.Second
 	}
 	ctx, c := context.WithCancel(context.Background())
-	go func() { _ = Run(ctx, cfg, opts) }()
+	stopped := make(chan struct{})
+	go func() {
+		defer close(stopped)
+		_ = Run(ctx, cfg, opts)
+	}()
+	t.Cleanup(func() {
+		c()
+		select {
+		case <-stopped:
+		case <-time.After(10 * time.Second):
+			t.Errorf("agent Run did not exit after cancel")
+		}
+	})
 	return c
 }
 
@@ -443,10 +572,12 @@ func TestOpHalfStateTimesOut(t *testing.T) {
 }
 
 func TestOpDuplicateNonceIgnored(t *testing.T) {
-	// Two op_nonce messages for the same operation_id should NOT
-	// start two goroutines / two op WSS dials.
+	// Repeated op_request / op_nonce for one operation_id must not start
+	// a second goroutine or a second op WSS, and a replacement nonce for
+	// an already-active operation must never reach /agent/op.
 	d := &dualBroker{
-		t: t,
+		t:            t,
+		correlateOps: true,
 		tunnelScript: func(t *testing.T, ctx context.Context, c *websocket.Conn, hello map[string]any) {
 			req, _ := json.Marshal(map[string]any{
 				"type":         "op_request",
@@ -457,17 +588,25 @@ func TestOpDuplicateNonceIgnored(t *testing.T) {
 			nonce, _ := json.Marshal(map[string]any{
 				"type":         "op_nonce",
 				"operation_id": 400,
-				"nonce":        "first",
+				"nonce":        "n400",
 			})
 			_ = c.Write(ctx, websocket.MessageText, nonce)
-			// Spam duplicates of both messages — should all be no-ops.
+			// Spam duplicates of both messages. All should be no-ops.
 			for i := 0; i < 5; i++ {
 				_ = c.Write(ctx, websocket.MessageText, req)
 				_ = c.Write(ctx, websocket.MessageText, nonce)
 			}
+			// A different nonce for the same operation must be ignored
+			// too. If it were honored the agent would dial /agent/op
+			// again and present it there.
+			replacement, _ := json.Marshal(map[string]any{
+				"type":         "op_nonce",
+				"operation_id": 400,
+				"nonce":        "n400-replacement",
+			})
+			_ = c.Write(ctx, websocket.MessageText, replacement)
 			<-ctx.Done()
 		},
-		opScript: stubOpScript(t, FrameOpClose),
 	}
 	cfg := startDualBroker(t, d)
 	cancel := driveAgent(t, cfg, RunOptions{
@@ -476,12 +615,16 @@ func TestOpDuplicateNonceIgnored(t *testing.T) {
 	})
 	defer cancel()
 
-	// Wait long enough for any duplicate dials to manifest, then
-	// assert exactly one op WSS happened.
+	// Wait for the one legitimate connection, then keep waiting so a
+	// duplicate dial has time to manifest before the assertions run.
+	waitForOpConnRecords(t, d, 1, 3*time.Second)
 	time.Sleep(800 * time.Millisecond)
 	if got := d.opConns.Load(); got != 1 {
 		t.Fatalf("expected exactly 1 op WSS, got %d (duplicates were started)", got)
 	}
+	// Connection count alone would not prove the accepted connection was
+	// the intended one, so pin the surviving pairing exactly.
+	assertOpConnPairings(t, d.opConnRecords(), map[string]int{"n400": 400})
 }
 
 // ---------------------------------------------------------------------------
@@ -560,23 +703,10 @@ func TestOpDialFailureReportsError(t *testing.T) {
 			_ = c.Write(ctx, websocket.MessageText, nonce)
 			drainOpComplete(ctx, c, opComplete)
 		},
-		// Reject all /agent/op connections by replacing the script
-		// with one that closes immediately before completing the
-		// websocket handshake.
-		opScript: func(t *testing.T, ctx context.Context, c *websocket.Conn, r *http.Request) {
-			_ = c.Close(websocket.StatusInternalError, "no")
-		},
 	}
-	// Override the broker URL so the dial actually succeeds at the
-	// transport layer; the broker rejects after Accept. Easiest to
-	// surface a clear "op_dial_failed" is to point the agent at a
-	// dead port instead — but then the tunnel itself can't connect.
-	// Compromise: leave the broker alive but make /agent/op return a
-	// non-WSS HTTP 500 by replacing the handler. Use a custom server
-	// for that.
-	// Simplest version that reliably reproduces a dial failure:
-	// /agent/op returns 500 Internal Server Error so websocket.Dial
-	// fails its upgrade.
+	// The control WSS stays healthy while /agent/op answers 500, so the
+	// websocket upgrade for the operation fails and the agent has to
+	// report op_dial_failed.
 	cfg, killOpEndpoint := startDualBrokerWithDeadOp(t, d)
 	defer killOpEndpoint()
 	cancel := driveAgent(t, cfg, RunOptions{
@@ -714,7 +844,8 @@ func TestOpBadInboundFrameReportsBadFrame(t *testing.T) {
 func TestOpTwoParallelOpsCompleteIndependently(t *testing.T) {
 	completes := make(chan map[string]any, 4)
 	d := &dualBroker{
-		t: t,
+		t:            t,
+		correlateOps: true,
 		tunnelScript: func(t *testing.T, ctx context.Context, c *websocket.Conn, hello map[string]any) {
 			for _, opID := range []int{901, 902} {
 				req, _ := json.Marshal(map[string]any{
@@ -730,7 +861,6 @@ func TestOpTwoParallelOpsCompleteIndependently(t *testing.T) {
 			}
 			drainOpComplete(ctx, c, completes)
 		},
-		opScript: stubOpScript(t, FrameOpClose),
 	}
 	cfg := startDualBroker(t, d)
 	cancel := driveAgent(t, cfg, RunOptions{
@@ -755,6 +885,12 @@ func TestOpTwoParallelOpsCompleteIndependently(t *testing.T) {
 			t.Fatalf("op=%d outcome=%q want success", id, seen[id])
 		}
 	}
+
+	// Each operation must have carried its own nonce onto its own op
+	// connection. A set of accepted nonces would still match if the two
+	// were swapped, so assert the pairing itself.
+	recs := waitForOpConnRecords(t, d, 2, 3*time.Second)
+	assertOpConnPairings(t, recs, map[string]int{"n901": 901, "n902": 902})
 }
 
 // startDualBrokerWithDeadOp serves /agent/tunnel via the supplied
@@ -815,21 +951,27 @@ func stubOpScript(t *testing.T, until FrameOp) func(t *testing.T, ctx context.Co
 		if err != nil {
 			return
 		}
-		for ctx.Err() == nil {
-			mt, raw, err := c.Read(ctx)
-			if err != nil {
-				return
-			}
-			if mt != websocket.MessageBinary {
-				continue
-			}
-			f, err := DecodeFrame(raw, DefaultMaxFramePayload)
-			if err != nil {
-				return
-			}
-			if f.Op == until {
-				return
-			}
+		drainFramesUntil(ctx, c, until)
+	}
+}
+
+// drainFramesUntil reads binary frames until one carrying until arrives,
+// the connection fails, or ctx ends.
+func drainFramesUntil(ctx context.Context, c *websocket.Conn, until FrameOp) {
+	for ctx.Err() == nil {
+		mt, raw, err := c.Read(ctx)
+		if err != nil {
+			return
+		}
+		if mt != websocket.MessageBinary {
+			continue
+		}
+		f, err := DecodeFrame(raw, DefaultMaxFramePayload)
+		if err != nil {
+			return
+		}
+		if f.Op == until {
+			return
 		}
 	}
 }

@@ -14,7 +14,6 @@ Covers the six endpoints under ``/patch/update-executions``:
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
 
 import pytest
 

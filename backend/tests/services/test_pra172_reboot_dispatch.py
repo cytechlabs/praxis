@@ -41,7 +41,6 @@ from app.db.models import (
     MaintenanceWindow,
     Package,
     PackageUpdate,
-    PatchPolicy,
     PatchUpdateExecutionReboot,
     System,
 )
@@ -49,7 +48,6 @@ from app.services import (
     patch_execution_service,
     patch_policy_service,
     patch_reboot_dispatch_service,
-    patch_reboot_service,
     patch_update_plan_service,
 )
 from app.services.patch_reboot_dispatch_service import (
@@ -726,7 +724,6 @@ def test_default_reboot_dispatch_uses_ssh_transport_directly(
     generic ``get_transport`` factory (which can select
     :class:`AgentTransport` for ``transport_preference=agent`` or
     ``auto``-with-healthy-tunnel)."""
-    from app.services import patch_reboot_dispatch_service as _mod
     from app.services.transport import ssh as _ssh_mod
 
     # Build a system whose transport_preference would prefer the
@@ -759,7 +756,9 @@ def test_default_reboot_dispatch_uses_ssh_transport_directly(
         def close_all_connections(self):
             return None
 
-    monkeypatch.setattr(_mod, "SSHService", _FakeSSHService, raising=False)
+    monkeypatch.setattr(
+        patch_reboot_dispatch_service, "SSHService", _FakeSSHService, raising=False
+    )
     # patch_reboot_dispatch_service imports SSHService lazily inside
     # default_reboot_dispatch, so monkeypatch the source module too.
     monkeypatch.setattr("app.services.ssh_service.SSHService", _FakeSSHService)
@@ -772,7 +771,9 @@ def test_default_reboot_dispatch_uses_ssh_transport_directly(
 
     monkeypatch.setattr(_ssh_mod.SSHTransport, "run_command", _fake_run_command)
 
-    result = _mod.default_reboot_dispatch(db, h, list(_mod.DEFAULT_REBOOT_COMMAND))
+    result = patch_reboot_dispatch_service.default_reboot_dispatch(
+        db, h, list(patch_reboot_dispatch_service.DEFAULT_REBOOT_COMMAND)
+    )
     assert called["get_transport"] is False
     assert result.exit_signal_kind == EXIT_SIGNAL_EXIT_ZERO
     assert result.transport_name == "ssh"
@@ -842,7 +843,6 @@ def test_transport_error_maps_to_transport_error_failure(db, admin_user, host_fa
     ``TransportError``; the result must be the failure mapping,
     not the success mapping.
     """
-    from app.services import patch_reboot_dispatch_service as _mod
     from app.services.transport import ssh as _ssh_mod
     from app.services.transport.base import TransportError
 
@@ -869,7 +869,9 @@ def test_transport_error_maps_to_transport_error_failure(db, admin_user, host_fa
     with _mock.patch(
         "app.services.ssh_service.SSHService", _FakeSSHService
     ), _mock.patch.object(_ssh_mod.SSHTransport, "run_command", _raise_transport_error):
-        result = _mod.default_reboot_dispatch(db, h, list(_mod.DEFAULT_REBOOT_COMMAND))
+        result = patch_reboot_dispatch_service.default_reboot_dispatch(
+            db, h, list(patch_reboot_dispatch_service.DEFAULT_REBOOT_COMMAND)
+        )
 
     assert result.exit_signal_kind == EXIT_SIGNAL_TRANSPORT_ERROR
     assert result.error == "transport_error"

@@ -23,7 +23,7 @@ Covers:
 from __future__ import annotations
 
 import json
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Callable, List, Optional
 
 import pytest
@@ -54,7 +54,6 @@ from app.services.patch_reboot_service import (
     AUDIT_REBOOT_QUEUED,
     AUDIT_REBOOT_SCHEDULED,
     AUDIT_REBOOT_SKIPPED,
-    REBOOT_STATE_NOT_REQUIRED,
     REBOOT_STATE_PENDING,
     REBOOT_STATE_SCHEDULED,
     REBOOT_STATE_SKIPPED,

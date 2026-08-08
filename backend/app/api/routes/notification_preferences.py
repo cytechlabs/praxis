@@ -4,7 +4,7 @@ API routes for per-user notification preferences (PRA-100).
 
 import json
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel, validator
 from sqlalchemy.orm import Session
 

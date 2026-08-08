@@ -28,8 +28,6 @@ from datetime import datetime, timedelta
 import pytest
 
 from app.db.models import (
-    CompliancePolicy,
-    CompliancePolicyCheck,
     CompliancePolicyEvidence,
     Credential,
     Group,
@@ -858,13 +856,11 @@ def test_evidence_module_not_importing_probe_runners():
     """Hard boundary: the evaluation service module's namespace must
     not surface a probe-runner symbol. Cheap rename-resistant guard.
     """
-    import app.services.compliance_evaluation_service as svc  # noqa: WPS433
-
     forbidden = {
         "subprocess",
         "paramiko",
         "ssh_service",
         "ssh_facts_collector_service",
     }
-    leaks = forbidden & set(dir(svc))
+    leaks = forbidden & set(dir(compliance_evaluation_service))
     assert not leaks, f"evaluation module leaked probe runners: {leaks}"

@@ -12,8 +12,6 @@ import json
 import logging
 import zipfile
 
-import pytest
-
 from app.core.log_buffer import install_log_buffer
 from app.db.access_models import AuditEvent
 from app.services import diagnostics_service as diag
@@ -112,6 +110,42 @@ def test_secrets_in_logs_are_redacted(db, client, admin_user):
     assert "hvs.CAESIBlSuperSecretToken" not in logs
     assert "hunter2" not in logs
     assert "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ4In0.sig" not in logs
+
+
+def test_compound_and_quoted_secrets_in_logs_are_redacted(db, client, admin_user):
+    """PRA-369: the export boundary, not just the matcher.
+
+    Third-party and application log records reach the bundle verbatim through the
+    root log buffer, so compound keys (`agent_token`) and single-quoted mapping
+    forms (`{'token': ...}`) have to be gone from the generated artifact itself.
+    """
+    install_log_buffer()
+    logging.getLogger("pra369.test").error(
+        "compound-redaction-boundary-marker agent_token=abcdef123456 "
+        "totp_secret=JBSWY3DPEHPK3PXP "
+        "my_password=hunter2 mapping={'token': 'abc123def'} "
+        'quoted password="spaced secret value" host=db'
+    )
+    _login(client, admin_user)
+    res = client.post("/diagnostics/bundle?time_range=24h")
+    assert res.status_code == 200
+    logs = _open_zip(res.content).read("logs/backend.log").decode()
+
+    # A marker unique to THIS record, so the absence assertions below can only be
+    # satisfied by redaction and never by the record having been dropped or by an
+    # unrelated log line happening to contain a common word.
+    assert "compound-redaction-boundary-marker" in logs
+    for raw in (
+        "abcdef123456",
+        "JBSWY3DPEHPK3PXP",
+        "hunter2",
+        "abc123def",
+        "spaced secret value",
+    ):
+        assert raw not in logs, f"raw secret {raw!r} leaked into the bundle"
+    assert "«redacted»" in logs
+    # Non-sensitive neighboring fields still survive the pass.
+    assert "host=db" in logs
 
 
 def test_config_summary_has_no_secrets(db, client, admin_user, monkeypatch):

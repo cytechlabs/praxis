@@ -24,6 +24,7 @@ These tests prove:
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import os
 import threading
@@ -59,6 +60,29 @@ class _FakeStream:
 
     async def close(self):
         self.closed = True
+
+
+_TRIPWIRE_MESSAGE = "body must not be consumed when declared size > cap"
+
+
+class _TripwireChunks:
+    """Async iterable that fails the test if anything consumes the body.
+
+    ``_download_via_agent`` consumes ``stream.chunks`` with ``async for``, so the
+    tripwire has to implement the async iterator protocol; a plain generator
+    would raise ``TypeError`` on the wrong contract instead of the intended
+    assertion, and would never record the consumption flag.
+    """
+
+    def __init__(self, consumed: dict):
+        self._consumed = consumed
+
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        self._consumed["iterated"] = True
+        raise AssertionError(_TRIPWIRE_MESSAGE)
 
 
 def _run_agent_download(system, chunks, *, size=0, cap=None, capture_created=None):
@@ -143,20 +167,12 @@ def test_declared_over_cap_rejected_before_consuming():
     system = _SystemStub()
 
     consumed = {"iterated": False}
-
-    def _tripwire():
-        # A generator whose first iteration would explode — proves we bail before
-        # touching the body.
-        consumed["iterated"] = True
-        raise AssertionError("body must not be consumed when declared size > cap")
-        yield b""  # pragma: no cover - makes this a generator
-
     finish = MagicMock()
 
     async def _open_fg(path):
         stream = _FakeStream([], size=0)
-        # Replace chunks with the tripwire generator; declare an oversize.
-        stream.chunks = _tripwire()
+        # Replace chunks with the tripwire iterable; declare an oversize.
+        stream.chunks = _TripwireChunks(consumed)
         stream.size = 5_000
         return stream
 
@@ -179,6 +195,23 @@ def test_declared_over_cap_rejected_before_consuming():
     assert kwargs["size_bytes"] == 0
     assert kwargs["sha256"] is None
     assert "exceeded max size" in (kwargs["error_message"] or "")
+
+
+def test_declared_over_cap_tripwire_fires_when_consumed():
+    """Companion to the test above: prove the tripwire is live. Iterated with the
+    same ``async for`` the production spool loop uses, it records consumption and
+    raises, so a passing declared-oversize test really means the body was skipped.
+    """
+    consumed = {"iterated": False}
+    tripwire = _TripwireChunks(consumed)
+
+    async def _drain():
+        async for _ in tripwire:
+            pass
+
+    with pytest.raises(AssertionError, match="must not be consumed"):
+        asyncio.run(_drain())
+    assert consumed["iterated"] is True
 
 
 def test_actual_over_cap_rejected_while_consuming():

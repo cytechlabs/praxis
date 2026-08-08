@@ -66,11 +66,9 @@ from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 from sqlalchemy.orm import Session
 
 from ..db.models import (
-    PatchPolicy,
     PatchUpdateExecution,
     PatchUpdateExecutionHost,
     PatchUpdateExecutionHostPackage,
-    PatchUpdatePlanHost,
     PatchUpdatePlanPreflightSnapshot,
     PatchUpdatePlanSelectedPackage,
     System,
@@ -78,7 +76,6 @@ from ..db.models import (
 )
 from .audit_event_service import safe_emit
 from .patch_execution_service import (  # noqa: F401  (re-export friendliness)
-    AUDIT_EXECUTION_CANCELED,
     AUDIT_EXECUTION_PAUSED,
     EXECUTION_HOST_STATE_CANCELED,
     EXECUTION_HOST_STATE_FAILED,

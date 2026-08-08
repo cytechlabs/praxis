@@ -53,7 +53,6 @@ hardcoded to `SSHService` · **Agent-push** = agent originates the data.
 | Capability | Transport | Priv? | Push/Pull | 1.0 claim | Code path |
 |---|---|---|---|---|---|
 | Command execution (`/execute`) | **Either** | No | Pull | ✅ agent or SSH | `command_execution_service.py` → `get_transport` → `run_command` |
-| Legacy `/ssh/execute` | SSH-only | No | Pull | ✅ SSH | `routes/ssh.py` → `ssh_service.execute_command` |
 | File download / upload | **Either** | No | Pull | ✅ agent or SSH | `file_transfer_service.py` (`_resolve_file_transport`) |
 | Directory browse (ls/stat/mkdir/unlink) | **SSH-only** | No | Pull | ⚠️ SSH-only; force-agent → `transport_unsupported` | `file_transfer_service._open_sftp` (paramiko) |
 | Facts refresh (on-demand) | **Either** | No | Pull | ✅ agent or SSH (agent gated on `facts` capability) | `routes/facts.py` (agent inline / SSH fallback) |

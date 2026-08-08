@@ -88,8 +88,6 @@ from .compliance_service import utc_iso
 from .patch_execution_dispatch_service import (
     ERROR_CODE_PACKAGE_MANAGER_FAILED,
     ERROR_CODE_TRANSPORT_ERROR,
-    ERROR_CODE_TRANSPORT_UNAVAILABLE,
-    ERROR_CODE_UNSUPPORTED_FAMILY,
     MAX_OUTPUT_BYTES,
     DispatchCallable,
     DispatchResult,

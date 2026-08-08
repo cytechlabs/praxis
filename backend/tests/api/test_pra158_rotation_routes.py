@@ -31,7 +31,6 @@ from app.db.models import (
     System,
 )
 from app.services import mirror_signing_key_service as svc_module
-from app.services.mirror_signing_key_service import vault_path_for
 
 _ACTIVE_FPR = "ABCDEF0123456789ABCDEF0123456789ABCDEF01"
 _PENDING_FPR = "B" * 40

@@ -43,7 +43,7 @@ import logging
 import re
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any, Dict, Iterable, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set
 
 from sqlalchemy import and_, exists, func, not_, or_, select
 from sqlalchemy.orm import Session

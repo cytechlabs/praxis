@@ -9,7 +9,6 @@ package manager / SSH / agent is invoked in CI.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
 
 import pytest
 

@@ -33,7 +33,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from sqlalchemy.orm import Session
 
-from ..db.models import ReportRun, ReportSchedule, User
+from ..db.models import ReportRun, ReportSchedule
 from . import report_run_service
 
 logger = logging.getLogger(__name__)

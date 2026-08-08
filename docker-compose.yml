@@ -59,6 +59,10 @@ services:
       - vault_data:/vault/data:ro
       - recordings_data:/data/praxis/recordings
       - mirror_data:/data/praxis/mirrors
+      # Local-file audit sinks write only beneath this mount. Dedicated volume,
+      # mounted into the backend alone, so sink output survives backend
+      # recreation without widening any other service's write surface.
+      - audit_sink_data:/data/praxis/audit-sinks
     environment:
       # DATABASE_URL defaults to the bundled db service. Override to point
       # at an external Postgres when running without the bundled profile.
@@ -78,6 +82,10 @@ services:
       - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@praxis.dev}
       - CORS_ORIGINS=${CORS_ORIGINS:-https://localhost,http://frontend:3000}
       - TRUSTED_HOSTS=${TRUSTED_HOSTS:-localhost,127.0.0.1,backend}
+      # Root directory every local-file audit sink is confined to. Sink targets
+      # are relative paths beneath it; absolute paths, traversal, and symlinked
+      # components are rejected. Change it only together with the mount above.
+      - AUDIT_FILE_SINK_ROOT=${AUDIT_FILE_SINK_ROOT:-/data/praxis/audit-sinks}
       # Backend → broker internal HTTP: tunnel health, op
       # dispatch. Reached via the docker network only —
       # the broker doesn't publish 8444 to the host.
@@ -244,6 +252,9 @@ volumes:
   vault_recovery:
   recordings_data:
   mirror_data:
+  # Local-file audit sink output. Mounted ONLY into the backend, never into
+  # agent-broker or any other service.
+  audit_sink_data:
   # Prometheus TSDB (infrastructure telemetry). Named so control-plane
   # metrics survive normal container recreation; not the paid Command Metrics store.
   prometheus_data:

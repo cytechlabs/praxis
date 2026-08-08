@@ -1,6 +1,6 @@
 """Just-in-time access request endpoints (PRA-139)."""
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from pydantic import BaseModel, Field, validator

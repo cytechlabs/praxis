@@ -31,9 +31,10 @@ import logging
 import os
 import threading
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
-from typing import Iterator, Optional, Tuple
+from typing import Any, Iterator, Optional, Tuple
 
 from fastapi import APIRouter, HTTPException
 from fastapi import Path as PathParam
@@ -113,8 +114,27 @@ _ALLOWED_FILENAMES = frozenset({"agent.tar.gz", "agent.tar.gz.sha256"})
 
 _RELEASE_VERSION = "v0.0.0-rc1"
 _RELEASE_TAG = f"agent-{_RELEASE_VERSION}"
+
+# The release download endpoint answers on the release origin and hands
+# back a redirect to a short-lived object URL on a GitHub asset host.
+# Only those exact hosts are followed. A "*.githubusercontent.com" rule
+# is deliberately avoided because sibling subdomains on that domain serve
+# user-controlled raw, gist, and Pages content.
+_RELEASE_ORIGIN_HOST = "github.com"
+_RELEASE_ORIGIN = f"https://{_RELEASE_ORIGIN_HOST}"
+_RELEASE_ASSET_HOSTS = frozenset(
+    {
+        # Object host used by the current release-asset redirect.
+        "release-assets.githubusercontent.com",
+        # Object host still used by older release-asset redirects.
+        "objects.githubusercontent.com",
+    }
+)
+_ALLOWED_HOP_HOSTS = frozenset({_RELEASE_ORIGIN_HOST}) | _RELEASE_ASSET_HOSTS
+_MAX_REDIRECT_HOPS = 4
+
 _GH_RELEASE_BASE = (
-    f"https://github.com/cytechlabs/praxis/releases/download/{_RELEASE_TAG}"
+    f"{_RELEASE_ORIGIN}/cytechlabs/praxis/releases/download/{_RELEASE_TAG}"
 )
 _DEFAULT_ARTIFACT_DIR = "/opt/praxis/agent-artifacts"
 
@@ -149,12 +169,160 @@ def _stream_local(path: Path) -> Iterator[bytes]:
             yield chunk
 
 
-def _gh_request(asset_name: str) -> "urllib.request.Request":
-    token = os.getenv("GITHUB_TOKEN")
-    headers = {"Accept": "application/octet-stream"}
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
-    return urllib.request.Request(f"{_GH_RELEASE_BASE}/{asset_name}", headers=headers)
+class _RedirectPolicyError(Exception):
+    """An upstream hop violated the artifact redirect policy."""
+
+
+def _hop_label(url: str) -> str:
+    """Scheme and host of a URL, safe to log. Release object URLs carry
+    signed query parameters, so a full URL is never logged."""
+    try:
+        parts = urllib.parse.urlsplit(url)
+        return f"{parts.scheme or 'unknown'}://{parts.hostname or 'unknown'}"
+    except ValueError:
+        return "unparsable"
+
+
+def _validate_hop(url: str) -> str:
+    """Return the origin of a permitted hop.
+
+    Fails closed on anything that is not an exact allow-listed release
+    host reached over HTTPS without embedded credentials."""
+    try:
+        parts = urllib.parse.urlsplit(url)
+        host = parts.hostname
+        port = parts.port
+        has_userinfo = bool(parts.username or parts.password)
+    except ValueError as exc:
+        raise _RedirectPolicyError("malformed hop target") from exc
+    if parts.scheme != "https":
+        raise _RedirectPolicyError(f"non-https hop {_hop_label(url)}")
+    if has_userinfo:
+        raise _RedirectPolicyError(f"credentials embedded in hop {_hop_label(url)}")
+    if not host or not host.isascii():
+        raise _RedirectPolicyError("malformed hop host")
+    host = host.lower()
+    if host not in _ALLOWED_HOP_HOSTS:
+        raise _RedirectPolicyError(f"host not allowed https://{host}")
+    if port not in (None, 443):
+        raise _RedirectPolicyError(f"port not allowed on https://{host}")
+    return f"https://{host}"
+
+
+def _build_hop_request(
+    url: str, origin: str, *, allow_credentials: bool
+) -> "urllib.request.Request":
+    """Build the request for a single validated hop.
+
+    The configured token is attached only on the release origin, and only
+    as an unredirected header so that urllib can never copy it onto a
+    redirect target."""
+    request = urllib.request.Request(
+        url,
+        headers={"Accept": "application/octet-stream"},
+        method="GET",
+    )
+    if allow_credentials and origin == _RELEASE_ORIGIN:
+        token = os.getenv("GITHUB_TOKEN")
+        if token:
+            request.add_unredirected_header("Authorization", f"Bearer {token}")
+    return request
+
+
+# urllib's redirect handler follows 3xx responses inside urlopen(), which
+# would hide intermediate hops from validation. Pre-filling its
+# loop-detection budget makes it surface each redirect as an HTTPError
+# carrying the Location header instead, so every hop is checked here.
+_NO_FOLLOW_BUDGET = {
+    f"praxis-hop-{index}": 1
+    for index in range(urllib.request.HTTPRedirectHandler.max_redirections)
+}
+
+
+def _open_single_hop(request: "urllib.request.Request", timeout: int) -> Any:
+    """Perform exactly one HTTP exchange without following a redirect."""
+    request.redirect_dict = dict(_NO_FOLLOW_BUDGET)
+    return urllib.request.urlopen(request, timeout=timeout)
+
+
+def _redirect_target(exc: urllib.error.HTTPError) -> Optional[str]:
+    """Redirect location carried by an upstream error, or None when the
+    response was not a redirect. The upstream body is released without
+    being read, logged, or surfaced."""
+    target = None
+    if 300 <= exc.code < 400 and exc.headers is not None:
+        target = exc.headers.get("Location") or exc.headers.get("URI")
+    body = getattr(exc, "fp", None)
+    if body is not None:
+        body.close()
+    return target or None
+
+
+def _reject_unvalidated_hop(request: "urllib.request.Request", response: Any) -> None:
+    """Redirects are followed by this module, not by urllib. A response URL
+    that differs from the requested URL means a hop escaped validation."""
+    final_url = getattr(response, "url", None)
+    if final_url is not None and final_url != request.full_url:
+        response.close()
+        raise _RedirectPolicyError(
+            f"unvalidated upstream redirect to {_hop_label(final_url)}"
+        )
+
+
+def _open_release_asset(asset_name: str, timeout: int) -> Any:
+    """Open a pinned release asset with every redirect hop validated.
+
+    Artifact streaming and checksum retrieval both route through here, so
+    neither reaches urllib's redirect-following default behavior. The
+    configured token travels only on the release origin, and once a hop
+    leaves that origin it is dropped for the remainder of the chain."""
+    url = f"{_GH_RELEASE_BASE}/{asset_name}"
+    allow_credentials = True
+    try:
+        for _ in range(_MAX_REDIRECT_HOPS + 1):
+            origin = _validate_hop(url)
+            if origin != _RELEASE_ORIGIN:
+                allow_credentials = False
+            request = _build_hop_request(
+                url, origin, allow_credentials=allow_credentials
+            )
+            try:
+                response = _open_single_hop(request, timeout)
+            except urllib.error.HTTPError as exc:
+                target = _redirect_target(exc)
+                if target is None:
+                    logger.warning(
+                        "agent artifact fetch failed for %s: HTTP %s",
+                        asset_name,
+                        exc.code,
+                    )
+                    raise HTTPException(
+                        status_code=502, detail="agent artifact unavailable"
+                    ) from exc
+                url = urllib.parse.urljoin(url, target)
+                continue
+            _reject_unvalidated_hop(request, response)
+            return response
+        raise _RedirectPolicyError("redirect chain too long")
+    except _RedirectPolicyError as exc:
+        logger.warning("agent artifact redirect rejected for %s: %s", asset_name, exc)
+        raise HTTPException(
+            status_code=502, detail="agent artifact unavailable"
+        ) from exc
+    except ValueError as exc:
+        logger.warning("agent artifact hop target unusable for %s", asset_name)
+        raise HTTPException(
+            status_code=502, detail="agent artifact unavailable"
+        ) from exc
+    except urllib.error.URLError as exc:
+        logger.warning(
+            "agent artifact unreachable for %s: %s",
+            asset_name,
+            exc.reason,
+        )
+        raise HTTPException(
+            status_code=502, detail="agent artifact unavailable"
+        ) from exc
 
 
 def _stream_github(asset_name: str) -> Tuple[Iterator[bytes], int]:
@@ -162,23 +330,7 @@ def _stream_github(asset_name: str) -> Tuple[Iterator[bytes], int]:
 
     Failures map to 502 without leaking which arm tripped (local
     misconfigured vs upstream unreachable vs auth wrong)."""
-    request = _gh_request(asset_name)
-    try:
-        response = urllib.request.urlopen(request, timeout=30)
-    except urllib.error.HTTPError as exc:
-        logger.warning(
-            "agent download fallback failed for %s: HTTP %s",
-            asset_name,
-            exc.code,
-        )
-        raise HTTPException(status_code=502, detail="agent artifact unavailable")
-    except urllib.error.URLError as exc:
-        logger.warning(
-            "agent download fallback unreachable for %s: %s",
-            asset_name,
-            exc.reason,
-        )
-        raise HTTPException(status_code=502, detail="agent artifact unavailable")
+    response = _open_release_asset(asset_name, timeout=30)
 
     total = int(response.headers.get("Content-Length") or 0)
 
@@ -208,12 +360,7 @@ def _read_checksums_text() -> str:
     if local is not None:
         return local.read_text(encoding="utf-8")
 
-    request = _gh_request("checksums.txt")
-    try:
-        response = urllib.request.urlopen(request, timeout=15)
-    except (urllib.error.HTTPError, urllib.error.URLError) as exc:
-        logger.warning("checksums.txt fetch failed: %s", exc)
-        raise HTTPException(status_code=502, detail="agent artifact unavailable")
+    response = _open_release_asset("checksums.txt", timeout=15)
     try:
         return response.read().decode("utf-8")
     finally:

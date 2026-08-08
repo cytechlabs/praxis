@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 
-from app.db.models import MirrorRepo, MirrorSigningKey, MirrorSyncRun
+from app.db.models import MirrorRepo, MirrorSyncRun
 from app.services import mirror_disk
 from app.services import mirror_signing_key_service as svc_module
 from app.services.mirror_gpg import gpg_available

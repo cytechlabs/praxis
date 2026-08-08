@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from sqlalchemy.orm import Session
 
 from app.db.command_execution_models import CommandExecutionResult
-from app.db.models import Credential, Distro, Group, Role, System, User
+from app.db.models import System, User
 from app.db.session import SessionLocal
 from app.services.command_result_processing_service import CommandResultProcessor
 

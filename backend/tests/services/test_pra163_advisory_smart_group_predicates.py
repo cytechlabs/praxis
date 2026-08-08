@@ -41,7 +41,6 @@ from app.db.models import (
     PatchAdvisory,
     PatchAdvisoryHostApplicability,
     SmartGroup,
-    SmartGroupMembership,
     System,
 )
 from app.services import (
@@ -52,9 +51,6 @@ from app.services import (
 )
 from app.services.patch_advisory_service import (
     APPLICABILITY_STATE_APPLICABLE,
-    APPLICABILITY_STATE_FIXED,
-    APPLICABILITY_STATE_NOT_APPLICABLE,
-    APPLICABILITY_STATE_UNKNOWN,
     SOURCE_KIND_REDHAT_UPDATEINFO,
     SOURCE_KIND_UBUNTU_USN,
     compute_host_applicability,

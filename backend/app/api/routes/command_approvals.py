@@ -2,7 +2,6 @@
 API routes for command approval workflows (PRA-80).
 """
 
-import threading
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
@@ -14,8 +13,6 @@ from ...db.models import CommandApproval, CommandApprovalVote, System, User
 from ...db.session import get_db
 from ...services.access_authorization_service import scoped_system_ids
 from ...services.command_approval_service import ApprovalVoteError, record_vote
-from ...services.command_execution_service import CommandExecutionService
-from ...services.notification_service import create_notification
 
 router = APIRouter(redirect_slashes=False)
 

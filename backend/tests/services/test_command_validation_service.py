@@ -12,9 +12,7 @@ from app.db.models import (
     CommandValidationLog,
     CommandValidationRule,
     CommandWhitelist,
-    Distro,
     System,
-    User,
 )
 from app.services.command_validation_service import CommandValidationService
 

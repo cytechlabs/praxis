@@ -23,7 +23,7 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 
 from ..db.access_models import AccessBinding, AccessRequest, FleetRole
-from ..db.models import Group, SmartGroup, User
+from ..db.models import Group, SmartGroup
 from . import access_binding_service as abs_svc
 
 logger = logging.getLogger(__name__)

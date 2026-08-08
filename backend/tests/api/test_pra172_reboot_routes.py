@@ -451,7 +451,6 @@ def test_dispatch_due_route_serializes_rebooting_row_with_utc_z(
     from datetime import timedelta as _td
 
     from app.db.models import PatchUpdateExecutionReboot
-    from app.services import patch_reboot_dispatch_service
     from app.services.patch_reboot_dispatch_service import (
         EXIT_SIGNAL_EXIT_ZERO,
         RebootDispatchResult,

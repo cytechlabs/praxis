@@ -47,7 +47,6 @@ domain results (HostInstallResult / ApplyResult / ...) on top.
 from __future__ import annotations
 
 import logging
-import shlex
 from dataclasses import dataclass, field
 from typing import List, Optional
 

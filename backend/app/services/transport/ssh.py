@@ -20,7 +20,6 @@ Per the PRA-153 design lock:
 from __future__ import annotations
 
 import asyncio
-import io
 import logging
 import time
 from typing import AsyncIterator, Optional

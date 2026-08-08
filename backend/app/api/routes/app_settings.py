@@ -1,6 +1,6 @@
 """API routes for application-wide settings (PRA-85)."""
 
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel

@@ -31,7 +31,7 @@ from typing import List
 
 import pytest
 
-from app.db.models import CompliancePolicyEvidence, Credential, Group, Package, System
+from app.db.models import CompliancePolicyEvidence, Credential, Group, System
 from app.services import (
     compliance_evaluation_service,
     compliance_remediation_plan_service,
@@ -43,8 +43,6 @@ from app.services.compliance_remediation_plan_service import (
     AUDIT_COMPLIANCE_REMEDIATION_PLAN_BUILT,
     AUDIT_COMPLIANCE_REMEDIATION_PLAN_REFRESHED,
     AUDIT_COMPLIANCE_REMEDIATION_PLAN_SUPERSEDED,
-    PLAN_KIND_PACKAGE_INSTALL,
-    PLAN_STATE_PLANNED,
 )
 from app.services.compliance_remediation_service import ComplianceError
 

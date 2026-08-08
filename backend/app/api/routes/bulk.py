@@ -8,11 +8,11 @@ assignment, deletion, and bulk import.
 
 import re
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
-from sqlalchemy import or_, text
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from ...core.auth import get_current_user, require_role
@@ -31,14 +31,13 @@ from ...db.models import (
     PackageUpdate,
     RepoSource,
     System,
-    SystemAudit,
     SystemMetadata,
     Tag,
     User,
     system_tag,
 )
 from ...db.session import get_db
-from ...db.ssh_security_models import SSHHostKey, SSHSecurityLog
+from ...db.ssh_security_models import SSHHostKey, SSHSecurityLog, SSHSecurityPolicy
 from ...services import fleet_operation_service
 from ...services.access_authorization_service import scoped_system_ids
 from ...services.notification_service import create_notification
@@ -767,6 +766,17 @@ def bulk_import_systems(
             "results": results,
         }
 
+    # Attach the persisted "Default" SSH security policy to every imported
+    # system, exactly like single-system registration
+    # (``systems.register_system``), resolved once for the whole batch rather
+    # than per row. Nothing is created here: if the seeded policy is somehow
+    # absent the systems are created with a NULL policy, which
+    # ``configure_host_key_policy`` treats as verification-required (never
+    # permissive).
+    default_policy = (
+        db.query(SSHSecurityPolicy).filter(SSHSecurityPolicy.name == "Default").first()
+    )
+
     fleet_op_id = fleet_operation_service.start_operation(
         operation_type="bulk_import",
         user_id=current_user.id,
@@ -799,6 +809,7 @@ def bulk_import_systems(
             status=sys_data.status,
             group_id=r_group_id,
             credentials_id=r_cred_id,
+            ssh_security_policy_id=default_policy.id if default_policy else None,
             registered_at=datetime.utcnow(),
             registered_by=current_user.id,
             created_at=datetime.utcnow(),

@@ -1,6 +1,5 @@
 """Integration tests for the auth flow (login, refresh, rotation, logout)."""
 
-import pytest
 
 from app.db.models import AppSettings, RefreshToken
 

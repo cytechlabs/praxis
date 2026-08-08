@@ -4,7 +4,7 @@ Authentication routes module.
 
 import logging
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional  # pylint: disable=unused-import
+from typing import Any, Dict, Optional
 
 from fastapi import (  # pylint: disable=wrong-import-order
     APIRouter,
@@ -20,7 +20,6 @@ from sqlalchemy import or_, update  # pylint: disable=wrong-import-order
 from sqlalchemy.orm import Session  # pylint: disable=wrong-import-order
 
 from app.api.routes.app_settings import is_self_registration_enabled
-from app.api.schemas.auth import RoleAssignment  # pylint: disable=unused-import
 from app.api.schemas.auth import (
     PasswordChange,
     Token,
@@ -28,7 +27,6 @@ from app.api.schemas.auth import (
     UserResponse,
     UserUpdate,
 )
-from app.core.auth import verify_admin  # pylint: disable=unused-import
 from app.core.auth import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
     REFRESH_TOKEN_EXPIRE_DAYS,

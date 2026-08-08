@@ -12,7 +12,6 @@ import pytest
 
 from app.db.access_models import AuditEvent
 from app.db.access_models import Session as SessionRow
-from app.db.access_models import SessionLock
 from app.db.models import Credential, Group, System
 from app.services import session_lock_service
 from app.services.access_authorization_service import PermissionDenied, authorize_action

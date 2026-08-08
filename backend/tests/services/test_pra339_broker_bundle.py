@@ -11,7 +11,6 @@ import io
 import zipfile
 
 import httpx
-import pytest
 
 from app.core.log_buffer import install_log_buffer
 from app.services import diagnostics_service as diag

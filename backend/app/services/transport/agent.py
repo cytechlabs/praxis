@@ -27,7 +27,6 @@ from app.services.broker_client import (
 
 from .base import (
     CommandResult,
-    FileCloseFn,
     FileGetStream,
     FilePutStream,
     PtySession,

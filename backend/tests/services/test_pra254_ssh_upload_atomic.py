@@ -28,8 +28,6 @@ from dataclasses import dataclass, field
 from typing import Dict, List
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from app.services import file_transfer_service as fts
 
 

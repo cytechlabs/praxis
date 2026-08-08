@@ -17,11 +17,9 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import datetime as dt
 import hashlib
 import json
 from contextlib import asynccontextmanager
-from functools import partial
 
 import pytest
 import websockets
@@ -41,7 +39,6 @@ from app.broker.audit import (
     TUNNEL_REPLACED,
 )
 from app.broker.handlers import (
-    REJECT_FINGERPRINT_MISMATCH,
     REJECT_NOT_ACTIVE,
     BrokerRejection,
     op_handler,

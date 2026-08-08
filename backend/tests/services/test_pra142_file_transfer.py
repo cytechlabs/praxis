@@ -9,11 +9,10 @@ Focuses on the parts we can cover without a live paramiko transport:
 from __future__ import annotations
 
 import json
-from datetime import datetime, timedelta
 
 import pytest
 
-from app.db.access_models import FileTransferAudit, FleetRole
+from app.db.access_models import FleetRole
 from app.db.models import Credential, Group, System
 from app.services import access_binding_service as abs_svc
 from app.services import file_transfer_service as fts

@@ -1,7 +1,6 @@
 """Integration tests for package update routes."""
 
 from datetime import date
-from unittest.mock import MagicMock
 
 import pytest
 

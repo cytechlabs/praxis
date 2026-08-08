@@ -74,7 +74,7 @@ import logging
 import shlex
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Awaitable, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from sqlalchemy.orm import Session
 

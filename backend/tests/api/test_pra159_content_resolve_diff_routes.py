@@ -4,10 +4,6 @@
 
 from __future__ import annotations
 
-import json
-from datetime import datetime
-from pathlib import Path
-
 import pytest
 
 from app.db.models import (
@@ -15,7 +11,6 @@ from app.db.models import (
     Group,
     HostContentProfileSubscription,
     MirrorRepo,
-    MirrorSyncRun,
     System,
 )
 
