@@ -144,9 +144,14 @@ for var in required_env_vars:
 # user_count is known; calling validate_production_env without a
 # user_count here is intentional.
 from app.core.startup_validation import (  # noqa: E402  pylint: disable=wrong-import-position
+    validate_database_credentials,
     validate_production_env,
 )
 
+# The bundled database credential is checked in every mode: Compose renders an
+# empty-password URL when the deployment never set POSTGRES_PASSWORD, and the
+# backend must refuse it here rather than fail later inside a connection pool.
+validate_database_credentials()
 validate_production_env()
 
 # Now proceed with other imports

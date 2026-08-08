@@ -99,7 +99,7 @@ for a headless / external-reverse-proxy deployment):
 git clone https://github.com/cytechlabs/praxis.git
 cd praxis
 cp .env.example .env
-# Edit .env: set SECRET_KEY and ADMIN_PASSWORD
+# Edit .env: set SECRET_KEY, ADMIN_PASSWORD, and POSTGRES_PASSWORD
 docker compose -f docker-compose.yml -f docker-compose.prod.yml \
     --profile bundled --profile proxy pull
 docker compose -f docker-compose.yml -f docker-compose.prod.yml \
@@ -107,8 +107,33 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml \
 ```
 
 Generate the required secrets by hand into `.env` — e.g.
-`SECRET_KEY=$(openssl rand -hex 32)`, plus a strong `ADMIN_PASSWORD` and
-`POSTGRES_PASSWORD`. Local development uses this same production-parity stack
+`SECRET_KEY=$(openssl rand -hex 32)`, `POSTGRES_PASSWORD=$(openssl rand -hex 24)`,
+plus a strong `ADMIN_PASSWORD`. None of these have a default; no password ships
+in the source tree.
+
+Where each one is enforced differs, and the distinction matters when reading
+failures:
+
+- `SECRET_KEY` is required by Compose interpolation. Nothing is created at all;
+  `docker compose config`, `up`, and `pull` all abort.
+- `POSTGRES_PASSWORD` is enforced at **startup**, not at interpolation.
+  Requiring it in Compose would also force external-database deployments to
+  define a variable they never use, because Compose evaluates every
+  interpolation eagerly regardless of the active profile. Instead the stack
+  renders and containers are created, then fail immediately: the bundled `db`
+  entrypoint exits before the server accepts connections, the backend and
+  broker exit during startup validation before binding a listener, and the
+  backup sidecar exits before running `pg_dump`. Nothing serves traffic and no
+  data is written on a credential-less bundled deployment.
+
+`POSTGRES_PASSWORD` applies to **bundled mode only**. External-database
+deployments supply their credentials inside `DATABASE_URL` and must leave
+`POSTGRES_PASSWORD` unset; there is nothing to duplicate.
+
+Keep `POSTGRES_PASSWORD` in the unreserved URL character set (letters, digits,
+`- . _ ~`): it is embedded in a connection string, so `@ : / ? # [ ] %` break
+the URL, and a literal `$` must be written `$$` to survive Compose
+interpolation. Local development uses this same production-parity stack
 (there is no separate dev runtime); the only difference from a release is
 building from source (`up -d --build`) instead of pulling a pinned image.
 
@@ -261,7 +286,9 @@ Migration-rollback posture for Praxis 1.0:
 - Runs inside the `db_backup` alpine sidecar container under cron at
   `0 2 * * *` (02:00 daily, container time).
 - Connects to the bundled `db` service over the docker network using
-  `${POSTGRES_USER:-postgres}` / `${POSTGRES_PASSWORD:-postgres}`.
+  `${POSTGRES_USER:-postgres}` and the deployment's required
+  `POSTGRES_PASSWORD` (the script has no password fallback and exits with a
+  named error if the sidecar receives none).
 - Writes a custom-format pg_dump to a restrictive (0600) same-directory
   temp file that does **not** match `*.dump`, validates the completed
   dump with `pg_restore --list`, then atomically renames it to
@@ -376,16 +403,85 @@ What is verified today:
 
 ### Backup correctness notes
 
-The bundled backup path is wired so a non-default `POSTGRES_PASSWORD` cannot
+The bundled backup path is wired so the deployment's `POSTGRES_PASSWORD` cannot
 silently produce empty dumps:
 
 - `docker-compose.yml`'s `db_backup` service declares `POSTGRES_USER` /
-  `POSTGRES_PASSWORD` / `POSTGRES_DB` in its `environment:` block (defaults
-  preserve existing behavior for operators who never touched
-  `POSTGRES_PASSWORD`).
+  `POSTGRES_PASSWORD` / `POSTGRES_DB` in its `environment:` block, reading the
+  same required `POSTGRES_PASSWORD` the `db` service is provisioned with, so the
+  sidecar and the database can never drift apart.
 - `scripts/backup.sh` runs under `set -euo pipefail`, so a failed `pg_dump`
   propagates immediately instead of printing a "Backup completed" success
   message over a zero-byte file.
+
+### Rotating the bundled PostgreSQL password
+
+`POSTGRES_PASSWORD` provisions the superuser **only on first initialization of
+an empty `postgres_data` volume**. On an existing deployment, changing it in
+`.env` alone leaves the database with the old password and every service unable
+to authenticate. Rotate inside the database first, then in `.env`. The volume is
+preserved throughout; do not `down -v`.
+
+Use `psql`'s interactive `\password`. It prompts twice, hashes the new password
+client-side, and sends only the hash, so the cleartext never appears in `argv`,
+in shell history, or in the server's statement log. Do not use
+`ALTER USER ... WITH PASSWORD '<literal>'` for this. `exec db psql` reaches the
+database over the container's local socket, so it connects regardless of which
+password the volume currently holds.
+
+```bash
+# 1. Open an interactive psql session on the bundled database. Note `-it` and
+#    no `-T`: the prompt needs a TTY.
+docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+    --profile bundled exec -it db \
+    psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-praxis}"
+
+# 2. At the psql prompt, rotate and quit:
+#        \password
+#        (enter the new password twice, e.g. from `openssl rand -hex 24`
+#         generated in a separate shell)
+#        \q
+
+# 3. Put the same value in .env (replace the POSTGRES_PASSWORD line).
+#    Everything that connects reads it from there.
+
+# 4. Recreate the services that hold a connection string. This restarts
+#    containers only; named volumes, including postgres_data, are untouched.
+docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+    --profile bundled --profile proxy up -d \
+    backend agent-broker db_backup
+
+# 5. Confirm the stack still authenticates.
+docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+    --profile bundled exec -T backend python -c \
+    "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5).status == 200 else 1)"
+```
+
+Recovery ordering matters. Step 1 and step 3 must agree:
+
+- **Steps 1-2 done, step 3 skipped**: the database holds the new password while
+  `.env` still holds the old one. Backend, broker, and the nightly backup fail
+  to authenticate. Fix by completing step 3.
+- **Step 3 done, steps 1-2 skipped**: `.env` holds a password the database was
+  never given. Same failure. Fix by running steps 1-2 with the value now in
+  `.env`, or by restoring the previous value in `.env`.
+- In both cases the data is untouched. Nothing here drops or reinitializes
+  `postgres_data`.
+
+Upgrading a deployment whose `postgres_data` volume was initialized with the
+old built-in `postgres` password: rotate before starting the app tier. The `db`
+entrypoint refuses to start on that value, and the backend and broker refuse to
+serve on it. Because `POSTGRES_PASSWORD` is only read when an empty volume is
+initialized, the database still holds the old password internally while you
+bring it up with the new one:
+
+```bash
+# 1. Put the new password in .env, then start ONLY the database.
+docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+    --profile bundled up -d db
+# 2. Run steps 1-2 above so the stored password matches .env.
+# 3. Start the rest of the stack normally.
+```
 
 ## Secrets Service (OpenBao) Unseal And Token Rotation
 
@@ -772,10 +868,17 @@ name and the corrective action:
 - **`ENVIRONMENT` outside `{development, production, test}`** —
   fails before any other check so a typo like `ENVIRONMENT=prod`
   is caught immediately.
-- **`POSTGRES_PASSWORD=postgres` in bundled production** — the
-  `.env.example` default is rejected in production with the
-  bundled `db`. External-Postgres operators set their own
-  `DATABASE_URL` and are exempt.
+- **Missing, empty, or `postgres` bundled database password**:
+  `validate_database_credentials` inspects the password carried
+  in `DATABASE_URL` and runs in **every** mode, not only
+  production, because that URL is the sole credential the backend
+  and broker containers receive. It is the enforcement point for
+  the bundled credential, since Compose deliberately does not
+  require `POSTGRES_PASSWORD` at interpolation. Production
+  additionally rejects a `POSTGRES_PASSWORD` that is empty or the
+  retired default for deployments that assemble their own URL.
+  External-Postgres operators set their own `DATABASE_URL` and
+  are exempt everywhere.
 - **Empty `VAULT_TOKEN` with non-bundled `VAULT_ADDR`** —
   external-Vault deployments must supply a token. Bundled-Vault
   deployments read the token from the shared
@@ -1046,9 +1149,15 @@ Verified by repo tests/scripts:
 - RPO/RTO targets -- see the RPO/RTO contract above (RPO ~ 24 h, RTO minutes to
   single-digit hours).
 - Startup validation: rejects missing/known-weak `SECRET_KEY`, empty
-  `ADMIN_PASSWORD` in production, the default `POSTGRES_PASSWORD` in bundled
-  prod, an empty `VAULT_TOKEN` in external mode, and unknown `ENVIRONMENT`
+  `ADMIN_PASSWORD` in production, a missing/empty/default bundled database
+  password, an empty `VAULT_TOKEN` in external mode, and unknown `ENVIRONMENT`
   values -- `backend/app/core/startup_validation.py` (+ unit tests).
+- Bundled database credential contract: no password ships in the source; the
+  bundled `db` entrypoint, the backend/broker startup preflight, and
+  `scripts/backup.sh` each exit before doing useful work when it is missing,
+  empty, or the retired default; and external `DATABASE_URL` mode renders and
+  runs without `POSTGRES_PASSWORD` --
+  `backend/tests/services/test_pra387_postgres_credential_contract.py`.
   `UserResponse` serializes reserved-TLD emails as `str` (input schemas keep
   `EmailStr`).
 
