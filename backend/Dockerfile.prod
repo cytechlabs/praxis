@@ -8,7 +8,7 @@
 # that held it is fixed in PRA-320's backend/app/broker/tls.py). The only web-stack pin
 # change this required was pydantic 2.6.0 -> 2.12.0 (first line whose pydantic-core has a
 # cp314 wheel); every dependency installs from a wheel on 3.14 (no source builds).
-FROM python:3.14.6-slim-bookworm AS builder
+FROM python:3.15.0b3-slim-bookworm AS builder
 
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PIP_NO_CACHE_DIR=1 \
@@ -65,7 +65,7 @@ RUN if [ "$PRAXIS_EE" = "1" ]; then \
 # ── Runtime ──────────────────────────────────────────────────────────────
 # PRA-319: keep the runtime base pinned to the SAME Python as the builder so the
 # copied /opt/venv (with its compiled cp314 extension modules) matches the interpreter.
-FROM python:3.14.6-slim-bookworm AS runtime
+FROM python:3.15.0b3-slim-bookworm AS runtime
 
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PYTHONDONTWRITEBYTECODE=1 \
