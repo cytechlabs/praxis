@@ -13,16 +13,16 @@
 # Everything installs from wheels on 3.14 (no source builds).
 
 # Core
-fastapi==0.109.0
-uvicorn==0.27.0
-websockets==12.0
+fastapi==0.141.1
+uvicorn==0.52.1
+websockets==17.0.1
 sqlalchemy==2.0.51
-alembic==1.18.5
-pydantic[email]==2.12.0
-pydantic-settings==2.1.0
+alembic==1.19.0
+pydantic[email]==2.13.4
+pydantic-settings==2.14.2
 python-jose[cryptography]==3.5.0
 passlib[bcrypt]==1.7.4
-bcrypt==3.2.0
+bcrypt==5.0.0
 # Form/upload parsing behind Starlette. Starlette 0.35.1 imports the legacy
 # top-level ``multipart`` module, which this line still ships as a shim over the
 # renamed ``python_multipart`` package, so the framework pins stay put.
@@ -32,9 +32,9 @@ python-dotenv==1.2.2
 slowapi==0.1.10
 pyjwt==2.13.0
 hvac==2.4.0
-paramiko==3.4.0
-psutil==5.9.8
-croniter==2.0.1
+paramiko==5.0.0
+psutil==7.2.2
+croniter==6.2.4
 APScheduler==3.11.3
 pyotp==2.10.0
 prometheus-client==0.26.0
@@ -44,10 +44,10 @@ pytest==9.1.1
 # pytest-asyncio 0.23.x caps pytest below 9, so the runner bump carries this
 # plugin with it.
 pytest-asyncio==1.4.0
-httpx==0.26.0
+httpx==0.28.1
 docker==7.2.0  # PRA-144 integration test spawns disposable SSH containers
 
 # Code Quality
 black==26.5.1
-pylint==3.0.3
-isort==5.13.2
+pylint==4.0.6
+isort==8.0.1
