@@ -290,7 +290,7 @@ def test_recovery_event_only_built_on_failed_to_ok_transition(
     returned events list rather than on send_alert mocks here.
     """
     from app.db.models import MirrorSyncRun
-    from app.services import mirror_alerts, mirror_disk
+    from app.services import mirror_disk
     from app.services.mirror_sync import SyncResult
     from app.services.mirror_sync.service import perform_sync_for_mirror
 
@@ -373,7 +373,7 @@ def test_claim_and_sync_full_path_fires_recovery_alert(tmp_path, monkeypatch):
     committed rows aren't visible to those independent connections.
     Explicit cleanup at the end keeps this test isolated.
     """
-    from app.db.models import MirrorAlertState, MirrorRepo, MirrorSyncRun
+    from app.db.models import MirrorSyncRun
     from app.db.session import SessionLocal
     from app.services import mirror_disk
     from app.services.mirror_sweep import claim_and_sync_one_mirror
@@ -462,7 +462,7 @@ def test_imported_offline_full_path_yields_ineligible(tmp_path, monkeypatch):
     state changes between enumeration and claim. PRA-157 #4 E2E
     coverage.
     """
-    from app.db.models import MirrorAlertState, MirrorRepo, MirrorSyncRun
+    from app.db.models import MirrorSyncRun
     from app.db.session import SessionLocal
     from app.services.mirror_sweep import claim_and_sync_one_mirror
 
@@ -538,7 +538,7 @@ def test_five_consecutive_failures_produce_one_alert_within_cooldown(
     dedup cooldown via mirror_alert_state. PRA-157 #4 E2E coverage
     of the cooldown contract.
     """
-    from app.db.models import MirrorAlertState, MirrorRepo, MirrorSyncRun
+    from app.db.models import MirrorSyncRun
     from app.db.session import SessionLocal
     from app.services import mirror_disk
     from app.services.mirror_sweep import claim_and_sync_one_mirror

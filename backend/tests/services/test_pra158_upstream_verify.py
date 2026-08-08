@@ -417,7 +417,6 @@ def test_orchestrator_fires_upstream_invalid_event_on_verify_failure(
     events list.
     """
     from app.db.models import MirrorSyncRun
-    from app.services.mirror_sync import SyncResult
     from app.services.mirror_sync import service as svc
 
     # Custom engine that lays a signed InRelease using key A.

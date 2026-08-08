@@ -502,7 +502,7 @@ def test_single_hop_open_never_follows_a_redirect():
             self.wfile.write(body)
 
         def log_message(self, *args):
-            pass
+            """Silence the stdlib per-request logging this test server emits."""
 
     server = http.server.HTTPServer(("127.0.0.1", 0), _Handler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
