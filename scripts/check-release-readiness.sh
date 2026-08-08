@@ -5,7 +5,8 @@
 #   1. package-version alignment (root package.json, frontend-next/package.json,
 #      frontend-next/package-lock.json, backend/setup.py, agent/VERSION, and the
 #      control plane's pinned agent release) against a target version;
-#   2. presence of the required release docs and agent packaging scripts;
+#   2. presence of the required release docs, publication scripts, and agent
+#      packaging scripts;
 #   3. presence of the required release workflows;
 #   4. clean whitespace (`git diff --check`).
 #
@@ -83,11 +84,16 @@ for doc in \
     docs/upgrade-notes-1.0.md \
     docs/release-checklist.md \
     docs/agent-release.md \
+    docs/ghcr-release-operations.md \
     agent/packaging/README.md \
     agent/packaging/install.sh \
     agent/packaging/uninstall.sh \
     agent/GO_VERSION \
-    agent/scripts/verify_sbom.py; do
+    agent/scripts/verify_sbom.py \
+    scripts/build_release_index.py \
+    scripts/check-release-absence.sh \
+    scripts/check-tag-commit.sh \
+    scripts/promote-release-images.sh; do
     if [ -f "${doc}" ]; then
         green "${doc}"
     else
