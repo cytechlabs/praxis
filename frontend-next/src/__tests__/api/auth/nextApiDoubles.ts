@@ -37,7 +37,7 @@ export function jsonResponse(payload: unknown, ok = true, status = 200): Respons
   return {
     ok,
     status,
-    json: async () => payload,
+    json: () => Promise.resolve(payload),
   } as unknown as Response;
 }
 

@@ -36,7 +36,8 @@ class _KeepOpenSession:
     def __getattr__(self, name):
         return getattr(self._session, name)
 
-    def close(self):
+    @staticmethod
+    def close():
         return None
 
 

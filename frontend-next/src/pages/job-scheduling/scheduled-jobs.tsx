@@ -844,7 +844,7 @@ const ScheduledJobs = () => {
                   <div className="truncate font-medium" title={job.name}>
                     {job.name}
                     {job.depends_on_job_id && (
-                      <span className="ml-1 text-xs text-content" title={`Depends on: ${job.dependency_name || 'Job #' + job.depends_on_job_id} (${job.chain_condition || 'on_success'})`}>
+                      <span className="ml-1 text-xs text-content" title={`Depends on: ${job.dependency_name || `Job #${job.depends_on_job_id}`} (${job.chain_condition || 'on_success'})`}>
                         &rarr; {job.dependency_name || `Job #${job.depends_on_job_id}`}
                       </span>
                     )}
