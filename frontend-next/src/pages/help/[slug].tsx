@@ -102,7 +102,10 @@ export const getStaticProps: GetStaticProps<HelpPageProps> = async ({ params }) 
   const entry = readHelpEntry(slug);
   if (!entry) return { notFound: true };
 
-  const mdx = await serialize(entry.body, { parseFrontmatter: false });
+  // Help pages are repository-owned MDX, but the compiler stays locked down:
+  // blockJS strips JavaScript expressions from the source instead of compiling
+  // them, so no help document can execute code at build or hydration time.
+  const mdx = await serialize(entry.body, { parseFrontmatter: false, blockJS: true });
   const index = buildHelpIndex();
   return { props: { entry, mdx, index } };
 };
