@@ -377,18 +377,18 @@ const AvailableUpdates = () => {
 
           {/* Search */}
           <div className="mb-4 relative">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-content-subtle" />
             <input
               type="text"
               placeholder="Search by package name, system, or type..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 bg-gray-950 border border-gray-700 rounded text-sm text-gray-200 focus:outline-none focus:border-red-600"
+              className="w-full pl-9 pr-3 py-2 bg-surface-sunken border border-border-strong rounded text-sm text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
             />
           </div>
 
-          <div className="border border-gray-800 rounded-lg">
-            <div className="grid grid-cols-[1.4fr_1.6fr_1.6fr_0.7fr_1fr_0.9fr_0.7fr] gap-3 p-4 bg-gray-950 border-b border-gray-800 font-medium text-gray-200">
+          <div className="border border-border rounded-lg">
+            <div className="grid grid-cols-[1.4fr_1.6fr_1.6fr_0.7fr_1fr_0.9fr_0.7fr] gap-3 p-4 bg-surface-sunken border-b border-border font-medium text-content">
               <button onClick={() => toggleSort('package_name')} className="flex items-center gap-1 hover:text-white">
                 Package Name <SortIcon col="package_name" />
               </button>
@@ -411,7 +411,7 @@ const AvailableUpdates = () => {
                 description="Choose a group or smart group above to view its available updates."
               />
             ) : loading ? (
-              <div className="p-4 text-gray-400">Loading updates...</div>
+              <div className="p-4 text-content-muted">Loading updates...</div>
             ) : filteredUpdates.length === 0 ? (
               <EmptyState
                 icon={<CheckCircle2 size={24} className="text-emerald-400" />}
@@ -429,29 +429,29 @@ const AvailableUpdates = () => {
                 return (
                   <div
                     key={update.id}
-                    className={`grid grid-cols-[1.4fr_1.6fr_1.6fr_0.7fr_1fr_0.9fr_0.7fr] gap-3 p-4 border-b border-gray-800 last:border-b-0 hover:bg-gray-950 even:bg-white/[0.012] ${isSecurity ? 'border-l-2 border-l-red-600/70' : 'border-l-2 border-l-transparent'}`}
+                    className={`grid grid-cols-[1.4fr_1.6fr_1.6fr_0.7fr_1fr_0.9fr_0.7fr] gap-3 p-4 border-b border-border last:border-b-0 hover:bg-surface-overlay even:bg-white/[0.012] ${isSecurity ? 'border-l-2 border-l-red-600/70' : 'border-l-2 border-l-transparent'}`}
                   >
-                    <div className="font-medium text-gray-300 break-words">
+                    <div className="font-medium text-content break-words">
                       {update.package_name}
                       {isHeld && (
                         <span className="ml-2 px-1.5 py-0.5 bg-yellow-900 text-yellow-300 rounded text-xs align-middle">Held</span>
                       )}
                     </div>
-                    <div className="text-gray-400 font-mono text-xs break-all">{update.installed_version}</div>
-                    <div className="text-gray-300 font-mono text-xs break-all">{update.available_version}</div>
+                    <div className="text-content-muted font-mono text-xs break-all">{update.installed_version}</div>
+                    <div className="text-content font-mono text-xs break-all">{update.available_version}</div>
                     <div>
                       <span
                         className={`px-2 py-1 rounded text-sm ${
                           update.update_type === 'security'
                             ? 'bg-red-900 text-red-300'
-                            : 'bg-gray-800 text-gray-300'
+                            : 'bg-surface-overlay text-content'
                         }`}
                       >
                         {update.update_type}
                       </span>
                     </div>
-                    <div className="text-gray-400">{getSystemHostname(update.system_id)}</div>
-                    <div className="text-gray-400 text-sm">
+                    <div className="text-content-muted">{getSystemHostname(update.system_id)}</div>
+                    <div className="text-content-muted text-sm">
                       {formatTimestamp(update.discovered_on, { dateOnly: true })}
                     </div>
                     <div>
@@ -485,7 +485,7 @@ const AvailableUpdates = () => {
             />
           )}
 
-          <div className="mt-4 flex justify-between text-sm text-gray-400">
+          <div className="mt-4 flex justify-between text-sm text-content-muted">
             <span>
               {search.trim() && filteredUpdates.length !== updates.length
                 ? `${filteredUpdates.length} of ${updates.length} updates match "${search.trim()}"`

@@ -212,15 +212,15 @@ const PatchAdvisoriesListPage: React.FC = () => {
         )}
 
         {canWrite && showImport && (
-          <div className="mb-4 rounded border border-zinc-800 bg-[#111115] p-4">
+          <div className="mb-4 rounded border border-border bg-surface-raised p-4">
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-sm font-medium text-gray-200">
+              <h2 className="text-sm font-medium text-content">
                 Import native advisories
               </h2>
               {importRuns && importRuns.length > 0 && (
-                <span className="text-xs text-gray-500">
+                <span className="text-xs text-content-subtle">
                   Last import{' '}
-                  <span className="text-gray-300">
+                  <span className="text-content">
                     {formatTimestamp(importRuns[0].started_at)}
                   </span>{' '}
                   - {importRuns[0].status}, {importRuns[0].imported_count} new /{' '}
@@ -230,16 +230,16 @@ const PatchAdvisoriesListPage: React.FC = () => {
                 </span>
               )}
             </div>
-            <p className="mb-3 text-xs text-gray-400">
+            <p className="mb-3 text-xs text-content-muted">
               Paste one raw advisory object or a JSON array of them for the
               selected source. Payloads are normalized and stored server-side,
               and host applicability is recomputed for affected targets.
             </p>
             <div className="flex flex-col gap-3 md:flex-row">
-              <label className="text-xs text-gray-400 md:w-56">
+              <label className="text-xs text-content-muted md:w-56">
                 Source
                 <select
-                  className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-gray-100"
+                  className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-content"
                   value={importSource}
                   onChange={(e) =>
                     setImportSource(e.target.value as AdvisorySourceKind)
@@ -252,10 +252,10 @@ const PatchAdvisoriesListPage: React.FC = () => {
                   ))}
                 </select>
               </label>
-              <label className="flex-1 text-xs text-gray-400">
+              <label className="flex-1 text-xs text-content-muted">
                 Raw payload JSON
                 <textarea
-                  className="mt-1 h-40 w-full rounded bg-black/40 px-2 py-1 font-mono text-xs text-gray-100"
+                  className="mt-1 h-40 w-full rounded bg-black/40 px-2 py-1 font-mono text-xs text-content"
                   placeholder='{"id": "USN-1234-1", ...}  or  [ {...}, {...} ]'
                   value={importText}
                   onChange={(e) => setImportText(e.target.value)}
@@ -293,11 +293,11 @@ const PatchAdvisoriesListPage: React.FC = () => {
           </div>
         )}
 
-        <div className="mb-4 grid grid-cols-2 gap-3 rounded border border-zinc-800 bg-[#111115] p-3 md:grid-cols-4">
-          <label className="text-xs text-gray-400">
+        <div className="mb-4 grid grid-cols-2 gap-3 rounded border border-border bg-surface-raised p-3 md:grid-cols-4">
+          <label className="text-xs text-content-muted">
             Source
             <select
-              className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-gray-100"
+              className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-content"
               value={filters.source_kind}
               onChange={(e) =>
                 setFilter({ source_kind: e.target.value as AdvisorySourceKind | '' })
@@ -311,10 +311,10 @@ const PatchAdvisoriesListPage: React.FC = () => {
               ))}
             </select>
           </label>
-          <label className="text-xs text-gray-400">
+          <label className="text-xs text-content-muted">
             Class
             <select
-              className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-gray-100"
+              className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-content"
               value={filters.advisory_class}
               onChange={(e) =>
                 setFilter({ advisory_class: e.target.value as AdvisoryClass | '' })
@@ -328,10 +328,10 @@ const PatchAdvisoriesListPage: React.FC = () => {
               ))}
             </select>
           </label>
-          <label className="text-xs text-gray-400">
+          <label className="text-xs text-content-muted">
             Severity
             <select
-              className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-gray-100"
+              className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-content"
               value={filters.severity}
               onChange={(e) =>
                 setFilter({ severity: e.target.value as AdvisorySeverity | '' })
@@ -345,10 +345,10 @@ const PatchAdvisoriesListPage: React.FC = () => {
               ))}
             </select>
           </label>
-          <label className="text-xs text-gray-400">
+          <label className="text-xs text-content-muted">
             Distro family
             <select
-              className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-gray-100"
+              className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-content"
               value={filters.distro_family}
               onChange={(e) =>
                 setFilter({ distro_family: e.target.value as AdvisoryDistroFamily | '' })
@@ -367,7 +367,7 @@ const PatchAdvisoriesListPage: React.FC = () => {
         {advisories === null && !error && <LoadingState label="Loading advisories" />}
 
         {advisories !== null && advisories.length === 0 && (
-          <div className="rounded border border-zinc-800 bg-[#111115] p-6 text-sm text-gray-400">
+          <div className="rounded border border-border bg-surface-raised p-6 text-sm text-content-muted">
             {canWrite
               ? 'No advisories match these filters. Use “Import advisories” above to load native Ubuntu USN, Debian security, or Red Hat updateinfo payloads.'
               : 'No advisories match these filters. An administrator can import native distribution advisories to populate this list.'}
@@ -375,9 +375,9 @@ const PatchAdvisoriesListPage: React.FC = () => {
         )}
 
         {advisories && advisories.length > 0 && (
-          <div className="overflow-x-auto rounded border border-zinc-800 bg-[#111115]">
+          <div className="overflow-x-auto rounded border border-border bg-surface-raised">
             <table className="w-full text-sm">
-              <thead className="border-b border-zinc-800 text-left text-gray-400">
+              <thead className="border-b border-border text-left text-content-muted">
                 <tr>
                   <th className="px-4 py-2">Source ID / title</th>
                   <th className="px-4 py-2">Severity</th>
@@ -388,9 +388,9 @@ const PatchAdvisoriesListPage: React.FC = () => {
                   <th className="px-4 py-2 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-800">
+              <tbody className="divide-y divide-border">
                 {advisories.map((a) => (
-                  <tr key={a.id} className="hover:bg-zinc-900/40">
+                  <tr key={a.id} className="hover:bg-surface-overlay/40">
                     <td className="px-4 py-2">
                       <Link
                         href={`/patch-advisories/${a.id}`}
@@ -398,29 +398,29 @@ const PatchAdvisoriesListPage: React.FC = () => {
                       >
                         {a.source_advisory_id}
                       </Link>
-                      <div className="text-xs text-gray-500">{a.title}</div>
+                      <div className="text-xs text-content-subtle">{a.title}</div>
                     </td>
                     <td className="px-4 py-2">
                       <Badge variant={severityBadgeVariant(a.severity)}>
                         {SEVERITY_LABELS[a.severity]}
                       </Badge>
                     </td>
-                    <td className="px-4 py-2 text-gray-300">
+                    <td className="px-4 py-2 text-content">
                       {ADVISORY_CLASS_LABELS[a.advisory_class]}
                     </td>
-                    <td className="px-4 py-2 text-gray-300">
+                    <td className="px-4 py-2 text-content">
                       {DISTRO_FAMILY_LABELS[a.distro_family]}
                     </td>
-                    <td className="px-4 py-2 text-gray-300">
+                    <td className="px-4 py-2 text-content">
                       {SOURCE_KIND_LABELS[a.source_kind]}
                     </td>
-                    <td className="px-4 py-2 text-gray-400">
+                    <td className="px-4 py-2 text-content-muted">
                       {a.published_at ? formatTimestamp(a.published_at) : '-'}
                     </td>
                     <td className="px-4 py-2 text-right">
                       <Link
                         href={`/patch-advisories/${a.id}`}
-                        className="inline-flex items-center gap-1 rounded p-1 text-gray-400 hover:text-blue-400"
+                        className="inline-flex items-center gap-1 rounded p-1 text-content-muted hover:text-blue-400"
                         title="View detail"
                       >
                         <Eye size={16} />
@@ -433,7 +433,7 @@ const PatchAdvisoriesListPage: React.FC = () => {
           </div>
         )}
 
-        <div className="mt-4 flex items-center justify-between text-xs text-gray-500">
+        <div className="mt-4 flex items-center justify-between text-xs text-content-subtle">
           <span>
             Showing {advisories?.length ?? 0} starting at offset {offset}
           </span>
@@ -441,14 +441,14 @@ const PatchAdvisoriesListPage: React.FC = () => {
             <button
               onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
               disabled={offset === 0}
-              className="rounded border border-zinc-700 px-3 py-1 text-gray-300 hover:bg-zinc-800 disabled:opacity-40"
+              className="rounded border border-border-strong px-3 py-1 text-content hover:bg-surface-overlay disabled:opacity-40"
             >
               Previous
             </button>
             <button
               onClick={() => setOffset(offset + PAGE_SIZE)}
               disabled={(advisories?.length ?? 0) < PAGE_SIZE}
-              className="rounded border border-zinc-700 px-3 py-1 text-gray-300 hover:bg-zinc-800 disabled:opacity-40"
+              className="rounded border border-border-strong px-3 py-1 text-content hover:bg-surface-overlay disabled:opacity-40"
             >
               Next
             </button>

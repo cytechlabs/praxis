@@ -373,7 +373,7 @@ const PatchPolicyDetailPage: React.FC = () => {
           actions={
             <Link
               href="/patch-policies/all"
-              className="inline-flex items-center gap-1 rounded border border-zinc-700 px-3 py-1.5 text-sm text-gray-300 hover:bg-zinc-800"
+              className="inline-flex items-center gap-1 rounded border border-border-strong px-3 py-1.5 text-sm text-content hover:bg-surface-overlay"
             >
               <ArrowLeft size={14} /> Back
             </Link>
@@ -399,7 +399,7 @@ const PatchPolicyDetailPage: React.FC = () => {
             {policy.is_fleet_default ? (
               <button
                 onClick={onClearFleetDefault}
-                className="inline-flex items-center gap-1 rounded border border-zinc-700 px-3 py-1.5 text-xs text-gray-300 hover:bg-zinc-800"
+                className="inline-flex items-center gap-1 rounded border border-border-strong px-3 py-1.5 text-xs text-content hover:bg-surface-overlay"
               >
                 <StarOff size={14} /> Clear fleet default
               </button>
@@ -422,31 +422,31 @@ const PatchPolicyDetailPage: React.FC = () => {
         )}
 
         {/* Edit form */}
-        <section className="mb-6 rounded border border-zinc-800 bg-[#111115] p-4">
-          <h3 className="mb-3 text-sm font-medium text-gray-200">
+        <section className="mb-6 rounded border border-border bg-surface-raised p-4">
+          <h3 className="mb-3 text-sm font-medium text-content">
             Policy fields
           </h3>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <label className="text-xs text-gray-400">
+            <label className="text-xs text-content-muted">
               Slug (immutable)
               <input
                 disabled
-                className="mt-1 w-full rounded bg-black/20 px-2 py-1 font-mono text-sm text-gray-400"
+                className="mt-1 w-full rounded bg-black/20 px-2 py-1 font-mono text-sm text-content-muted"
                 value={policy.slug}
               />
             </label>
-            <label className="text-xs text-gray-400">
+            <label className="text-xs text-content-muted">
               Name
               <input
-                className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-gray-100"
+                className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-content"
                 value={merged.name}
                 onChange={(e) => setEdit({ ...edit, name: e.target.value })}
               />
             </label>
-            <label className="text-xs text-gray-400 md:col-span-2">
+            <label className="text-xs text-content-muted md:col-span-2">
               Description
               <textarea
-                className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-gray-100"
+                className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-content"
                 rows={2}
                 value={merged.description ?? ''}
                 onChange={(e) =>
@@ -454,10 +454,10 @@ const PatchPolicyDetailPage: React.FC = () => {
                 }
               />
             </label>
-            <label className="text-xs text-gray-400">
+            <label className="text-xs text-content-muted">
               Scope
               <select
-                className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-gray-100"
+                className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-content"
                 value={merged.scope_kind}
                 onChange={(e) =>
                   setEdit({ ...edit, scope_kind: e.target.value as ScopeKind })
@@ -470,10 +470,10 @@ const PatchPolicyDetailPage: React.FC = () => {
                 ))}
               </select>
             </label>
-            <label className="text-xs text-gray-400">
+            <label className="text-xs text-content-muted">
               Reboot policy
               <select
-                className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-gray-100"
+                className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-content"
                 value={merged.reboot_policy}
                 onChange={(e) =>
                   setEdit({
@@ -489,15 +489,15 @@ const PatchPolicyDetailPage: React.FC = () => {
                 ))}
               </select>
             </label>
-            <label className="text-xs text-gray-400 md:col-span-2">
+            <label className="text-xs text-content-muted md:col-span-2">
               Packages{' '}
-              <span className="text-gray-500">
+              <span className="text-content-subtle">
                 (comma-separated; required for allowlist / denylist; must be
                 empty for security-only / full)
               </span>
               <input
                 disabled={!fieldNeedsPackages && (merged.scope_packages || []).length === 0 && scopePackagesText.length === 0}
-                className="mt-1 w-full rounded bg-black/40 px-2 py-1 font-mono text-sm text-gray-100 disabled:opacity-50"
+                className="mt-1 w-full rounded bg-black/40 px-2 py-1 font-mono text-sm text-content disabled:opacity-50"
                 value={scopePackagesText}
                 onChange={(e) => setScopePackagesText(e.target.value)}
                 placeholder={
@@ -507,11 +507,11 @@ const PatchPolicyDetailPage: React.FC = () => {
                 }
               />
             </label>
-            <label className="text-xs text-gray-400">
+            <label className="text-xs text-content-muted">
               Maintenance window ID
               <input
                 type="number"
-                className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-gray-100"
+                className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-content"
                 value={merged.maintenance_window_id ?? ''}
                 onChange={(e) =>
                   setEdit({
@@ -524,11 +524,11 @@ const PatchPolicyDetailPage: React.FC = () => {
                 placeholder="(none)"
               />
             </label>
-            <label className="text-xs text-gray-400">
+            <label className="text-xs text-content-muted">
               Reboot window ID
               <input
                 type="number"
-                className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-gray-100"
+                className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-content"
                 value={merged.reboot_window_id ?? ''}
                 onChange={(e) =>
                   setEdit({
@@ -541,7 +541,7 @@ const PatchPolicyDetailPage: React.FC = () => {
                 placeholder="(none)"
               />
             </label>
-            <label className="flex items-center gap-2 text-xs text-gray-300">
+            <label className="flex items-center gap-2 text-xs text-content">
               <input
                 type="checkbox"
                 checked={merged.requires_approval}
@@ -551,12 +551,12 @@ const PatchPolicyDetailPage: React.FC = () => {
               />
               Requires approval
             </label>
-            <label className="text-xs text-gray-400">
+            <label className="text-xs text-content-muted">
               Required approvals
               <input
                 type="number"
                 min={1}
-                className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-gray-100"
+                className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-content"
                 value={merged.required_approvals}
                 onChange={(e) =>
                   setEdit({
@@ -569,10 +569,10 @@ const PatchPolicyDetailPage: React.FC = () => {
                 }
               />
             </label>
-            <label className="text-xs text-gray-400">
+            <label className="text-xs text-content-muted">
               Rollout cadence
               <select
-                className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-gray-100"
+                className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-content"
                 value={merged.rollout_cadence}
                 onChange={(e) =>
                   setEdit({
@@ -593,10 +593,10 @@ const PatchPolicyDetailPage: React.FC = () => {
                 </span>
               )}
             </label>
-            <label className="text-xs text-gray-400">
+            <label className="text-xs text-content-muted">
               Failure policy
               <select
-                className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-gray-100"
+                className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-content"
                 value={merged.failure_policy}
                 onChange={(e) =>
                   setEdit({
@@ -612,7 +612,7 @@ const PatchPolicyDetailPage: React.FC = () => {
                 ))}
               </select>
             </label>
-            <label className="flex items-center gap-2 text-xs text-gray-300">
+            <label className="flex items-center gap-2 text-xs text-content">
               <input
                 type="checkbox"
                 checked={merged.enabled}
@@ -634,7 +634,7 @@ const PatchPolicyDetailPage: React.FC = () => {
             <button
               onClick={onCancel}
               disabled={!dirty || saving}
-              className="inline-flex items-center gap-1 rounded border border-zinc-700 px-3 py-1.5 text-sm text-gray-300 hover:bg-zinc-800 disabled:opacity-40"
+              className="inline-flex items-center gap-1 rounded border border-border-strong px-3 py-1.5 text-sm text-content hover:bg-surface-overlay disabled:opacity-40"
             >
               <X size={14} /> Cancel
             </button>
@@ -642,10 +642,10 @@ const PatchPolicyDetailPage: React.FC = () => {
         </section>
 
         {/* Bindings */}
-        <section className="mb-6 rounded border border-zinc-800 bg-[#111115] p-4">
-          <h3 className="mb-3 text-sm font-medium text-gray-200">
+        <section className="mb-6 rounded border border-border bg-surface-raised p-4">
+          <h3 className="mb-3 text-sm font-medium text-content">
             Bindings ·{' '}
-            <span className="text-gray-500">
+            <span className="text-content-subtle">
               direct host &gt; static group &gt; smart group &gt; fleet default
             </span>
           </h3>
@@ -653,12 +653,12 @@ const PatchPolicyDetailPage: React.FC = () => {
           {/* Hosts */}
           <div className="mb-4">
             <div className="mb-2 flex items-center justify-between">
-              <span className="text-xs uppercase tracking-wide text-gray-400">
+              <span className="text-xs uppercase tracking-wide text-content-muted">
                 Direct host bindings ({bindings?.hosts.length ?? 0})
               </span>
               <div className="flex items-center gap-2">
                 <select
-                  className="rounded bg-black/40 px-2 py-1 text-xs text-gray-100"
+                  className="rounded bg-black/40 px-2 py-1 text-xs text-content"
                   value={addHostId}
                   onChange={(e) => setAddHostId(e.target.value)}
                 >
@@ -684,18 +684,18 @@ const PatchPolicyDetailPage: React.FC = () => {
               </div>
             </div>
             {bindings && bindings.hosts.length > 0 ? (
-              <ul className="divide-y divide-zinc-800 rounded border border-zinc-800">
+              <ul className="divide-y divide-border rounded border border-border">
                 {bindings.hosts.map((b) => (
                   <li
                     key={b.id}
                     className="flex items-center justify-between px-3 py-1.5 text-sm"
                   >
-                    <span className="text-gray-200">
+                    <span className="text-content">
                       {labelForId(systems, b.system_id, 'host')}
                     </span>
                     <button
                       onClick={() => onRemoveHost(b.system_id)}
-                      className="rounded p-1 text-gray-400 hover:text-red-400"
+                      className="rounded p-1 text-content-muted hover:text-red-400"
                       title="Unbind"
                     >
                       <Trash2 size={14} />
@@ -704,19 +704,19 @@ const PatchPolicyDetailPage: React.FC = () => {
                 ))}
               </ul>
             ) : (
-              <div className="text-xs text-gray-500">No direct host bindings.</div>
+              <div className="text-xs text-content-subtle">No direct host bindings.</div>
             )}
           </div>
 
           {/* Static groups */}
           <div className="mb-4">
             <div className="mb-2 flex items-center justify-between">
-              <span className="text-xs uppercase tracking-wide text-gray-400">
+              <span className="text-xs uppercase tracking-wide text-content-muted">
                 Static group bindings ({bindings?.groups.length ?? 0})
               </span>
               <div className="flex items-center gap-2">
                 <select
-                  className="rounded bg-black/40 px-2 py-1 text-xs text-gray-100"
+                  className="rounded bg-black/40 px-2 py-1 text-xs text-content"
                   value={addGroupId}
                   onChange={(e) => setAddGroupId(e.target.value)}
                 >
@@ -742,18 +742,18 @@ const PatchPolicyDetailPage: React.FC = () => {
               </div>
             </div>
             {bindings && bindings.groups.length > 0 ? (
-              <ul className="divide-y divide-zinc-800 rounded border border-zinc-800">
+              <ul className="divide-y divide-border rounded border border-border">
                 {bindings.groups.map((b) => (
                   <li
                     key={b.id}
                     className="flex items-center justify-between px-3 py-1.5 text-sm"
                   >
-                    <span className="text-gray-200">
+                    <span className="text-content">
                       {labelForId(groups, b.group_id, 'group')}
                     </span>
                     <button
                       onClick={() => onRemoveGroup(b.group_id)}
-                      className="rounded p-1 text-gray-400 hover:text-red-400"
+                      className="rounded p-1 text-content-muted hover:text-red-400"
                       title="Unbind"
                     >
                       <Trash2 size={14} />
@@ -762,19 +762,19 @@ const PatchPolicyDetailPage: React.FC = () => {
                 ))}
               </ul>
             ) : (
-              <div className="text-xs text-gray-500">No static group bindings.</div>
+              <div className="text-xs text-content-subtle">No static group bindings.</div>
             )}
           </div>
 
           {/* Smart groups */}
           <div>
             <div className="mb-2 flex items-center justify-between">
-              <span className="text-xs uppercase tracking-wide text-gray-400">
+              <span className="text-xs uppercase tracking-wide text-content-muted">
                 Smart group bindings ({bindings?.smart_groups.length ?? 0})
               </span>
               <div className="flex items-center gap-2">
                 <select
-                  className="rounded bg-black/40 px-2 py-1 text-xs text-gray-100"
+                  className="rounded bg-black/40 px-2 py-1 text-xs text-content"
                   value={addSmartGroupId}
                   onChange={(e) => setAddSmartGroupId(e.target.value)}
                 >
@@ -801,25 +801,25 @@ const PatchPolicyDetailPage: React.FC = () => {
                 </button>
               </div>
             </div>
-            <p className="mb-2 text-[11px] text-gray-500">
+            <p className="mb-2 text-[11px] text-content-subtle">
               Smart groups whose rules reference{' '}
               <span className="font-mono">patch.*</span> cannot be bound here -
               the cycle would create a feedback loop where membership depends
               on the policy that membership assigns.
             </p>
             {bindings && bindings.smart_groups.length > 0 ? (
-              <ul className="divide-y divide-zinc-800 rounded border border-zinc-800">
+              <ul className="divide-y divide-border rounded border border-border">
                 {bindings.smart_groups.map((b) => (
                   <li
                     key={b.id}
                     className="flex items-center justify-between px-3 py-1.5 text-sm"
                   >
-                    <span className="text-gray-200">
+                    <span className="text-content">
                       {labelForId(smartGroups, b.smart_group_id, 'smart group')}
                     </span>
                     <button
                       onClick={() => onRemoveSmartGroup(b.smart_group_id)}
-                      className="rounded p-1 text-gray-400 hover:text-red-400"
+                      className="rounded p-1 text-content-muted hover:text-red-400"
                       title="Unbind"
                     >
                       <Trash2 size={14} />
@@ -828,7 +828,7 @@ const PatchPolicyDetailPage: React.FC = () => {
                 ))}
               </ul>
             ) : (
-              <div className="text-xs text-gray-500">
+              <div className="text-xs text-content-subtle">
                 No smart group bindings.
               </div>
             )}

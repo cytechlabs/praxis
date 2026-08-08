@@ -207,43 +207,43 @@ const IdentityProviderTab: React.FC = () => {
   };
 
   if (loading) {
-    return <div className="text-gray-400 p-4">Loading identity providers...</div>;
+    return <div className="text-content-muted p-4">Loading identity providers...</div>;
   }
 
   // Editing form
   if (editing !== null) {
     return (
-      <div className="bg-[#0c0c0f] border border-gray-800/60 rounded-lg p-6">
+      <div className="bg-surface-raised border border-border/60 rounded-lg p-6">
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold text-gray-100">
+          <h3 className="text-lg font-semibold text-content">
             {editing === 'new' ? 'Add Identity Provider' : 'Edit Identity Provider'}
           </h3>
-          <button onClick={handleCancel} className="text-gray-400 hover:text-gray-200">
+          <button onClick={handleCancel} className="text-content-muted hover:text-content">
             <X size={20} />
           </button>
         </div>
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Provider Name</label>
+            <label className="block text-sm font-medium text-content mb-1">Provider Name</label>
             <input
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               placeholder="e.g., Okta, Azure AD, Keycloak"
-              className="w-full px-3 py-2 bg-[#09090b] border border-gray-700/60 rounded-md text-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-600"
+              className="w-full px-3 py-2 bg-surface-sunken border border-border-strong/60 rounded-md text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Discovery URL</label>
+            <label className="block text-sm font-medium text-content mb-1">Discovery URL</label>
             <div className="flex gap-2">
               <input
                 type="text"
                 value={formData.discovery_url}
                 onChange={(e) => setFormData({ ...formData, discovery_url: e.target.value })}
                 placeholder="https://your-provider.com/.well-known/openid-configuration"
-                className="flex-1 px-3 py-2 bg-[#09090b] border border-gray-700/60 rounded-md text-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-600"
+                className="flex-1 px-3 py-2 bg-surface-sunken border border-border-strong/60 rounded-md text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
               />
               <Button
                 variant="outline"
@@ -264,51 +264,51 @@ const IdentityProviderTab: React.FC = () => {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Client ID</label>
+              <label className="block text-sm font-medium text-content mb-1">Client ID</label>
               <input
                 type="text"
                 value={formData.client_id}
                 onChange={(e) => setFormData({ ...formData, client_id: e.target.value })}
-                className="w-full px-3 py-2 bg-[#09090b] border border-gray-700/60 rounded-md text-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-600"
+                className="w-full px-3 py-2 bg-surface-sunken border border-border-strong/60 rounded-md text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">
-                Client Secret {editing !== 'new' && <span className="text-gray-500">(leave blank to keep current)</span>}
+              <label className="block text-sm font-medium text-content mb-1">
+                Client Secret {editing !== 'new' && <span className="text-content-subtle">(leave blank to keep current)</span>}
               </label>
               <input
                 type="password"
                 value={formData.client_secret}
                 onChange={(e) => setFormData({ ...formData, client_secret: e.target.value })}
-                className="w-full px-3 py-2 bg-[#09090b] border border-gray-700/60 rounded-md text-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-600"
+                className="w-full px-3 py-2 bg-surface-sunken border border-border-strong/60 rounded-md text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Role Claim</label>
+            <label className="block text-sm font-medium text-content mb-1">Role Claim</label>
             <input
               type="text"
               value={formData.role_claim}
               onChange={(e) => setFormData({ ...formData, role_claim: e.target.value })}
               placeholder="roles, groups, resource_access.praxis.roles"
-              className="w-full px-3 py-2 bg-[#09090b] border border-gray-700/60 rounded-md text-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-600"
+              className="w-full px-3 py-2 bg-surface-sunken border border-border-strong/60 rounded-md text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
             />
-            <p className="mt-1 text-xs text-gray-500">
+            <p className="mt-1 text-xs text-content-subtle">
               JWT claim containing user roles. Supports dot notation for nested claims.
             </p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Role Mapping (JSON)</label>
+            <label className="block text-sm font-medium text-content mb-1">Role Mapping (JSON)</label>
             <textarea
               value={formData.role_mapping}
               onChange={(e) => setFormData({ ...formData, role_mapping: e.target.value })}
               rows={4}
               placeholder='{"admin_group": "admin", "users": "maintainer", "viewers": "auditor"}'
-              className="w-full px-3 py-2 bg-[#09090b] border border-gray-700/60 rounded-md text-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-600 font-mono text-sm"
+              className="w-full px-3 py-2 bg-surface-sunken border border-border-strong/60 rounded-md text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong font-mono text-sm"
             />
-            <p className="mt-1 text-xs text-gray-500">
+            <p className="mt-1 text-xs text-content-subtle">
               Maps provider role/group values to Praxis roles (admin, maintainer, auditor).
             </p>
           </div>
@@ -319,14 +319,14 @@ const IdentityProviderTab: React.FC = () => {
               id="enabled"
               checked={formData.enabled}
               onChange={(e) => setFormData({ ...formData, enabled: e.target.checked })}
-              className="rounded border-gray-700"
+              className="rounded border-border-strong"
             />
-            <label htmlFor="enabled" className="text-sm text-gray-300">
+            <label htmlFor="enabled" className="text-sm text-content">
               Enable SSO login
             </label>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-800/60">
+          <div className="flex justify-end gap-3 pt-4 border-t border-border/60">
             <Button variant="outline" onClick={handleCancel}>
               Cancel
             </Button>
@@ -350,8 +350,8 @@ const IdentityProviderTab: React.FC = () => {
     <div>
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="text-lg font-semibold text-gray-100">Identity Provider</h3>
-          <p className="text-sm text-gray-400">Configure OIDC/OAuth2 single sign-on</p>
+          <h3 className="text-lg font-semibold text-content">Identity Provider</h3>
+          <p className="text-sm text-content-muted">Configure OIDC/OAuth2 single sign-on</p>
         </div>
         <Button variant="primary" onClick={handleNew} icon={<Plus size={16} />}>
           Add Provider
@@ -359,10 +359,10 @@ const IdentityProviderTab: React.FC = () => {
       </div>
 
       {providers.length === 0 ? (
-        <div className="bg-[#0c0c0f] border border-gray-800/60 rounded-lg p-8 text-center">
-          <Shield size={48} className="mx-auto text-gray-600 mb-4" />
-          <p className="text-gray-400 mb-2">No identity provider configured</p>
-          <p className="text-sm text-gray-500">
+        <div className="bg-surface-raised border border-border/60 rounded-lg p-8 text-center">
+          <Shield size={48} className="mx-auto text-content-subtle mb-4" />
+          <p className="text-content-muted mb-2">No identity provider configured</p>
+          <p className="text-sm text-content-subtle">
             Add an OIDC provider to enable single sign-on alongside local authentication.
           </p>
         </div>
@@ -371,21 +371,21 @@ const IdentityProviderTab: React.FC = () => {
           {providers.map((provider) => (
             <div
               key={provider.id}
-              className="bg-[#0c0c0f] border border-gray-800/60 rounded-lg p-4 flex items-center justify-between"
+              className="bg-surface-raised border border-border/60 rounded-lg p-4 flex items-center justify-between"
             >
               <div className="flex items-center gap-4">
                 <Shield size={24} className={provider.enabled ? 'text-green-400' : 'text-gray-600'} />
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-gray-100 font-medium">{provider.name}</span>
+                    <span className="text-content font-medium">{provider.name}</span>
                     <span className={`px-2 py-0.5 text-xs rounded-full ${provider.enabled ? 'bg-green-900/30 text-green-400' : 'bg-gray-800 text-gray-500'}`}>
                       {provider.enabled ? 'Enabled' : 'Disabled'}
                     </span>
                   </div>
-                  <div className="text-sm text-gray-500 mt-1">
+                  <div className="text-sm text-content-subtle mt-1">
                     {provider.discovery_url}
                   </div>
-                  <div className="text-xs text-gray-600 mt-1">
+                  <div className="text-xs text-content-subtle mt-1">
                     Client ID: {provider.client_id} | Claim: {provider.role_claim}
                   </div>
                 </div>

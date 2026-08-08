@@ -97,7 +97,7 @@ const ComplianceRemediationExecutionDetailPage: React.FC = () => {
   if (!Number.isFinite(attemptId)) {
     return (
       <MainLayout>
-        <div className="p-6 text-gray-400">Invalid execution attempt id.</div>
+        <div className="p-6 text-content-muted">Invalid execution attempt id.</div>
       </MainLayout>
     );
   }
@@ -120,14 +120,14 @@ const ComplianceRemediationExecutionDetailPage: React.FC = () => {
               {attempt && (
                 <Link
                   href={`/compliance/remediation/requests/${attempt.request_id}`}
-                  className="inline-flex items-center gap-1.5 text-sm text-gray-300 hover:text-gray-100"
+                  className="inline-flex items-center gap-1.5 text-sm text-content hover:text-content"
                 >
                   <ArrowLeft size={14} /> Request #{attempt.request_id}
                 </Link>
               )}
               <Link
                 href="/compliance/remediation"
-                className="inline-flex items-center gap-1.5 text-sm text-gray-300 hover:text-gray-100"
+                className="inline-flex items-center gap-1.5 text-sm text-content hover:text-content"
               >
                 Fleet remediation →
               </Link>
@@ -162,7 +162,7 @@ const ComplianceRemediationExecutionDetailPage: React.FC = () => {
                 <Row
                   label="Plan kind snapshot"
                   value={
-                    <span className="text-sm text-gray-200">
+                    <span className="text-sm text-content">
                       {PLAN_KIND_LABELS[
                         attempt.plan_kind_snapshot as keyof typeof PLAN_KIND_LABELS
                       ] ?? attempt.plan_kind_snapshot}
@@ -188,7 +188,7 @@ const ComplianceRemediationExecutionDetailPage: React.FC = () => {
                         Plan #{attempt.plan_id}
                       </Link>
                     ) : (
-                      <span className="text-xs text-gray-500">-</span>
+                      <span className="text-xs text-content-subtle">-</span>
                     )
                   }
                 />
@@ -249,7 +249,7 @@ const ComplianceRemediationExecutionDetailPage: React.FC = () => {
                         user #{attempt.approval_decided_by}
                       </span>
                     ) : (
-                      <span className="text-xs text-gray-500">-</span>
+                      <span className="text-xs text-content-subtle">-</span>
                     )
                   }
                 />
@@ -295,7 +295,7 @@ const ComplianceRemediationExecutionDetailPage: React.FC = () => {
                     attempt.exit_code !== null ? (
                       <span className="font-mono">{attempt.exit_code}</span>
                     ) : (
-                      <span className="text-xs text-gray-500">-</span>
+                      <span className="text-xs text-content-subtle">-</span>
                     )
                   }
                 />
@@ -307,7 +307,7 @@ const ComplianceRemediationExecutionDetailPage: React.FC = () => {
                         {attempt.duration_ms.toLocaleString()} ms
                       </span>
                     ) : (
-                      <span className="text-xs text-gray-500">-</span>
+                      <span className="text-xs text-content-subtle">-</span>
                     )
                   }
                 />
@@ -335,7 +335,7 @@ const ComplianceRemediationExecutionDetailPage: React.FC = () => {
                     label="stdout summary"
                     wide
                     value={
-                      <pre className="whitespace-pre-wrap text-xs font-mono text-gray-300">
+                      <pre className="whitespace-pre-wrap text-xs font-mono text-content">
                         {attempt.stdout_summary}
                       </pre>
                     }
@@ -346,7 +346,7 @@ const ComplianceRemediationExecutionDetailPage: React.FC = () => {
                     label="stderr summary"
                     wide
                     value={
-                      <pre className="whitespace-pre-wrap text-xs font-mono text-gray-300">
+                      <pre className="whitespace-pre-wrap text-xs font-mono text-content">
                         {attempt.stderr_summary}
                       </pre>
                     }
@@ -414,7 +414,7 @@ const DispatchAction: React.FC<DispatchActionProps> = ({
   };
 
   return (
-    <div className="border-t border-gray-800 pt-4 mt-4 space-y-2">
+    <div className="border-t border-border pt-4 mt-4 space-y-2">
       <div className="flex flex-wrap items-center gap-3">
         <Button
           variant="primary"
@@ -432,7 +432,7 @@ const DispatchAction: React.FC<DispatchActionProps> = ({
           {blocked}
         </div>
       )}
-      <p className="text-[11px] text-gray-500">
+      <p className="text-[11px] text-content-subtle">
         Dispatch invokes the approved patch execution transport on
         the backend. The backend re-checks the readiness gate at write
         time and walks the attempt through{' '}
@@ -467,8 +467,8 @@ const Row: React.FC<{
   wide?: boolean;
 }> = ({ label, value, wide }) => (
   <div className={wide ? 'md:col-span-3' : ''}>
-    <p className="text-xs uppercase tracking-wide text-gray-500">{label}</p>
-    <div className="text-sm text-gray-200 mt-0.5">{value}</div>
+    <p className="text-xs uppercase tracking-wide text-content-subtle">{label}</p>
+    <div className="text-sm text-content mt-0.5">{value}</div>
   </div>
 );
 

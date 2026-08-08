@@ -193,10 +193,10 @@ const FleetAccessTab = () => {
       {/* Header + actions */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-gray-200 flex items-center gap-2">
+          <h2 className="text-lg font-semibold text-content flex items-center gap-2">
             <Shield size={18} /> Fleet Access
           </h2>
-          <p className="text-sm text-gray-400 mt-1 max-w-2xl">
+          <p className="text-sm text-content-muted mt-1 max-w-2xl">
             Define who can access which systems, as which Linux login, under which fleet role.
             Reconcile pushes the current state to every host: creates accounts, writes principals,
             removes revoked access with home directory archived. Fleet roles grant no standing
@@ -220,33 +220,33 @@ const FleetAccessTab = () => {
         <CardHeader>
           <div>
             <div>Fleet Roles</div>
-            <div className="text-xs font-normal text-gray-500 mt-0.5">
+            <div className="text-xs font-normal text-content-subtle mt-0.5">
               Permission bundles applied per-fleet. Built-in roles are managed by Praxis.
             </div>
           </div>
         </CardHeader>
         <CardBody>
           {loading ? (
-            <div className="text-gray-500 text-sm">Loading…</div>
+            <div className="text-content-subtle text-sm">Loading…</div>
           ) : roles.length === 0 ? (
             <EmptyState title="No fleet roles" description="No roles have been configured." icon={<Shield size={28} />} />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {roles.map(r => (
-                <div key={r.id} className="rounded-lg border border-gray-800 bg-black/40 p-4">
+                <div key={r.id} className="rounded-lg border border-border bg-black/40 p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-gray-200">{r.name}</h3>
+                      <h3 className="font-semibold text-content">{r.name}</h3>
                       {r.is_builtin && <Badge variant="info">built-in</Badge>}
                     </div>
                     <Badge variant={r.login_mode === 'per_user' ? 'success' : 'warning'}>
                       {r.login_mode === 'per_user' ? 'per-user' : `role: ${r.role_account_name}`}
                     </Badge>
                   </div>
-                  {r.description && <p className="text-xs text-gray-400 mt-2">{r.description}</p>}
-                  <div className="mt-3 space-y-1 text-xs text-gray-500">
-                    <div>actions: <span className="text-gray-300">{r.allowed_actions.join(', ') || 'none'}</span></div>
-                    <div>os groups: <span className="text-gray-300">{r.os_groups.join(', ') || '-'}</span></div>
+                  {r.description && <p className="text-xs text-content-muted mt-2">{r.description}</p>}
+                  <div className="mt-3 space-y-1 text-xs text-content-subtle">
+                    <div>actions: <span className="text-content">{r.allowed_actions.join(', ') || 'none'}</span></div>
+                    <div>os groups: <span className="text-content">{r.os_groups.join(', ') || '-'}</span></div>
                     <div>
                       approval: {r.session_requires_approval ? 'required' : 'no'} · totp: {r.totp_required ? 'required' : 'no'}
                     </div>
@@ -272,14 +272,14 @@ const FleetAccessTab = () => {
         >
           <div>
             <div>Access Bindings</div>
-            <div className="text-xs font-normal text-gray-500 mt-0.5">
+            <div className="text-xs font-normal text-content-subtle mt-0.5">
               Grants a subject (user or app-role) access to a scope (group or smart group) under a fleet role.
             </div>
           </div>
         </CardHeader>
         <CardBody>
           {loading ? (
-            <div className="text-gray-500 text-sm">Loading…</div>
+            <div className="text-content-subtle text-sm">Loading…</div>
           ) : bindings.length === 0 ? (
             <EmptyState
               title="No bindings yet"
@@ -290,7 +290,7 @@ const FleetAccessTab = () => {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left text-xs uppercase tracking-wide text-gray-500 border-b border-gray-800">
+                  <tr className="text-left text-xs uppercase tracking-wide text-content-subtle border-b border-border">
                     <th className="py-2 pr-4">Subject</th>
                     <th className="py-2 pr-4">Scope</th>
                     <th className="py-2 pr-4">Fleet Role</th>
@@ -303,9 +303,9 @@ const FleetAccessTab = () => {
                   {bindings.map(b => {
                     const role = rolesById.get(b.fleet_role_id);
                     return (
-                      <tr key={b.id} className="border-b border-gray-900 hover:bg-white/5">
-                        <td className="py-3 pr-4 text-gray-300">{describeSubject(b)}</td>
-                        <td className="py-3 pr-4 text-gray-300">{describeScope(b)}</td>
+                      <tr key={b.id} className="border-b border-border hover:bg-white/5">
+                        <td className="py-3 pr-4 text-content">{describeSubject(b)}</td>
+                        <td className="py-3 pr-4 text-content">{describeScope(b)}</td>
                         <td className="py-3 pr-4">
                           <Badge variant="info">{role?.name || `#${b.fleet_role_id}`}</Badge>
                         </td>
@@ -314,13 +314,13 @@ const FleetAccessTab = () => {
                             {b.enabled ? 'enabled' : 'disabled'}
                           </Badge>
                         </td>
-                        <td className="py-3 pr-4 text-gray-400 text-xs">
+                        <td className="py-3 pr-4 text-content-muted text-xs">
                           {b.expires_at ? formatTimestamp(b.expires_at) : 'never'}
                         </td>
                         <td className="py-3 pr-4 text-right">
                           <button
                             onClick={() => setDeleteCandidate(b)}
-                            className="p-1.5 rounded-md text-gray-500 hover:text-red-400 hover:bg-red-500/10"
+                            className="p-1.5 rounded-md text-content-subtle hover:text-red-400 hover:bg-red-500/10"
                             aria-label="Delete binding"
                           >
                             <Trash2 size={14} />
@@ -340,7 +340,7 @@ const FleetAccessTab = () => {
       <Modal open={isCreateOpen} onClose={() => setIsCreateOpen(false)} title="New Access Binding">
         <div className="space-y-4">
           <div>
-            <label className="block text-xs uppercase tracking-wide text-gray-500 mb-1">Subject</label>
+            <label className="block text-xs uppercase tracking-wide text-content-subtle mb-1">Subject</label>
             <div className="flex gap-2">
               <div className="w-40">
                 <Select
@@ -367,12 +367,12 @@ const FleetAccessTab = () => {
               </div>
             </div>
             {form.subject_kind === 'app_role' && (
-              <p className="text-xs text-gray-500 mt-1">All users holding this app role will inherit the binding.</p>
+              <p className="text-xs text-content-subtle mt-1">All users holding this app role will inherit the binding.</p>
             )}
           </div>
 
           <div>
-            <label className="block text-xs uppercase tracking-wide text-gray-500 mb-1">Scope</label>
+            <label className="block text-xs uppercase tracking-wide text-content-subtle mb-1">Scope</label>
             <div className="flex gap-2">
               <div className="w-40">
                 <Select
@@ -401,7 +401,7 @@ const FleetAccessTab = () => {
           </div>
 
           <div>
-            <label className="block text-xs uppercase tracking-wide text-gray-500 mb-1">Fleet Role</label>
+            <label className="block text-xs uppercase tracking-wide text-content-subtle mb-1">Fleet Role</label>
             <Select
               value={form.fleet_role_id}
               onChange={e => setForm(f => ({ ...f, fleet_role_id: Number(e.target.value) }))}

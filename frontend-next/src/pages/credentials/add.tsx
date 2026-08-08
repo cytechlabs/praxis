@@ -219,8 +219,8 @@ const AddCredentialPage: React.FC = () => {
           <title>Add Credential | Praxis</title>
         </Head>
         <div className="text-center">
-          <h1 className="text-xl font-semibold text-gray-100">Access Denied</h1>
-          <p className="text-gray-400 mt-2">You do not have permission to access this page.</p>
+          <h1 className="text-xl font-semibold text-content">Access Denied</h1>
+          <p className="text-content-muted mt-2">You do not have permission to access this page.</p>
         </div>
       </MainLayout>
     );
@@ -251,10 +251,10 @@ const AddCredentialPage: React.FC = () => {
         {/* Creation mode picker */}
         <Card>
           <CardBody>
-            <h2 className="text-sm font-semibold text-gray-200 uppercase tracking-wider mb-1">
+            <h2 className="text-sm font-semibold text-content uppercase tracking-wider mb-1">
               How should we store the secret?
             </h2>
-            <p className="text-xs text-gray-500 mb-4">
+            <p className="text-xs text-content-subtle mb-4">
               Every credential is backed by OpenBao (a Vault-compatible secrets service). Choose whether to create a new secret
               for it or link to one that already exists.
             </p>
@@ -265,16 +265,16 @@ const AddCredentialPage: React.FC = () => {
                 className={`text-left p-4 rounded-lg border transition-colors ${
                   mode === 'managed'
                     ? 'border-red-600 bg-red-900/20'
-                    : 'border-gray-800 bg-gray-900/30 hover:border-gray-700'
+                    : 'border-border bg-surface-raised/30 hover:border-border-strong'
                 }`}
               >
                 <div className="flex items-center gap-2 mb-1">
                   <Plus size={16} className="text-red-400" />
-                  <span className="text-sm font-semibold text-gray-200">Create new secret</span>
+                  <span className="text-sm font-semibold text-content">Create new secret</span>
                 </div>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-content-subtle">
                   Enter a username + password or SSH key. Praxis writes it to Vault under
-                  <code className="ml-1 text-gray-400">praxis/credentials/&lt;name&gt;</code>.
+                  <code className="ml-1 text-content-muted">praxis/credentials/&lt;name&gt;</code>.
                 </p>
               </button>
               <button
@@ -283,16 +283,16 @@ const AddCredentialPage: React.FC = () => {
                 className={`text-left p-4 rounded-lg border transition-colors ${
                   mode === 'linked'
                     ? 'border-red-600 bg-red-900/20'
-                    : 'border-gray-800 bg-gray-900/30 hover:border-gray-700'
+                    : 'border-border bg-surface-raised/30 hover:border-border-strong'
                 }`}
               >
                 <div className="flex items-center gap-2 mb-1">
-                  <Link2 size={16} className="text-slate-300" />
-                  <span className="text-sm font-semibold text-gray-200">
+                  <Link2 size={16} className="text-content" />
+                  <span className="text-sm font-semibold text-content">
                     Link to existing Vault secret
                   </span>
                 </div>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-content-subtle">
                   Pick a secret already stored in Vault. Praxis just records its path - no copy is
                   made.
                 </p>
@@ -304,7 +304,7 @@ const AddCredentialPage: React.FC = () => {
         {/* Identity + secret */}
         <Card>
           <CardBody>
-            <h2 className="text-sm font-semibold text-gray-200 uppercase tracking-wider mb-4">
+            <h2 className="text-sm font-semibold text-content uppercase tracking-wider mb-4">
               {mode === 'managed' ? 'Identity & Secret' : 'Identity & Linked Secret'}
             </h2>
 
@@ -323,7 +323,7 @@ const AddCredentialPage: React.FC = () => {
 
               {mode === 'managed' && (
                 <div className="md:col-span-2">
-                  <label className="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">
+                  <label className="block text-xs font-medium text-content-muted uppercase tracking-wider mb-2">
                     Auth Method
                   </label>
                   <div className="flex gap-3">
@@ -382,7 +382,7 @@ const AddCredentialPage: React.FC = () => {
                     />
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">
+                    <label className="block text-xs font-medium text-content-muted uppercase tracking-wider mb-1">
                       SSH Private Key *
                     </label>
                     <textarea
@@ -392,7 +392,7 @@ const AddCredentialPage: React.FC = () => {
                       required
                       rows={8}
                       placeholder="Paste SSH private key here"
-                      className="w-full px-3 py-2 bg-gray-900/50 border border-gray-700 rounded-md text-sm text-gray-200 font-mono placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-600"
+                      className="w-full px-3 py-2 bg-surface-sunken/50 border border-border-strong rounded-md text-sm text-content font-mono placeholder:text-content-subtle focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
                     />
                   </div>
                 </>
@@ -400,7 +400,7 @@ const AddCredentialPage: React.FC = () => {
 
               {mode === 'linked' && (
                 <div className="md:col-span-2">
-                  <label className="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">
+                  <label className="block text-xs font-medium text-content-muted uppercase tracking-wider mb-1">
                     Vault Secret *
                   </label>
                   <div className="relative">
@@ -413,11 +413,11 @@ const AddCredentialPage: React.FC = () => {
                       readOnly
                       onClick={() => setShowSecretSelector((s) => !s)}
                       placeholder="Click to select a secret"
-                      className="w-full px-3 py-2 pr-10 bg-gray-900/50 border border-gray-700 rounded-md text-sm text-gray-200 font-mono cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-600"
+                      className="w-full px-3 py-2 pr-10 bg-surface-raised/50 border border-border-strong rounded-md text-sm text-content font-mono cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
                     />
                     <button
                       type="button"
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-content-muted hover:text-content"
                       onClick={() => setShowSecretSelector((s) => !s)}
                     >
                       <ChevronDown size={18} />
@@ -425,7 +425,7 @@ const AddCredentialPage: React.FC = () => {
                   </div>
 
                   {showSecretSelector && (
-                    <div className="mt-2 bg-gray-950 border border-gray-800 rounded-md p-4">
+                    <div className="mt-2 bg-surface-raised border border-border rounded-md p-4">
                       {loadingVault ? (
                         <div className="flex justify-center items-center h-32">
                           <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-red-500" />
@@ -447,7 +447,7 @@ const AddCredentialPage: React.FC = () => {
                           </Select>
 
                           <div>
-                            <label className="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">
+                            <label className="block text-xs font-medium text-content-muted uppercase tracking-wider mb-1">
                               Secrets
                             </label>
                             <div className="relative">
@@ -456,18 +456,18 @@ const AddCredentialPage: React.FC = () => {
                                 value={secretSearch}
                                 onChange={(e) => setSecretSearch(e.target.value)}
                                 placeholder="Search secrets..."
-                                className="w-full pl-9 pr-3 py-2 bg-gray-900/50 border border-gray-700 rounded-md text-sm text-gray-200 placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-600"
+                                className="w-full pl-9 pr-3 py-2 bg-surface-sunken border border-border-strong rounded-md text-sm text-content placeholder:text-content-subtle focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
                               />
                               <Search
                                 size={14}
-                                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"
+                                className="absolute left-3 top-1/2 -translate-y-1/2 text-content-subtle"
                               />
                             </div>
                           </div>
 
                           <div className="max-h-60 overflow-y-auto">
                             {filteredSecrets.length === 0 ? (
-                              <p className="text-gray-500 text-center py-4 text-sm">
+                              <p className="text-content-subtle text-center py-4 text-sm">
                                 {secrets.length === 0 ? 'No secrets in this store' : 'No matches'}
                               </p>
                             ) : (
@@ -477,9 +477,9 @@ const AddCredentialPage: React.FC = () => {
                                     key={i}
                                     type="button"
                                     onClick={() => handleSelectSecret(secret)}
-                                    className="w-full text-left px-3 py-2 rounded-md bg-gray-900 text-gray-300 hover:bg-gray-800 flex items-center gap-2 text-sm"
+                                    className="w-full text-left px-3 py-2 rounded-md bg-surface-raised text-content hover:bg-surface-overlay flex items-center gap-2 text-sm"
                                   >
-                                    <Database size={14} className="text-slate-300 shrink-0" />
+                                    <Database size={14} className="text-content shrink-0" />
                                     <span className="truncate font-mono">{secret}</span>
                                   </button>
                                 ))}
@@ -492,24 +492,24 @@ const AddCredentialPage: React.FC = () => {
                   )}
 
                   {secretData && (
-                    <div className="mt-4 bg-gray-950 border border-gray-800 rounded-md p-4">
-                      <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                    <div className="mt-4 bg-surface-raised border border-border rounded-md p-4">
+                      <h3 className="text-xs font-semibold text-content-muted uppercase tracking-wider mb-2">
                         Preview
                       </h3>
                       <table className="w-full text-sm">
                         <thead>
-                          <tr className="border-b border-gray-800">
-                            <th scope="col" className="text-left pb-2 text-gray-500 font-medium">Key</th>
-                            <th scope="col" className="text-left pb-2 text-gray-500 font-medium">Value</th>
+                          <tr className="border-b border-border">
+                            <th scope="col" className="text-left pb-2 text-content-subtle font-medium">Key</th>
+                            <th scope="col" className="text-left pb-2 text-content-subtle font-medium">Value</th>
                           </tr>
                         </thead>
                         <tbody>
                           {Object.entries(secretData.data).map(([key, value]) => (
-                            <tr key={key} className="border-b border-gray-800/50">
-                              <td className="py-2 pr-4 text-gray-300 font-mono">{key}</td>
-                              <td className="py-2 text-gray-200 break-all">
+                            <tr key={key} className="border-b border-border/50">
+                              <td className="py-2 pr-4 text-content font-mono">{key}</td>
+                              <td className="py-2 text-content break-all">
                                 {key.toLowerCase().includes('password') ? (
-                                  <span className="bg-gray-800 px-2 py-0.5 rounded text-xs">
+                                  <span className="bg-surface-overlay px-2 py-0.5 rounded text-xs">
                                     ••••••••
                                   </span>
                                 ) : (
@@ -531,7 +531,7 @@ const AddCredentialPage: React.FC = () => {
         {/* Sudo */}
         <Card>
           <CardBody>
-            <h2 className="text-sm font-semibold text-gray-200 uppercase tracking-wider mb-4">
+            <h2 className="text-sm font-semibold text-content uppercase tracking-wider mb-4">
               Sudo Configuration
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -560,9 +560,9 @@ const AddCredentialPage: React.FC = () => {
               )}
             </div>
             {formData.sudo_method === 'password' && mode === 'linked' && (
-              <p className="text-xs text-gray-500 mt-3">
+              <p className="text-xs text-content-subtle mt-3">
                 When using a linked secret, the sudo password should already be stored in the linked
-                Vault secret as a key named <code className="text-gray-400">sudo_password</code>.
+                Vault secret as a key named <code className="text-content-muted">sudo_password</code>.
               </p>
             )}
           </CardBody>

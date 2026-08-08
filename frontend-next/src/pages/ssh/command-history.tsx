@@ -21,7 +21,7 @@ const statusBadgeClass = (statusRaw: string | null | undefined): string => {
     return 'bg-red-900 text-red-200 border-red-700';
   if (['running', 'pending', 'queued'].includes(status))
     return 'bg-yellow-900 text-yellow-200 border-yellow-700';
-  return 'bg-gray-800 text-gray-300 border-gray-600';
+  return 'bg-surface-overlay text-content border-border-strong';
 };
 
 const validationBadgeClass = (statusRaw: string | null | undefined): string => {
@@ -41,7 +41,7 @@ const riskBadgeClass = (riskRaw: string | null | undefined): string => {
   if (risk === 'medium') return 'bg-yellow-900 text-yellow-200 border-yellow-700';
   if (risk === 'high') return 'bg-orange-900 text-orange-200 border-orange-700';
   if (risk === 'critical') return 'bg-red-900 text-red-200 border-red-700';
-  return 'bg-gray-800 text-gray-300 border-gray-600';
+  return 'bg-surface-overlay text-content border-border-strong';
 };
 
 const InlineBadge: React.FC<{ label: string; className: string }> = ({ label, className }) => (
@@ -170,14 +170,14 @@ const CommandHistoryPage: React.FC = () => {
           <CardBody>
             <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3">
               <div>
-                <label className="block text-xs text-gray-400 uppercase mb-1">System</label>
+                <label className="block text-xs text-content-muted uppercase mb-1">System</label>
                 <select
                   value={systemFilter}
                   onChange={(e) => {
                     setSystemFilter(e.target.value);
                     setOffset(0);
                   }}
-                  className="w-full bg-white/[0.02] border border-gray-700 text-gray-200 rounded px-2 py-1 text-sm"
+                  className="w-full bg-white/[0.02] border border-border-strong text-content rounded px-2 py-1 text-sm"
                 >
                   <option value="">All</option>
                   {systems.map((s) => (
@@ -188,11 +188,11 @@ const CommandHistoryPage: React.FC = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-gray-400 uppercase mb-1">User ID</label>
+                <label className="block text-xs text-content-muted uppercase mb-1">User ID</label>
                 <select
                   value={userFilter}
                   onChange={(e) => setUserFilter(e.target.value)}
-                  className="w-full bg-white/[0.02] border border-gray-700 text-gray-200 rounded px-2 py-1 text-sm"
+                  className="w-full bg-white/[0.02] border border-border-strong text-content rounded px-2 py-1 text-sm"
                 >
                   <option value="">All</option>
                   {userOptions.map((u) => (
@@ -203,11 +203,11 @@ const CommandHistoryPage: React.FC = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-gray-400 uppercase mb-1">Status</label>
+                <label className="block text-xs text-content-muted uppercase mb-1">Status</label>
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="w-full bg-white/[0.02] border border-gray-700 text-gray-200 rounded px-2 py-1 text-sm"
+                  className="w-full bg-white/[0.02] border border-border-strong text-content rounded px-2 py-1 text-sm"
                 >
                   <option value="">All</option>
                   <option value="completed">Completed</option>
@@ -218,11 +218,11 @@ const CommandHistoryPage: React.FC = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-gray-400 uppercase mb-1">Risk</label>
+                <label className="block text-xs text-content-muted uppercase mb-1">Risk</label>
                 <select
                   value={riskFilter}
                   onChange={(e) => setRiskFilter(e.target.value)}
-                  className="w-full bg-white/[0.02] border border-gray-700 text-gray-200 rounded px-2 py-1 text-sm"
+                  className="w-full bg-white/[0.02] border border-border-strong text-content rounded px-2 py-1 text-sm"
                 >
                   <option value="">All</option>
                   <option value="low">Low</option>
@@ -232,21 +232,21 @@ const CommandHistoryPage: React.FC = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-gray-400 uppercase mb-1">From</label>
+                <label className="block text-xs text-content-muted uppercase mb-1">From</label>
                 <input
                   type="date"
                   value={dateFrom}
                   onChange={(e) => setDateFrom(e.target.value)}
-                  className="w-full bg-white/[0.02] border border-gray-700 text-gray-200 rounded px-2 py-1 text-sm"
+                  className="w-full bg-white/[0.02] border border-border-strong text-content rounded px-2 py-1 text-sm"
                 />
               </div>
               <div>
-                <label className="block text-xs text-gray-400 uppercase mb-1">To</label>
+                <label className="block text-xs text-content-muted uppercase mb-1">To</label>
                 <input
                   type="date"
                   value={dateTo}
                   onChange={(e) => setDateTo(e.target.value)}
-                  className="w-full bg-white/[0.02] border border-gray-700 text-gray-200 rounded px-2 py-1 text-sm"
+                  className="w-full bg-white/[0.02] border border-border-strong text-content rounded px-2 py-1 text-sm"
                 />
               </div>
             </div>
@@ -257,7 +257,7 @@ const CommandHistoryPage: React.FC = () => {
         <Card>
           <CardBody>
             <div className="flex items-center justify-between mb-2">
-              <div className="text-sm text-gray-400">
+              <div className="text-sm text-content-muted">
                 Showing {filteredRows.length} of {rows.length} loaded rows
               </div>
               <div className="flex items-center gap-2 text-xs">
@@ -269,7 +269,7 @@ const CommandHistoryPage: React.FC = () => {
                 >
                   Prev
                 </Button>
-                <span className="text-gray-600">offset {offset}</span>
+                <span className="text-content-subtle">offset {offset}</span>
                 <Button
                   variant="outline"
                   size="sm"
@@ -281,13 +281,13 @@ const CommandHistoryPage: React.FC = () => {
               </div>
             </div>
             {loading ? (
-              <div className="text-sm text-gray-600">Loading...</div>
+              <div className="text-sm text-content-subtle">Loading...</div>
             ) : filteredRows.length === 0 ? (
               <EmptyState title="No executions match" />
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="text-gray-400 uppercase text-xs">
+                  <thead className="text-content-muted uppercase text-xs">
                     <tr>
                       <th scope="col" className="text-left py-1">Time</th>
                       <th scope="col" className="text-left py-1">System</th>
@@ -300,13 +300,13 @@ const CommandHistoryPage: React.FC = () => {
                       <th scope="col" className="text-left py-1">Risk</th>
                     </tr>
                   </thead>
-                  <tbody className="text-gray-200">
+                  <tbody className="text-content">
                     {filteredRows.map((r) => {
                       const isExpanded = expanded.has(r.id);
                       return (
                         <React.Fragment key={r.id}>
                           <tr
-                            className="border-t border-gray-800 hover:bg-gray-800 cursor-pointer"
+                            className="border-t border-border hover:bg-surface-overlay cursor-pointer"
                             onClick={() => gotoExecution(r.id)}
                           >
                             <td className="py-1 text-xs">{formatDateTime(r.started_at)}</td>

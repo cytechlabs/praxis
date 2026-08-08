@@ -136,7 +136,7 @@ const ActiveJobs = () => {
         <Card>
           <div className="p-6">
             {/* Table Header */}
-            <div className="grid grid-cols-8 gap-4 p-4 bg-gray-900 border-b border-gray-800 font-medium text-gray-200 text-sm rounded-t-lg">
+            <div className="grid grid-cols-8 gap-4 p-4 bg-surface-raised border-b border-border font-medium text-content text-sm rounded-t-lg">
               <div>Job Name</div>
               <div>Job Type</div>
               <div>Target</div>
@@ -148,12 +148,12 @@ const ActiveJobs = () => {
             </div>
 
             {/* Loading */}
-            {loading && <div className="p-4 text-gray-400">Loading...</div>}
+            {loading && <div className="p-4 text-content-muted">Loading...</div>}
 
             {/* Empty State */}
             {!loading && activeJobs.length === 0 && (
               <EmptyState
-                icon={<Activity className="w-6 h-6 text-gray-500" />}
+                icon={<Activity className="w-6 h-6 text-content-subtle" />}
                 title="No jobs currently running"
               />
             )}
@@ -167,15 +167,15 @@ const ActiveJobs = () => {
                 const systemsTargeted = job.current_run?.systems_targeted || 0;
 
                 return (
-                  <div key={job.id} className="grid grid-cols-8 gap-4 p-4 border-b border-gray-800 text-gray-300 hover:bg-white/[0.03]/50 text-sm items-center">
+                  <div key={job.id} className="grid grid-cols-8 gap-4 p-4 border-b border-border text-content hover:bg-white/[0.03]/50 text-sm items-center">
                     <div className="truncate font-medium" title={job.name}>{job.name}</div>
                     <div className="capitalize">{job.job_type.replace('_', ' ')}</div>
                     <div className="truncate" title={getTargetDisplay(job)}>{getTargetDisplay(job)}</div>
                     <div>
-                      <div className="w-full bg-gray-800 rounded-full h-2">
+                      <div className="w-full bg-surface-overlay rounded-full h-2">
                         <div className="bg-red-600 h-2 rounded-full" style={{ width: `${progressPct}%` }} />
                       </div>
-                      <span className="text-xs text-gray-400">{progressPct}%</span>
+                      <span className="text-xs text-content-muted">{progressPct}%</span>
                     </div>
                     <div>{systemsCompleted}/{systemsTargeted}</div>
                     <div>{startTime ? formatTimestamp(startTime) : '-'}</div>

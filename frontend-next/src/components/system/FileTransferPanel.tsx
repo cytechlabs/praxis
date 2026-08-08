@@ -177,9 +177,9 @@ const FileTransferPanel = ({ systemId, systemHostname }: Props) => {
         <div>
           <div className="flex items-center gap-2">
             <HardDrive size={14} /> Files
-            {systemHostname && <span className="text-xs font-normal text-gray-500">· {systemHostname}</span>}
+            {systemHostname && <span className="text-xs font-normal text-content-subtle">· {systemHostname}</span>}
           </div>
-          <div className="text-xs font-normal text-gray-500 mt-0.5">
+          <div className="text-xs font-normal text-content-subtle mt-0.5">
             SFTP browser. Remote permissions are enforced by the host kernel - you can only see what your
             mapped Linux account is allowed to.
           </div>
@@ -188,15 +188,15 @@ const FileTransferPanel = ({ systemId, systemHostname }: Props) => {
       <CardBody>
         {/* Breadcrumbs */}
         <div className="mb-3 flex items-center gap-1 text-sm">
-          <button onClick={() => load('/')} className="p-1 rounded hover:bg-white/5 text-gray-400 hover:text-gray-200">
+          <button onClick={() => load('/')} className="p-1 rounded hover:bg-white/5 text-content-muted hover:text-content">
             <Home size={14} />
           </button>
           {path !== '/' && (
-            <button onClick={() => load(parent(path))} className="p-1 rounded hover:bg-white/5 text-gray-400 hover:text-gray-200" aria-label="Up one level">
+            <button onClick={() => load(parent(path))} className="p-1 rounded hover:bg-white/5 text-content-muted hover:text-content" aria-label="Up one level">
               <ArrowUp size={14} />
             </button>
           )}
-          <span className="text-xs text-gray-500 ml-2 font-mono break-all">{path}</span>
+          <span className="text-xs text-content-subtle ml-2 font-mono break-all">{path}</span>
         </div>
 
         {error && (
@@ -209,14 +209,14 @@ const FileTransferPanel = ({ systemId, systemHostname }: Props) => {
         {loading ? (
           <LoadingState label="Loading files" />
         ) : entries.length === 0 ? (
-          <div className="text-gray-500 text-sm py-4 text-center">
+          <div className="text-content-subtle text-sm py-4 text-center">
             {error ? 'Nothing to show.' : '(empty directory)'}
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs uppercase tracking-wide text-gray-500 border-b border-gray-800">
+                <tr className="text-left text-xs uppercase tracking-wide text-content-subtle border-b border-border">
                   <th className="py-2 pr-4">Name</th>
                   <th className="py-2 pr-4">Size</th>
                   <th className="py-2 pr-4">Mode</th>
@@ -226,22 +226,22 @@ const FileTransferPanel = ({ systemId, systemHostname }: Props) => {
               </thead>
               <tbody>
                 {entries.map((e) => (
-                  <tr key={e.name} className="border-b border-gray-900 hover:bg-white/5">
+                  <tr key={e.name} className="border-b border-border hover:bg-white/5">
                     <td className="py-2 pr-4">
                       <button
                         onClick={() => handleEntryClick(e)}
-                        className={`flex items-center gap-2 ${e.is_dir ? 'text-gray-200 hover:text-white' : 'text-gray-400'}`}
+                        className={`flex items-center gap-2 ${e.is_dir ? 'text-content hover:text-white' : 'text-content-muted'}`}
                       >
                         {e.is_dir
                           ? <FolderIcon size={14} className="text-yellow-500" />
-                          : <FileIcon size={14} className="text-gray-500" />}
+                          : <FileIcon size={14} className="text-content-subtle" />}
                         <span className="font-mono">{e.name}{e.is_dir ? '/' : ''}</span>
                         {e.is_link && <Badge variant="neutral">link</Badge>}
                       </button>
                     </td>
-                    <td className="py-2 pr-4 text-gray-400 tabular-nums">{e.is_dir ? '-' : fmtBytes(e.size)}</td>
-                    <td className="py-2 pr-4 font-mono text-xs text-gray-500">{fmtMode(e.mode)}</td>
-                    <td className="py-2 pr-4 text-xs text-gray-500">
+                    <td className="py-2 pr-4 text-content-muted tabular-nums">{e.is_dir ? '-' : fmtBytes(e.size)}</td>
+                    <td className="py-2 pr-4 font-mono text-xs text-content-subtle">{fmtMode(e.mode)}</td>
+                    <td className="py-2 pr-4 text-xs text-content-subtle">
                       {e.mtime ? formatTimestamp(new Date(e.mtime * 1000)) : '-'}
                     </td>
                     <td className="py-2 pr-4 text-right">
@@ -281,7 +281,7 @@ const FileTransferPanel = ({ systemId, systemHostname }: Props) => {
 
       <Modal open={showMkdir} onClose={() => { setShowMkdir(false); setNewDir(''); }} title="New folder" maxWidth="max-w-md">
         <div className="space-y-3">
-          <p className="text-sm text-gray-300">Create a folder in <span className="font-mono text-gray-400">{path}</span>.</p>
+          <p className="text-sm text-content">Create a folder in <span className="font-mono text-content-muted">{path}</span>.</p>
           <Input value={newDir} onChange={(e) => setNewDir(e.target.value)} placeholder="folder-name" />
           <div className="flex justify-end gap-2">
             <Button variant="ghost" size="sm" onClick={() => { setShowMkdir(false); setNewDir(''); }}>Cancel</Button>

@@ -215,7 +215,7 @@ const PatchUpdatePlansListPage: React.FC = () => {
                 </>
               ) : (
                 <span
-                  className="text-[11px] text-gray-500"
+                  className="text-[11px] text-content-subtle"
                   title="Bulk export requires the admin or maintainer role."
                   data-testid="patch-executions-export-rbac-required"
                 >

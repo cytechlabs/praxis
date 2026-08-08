@@ -139,15 +139,15 @@ const ActivityFeed: React.FC = () => {
             {/* Filters */}
             <div className="flex flex-wrap items-end gap-4 mb-6">
               <div className="flex items-center gap-2">
-                <Filter className="w-4 h-4 text-gray-400" />
-                <span className="text-sm text-gray-400">Filters:</span>
+                <Filter className="w-4 h-4 text-content-muted" />
+                <span className="text-sm text-content-muted">Filters:</span>
               </div>
               <div>
-                <label className="block text-xs text-gray-400 mb-1">Source</label>
+                <label className="block text-xs text-content-muted mb-1">Source</label>
                 <select
                   value={sourceFilter}
                   onChange={(e) => { setSourceFilter(e.target.value); setPage(1); }}
-                  className="bg-gray-950 border border-gray-800 rounded px-2 py-1 text-gray-200 text-sm"
+                  className="bg-surface-sunken border border-border rounded px-2 py-1 text-content text-sm"
                 >
                   <option value="">All</option>
                   {sources.map((s) => (
@@ -156,21 +156,21 @@ const ActivityFeed: React.FC = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-gray-400 mb-1">From</label>
+                <label className="block text-xs text-content-muted mb-1">From</label>
                 <input
                   type="date"
                   value={fromDate}
                   onChange={(e) => { setFromDate(e.target.value); setPage(1); }}
-                  className="bg-gray-950 border border-gray-800 rounded px-2 py-1 text-gray-200 text-sm"
+                  className="bg-surface-sunken border border-border rounded px-2 py-1 text-content text-sm"
                 />
               </div>
               <div>
-                <label className="block text-xs text-gray-400 mb-1">To</label>
+                <label className="block text-xs text-content-muted mb-1">To</label>
                 <input
                   type="date"
                   value={toDate}
                   onChange={(e) => { setToDate(e.target.value); setPage(1); }}
-                  className="bg-gray-950 border border-gray-800 rounded px-2 py-1 text-gray-200 text-sm"
+                  className="bg-surface-sunken border border-border rounded px-2 py-1 text-content text-sm"
                 />
               </div>
               <Button variant="outline" size="sm" onClick={resetFilters}>
@@ -182,7 +182,7 @@ const ActivityFeed: React.FC = () => {
             <div className="flex flex-wrap gap-2 mb-4">
               <button
                 onClick={() => { setSourceFilter(''); setPage(1); }}
-                className={`px-3 py-1 rounded-full text-xs border ${!sourceFilter ? 'bg-gray-700 text-gray-100 border-gray-500' : 'bg-gray-800 text-gray-400 border-gray-600 hover:border-gray-500'}`}
+                className={`px-3 py-1 rounded-full text-xs border ${!sourceFilter ? 'bg-border text-content border-border-strong' : 'bg-surface-overlay text-content-muted border-border hover:border-border-strong'}`}
               >
                 All
               </button>
@@ -190,7 +190,7 @@ const ActivityFeed: React.FC = () => {
                 <button
                   key={s.value}
                   onClick={() => { setSourceFilter(s.value); setPage(1); }}
-                  className={`px-3 py-1 rounded-full text-xs border ${sourceFilter === s.value ? 'bg-gray-700 text-gray-100 border-gray-500' : 'bg-gray-800 text-gray-400 border-gray-600 hover:border-gray-500'}`}
+                  className={`px-3 py-1 rounded-full text-xs border ${sourceFilter === s.value ? 'bg-border text-content border-border-strong' : 'bg-surface-overlay text-content-muted border-border hover:border-border-strong'}`}
                 >
                   {s.label}
                 </button>
@@ -198,9 +198,9 @@ const ActivityFeed: React.FC = () => {
             </div>
 
             {/* Feed items */}
-            {loading && <div className="p-4 text-gray-400">Loading...</div>}
+            {loading && <div className="p-4 text-content-muted">Loading...</div>}
             {!loading && items.length === 0 && (
-              <div className="p-8 text-center text-gray-400">No activity found.</div>
+              <div className="p-8 text-center text-content-muted">No activity found.</div>
             )}
 
             <div className="space-y-2">
@@ -222,16 +222,16 @@ const ActivityFeed: React.FC = () => {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="inline-block px-2 py-0.5 rounded text-xs border bg-gray-800 text-gray-400 border-gray-600 capitalize">
+                        <span className="inline-block px-2 py-0.5 rounded text-xs border bg-surface-overlay text-content-muted border-border-strong capitalize">
                           {item.source.replace('_', ' ')}
                         </span>
-                        <span className="text-xs text-gray-500">{relativeTime(item.timestamp)}</span>
+                        <span className="text-xs text-content-subtle">{relativeTime(item.timestamp)}</span>
                         {item.timestamp && (
-                          <span className="text-xs text-gray-600">{formatTimestamp(item.timestamp)}</span>
+                          <span className="text-xs text-content-subtle">{formatTimestamp(item.timestamp)}</span>
                         )}
                       </div>
-                      <p className="text-sm text-gray-200">{item.description}</p>
-                      <div className="flex flex-wrap gap-3 mt-1 text-xs text-gray-400">
+                      <p className="text-sm text-content">{item.description}</p>
+                      <div className="flex flex-wrap gap-3 mt-1 text-xs text-content-muted">
                         {item.username && <span>User: {item.username}</span>}
                         {item.system_hostname && <span>System: {item.system_hostname}</span>}
                         {item.event_type && <span>Type: {item.event_type}</span>}
@@ -245,7 +245,7 @@ const ActivityFeed: React.FC = () => {
 
             {/* Pagination */}
             <div className="flex items-center justify-between pt-4 mt-4">
-              <span className="text-sm text-gray-400">
+              <span className="text-sm text-content-muted">
                 {total > 0
                   ? `Showing ${(page - 1) * pageSize + 1}-${Math.min(page * pageSize, total)} of ${total}`
                   : 'No results'}
@@ -259,7 +259,7 @@ const ActivityFeed: React.FC = () => {
                 >
                   Previous
                 </Button>
-                <span className="text-sm text-gray-400 self-center">Page {page} of {totalPages}</span>
+                <span className="text-sm text-content-muted self-center">Page {page} of {totalPages}</span>
                 <Button
                   variant="outline"
                   size="sm"

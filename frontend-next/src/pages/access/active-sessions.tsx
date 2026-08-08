@@ -127,17 +127,17 @@ const ActiveSessionsPage = () => {
 
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-semibold text-gray-100 flex items-center gap-2">
+          <h1 className="text-xl font-semibold text-content flex items-center gap-2">
             <Activity size={18} /> Active Sessions
           </h1>
-          <p className="text-sm text-gray-400 mt-1">
+          <p className="text-sm text-content-muted mt-1">
             {canWrite
               ? 'Live view of every open SSH session. Force-close as needed for incident response.'
               : 'Live view of your open SSH sessions.'}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-500">Updates every {POLL_MS / 1000}s</span>
+          <span className="text-xs text-content-subtle">Updates every {POLL_MS / 1000}s</span>
           <Button variant="outline" size="sm" onClick={() => load(true)} aria-label="Refresh now">
             <RefreshCw size={14} />
           </Button>
@@ -158,7 +158,7 @@ const ActiveSessionsPage = () => {
               <select
                 value={sortKey}
                 onChange={(e) => setSortKey(e.target.value as SortKey)}
-                className="bg-[#0c0c0f] border border-gray-800 rounded-md px-2 py-1.5 text-xs text-gray-300"
+                className="bg-surface-sunken border border-border rounded-md px-2 py-1.5 text-xs text-content"
               >
                 <option value="duration">Longest running</option>
                 <option value="started">Newest first</option>
@@ -169,7 +169,7 @@ const ActiveSessionsPage = () => {
         </CardHeader>
         <CardBody>
           {loading ? (
-            <div className="text-gray-500 text-sm">Loading…</div>
+            <div className="text-content-subtle text-sm">Loading…</div>
           ) : filtered.length === 0 ? (
             <EmptyState
               title="No active sessions"
@@ -180,7 +180,7 @@ const ActiveSessionsPage = () => {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left text-xs uppercase tracking-wide text-gray-500 border-b border-gray-800">
+                  <tr className="text-left text-xs uppercase tracking-wide text-content-subtle border-b border-border">
                     <th className="py-2 pr-4">Host</th>
                     <th className="py-2 pr-4">User</th>
                     <th className="py-2 pr-4">Login</th>
@@ -194,24 +194,24 @@ const ActiveSessionsPage = () => {
                 </thead>
                 <tbody>
                   {filtered.map(r => (
-                    <tr key={r.id} className="border-b border-gray-900 hover:bg-white/5">
-                      <td className="py-3 pr-4 font-mono text-xs text-gray-200">{r.hostname || `#${r.system_id}`}</td>
-                      <td className="py-3 pr-4 text-xs text-gray-300">
+                    <tr key={r.id} className="border-b border-border hover:bg-white/5">
+                      <td className="py-3 pr-4 font-mono text-xs text-content">{r.hostname || `#${r.system_id}`}</td>
+                      <td className="py-3 pr-4 text-xs text-content">
                         {r.user_id === user?.id ? <span className="text-emerald-400">you</span> : `#${r.user_id}`}
                       </td>
-                      <td className="py-3 pr-4 font-mono text-xs text-gray-400">{r.login}</td>
+                      <td className="py-3 pr-4 font-mono text-xs text-content-muted">{r.login}</td>
                       <td className="py-3 pr-4 text-xs">
                         {r.fleet_role_name
                           ? <Badge variant="info">{r.fleet_role_name}</Badge>
-                          : <span className="text-gray-600">-</span>}
+                          : <span className="text-content-subtle">-</span>}
                       </td>
-                      <td className="py-3 pr-4 text-xs text-gray-500">{formatTimestamp(r.started_at)}</td>
-                      <td className="py-3 pr-4 text-xs text-gray-300 tabular-nums">{fmtDuration(r.started_at)}</td>
-                      <td className="py-3 pr-4 text-xs text-gray-400">
+                      <td className="py-3 pr-4 text-xs text-content-subtle">{formatTimestamp(r.started_at)}</td>
+                      <td className="py-3 pr-4 text-xs text-content tabular-nums">{fmtDuration(r.started_at)}</td>
+                      <td className="py-3 pr-4 text-xs text-content-muted">
                         {fmtRelative(r.last_activity_at)}
                         {r.live && <span className="ml-1 inline-block w-1.5 h-1.5 rounded-full bg-emerald-500/70 align-middle" aria-label="live" />}
                       </td>
-                      <td className="py-3 pr-4 font-mono text-xs text-gray-500">{r.client_ip || '-'}</td>
+                      <td className="py-3 pr-4 font-mono text-xs text-content-subtle">{r.client_ip || '-'}</td>
                       <td className="py-3 pr-4 text-right">
                         {canWrite ? (
                           <div className="flex gap-1 justify-end">
@@ -221,7 +221,7 @@ const ActiveSessionsPage = () => {
                                   onClick={() => router.push(`/hosts/${r.system_id}/session?join=observe&sid=${r.id}`)}
                                   aria-label="Observe session"
                                   title="Observe (read-only)"
-                                  className="p-1.5 rounded-md text-gray-500 hover:text-sky-400 hover:bg-sky-500/10"
+                                  className="p-1.5 rounded-md text-content-subtle hover:text-sky-400 hover:bg-sky-500/10"
                                 >
                                   <Eye size={14} />
                                 </button>
@@ -229,7 +229,7 @@ const ActiveSessionsPage = () => {
                                   onClick={() => router.push(`/hosts/${r.system_id}/session?join=participate&sid=${r.id}`)}
                                   aria-label="Participate in session"
                                   title="Participate (read/write)"
-                                  className="p-1.5 rounded-md text-gray-500 hover:text-amber-400 hover:bg-amber-500/10"
+                                  className="p-1.5 rounded-md text-content-subtle hover:text-amber-400 hover:bg-amber-500/10"
                                 >
                                   <Edit3 size={14} />
                                 </button>
@@ -239,7 +239,7 @@ const ActiveSessionsPage = () => {
                               onClick={() => setConfirmId(r.id)}
                               disabled={busyId === r.id}
                               aria-label="Force close"
-                              className="p-1.5 rounded-md text-gray-500 hover:text-red-400 hover:bg-red-500/10 disabled:opacity-30"
+                              className="p-1.5 rounded-md text-content-subtle hover:text-red-400 hover:bg-red-500/10 disabled:opacity-30"
                             >
                               <X size={14} />
                             </button>

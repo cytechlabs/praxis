@@ -22,7 +22,7 @@ const ACTION_LABEL: Record<string, string> = {
 };
 
 const CapabilityRow = ({ cap }: { cap: EACapability }) => (
-  <div className="flex items-start justify-between gap-3 rounded border border-gray-800 bg-black/30 px-3 py-2">
+  <div className="flex items-start justify-between gap-3 rounded border border-border bg-black/30 px-3 py-2">
     <div className="min-w-0">
       <div className="flex items-center gap-2">
         {cap.allowed ? (
@@ -30,31 +30,31 @@ const CapabilityRow = ({ cap }: { cap: EACapability }) => (
         ) : (
           <Badge variant="danger">denied</Badge>
         )}
-        <span className="text-sm text-gray-200">
+        <span className="text-sm text-content">
           {ACTION_LABEL[cap.action] ?? cap.action}
         </span>
         {cap.login && (
-          <span className="text-xs text-gray-500">
-            as <span className="font-mono text-gray-300">{cap.login}</span>
+          <span className="text-xs text-content-subtle">
+            as <span className="font-mono text-content">{cap.login}</span>
           </span>
         )}
       </div>
       {cap.allowed ? (
-        <div className="mt-1 text-xs text-gray-500 space-x-2">
-          {cap.fleet_role_name && <span>role: <span className="text-gray-300">{cap.fleet_role_name}</span></span>}
+        <div className="mt-1 text-xs text-content-subtle space-x-2">
+          {cap.fleet_role_name && <span>role: <span className="text-content">{cap.fleet_role_name}</span></span>}
           {cap.requires_approval && <Badge variant="warning">requires approval</Badge>}
           {cap.requires_totp && <Badge variant="warning">requires TOTP</Badge>}
           {typeof cap.max_session_s === 'number' && (
-            <span>max session: <span className="text-gray-300">{Math.round(cap.max_session_s / 60)}m</span></span>
+            <span>max session: <span className="text-content">{Math.round(cap.max_session_s / 60)}m</span></span>
           )}
           {typeof cap.recording_retention_days === 'number' && (
-            <span>recording kept: <span className="text-gray-300">{cap.recording_retention_days}d</span></span>
+            <span>recording kept: <span className="text-content">{cap.recording_retention_days}d</span></span>
           )}
         </div>
       ) : (
         <div className="mt-1 text-xs text-red-400/80">
           {cap.code && <span className="font-mono">{cap.code}</span>}
-          {cap.reason && <span className="text-gray-500"> - {cap.reason}</span>}
+          {cap.reason && <span className="text-content-subtle"> - {cap.reason}</span>}
         </div>
       )}
     </div>
@@ -72,15 +72,15 @@ const hostBadge = (d: EALoginDetail) => {
 const LoginDetail = ({ d }: { d: EALoginDetail }) => {
   const formatTimestamp = useFormatTimestamp();
   return (
-  <div className="rounded border border-gray-800 bg-black/30 p-3">
+  <div className="rounded border border-border bg-black/30 p-3">
     <div className="flex items-center justify-between gap-2 flex-wrap">
       <div className="flex items-center gap-2">
-        <span className="font-mono text-sm text-gray-200">{d.login}</span>
+        <span className="font-mono text-sm text-content">{d.login}</span>
         <Badge variant={d.login_mode === 'per_user' ? 'success' : 'warning'}>
           {d.login_mode === 'role_account' ? `role: ${d.role_account_name ?? d.login}` : d.login_mode ?? 'unresolved'}
         </Badge>
         {d.resolved_fleet_role_name && (
-          <span className="text-xs text-gray-500">role: <span className="text-gray-300">{d.resolved_fleet_role_name}</span></span>
+          <span className="text-xs text-content-subtle">role: <span className="text-content">{d.resolved_fleet_role_name}</span></span>
         )}
       </div>
       <div className="flex items-center gap-2">
@@ -92,10 +92,10 @@ const LoginDetail = ({ d }: { d: EALoginDetail }) => {
         )}
       </div>
     </div>
-    <div className="mt-2 text-xs text-gray-500 space-x-3">
-      <span>expiry: <span className="text-gray-300">{d.expiry_state}</span>{d.nearest_active_expiry ? ` (next ${formatTimestamp(d.nearest_active_expiry)})` : ''}</span>
-      <span>active grants: <span className="text-gray-300">{d.active_grants.length}</span></span>
-      {d.expired_grants.length > 0 && <span>expired: <span className="text-gray-400">{d.expired_grants.length}</span></span>}
+    <div className="mt-2 text-xs text-content-subtle space-x-3">
+      <span>expiry: <span className="text-content">{d.expiry_state}</span>{d.nearest_active_expiry ? ` (next ${formatTimestamp(d.nearest_active_expiry)})` : ''}</span>
+      <span>active grants: <span className="text-content">{d.active_grants.length}</span></span>
+      {d.expired_grants.length > 0 && <span>expired: <span className="text-content-muted">{d.expired_grants.length}</span></span>}
       {d.host_state.last_error && <span className="text-red-400/80">host: {d.host_state.last_error}</span>}
     </div>
     {d.conflict && (
@@ -165,7 +165,7 @@ const EffectiveAccessCard = () => {
       <CardHeader>
         <div>
           <div className="flex items-center gap-2"><Eye size={16} /> Effective Access</div>
-          <div className="text-xs font-normal text-gray-500 mt-0.5">
+          <div className="text-xs font-normal text-content-subtle mt-0.5">
             Current enforced access for a user on a host - what they can do right now and why.
             Read-only; computed by the live authorization path (no simulation, no changes made).
           </div>
@@ -174,24 +174,24 @@ const EffectiveAccessCard = () => {
       <CardBody>
         <div className="flex flex-wrap items-end gap-3">
           <div className="min-w-[12rem]">
-            <label className="block text-xs uppercase tracking-wide text-gray-500 mb-1">User</label>
+            <label className="block text-xs uppercase tracking-wide text-content-subtle mb-1">User</label>
             <Select value={userId} onChange={e => setUserId(Number(e.target.value))}>
               {users.map(u => <option key={u.id} value={u.id}>{u.username}</option>)}
             </Select>
           </div>
           <div className="min-w-[14rem]">
-            <label className="block text-xs uppercase tracking-wide text-gray-500 mb-1">System</label>
+            <label className="block text-xs uppercase tracking-wide text-content-subtle mb-1">System</label>
             <Select value={systemId} onChange={e => setSystemId(Number(e.target.value))}>
               {systems.map(s => <option key={s.id} value={s.id}>{s.hostname}</option>)}
             </Select>
           </div>
           <div className="min-w-[10rem]">
-            <label className="block text-xs uppercase tracking-wide text-gray-500 mb-1">Login (optional)</label>
+            <label className="block text-xs uppercase tracking-wide text-content-subtle mb-1">Login (optional)</label>
             <input
               value={login}
               onChange={e => setLogin(e.target.value)}
               placeholder="all logins"
-              className="w-full rounded-md border border-gray-700 bg-black/40 px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:border-gray-500 focus:outline-none"
+              className="w-full rounded-md border border-border-strong bg-black/40 px-3 py-2 text-sm text-content placeholder-content-subtle focus:border-border-strong focus:outline-none"
             />
           </div>
           <Button variant="primary" onClick={load} disabled={loading}>
@@ -203,9 +203,9 @@ const EffectiveAccessCard = () => {
         {summary && (
           <div className="mt-5 space-y-4">
             {/* Identity + scope */}
-            <div className="rounded-lg border border-gray-800 bg-black/40 p-3">
+            <div className="rounded-lg border border-border bg-black/40 p-3">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm text-gray-200">{summary.identity.username}</span>
+                <span className="text-sm text-content">{summary.identity.username}</span>
                 {summary.identity.is_active ? (
                   <Badge variant="success">active</Badge>
                 ) : (
@@ -215,13 +215,13 @@ const EffectiveAccessCard = () => {
                 {summary.scoped_api_access.allowed ? (
                   <span className="inline-flex items-center gap-1 text-xs text-green-400"><ShieldCheck size={13} /> fleet visibility</span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 text-xs text-gray-500"><ShieldX size={13} /> no fleet visibility</span>
+                  <span className="inline-flex items-center gap-1 text-xs text-content-subtle"><ShieldX size={13} /> no fleet visibility</span>
                 )}
               </div>
-              <div className="mt-1 text-xs text-gray-500">
-                on <span className="text-gray-300">{summary.system.hostname}</span> ·
-                {' '}cert principal <span className="font-mono text-gray-300">{summary.identity.cert_principal}</span> ·
-                {' '}overall expiry <span className="text-gray-300">{summary.expiry.overall_state}</span>
+              <div className="mt-1 text-xs text-content-subtle">
+                on <span className="text-content">{summary.system.hostname}</span> ·
+                {' '}cert principal <span className="font-mono text-content">{summary.identity.cert_principal}</span> ·
+                {' '}overall expiry <span className="text-content">{summary.expiry.overall_state}</span>
               </div>
             </div>
 
@@ -238,7 +238,7 @@ const EffectiveAccessCard = () => {
 
             {/* Capabilities */}
             <div>
-              <div className="text-xs uppercase tracking-wide text-gray-500 mb-2">Capabilities</div>
+              <div className="text-xs uppercase tracking-wide text-content-subtle mb-2">Capabilities</div>
               <div className="space-y-2">
                 {summary.capabilities.map((c, i) => <CapabilityRow key={`${c.action}-${c.requested_login}-${i}`} cap={c} />)}
               </div>
@@ -247,14 +247,14 @@ const EffectiveAccessCard = () => {
             {/* Logins */}
             {summary.logins.length > 0 && (
               <div>
-                <div className="text-xs uppercase tracking-wide text-gray-500 mb-2">Logins &amp; host state</div>
+                <div className="text-xs uppercase tracking-wide text-content-subtle mb-2">Logins &amp; host state</div>
                 <div className="space-y-2">
                   {summary.logins.map(d => <LoginDetail key={d.login} d={d} />)}
                 </div>
               </div>
             )}
 
-            <p className="text-xs text-gray-600">
+            <p className="text-xs text-content-subtle">
               {summary.notes.join(' ')}
             </p>
           </div>

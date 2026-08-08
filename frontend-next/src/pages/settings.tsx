@@ -166,8 +166,8 @@ const SettingsPage = () => {
           <title>Settings | Praxis</title>
         </Head>
         <div className="text-center">
-          <h1 className="text-2xl font-semibold text-gray-200">Access Denied</h1>
-          <p className="text-gray-400 mt-2">You do not have permission to access this page.</p>
+          <h1 className="text-2xl font-semibold text-content">Access Denied</h1>
+          <p className="text-content-muted mt-2">You do not have permission to access this page.</p>
         </div>
       </MainLayout>
     );

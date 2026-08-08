@@ -93,7 +93,7 @@ const JobHistory = () => {
           <StatCard label="Total Runs" value={total} />
           <StatCard label="Completed" value={completedCount} icon={<CheckCircle className="w-3 h-3 text-green-400" />} />
           <StatCard label="Failed" value={failedCount} icon={<XCircle className="w-3 h-3 text-red-400" />} />
-          <StatCard label="Cancelled" value={cancelledCount} icon={<AlertTriangle className="w-3 h-3 text-gray-400" />} />
+          <StatCard label="Cancelled" value={cancelledCount} icon={<AlertTriangle className="w-3 h-3 text-content-muted" />} />
         </div>
 
         {/* Table */}
@@ -101,9 +101,9 @@ const JobHistory = () => {
           <div className="p-6">
             {/* Filters */}
             <div className="flex items-center gap-4 mb-4">
-              <Filter className="w-4 h-4 text-gray-400" />
+              <Filter className="w-4 h-4 text-content-muted" />
               <div className="flex items-center gap-2">
-                <label className="text-sm text-gray-400">Status:</label>
+                <label className="text-sm text-content-muted">Status:</label>
                 <Select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
@@ -118,7 +118,7 @@ const JobHistory = () => {
             </div>
 
             {/* Table Header */}
-            <div className="grid grid-cols-8 gap-4 p-4 bg-gray-900 border-b border-gray-800 font-medium text-gray-200 text-sm rounded-t-lg">
+            <div className="grid grid-cols-8 gap-4 p-4 bg-surface-raised border-b border-border font-medium text-content text-sm rounded-t-lg">
               <div>Job Name</div>
               <div>Job Type</div>
               <div>Status</div>
@@ -130,7 +130,7 @@ const JobHistory = () => {
             </div>
 
             {/* Loading */}
-            {loading && <div className="p-4 text-gray-400">Loading...</div>}
+            {loading && <div className="p-4 text-content-muted">Loading...</div>}
 
             {/* Empty State */}
             {!loading && filteredHistory.length === 0 && (
@@ -140,7 +140,7 @@ const JobHistory = () => {
             {/* Table Rows */}
             {!loading &&
               filteredHistory.map((item) => (
-                <div key={item.id} className="grid grid-cols-8 gap-4 p-4 border-b border-gray-800 text-gray-300 hover:bg-white/[0.03]/50 text-sm items-center">
+                <div key={item.id} className="grid grid-cols-8 gap-4 p-4 border-b border-border text-content hover:bg-white/[0.03]/50 text-sm items-center">
                   <div className="truncate font-medium" title={item.job_name}>{item.job_name}</div>
                   <div className="capitalize">{item.job_type ? humanizeLabel(item.job_type) : '-'}</div>
                   <div>
@@ -169,7 +169,7 @@ const JobHistory = () => {
 
             {/* Pagination */}
             <div className="flex items-center justify-between p-4">
-              <span className="text-sm text-gray-400">
+              <span className="text-sm text-content-muted">
                 {total > 0
                   ? `Showing ${page * limit + 1}-${Math.min((page + 1) * limit, total)} of ${total}`
                   : 'No results'}

@@ -49,7 +49,7 @@ const BrowsePage: React.FC = () => {
       <div className="p-6">
         <Link
           href={`/mirrors/${id}`}
-          className="mb-4 inline-flex items-center gap-1 text-sm text-gray-400 hover:text-gray-200"
+          className="mb-4 inline-flex items-center gap-1 text-sm text-content-muted hover:text-content"
         >
           <ArrowLeft size={14} /> Back to mirror
         </Link>
@@ -64,18 +64,18 @@ const BrowsePage: React.FC = () => {
         {!data && !error && <LoadingState label="Loading content" />}
 
         {data && (
-          <div className="overflow-x-auto rounded border border-zinc-800 bg-[#111115]">
+          <div className="overflow-x-auto rounded border border-border bg-surface-raised">
             <table className="w-full text-sm">
-              <thead className="border-b border-zinc-800 text-left text-gray-400">
+              <thead className="border-b border-border text-left text-content-muted">
                 <tr>
                   <th className="px-4 py-2">Name</th>
                   <th className="px-4 py-2">Type</th>
                   <th className="px-4 py-2">Size</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-800">
+              <tbody className="divide-y divide-border">
                 {data.parent !== null && (
-                  <tr className="hover:bg-zinc-900/40">
+                  <tr className="hover:bg-surface-overlay/40">
                     <td colSpan={3} className="px-4 py-2">
                       <Link
                         href={
@@ -94,7 +94,7 @@ const BrowsePage: React.FC = () => {
                   <tr>
                     <td
                       colSpan={3}
-                      className="px-4 py-4 text-center text-gray-500"
+                      className="px-4 py-4 text-center text-content-subtle"
                     >
                       Empty directory.
                     </td>
@@ -103,8 +103,8 @@ const BrowsePage: React.FC = () => {
                 {data.entries.map((e) => {
                   const childPath = path ? `${path}/${e.name}` : e.name;
                   return (
-                    <tr key={e.name} className="hover:bg-zinc-900/40">
-                      <td className="px-4 py-2 font-mono text-gray-200">
+                    <tr key={e.name} className="hover:bg-surface-overlay/40">
+                      <td className="px-4 py-2 font-mono text-content">
                         {e.type === 'dir' ? (
                           <Link
                             href={`/mirrors/${id}/browse?path=${encodeURIComponent(childPath)}`}
@@ -113,13 +113,13 @@ const BrowsePage: React.FC = () => {
                             <Folder size={14} /> {e.name}/
                           </Link>
                         ) : (
-                          <span className="inline-flex items-center gap-2 text-gray-300">
+                          <span className="inline-flex items-center gap-2 text-content">
                             <File size={14} /> {e.name}
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-2 text-gray-400">{e.type}</td>
-                      <td className="px-4 py-2 text-gray-400">
+                      <td className="px-4 py-2 text-content-muted">{e.type}</td>
+                      <td className="px-4 py-2 text-content-muted">
                         {e.type === 'file' ? formatBytes(e.size) : '-'}
                       </td>
                     </tr>

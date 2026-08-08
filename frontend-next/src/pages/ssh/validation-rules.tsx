@@ -181,14 +181,14 @@ const ValidationRulesPage: React.FC = () => {
         <Card className="mb-6">
           <CardBody>
             <div className="flex items-center gap-2 mb-3">
-              <Search size={18} className="text-gray-400" />
-              <span className="text-sm font-medium text-gray-300">Rule Tester</span>
+              <Search size={18} className="text-content-muted" />
+              <span className="text-sm font-medium text-content">Rule Tester</span>
             </div>
             <div className="flex gap-2">
               <input value={testCommand} onChange={(e) => setTestCommand(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleTest()}
                 placeholder="Enter a command to test against rules (e.g. rm -rf /)"
-                className="flex-1 bg-white/[0.02] border border-gray-700 rounded px-3 py-2 text-sm text-gray-200 focus:border-red-500 focus:outline-none" />
+                className="flex-1 bg-white/[0.02] border border-border-strong rounded px-3 py-2 text-sm text-content focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong focus:outline-none" />
               <Button variant="outline" onClick={handleTest} disabled={testing}>
                 {testing ? 'Testing...' : 'Test'}
               </Button>
@@ -201,7 +201,7 @@ const ValidationRulesPage: React.FC = () => {
                 {testResult.rule_matches.length > 0 && (
                   <div className="text-yellow-400 mt-1">Triggered rules: {testResult.rule_matches.map(r => `${r.name} (${r.severity})`).join(', ')}</div>
                 )}
-                {testResult.rule_matches.length === 0 && <div className="text-gray-600 mt-1">No rules triggered</div>}
+                {testResult.rule_matches.length === 0 && <div className="text-content-subtle mt-1">No rules triggered</div>}
               </div>
             )}
           </CardBody>
@@ -210,17 +210,17 @@ const ValidationRulesPage: React.FC = () => {
         {/* Filters */}
         <div className="flex gap-4 mb-4">
           <select value={filterSeverity} onChange={(e) => setFilterSeverity(e.target.value)}
-            className="bg-white/[0.02] border border-gray-700 rounded px-3 py-1.5 text-sm text-gray-200">
+            className="bg-white/[0.02] border border-border-strong rounded px-3 py-1.5 text-sm text-content">
             <option value="">All Severities</option>
             {SEVERITIES.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
           <select value={filterType} onChange={(e) => setFilterType(e.target.value)}
-            className="bg-white/[0.02] border border-gray-700 rounded px-3 py-1.5 text-sm text-gray-200">
+            className="bg-white/[0.02] border border-border-strong rounded px-3 py-1.5 text-sm text-content">
             <option value="">All Types</option>
             {VALIDATION_TYPES.map(t => <option key={t} value={t}>{humanizeLabel(t)}</option>)}
           </select>
           <select value={filterActive} onChange={(e) => setFilterActive(e.target.value)}
-            className="bg-white/[0.02] border border-gray-700 rounded px-3 py-1.5 text-sm text-gray-200">
+            className="bg-white/[0.02] border border-border-strong rounded px-3 py-1.5 text-sm text-content">
             <option value="">All Status</option>
             <option value="true">Active</option>
             <option value="false">Inactive</option>
@@ -232,8 +232,8 @@ const ValidationRulesPage: React.FC = () => {
           <CardBody className="p-0">
             <div className="overflow-x-auto">
             <table className="w-full min-w-[48rem] text-sm">
-              <thead className="bg-gray-950">
-                <tr className="text-left text-gray-400 border-b border-gray-800">
+              <thead className="bg-surface-sunken">
+                <tr className="text-left text-content-muted border-b border-border">
                   <th scope="col" className="px-4 py-3">Name</th>
                   <th scope="col" className="px-4 py-3">Pattern</th>
                   <th scope="col" className="px-4 py-3">Type</th>
@@ -244,17 +244,17 @@ const ValidationRulesPage: React.FC = () => {
               </thead>
               <tbody>
                 {rules.map((rule) => (
-                  <tr key={rule.id} className="border-b border-gray-800/50 hover:bg-gray-800/30">
+                  <tr key={rule.id} className="border-b border-border/50 hover:bg-surface-overlay/30">
                     <td className="px-4 py-3">
-                      <div className="font-medium text-gray-100">{rule.name}</div>
-                      {rule.description && <div className="text-xs text-gray-600 mt-0.5">{rule.description}</div>}
+                      <div className="font-medium text-content">{rule.name}</div>
+                      {rule.description && <div className="text-xs text-content-subtle mt-0.5">{rule.description}</div>}
                       {rule.error_message && <div className="text-xs text-red-400/70 mt-0.5">{rule.error_message}</div>}
                     </td>
                     <td className="px-4 py-3">
-                      <code className="text-xs bg-gray-950 px-2 py-1 rounded text-gray-300">{rule.pattern}</code>
-                      {rule.is_regex && <span className="ml-2 text-xs text-slate-300">regex</span>}
+                      <code className="text-xs bg-surface-sunken px-2 py-1 rounded text-content">{rule.pattern}</code>
+                      {rule.is_regex && <span className="ml-2 text-xs text-content">regex</span>}
                     </td>
-                    <td className="px-4 py-3 text-gray-400">{humanizeLabel(rule.validation_type)}</td>
+                    <td className="px-4 py-3 text-content-muted">{humanizeLabel(rule.validation_type)}</td>
                     <td className="px-4 py-3">
                       <span className={`text-xs px-2 py-0.5 rounded border ${SEVERITY_COLORS[rule.severity] || ''}`}>
                         {rule.severity}
@@ -264,12 +264,12 @@ const ValidationRulesPage: React.FC = () => {
                       <button onClick={() => handleToggle(rule)} title={rule.is_active ? 'Active' : 'Inactive'}>
                         {rule.is_active
                           ? <ToggleRight size={20} className="text-green-400" />
-                          : <ToggleLeft size={20} className="text-gray-600" />}
+                          : <ToggleLeft size={20} className="text-content-subtle" />}
                       </button>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <button onClick={() => openEdit(rule)} className="text-gray-400 hover:text-gray-100 mr-3"><Pencil size={14} /></button>
-                      <button onClick={() => { setDeleteTargetId(rule.id); setShowDeleteConfirm(true); }} className="text-gray-400 hover:text-red-400"><Trash2 size={14} /></button>
+                      <button onClick={() => openEdit(rule)} className="text-content-muted hover:text-content mr-3"><Pencil size={14} /></button>
+                      <button onClick={() => { setDeleteTargetId(rule.id); setShowDeleteConfirm(true); }} className="text-content-muted hover:text-red-400"><Trash2 size={14} /></button>
                     </td>
                   </tr>
                 ))}
@@ -284,62 +284,62 @@ const ValidationRulesPage: React.FC = () => {
 
         {/* Modal */}
         {modalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0c0c0f]/60">
-            <div className="bg-gray-950 border border-gray-800 rounded-lg w-full max-w-lg p-6">
-              <h2 className="text-lg font-semibold text-gray-100 mb-4">{editing ? 'Edit Rule' : 'New Validation Rule'}</h2>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-surface/60">
+            <div className="bg-surface-overlay border border-border rounded-lg w-full max-w-lg p-6">
+              <h2 className="text-lg font-semibold text-content mb-4">{editing ? 'Edit Rule' : 'New Validation Rule'}</h2>
 
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div>
-                  <label className="block text-xs text-gray-400 mb-1">Name</label>
+                  <label className="block text-xs text-content-muted mb-1">Name</label>
                   <input value={formName} onChange={(e) => setFormName(e.target.value)}
-                    className="w-full bg-white/[0.02] border border-gray-700 rounded px-3 py-2 text-sm text-gray-200 focus:border-red-500 focus:outline-none" />
+                    className="w-full bg-white/[0.02] border border-border-strong rounded px-3 py-2 text-sm text-content focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong focus:outline-none" />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-400 mb-1">Type</label>
+                  <label className="block text-xs text-content-muted mb-1">Type</label>
                   <select value={formValidationType} onChange={(e) => setFormValidationType(e.target.value)}
-                    className="w-full bg-white/[0.02] border border-gray-700 rounded px-3 py-2 text-sm text-gray-200">
+                    className="w-full bg-white/[0.02] border border-border-strong rounded px-3 py-2 text-sm text-content">
                     {VALIDATION_TYPES.map(t => <option key={t} value={t}>{humanizeLabel(t)}</option>)}
                   </select>
                 </div>
               </div>
 
               <div className="mb-4">
-                <label className="block text-xs text-gray-400 mb-1">Description</label>
+                <label className="block text-xs text-content-muted mb-1">Description</label>
                 <input value={formDescription} onChange={(e) => setFormDescription(e.target.value)}
-                  className="w-full bg-white/[0.02] border border-gray-700 rounded px-3 py-2 text-sm text-gray-200 focus:border-red-500 focus:outline-none" />
+                  className="w-full bg-white/[0.02] border border-border-strong rounded px-3 py-2 text-sm text-content focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong focus:outline-none" />
               </div>
 
               <div className="mb-4">
-                <label className="block text-xs text-gray-400 mb-1">Pattern</label>
+                <label className="block text-xs text-content-muted mb-1">Pattern</label>
                 <input value={formPattern} onChange={(e) => setFormPattern(e.target.value)}
                   placeholder="e.g. rm -rf / or ^rm\s+-rf\s+/"
-                  className="w-full bg-white/[0.02] border border-gray-700 rounded px-3 py-2 text-sm text-gray-200 font-mono focus:border-red-500 focus:outline-none" />
+                  className="w-full bg-white/[0.02] border border-border-strong rounded px-3 py-2 text-sm text-content font-mono focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong focus:outline-none" />
               </div>
 
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div>
-                  <label className="block text-xs text-gray-400 mb-1">Severity</label>
+                  <label className="block text-xs text-content-muted mb-1">Severity</label>
                   <select value={formSeverity} onChange={(e) => setFormSeverity(e.target.value)}
-                    className="w-full bg-white/[0.02] border border-gray-700 rounded px-3 py-2 text-sm text-gray-200">
+                    className="w-full bg-white/[0.02] border border-border-strong rounded px-3 py-2 text-sm text-content">
                     {SEVERITIES.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
                 <div className="flex items-end">
-                  <label className="flex items-center gap-2 text-sm text-gray-300 pb-2">
+                  <label className="flex items-center gap-2 text-sm text-content pb-2">
                     <input type="checkbox" checked={formIsRegex} onChange={(e) => setFormIsRegex(e.target.checked)}
-                      className="rounded border-gray-700" /> Regex pattern
+                      className="rounded border-border-strong" /> Regex pattern
                   </label>
                 </div>
               </div>
 
               <div className="mb-4">
-                <label className="block text-xs text-gray-400 mb-1">Error Message (shown when rule triggers)</label>
+                <label className="block text-xs text-content-muted mb-1">Error Message (shown when rule triggers)</label>
                 <input value={formErrorMessage} onChange={(e) => setFormErrorMessage(e.target.value)}
                   placeholder="e.g. This command is blocked for safety reasons"
-                  className="w-full bg-white/[0.02] border border-gray-700 rounded px-3 py-2 text-sm text-gray-200 focus:border-red-500 focus:outline-none" />
+                  className="w-full bg-white/[0.02] border border-border-strong rounded px-3 py-2 text-sm text-content focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong focus:outline-none" />
               </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-800">
+              <div className="flex justify-end gap-3 pt-4 border-t border-border">
                 <Button variant="ghost" onClick={() => setModalOpen(false)}>Cancel</Button>
                 <Button variant="primary" onClick={handleSave} disabled={!formName || !formPattern}>
                   {editing ? 'Update' : 'Create'}

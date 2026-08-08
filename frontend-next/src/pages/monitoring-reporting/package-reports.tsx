@@ -286,7 +286,7 @@ const PackageReports: React.FC = () => {
               <select
                 value={smartGroupId}
                 onChange={(e) => { setSmartGroupId(e.target.value ? Number(e.target.value) : ''); setOutdatedPage(1); }}
-                className="bg-gray-950 border border-gray-800 rounded px-2 py-1 text-gray-200 text-sm"
+                className="bg-surface-sunken border border-border rounded px-2 py-1 text-content text-sm"
                 title="Scope report to a smart group"
               >
                 <option value="">Fleet-wide</option>
@@ -326,7 +326,7 @@ const PackageReports: React.FC = () => {
         <Card className="mb-6">
           <CardBody>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-200">Outdated Packages</h2>
+              <h2 className="text-lg font-semibold text-content">Outdated Packages</h2>
               {canWrite && (
                 <ExportButton
                   endpoint="/api/backend/package-reports/outdated/export"
@@ -339,13 +339,13 @@ const PackageReports: React.FC = () => {
 
             <div className="flex flex-wrap items-end gap-4 mb-4">
               <div>
-                <label className="block text-xs text-gray-400 mb-1">Package Name</label>
+                <label className="block text-xs text-content-muted mb-1">Package Name</label>
                 <input
                   type="text"
                   value={nameFilter}
                   onChange={(e) => { setNameFilter(e.target.value); setOutdatedPage(1); }}
                   placeholder="Search..."
-                  className="bg-gray-950 border border-gray-800 rounded px-2 py-1 text-gray-200 text-sm"
+                  className="bg-surface-sunken border border-border rounded px-2 py-1 text-content text-sm"
                 />
               </div>
               <div className="flex items-center gap-2">
@@ -354,13 +354,13 @@ const PackageReports: React.FC = () => {
                   id="securityOnly"
                   checked={securityOnly}
                   onChange={(e) => { setSecurityOnly(e.target.checked); setOutdatedPage(1); }}
-                  className="rounded border-gray-800"
+                  className="rounded border-border"
                 />
-                <label htmlFor="securityOnly" className="text-sm text-gray-300">Security only</label>
+                <label htmlFor="securityOnly" className="text-sm text-content">Security only</label>
               </div>
             </div>
 
-            <div className="grid grid-cols-12 gap-2 p-3 bg-gray-950 border-b border-gray-800 font-medium text-gray-200 text-sm rounded-t-lg">
+            <div className="grid grid-cols-12 gap-2 p-3 bg-surface-sunken border-b border-border font-medium text-content text-sm rounded-t-lg">
               <div className="col-span-3">Package</div>
               <div className="col-span-2">Installed</div>
               <div className="col-span-2">Available</div>
@@ -368,13 +368,13 @@ const PackageReports: React.FC = () => {
               <div className="col-span-2">Security</div>
             </div>
 
-            {loading && <div className="p-4 text-gray-400">Loading...</div>}
+            {loading && <div className="p-4 text-content-muted">Loading...</div>}
             {!loading && outdated.length === 0 && (
-              <div className="p-8 text-center text-gray-400">No outdated packages found.</div>
+              <div className="p-8 text-center text-content-muted">No outdated packages found.</div>
             )}
 
             {!loading && outdated.map((item, idx) => (
-              <div key={idx} className="grid grid-cols-12 gap-2 p-3 border-b border-gray-800 text-gray-300 text-sm items-center">
+              <div key={idx} className="grid grid-cols-12 gap-2 p-3 border-b border-border text-content text-sm items-center">
                 <div className="col-span-3 font-medium">{item.package_name}</div>
                 <div className="col-span-2 text-red-300">{item.installed_version}</div>
                 <div className="col-span-2 text-green-300">{item.available_version}</div>
@@ -388,7 +388,7 @@ const PackageReports: React.FC = () => {
             ))}
 
             <div className="flex items-center justify-between pt-4">
-              <span className="text-sm text-gray-400">
+              <span className="text-sm text-content-muted">
                 {outdatedTotal > 0
                   ? `Showing ${(outdatedPage - 1) * pageSize + 1}-${Math.min(outdatedPage * pageSize, outdatedTotal)} of ${outdatedTotal}`
                   : 'No results'}
@@ -402,7 +402,7 @@ const PackageReports: React.FC = () => {
                 >
                   Previous
                 </Button>
-                <span className="text-sm text-gray-400 self-center">Page {outdatedPage} of {totalPages}</span>
+                <span className="text-sm text-content-muted self-center">Page {outdatedPage} of {totalPages}</span>
                 <Button
                   variant="outline"
                   size="sm"
@@ -420,10 +420,10 @@ const PackageReports: React.FC = () => {
         <Card>
           <CardBody>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-200">
+              <h2 className="text-lg font-semibold text-content">
                 Update Compliance
                 {compliance && (
-                  <span className="ml-3 text-sm font-normal text-gray-400">
+                  <span className="ml-3 text-sm font-normal text-content-muted">
                     Fleet Average: <span className={complianceText(compliance.fleet_average_compliance)}>{compliance.fleet_average_compliance}%</span>
                   </span>
                 )}
@@ -439,14 +439,14 @@ const PackageReports: React.FC = () => {
             </div>
 
             {compliance && compliance.systems.length === 0 && (
-              <div className="p-8 text-center text-gray-400">No systems found.</div>
+              <div className="p-8 text-center text-content-muted">No systems found.</div>
             )}
 
             {compliance && compliance.systems.map((sys) => (
-              <div key={sys.system_id} className="flex items-center gap-4 py-2 border-b border-gray-800/50">
-                <div className="w-48 text-sm text-gray-300 truncate">{sys.hostname}</div>
+              <div key={sys.system_id} className="flex items-center gap-4 py-2 border-b border-border/50">
+                <div className="w-48 text-sm text-content truncate">{sys.hostname}</div>
                 <div className="flex-1">
-                  <div className="w-full bg-gray-800 rounded-full h-4 overflow-hidden">
+                  <div className="w-full bg-surface-overlay rounded-full h-4 overflow-hidden">
                     <div
                       className={`h-full rounded-full ${complianceColor(sys.compliance_percentage)}`}
                       style={{ width: `${sys.compliance_percentage}%` }}
@@ -456,7 +456,7 @@ const PackageReports: React.FC = () => {
                 <div className={`w-16 text-right text-sm font-medium ${complianceText(sys.compliance_percentage)}`}>
                   {sys.compliance_percentage}%
                 </div>
-                <div className="w-40 text-xs text-gray-400">
+                <div className="w-40 text-xs text-content-muted">
                   {sys.up_to_date_count} ok / {sys.outdated_count} outdated / {sys.held_count} held
                 </div>
               </div>
@@ -469,9 +469,9 @@ const PackageReports: React.FC = () => {
             (package outdated/compliance) and the patch/compliance pages. */}
         <Card className="mt-6">
           <CardBody>
-            <h2 className="text-lg font-semibold text-gray-200 mb-4">
+            <h2 className="text-lg font-semibold text-content mb-4">
               Recent Reports
-              <span className="ml-3 text-xs font-normal text-gray-500">
+              <span className="ml-3 text-xs font-normal text-content-subtle">
                 Last 10 report runs across package, patch + compliance
               </span>
             </h2>
@@ -485,7 +485,7 @@ const PackageReports: React.FC = () => {
             )}
             {!recentReportsError && recentReports.length === 0 && (
               <div
-                className="p-6 text-center text-gray-400 text-sm"
+                className="p-6 text-center text-content-muted text-sm"
                 data-testid="recent-reports-empty"
               >
                 No report runs yet. Export the Outdated Packages or Update
@@ -497,7 +497,7 @@ const PackageReports: React.FC = () => {
               <div className="overflow-x-auto" data-testid="recent-reports-table">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-gray-800 text-gray-400 text-xs uppercase">
+                    <tr className="border-b border-border text-content-muted text-xs uppercase">
                       <th className="text-left p-2">Kind</th>
                       <th className="text-left p-2">Format</th>
                       <th className="text-left p-2">State</th>
@@ -511,10 +511,10 @@ const PackageReports: React.FC = () => {
                     {recentReports.map((r) => (
                       <tr
                         key={r.id}
-                        className="border-b border-gray-800/50 text-gray-300"
+                        className="border-b border-border/50 text-content"
                       >
                         <td className="p-2">{REPORT_KIND_LABELS[r.report_kind] ?? r.report_kind}</td>
-                        <td className="p-2 uppercase text-xs text-gray-400">
+                        <td className="p-2 uppercase text-xs text-content-muted">
                           {r.format ?? '-'}
                         </td>
                         <td className="p-2">
@@ -536,10 +536,10 @@ const PackageReports: React.FC = () => {
                         <td className="p-2 text-xs">
                           {r.triggered_by_username ?? r.triggered_by}
                         </td>
-                        <td className="p-2 text-xs text-gray-400">
+                        <td className="p-2 text-xs text-content-muted">
                           {formatTimestamp(r.started_at)}
                         </td>
-                        <td className="p-2 text-xs text-gray-400">
+                        <td className="p-2 text-xs text-content-muted">
                           {r.completed_at ? formatTimestamp(r.completed_at) : '-'}
                         </td>
                       </tr>
@@ -559,9 +559,9 @@ const PackageReports: React.FC = () => {
             Reports panel above. */}
         <Card className="mt-6">
           <CardBody>
-            <h2 className="text-lg font-semibold text-gray-200 mb-4">
+            <h2 className="text-lg font-semibold text-content mb-4">
               Scheduled Reports
-              <span className="ml-3 text-xs font-normal text-gray-500">
+              <span className="ml-3 text-xs font-normal text-content-subtle">
                 Recurring exports fired by the in-process scheduler
               </span>
             </h2>
@@ -574,12 +574,12 @@ const PackageReports: React.FC = () => {
               </div>
             )}
             <div className="flex items-center justify-between mb-3">
-              <div className="text-xs text-gray-400">
+              <div className="text-xs text-content-muted">
                 {schedules.length} active schedule{schedules.length === 1 ? '' : 's'}
               </div>
               {!scheduledExportsEntitled ? (
                 <span
-                  className="inline-flex items-center gap-1 text-[11px] text-gray-500"
+                  className="inline-flex items-center gap-1 text-[11px] text-content-subtle"
                   title="Scheduled report exports are part of the paid Praxis edition."
                   data-testid="report-schedules-paid-locked"
                 >
@@ -595,7 +595,7 @@ const PackageReports: React.FC = () => {
                 </button>
               ) : (
                 <span
-                  className="text-[11px] text-gray-500"
+                  className="text-[11px] text-content-subtle"
                   title="Creating a scheduled report requires the admin or maintainer role."
                   data-testid="report-schedules-rbac-required"
                 >
@@ -604,24 +604,24 @@ const PackageReports: React.FC = () => {
               )}
             </div>
             {showCreateSchedule && canManageSchedules && (
-              <div className="bg-gray-900/60 border border-gray-800 rounded p-3 mb-4 space-y-2 text-xs">
+              <div className="bg-surface-raised/60 border border-border rounded p-3 mb-4 space-y-2 text-xs">
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
                   <label className="block">
-                    <span className="text-gray-400">Name</span>
+                    <span className="text-content-muted">Name</span>
                     <input
                       type="text"
                       value={scheduleForm.name}
                       onChange={(e) => setScheduleForm((f) => ({ ...f, name: e.target.value }))}
-                      className="mt-1 block w-full rounded border border-gray-800 bg-gray-950 p-1.5"
+                      className="mt-1 block w-full rounded border border-border bg-surface-sunken p-1.5"
                       data-testid="report-schedule-name"
                     />
                   </label>
                   <label className="block">
-                    <span className="text-gray-400">Report kind</span>
+                    <span className="text-content-muted">Report kind</span>
                     <select
                       value={scheduleForm.report_kind}
                       onChange={(e) => setScheduleForm((f) => ({ ...f, report_kind: e.target.value as ReportKind }))}
-                      className="mt-1 block w-full rounded border border-gray-800 bg-gray-950 p-1.5"
+                      className="mt-1 block w-full rounded border border-border bg-surface-sunken p-1.5"
                     >
                       {REPORT_KIND_VALUES.map((k) => (
                         <option key={k} value={k}>
@@ -631,11 +631,11 @@ const PackageReports: React.FC = () => {
                     </select>
                   </label>
                   <label className="block">
-                    <span className="text-gray-400">Cadence</span>
+                    <span className="text-content-muted">Cadence</span>
                     <select
                       value={scheduleForm.cadence}
                       onChange={(e) => setScheduleForm((f) => ({ ...f, cadence: e.target.value as ReportCadence }))}
-                      className="mt-1 block w-full rounded border border-gray-800 bg-gray-950 p-1.5"
+                      className="mt-1 block w-full rounded border border-border bg-surface-sunken p-1.5"
                     >
                       {REPORT_CADENCE_VALUES.map((c) => (
                         <option key={c} value={c}>
@@ -645,12 +645,12 @@ const PackageReports: React.FC = () => {
                     </select>
                   </label>
                   <label className="block">
-                    <span className="text-gray-400">Filters (JSON)</span>
+                    <span className="text-content-muted">Filters (JSON)</span>
                     <input
                       type="text"
                       value={scheduleForm.filters_json}
                       onChange={(e) => setScheduleForm((f) => ({ ...f, filters_json: e.target.value }))}
-                      className="mt-1 block w-full rounded border border-gray-800 bg-gray-950 p-1.5 font-mono"
+                      className="mt-1 block w-full rounded border border-border bg-surface-sunken p-1.5 font-mono"
                       placeholder='{"plan_id": 1}'
                     />
                   </label>
@@ -668,7 +668,7 @@ const PackageReports: React.FC = () => {
             )}
             {!schedulesError && schedules.length === 0 ? (
               <div
-                className="p-6 text-center text-gray-400 text-sm"
+                className="p-6 text-center text-content-muted text-sm"
                 data-testid="report-schedules-empty"
               >
                 No scheduled reports yet. Create one above to start a recurring
@@ -678,7 +678,7 @@ const PackageReports: React.FC = () => {
               <div className="overflow-x-auto" data-testid="report-schedules-table">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-gray-800 text-gray-400 text-xs uppercase">
+                    <tr className="border-b border-border text-content-muted text-xs uppercase">
                       <th className="text-left p-2">Name</th>
                       <th className="text-left p-2">Kind</th>
                       <th className="text-left p-2">Cadence</th>
@@ -690,27 +690,27 @@ const PackageReports: React.FC = () => {
                   </thead>
                   <tbody>
                     {schedules.map((s) => (
-                      <tr key={s.id} className="border-b border-gray-800/50 text-gray-300">
+                      <tr key={s.id} className="border-b border-border/50 text-content">
                         <td className="p-2">{s.name}</td>
                         <td className="p-2">{REPORT_KIND_LABELS[s.report_kind] ?? s.report_kind}</td>
                         <td className="p-2">{REPORT_CADENCE_LABELS[s.cadence] ?? s.cadence}</td>
                         <td className="p-2">{s.enabled ? 'yes' : 'no'}</td>
-                        <td className="p-2 text-xs text-gray-400">
+                        <td className="p-2 text-xs text-content-muted">
                           {s.next_run_at ? formatTimestamp(s.next_run_at) : '-'}
                         </td>
-                        <td className="p-2 text-xs text-gray-400">
+                        <td className="p-2 text-xs text-content-muted">
                           {s.last_run_at ? `${s.last_run_state} ${formatTimestamp(s.last_run_at)}` : '-'}
                         </td>
                         <td className="p-2 text-right">
                           {canManageSchedules ? (
                             <button
                               onClick={() => handleDeleteSchedule(s.id)}
-                              className="text-xs px-2 py-1 bg-gray-800 hover:bg-red-900 text-gray-200 rounded"
+                              className="text-xs px-2 py-1 bg-border hover:bg-red-900 text-content rounded"
                             >
                               Delete
                             </button>
                           ) : (
-                            <span className="text-[11px] text-gray-500">-</span>
+                            <span className="text-[11px] text-content-subtle">-</span>
                           )}
                         </td>
                       </tr>

@@ -34,8 +34,8 @@ const ENTITLEMENT_LABELS: Record<string, string> = {
 
 const Field: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
   <div className="flex flex-col gap-1">
-    <span className="text-[11px] uppercase tracking-wide text-gray-500">{label}</span>
-    <span className="text-sm text-gray-200">{children}</span>
+    <span className="text-[11px] uppercase tracking-wide text-content-subtle">{label}</span>
+    <span className="text-sm text-content">{children}</span>
   </div>
 );
 
@@ -166,12 +166,12 @@ const LicenseTab: React.FC = () => {
         </CardHeader>
         <CardBody>
           {loading ? (
-            <p className="text-sm text-gray-500">Loading…</p>
+            <p className="text-sm text-content-subtle">Loading…</p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field label="Edition">
                 <span className="capitalize">{tier || edition}</span>
-                {!isPaid && <span className="text-gray-500"> (free)</span>}
+                {!isPaid && <span className="text-content-subtle"> (free)</span>}
               </Field>
               <Field label="License state">
                 <span className="capitalize">{licenseState.replace('_', ' ')}</span>
@@ -187,12 +187,12 @@ const LicenseTab: React.FC = () => {
               </Field>
               <Field label="Installation ID">
                 <span className="inline-flex items-center gap-2">
-                  <code className="text-xs text-gray-300 break-all">{instanceId || '-'}</code>
+                  <code className="text-xs text-content break-all">{instanceId || '-'}</code>
                   {instanceId && (
                     <button
                       type="button"
                       onClick={copyInstanceId}
-                      className="text-gray-400 hover:text-gray-200"
+                      className="text-content-muted hover:text-content"
                       title="Copy installation ID"
                     >
                       {copied ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
@@ -229,7 +229,7 @@ const LicenseTab: React.FC = () => {
                     entitlements[key] ? 'bg-emerald-400' : 'bg-gray-600'
                   }`}
                 />
-                <span className={entitlements[key] ? 'text-gray-200' : 'text-gray-500'}>
+                <span className={entitlements[key] ? 'text-content' : 'text-content-subtle'}>
                   {ENTITLEMENT_LABELS[key]}
                 </span>
               </div>
@@ -242,16 +242,16 @@ const LicenseTab: React.FC = () => {
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
-              <ShoppingCart size={16} className="text-gray-400" />
+              <ShoppingCart size={16} className="text-content-muted" />
               <span>Buy or upgrade</span>
             </div>
           </CardHeader>
           <CardBody>
-            <p className="text-xs text-gray-500 mb-3">
+            <p className="text-xs text-content-subtle mb-3">
               Purchasing unlocks a higher host cap and paid governance; the free
               edition remains free. This opens the Praxis website with your
               Installation ID{' '}
-              <code className="text-gray-400">{instanceId || '-'}</code> prefilled -
+              <code className="text-content-muted">{instanceId || '-'}</code> prefilled -
               choose a plan there to complete checkout.
             </p>
             <Button
@@ -271,9 +271,9 @@ const LicenseTab: React.FC = () => {
         <Card>
           <CardHeader>Apply a license</CardHeader>
           <CardBody>
-            <p className="text-xs text-gray-500 mb-2">
+            <p className="text-xs text-content-subtle mb-2">
               Paste a license key issued for installation ID{' '}
-              <code className="text-gray-400">{instanceId || '-'}</code>. Validation is offline; no
+              <code className="text-content-muted">{instanceId || '-'}</code>. Validation is offline; no
               data leaves this install.
             </p>
             <textarea
@@ -281,10 +281,10 @@ const LicenseTab: React.FC = () => {
               onChange={(e) => setToken(e.target.value)}
               placeholder="Paste license token…"
               rows={4}
-              className="w-full rounded border border-gray-800 bg-gray-950 p-2 text-xs font-mono text-gray-200"
+              className="w-full rounded border border-border bg-surface-sunken p-2 text-xs font-mono text-content"
               data-testid="license-token-input"
             />
-            <label className="mt-3 block text-[11px] uppercase tracking-wide text-gray-500">
+            <label className="mt-3 block text-[11px] uppercase tracking-wide text-content-subtle">
               Refresh token (optional)
             </label>
             <input
@@ -293,10 +293,10 @@ const LicenseTab: React.FC = () => {
               onChange={(e) => setRefreshToken(e.target.value)}
               placeholder="Enable automatic renewal…"
               autoComplete="off"
-              className="mt-1 w-full rounded border border-gray-800 bg-gray-950 p-2 text-xs font-mono text-gray-200"
+              className="mt-1 w-full rounded border border-border bg-surface-sunken p-2 text-xs font-mono text-content"
               data-testid="license-refresh-token-input"
             />
-            <p className="mt-1 text-[11px] text-gray-500">
+            <p className="mt-1 text-[11px] text-content-subtle">
               Paste the refresh token from your purchase to let this install renew the
               license automatically after each billing renewal. It is stored securely on
               the server and never in your browser. Leave blank to keep using manual
@@ -320,7 +320,7 @@ const LicenseTab: React.FC = () => {
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
-              <RefreshCw size={16} className="text-gray-400" />
+              <RefreshCw size={16} className="text-content-muted" />
               <span>Online refresh</span>
             </div>
           </CardHeader>
@@ -330,7 +330,7 @@ const LicenseTab: React.FC = () => {
                 {onlineRefresh?.configured ? (
                   <span className="text-emerald-400">Configured</span>
                 ) : (
-                  <span className="text-gray-500">Not configured</span>
+                  <span className="text-content-subtle">Not configured</span>
                 )}
               </Field>
               <Field label="Last attempt">
@@ -345,11 +345,11 @@ const LicenseTab: React.FC = () => {
               </Field>
               {onlineRefresh?.last_detail && (
                 <Field label="Detail">
-                  <span className="text-gray-400">{onlineRefresh.last_detail}</span>
+                  <span className="text-content-muted">{onlineRefresh.last_detail}</span>
                 </Field>
               )}
             </div>
-            <p className="mt-3 text-[11px] text-gray-500">
+            <p className="mt-3 text-[11px] text-content-subtle">
               {onlineRefresh?.configured
                 ? 'This install can renew its license automatically after a billing renewal. You can also refresh now.'
                 : 'Apply a license with a refresh token to enable automatic renewal. Manual license import always works without it.'}

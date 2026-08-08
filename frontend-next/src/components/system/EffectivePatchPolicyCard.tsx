@@ -48,7 +48,7 @@ const EffectivePatchPolicyCard = ({ systemId }: Props) => {
 
   const renderBody = () => {
     if (loading) {
-      return <div className="text-sm text-gray-400">Loading…</div>;
+      return <div className="text-sm text-content-muted">Loading…</div>;
     }
     if (error) {
       return (
@@ -95,9 +95,9 @@ const EffectivePatchPolicyCard = ({ systemId }: Props) => {
 
     if (resolution.state === 'no_policy' || !resolution.effective?.policy) {
       return (
-        <div className="text-sm text-gray-300">
+        <div className="text-sm text-content">
           <Badge variant="neutral">No policy</Badge>
-          <p className="mt-2 text-xs text-gray-500">
+          <p className="mt-2 text-xs text-content-subtle">
             No direct, static-group, smart-group, or fleet-default binding
             matches this host. Add one from the{' '}
             <Link
@@ -135,22 +135,22 @@ const EffectivePatchPolicyCard = ({ systemId }: Props) => {
             </span>
           )}
         </div>
-        <div className="mt-1 text-xs text-gray-400">{policy.name}</div>
-        <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-1 text-xs text-gray-300 md:grid-cols-3">
+        <div className="mt-1 text-xs text-content-muted">{policy.name}</div>
+        <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-1 text-xs text-content md:grid-cols-3">
           <div>
-            <dt className="text-gray-500">Scope</dt>
+            <dt className="text-content-subtle">Scope</dt>
             <dd>{policy.scope_kind}</dd>
           </div>
           <div>
-            <dt className="text-gray-500">Reboot</dt>
+            <dt className="text-content-subtle">Reboot</dt>
             <dd>{policy.reboot_policy}</dd>
           </div>
           <div>
-            <dt className="text-gray-500">Cadence</dt>
+            <dt className="text-content-subtle">Cadence</dt>
             <dd>{policy.rollout_cadence}</dd>
           </div>
           <div>
-            <dt className="text-gray-500">Approval</dt>
+            <dt className="text-content-subtle">Approval</dt>
             <dd>
               {policy.requires_approval
                 ? `Required (${policy.required_approvals})`
@@ -158,11 +158,11 @@ const EffectivePatchPolicyCard = ({ systemId }: Props) => {
             </dd>
           </div>
           <div>
-            <dt className="text-gray-500">Failure</dt>
+            <dt className="text-content-subtle">Failure</dt>
             <dd>{policy.failure_policy}</dd>
           </div>
           <div>
-            <dt className="text-gray-500">Enabled</dt>
+            <dt className="text-content-subtle">Enabled</dt>
             <dd>{policy.enabled ? 'yes' : 'no'}</dd>
           </div>
         </dl>
@@ -187,7 +187,7 @@ const EffectivePatchPolicyCard = ({ systemId }: Props) => {
       >
         <div>
           <div>Effective patch policy</div>
-          <div className="mt-0.5 text-xs font-normal text-gray-500">
+          <div className="mt-0.5 text-xs font-normal text-content-subtle">
             Resolved via direct host &gt; static group &gt; smart group &gt; fleet default.
           </div>
         </div>

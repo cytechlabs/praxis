@@ -91,23 +91,23 @@ const UserManagementTab = ({
 
       {!loading && !error && (
         <div className="overflow-x-auto">
-          <table className="min-w-full bg-[#0c0c0f] border border-gray-800/60 rounded">
+          <table className="min-w-full bg-surface-raised border border-border/60 rounded">
             <thead>
-              <tr className="border-b border-gray-800/60">
-                <th scope="col" className="px-6 py-3 text-left text-sm font-medium text-gray-400">ID</th>
-                <th scope="col" className="px-6 py-3 text-left text-sm font-medium text-gray-400">Username</th>
-                <th scope="col" className="px-6 py-3 text-left text-sm font-medium text-gray-400">Email</th>
-                <th scope="col" className="px-6 py-3 text-left text-sm font-medium text-gray-400">Status</th>
-                <th scope="col" className="px-6 py-3 text-left text-sm font-medium text-gray-400">Roles</th>
-                <th scope="col" className="px-6 py-3 text-left text-sm font-medium text-gray-400">Actions</th>
+              <tr className="border-b border-border/60">
+                <th scope="col" className="px-6 py-3 text-left text-sm font-medium text-content-muted">ID</th>
+                <th scope="col" className="px-6 py-3 text-left text-sm font-medium text-content-muted">Username</th>
+                <th scope="col" className="px-6 py-3 text-left text-sm font-medium text-content-muted">Email</th>
+                <th scope="col" className="px-6 py-3 text-left text-sm font-medium text-content-muted">Status</th>
+                <th scope="col" className="px-6 py-3 text-left text-sm font-medium text-content-muted">Roles</th>
+                <th scope="col" className="px-6 py-3 text-left text-sm font-medium text-content-muted">Actions</th>
               </tr>
             </thead>
             <tbody>
               {paginatedUsers.map((user) => (
-                <tr key={user.id} className="border-b border-gray-800/60">
-                  <td className="px-6 py-4 text-sm text-gray-300">{user.id}</td>
-                  <td className="px-6 py-4 text-sm text-gray-300">{user.username}</td>
-                  <td className="px-6 py-4 text-sm text-gray-300">{user.email}</td>
+                <tr key={user.id} className="border-b border-border/60">
+                  <td className="px-6 py-4 text-sm text-content">{user.id}</td>
+                  <td className="px-6 py-4 text-sm text-content">{user.username}</td>
+                  <td className="px-6 py-4 text-sm text-content">{user.email}</td>
                   <td className="px-6 py-4 text-sm">
                     <button
                       onClick={() => onToggleActive(user)}
@@ -126,7 +126,7 @@ const UserManagementTab = ({
                         setSelectedUser(user);
                         setIsRoleDialogOpen(true);
                       }}
-                      className="text-gray-300 hover:text-white cursor-pointer"
+                      className="text-content hover:text-white cursor-pointer"
                     >
                       {user.roles.length > 0 ? user.roles.join(', ') : 'Set Role'}
                     </button>

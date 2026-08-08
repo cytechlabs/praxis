@@ -143,8 +143,8 @@ const AccessRequestsPage = () => {
       <Head><title>Access Requests | Praxis</title></Head>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-semibold text-gray-100">Access Requests</h1>
-          <p className="text-sm text-gray-400 mt-1">
+          <h1 className="text-xl font-semibold text-content">Access Requests</h1>
+          <p className="text-sm text-content-muted mt-1">
             Request time-bound access to fleet groups. Approval grants an access binding that auto-expires.
           </p>
         </div>
@@ -164,7 +164,7 @@ const AccessRequestsPage = () => {
         <CardHeader>Requests</CardHeader>
         <CardBody>
           {loading ? (
-            <div className="text-gray-500 text-sm">Loading…</div>
+            <div className="text-content-subtle text-sm">Loading…</div>
           ) : rows.length === 0 ? (
             <EmptyState
               title="No requests"
@@ -175,7 +175,7 @@ const AccessRequestsPage = () => {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left text-xs uppercase tracking-wide text-gray-500 border-b border-gray-800">
+                  <tr className="text-left text-xs uppercase tracking-wide text-content-subtle border-b border-border">
                     <th className="py-2 pr-4">Scope</th>
                     <th className="py-2 pr-4">Role</th>
                     <th className="py-2 pr-4">Duration</th>
@@ -188,25 +188,25 @@ const AccessRequestsPage = () => {
                   {rows.map(r => {
                     const role = rolesById.get(r.fleet_role_id);
                     return (
-                      <tr key={r.id} className="border-b border-gray-900 hover:bg-white/5">
-                        <td className="py-3 pr-4 text-gray-300">{scopeLabel(r)}</td>
+                      <tr key={r.id} className="border-b border-border hover:bg-white/5">
+                        <td className="py-3 pr-4 text-content">{scopeLabel(r)}</td>
                         <td className="py-3 pr-4"><Badge variant="info">{role?.name || `#${r.fleet_role_id}`}</Badge></td>
-                        <td className="py-3 pr-4 text-gray-400">{fmtDuration(r.duration_seconds)}</td>
+                        <td className="py-3 pr-4 text-content-muted">{fmtDuration(r.duration_seconds)}</td>
                         <td className="py-3 pr-4"><Badge variant={statusVariant(r.status)}>{humanizeStatus(r.status)}</Badge></td>
-                        <td className="py-3 pr-4 text-xs text-gray-500">{formatTimestamp(r.requested_at)}</td>
+                        <td className="py-3 pr-4 text-xs text-content-subtle">{formatTimestamp(r.requested_at)}</td>
                         <td className="py-3 pr-4 text-right">
                           {isAdmin && r.status === 'pending' && (
                             <div className="flex gap-1 justify-end">
-                              <button onClick={() => handleApprove(r.id)} aria-label="Approve" className="p-1.5 rounded-md text-gray-500 hover:text-emerald-400 hover:bg-emerald-500/10">
+                              <button onClick={() => handleApprove(r.id)} aria-label="Approve" className="p-1.5 rounded-md text-content-subtle hover:text-emerald-400 hover:bg-emerald-500/10">
                                 <Check size={14} />
                               </button>
-                              <button onClick={() => handleReject(r.id)} aria-label="Reject" className="p-1.5 rounded-md text-gray-500 hover:text-red-400 hover:bg-red-500/10">
+                              <button onClick={() => handleReject(r.id)} aria-label="Reject" className="p-1.5 rounded-md text-content-subtle hover:text-red-400 hover:bg-red-500/10">
                                 <X size={14} />
                               </button>
                             </div>
                           )}
                           {isAdmin && r.status === 'approved' && (
-                            <button onClick={() => handleRevoke(r.id)} aria-label="Revoke" className="p-1.5 rounded-md text-gray-500 hover:text-red-400 hover:bg-red-500/10">
+                            <button onClick={() => handleRevoke(r.id)} aria-label="Revoke" className="p-1.5 rounded-md text-content-subtle hover:text-red-400 hover:bg-red-500/10">
                               <X size={14} />
                             </button>
                           )}
@@ -224,13 +224,13 @@ const AccessRequestsPage = () => {
       <Modal open={showNew} onClose={() => setShowNew(false)} title="Request access">
         <div className="space-y-4">
           <div>
-            <label className="block text-xs uppercase tracking-wide text-gray-500 mb-1">Fleet role</label>
+            <label className="block text-xs uppercase tracking-wide text-content-subtle mb-1">Fleet role</label>
             <Select value={form.fleet_role_id} onChange={e => setForm(f => ({ ...f, fleet_role_id: Number(e.target.value) }))}>
               {roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
             </Select>
           </div>
           <div>
-            <label className="block text-xs uppercase tracking-wide text-gray-500 mb-1">Scope</label>
+            <label className="block text-xs uppercase tracking-wide text-content-subtle mb-1">Scope</label>
             <div className="flex gap-2">
               <div className="w-40">
                 <Select
@@ -255,7 +255,7 @@ const AccessRequestsPage = () => {
             </div>
           </div>
           <div>
-            <label className="block text-xs uppercase tracking-wide text-gray-500 mb-1">Duration (hours)</label>
+            <label className="block text-xs uppercase tracking-wide text-content-subtle mb-1">Duration (hours)</label>
             <Input
               type="number"
               min={0.25}
@@ -264,15 +264,15 @@ const AccessRequestsPage = () => {
               value={form.duration_hours}
               onChange={e => setForm(f => ({ ...f, duration_hours: Number(e.target.value) }))}
             />
-            <p className="text-xs text-gray-500 mt-1">5 min minimum, 7 days maximum.</p>
+            <p className="text-xs text-content-subtle mt-1">5 min minimum, 7 days maximum.</p>
           </div>
           <div>
-            <label className="block text-xs uppercase tracking-wide text-gray-500 mb-1">Justification</label>
+            <label className="block text-xs uppercase tracking-wide text-content-subtle mb-1">Justification</label>
             <textarea
               value={form.justification}
               onChange={e => setForm(f => ({ ...f, justification: e.target.value }))}
               rows={3}
-              className="w-full bg-gray-900/50 border border-gray-700 rounded-md text-sm text-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-600"
+              className="w-full bg-surface-sunken/50 border border-border-strong rounded-md text-sm text-content px-3 py-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
               placeholder="Why do you need this access? (optional but helpful)"
             />
           </div>

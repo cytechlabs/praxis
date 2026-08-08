@@ -38,9 +38,9 @@ type LoadState = 'loading' | 'loaded' | 'error';
 
 const SectionShell = ({ children }: { children: React.ReactNode }) => (
   <section className="md:col-span-2">
-    <h2 className="text-xl font-semibold text-gray-200 mb-4">Thin agent</h2>
-    <div className="bg-gray-900/30 p-4 rounded-lg border border-gray-800">
-      <p className="text-xs text-gray-500 mb-4">
+    <h2 className="text-xl font-semibold text-content mb-4">Thin agent</h2>
+    <div className="bg-surface-raised/30 p-4 rounded-lg border border-border">
+      <p className="text-xs text-content-subtle mb-4">
         The Praxis thin agent and its broker tunnel - a separate mechanism from
         the SSH access broker (CA trust + principals) shown elsewhere on this
         page.
@@ -62,10 +62,10 @@ const Signal = ({
   description: string;
 }) => (
   <div>
-    <p className="text-sm text-gray-400 mb-1">{term}</p>
+    <p className="text-sm text-content-muted mb-1">{term}</p>
     <div className="flex items-start gap-3">
       <Badge variant={variant}>{label}</Badge>
-      <span className="text-sm text-gray-400">{description}</span>
+      <span className="text-sm text-content-muted">{description}</span>
     </div>
   </div>
 );
@@ -114,7 +114,7 @@ const ThinAgentStatusCard = ({ systemId, isAdmin }: Props) => {
   if (!isAdmin) {
     return (
       <SectionShell>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-content-subtle">
           Thin-agent status is available to administrators.
         </p>
       </SectionShell>
@@ -124,7 +124,7 @@ const ThinAgentStatusCard = ({ systemId, isAdmin }: Props) => {
   if (loadState === 'loading') {
     return (
       <SectionShell>
-        <p className="text-sm text-gray-500" role="status">
+        <p className="text-sm text-content-subtle" role="status">
           Loading thin-agent status…
         </p>
       </SectionShell>
@@ -186,32 +186,32 @@ const ThinAgentStatusCard = ({ systemId, isAdmin }: Props) => {
         </div>
 
         {enrolled && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2 border-t border-gray-800">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2 border-t border-border">
             <div>
-              <p className="text-sm text-gray-400">Agent version</p>
-              <p className="text-gray-200">
+              <p className="text-sm text-content-muted">Agent version</p>
+              <p className="text-content">
                 {status.agent_version ?? (
-                  <span className="text-gray-500">Not reported yet</span>
+                  <span className="text-content-subtle">Not reported yet</span>
                 )}
               </p>
             </div>
             <div>
-              <p className="text-sm text-gray-400">Last seen</p>
-              <p className="text-gray-200">
+              <p className="text-sm text-content-muted">Last seen</p>
+              <p className="text-content">
                 {status.agent_last_seen_at ? (
                   formatTimestamp(status.agent_last_seen_at)
                 ) : (
-                  <span className="text-gray-500">Never connected</span>
+                  <span className="text-content-subtle">Never connected</span>
                 )}
               </p>
             </div>
             <div>
-              <p className="text-sm text-gray-400">Certificate expires</p>
-              <p className="text-gray-200">
+              <p className="text-sm text-content-muted">Certificate expires</p>
+              <p className="text-content">
                 {status.agent_cert_expires_at ? (
                   formatTimestamp(status.agent_cert_expires_at)
                 ) : (
-                  <span className="text-gray-500">-</span>
+                  <span className="text-content-subtle">-</span>
                 )}
               </p>
             </div>

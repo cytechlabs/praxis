@@ -83,8 +83,8 @@ const ActivationTokensTab = () => {
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-slate-200">Activation tokens</h2>
-            <p className="mt-1 text-xs text-slate-500">
+            <h2 className="text-lg font-semibold text-content">Activation tokens</h2>
+            <p className="mt-1 text-xs text-content-subtle">
               One-line agent enrollment. Each token binds to one pre-registered host and
               can be redeemed once.
             </p>
@@ -100,7 +100,7 @@ const ActivationTokensTab = () => {
       </CardHeader>
       <CardBody>
         {loading ? (
-          <div className="py-8 text-center text-sm text-slate-500">Loading…</div>
+          <div className="py-8 text-center text-sm text-content-subtle">Loading…</div>
         ) : (
           <ActivationTokensTable
             tokens={sortedTokens}

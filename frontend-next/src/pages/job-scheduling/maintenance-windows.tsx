@@ -266,21 +266,21 @@ const MaintenanceWindows = () => {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm text-gray-400 mb-1">Name *</label>
+                    <label className="block text-sm text-content-muted mb-1">Name *</label>
                     <input
                       type="text"
                       value={formName}
                       onChange={(e) => setFormName(e.target.value)}
-                      className="bg-gray-950 border border-gray-800 rounded-lg px-3 py-2 text-gray-200 w-full focus:outline-none focus:border-red-600"
+                      className="bg-surface-sunken border border-border rounded-lg px-3 py-2 text-content w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
                       placeholder="e.g., Weekend Maintenance"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm text-gray-400 mb-1">Target Type</label>
+                    <label className="block text-sm text-content-muted mb-1">Target Type</label>
                     <select
                       value={formTargetType}
                       onChange={(e) => { setFormTargetType(e.target.value); setFormTargetId(null); }}
-                      className="bg-gray-950 border border-gray-800 rounded-lg px-3 py-2 text-gray-200 w-full focus:outline-none focus:border-red-600"
+                      className="bg-surface-sunken border border-border rounded-lg px-3 py-2 text-content w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
                     >
                       <option value="all">All Systems</option>
                       <option value="system">Specific System</option>
@@ -291,11 +291,11 @@ const MaintenanceWindows = () => {
 
                 {formTargetType === 'system' && (
                   <div>
-                    <label className="block text-sm text-gray-400 mb-1">System</label>
+                    <label className="block text-sm text-content-muted mb-1">System</label>
                     <select
                       value={formTargetId || ''}
                       onChange={(e) => setFormTargetId(Number(e.target.value) || null)}
-                      className="bg-gray-950 border border-gray-800 rounded-lg px-3 py-2 text-gray-200 w-full focus:outline-none focus:border-red-600"
+                      className="bg-surface-sunken border border-border rounded-lg px-3 py-2 text-content w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
                     >
                       <option value="">Select system...</option>
                       {systems.map(s => <option key={s.id} value={s.id}>{s.hostname}</option>)}
@@ -305,11 +305,11 @@ const MaintenanceWindows = () => {
 
                 {formTargetType === 'group' && (
                   <div>
-                    <label className="block text-sm text-gray-400 mb-1">Group</label>
+                    <label className="block text-sm text-content-muted mb-1">Group</label>
                     <select
                       value={formTargetId || ''}
                       onChange={(e) => setFormTargetId(Number(e.target.value) || null)}
-                      className="bg-gray-950 border border-gray-800 rounded-lg px-3 py-2 text-gray-200 w-full focus:outline-none focus:border-red-600"
+                      className="bg-surface-sunken border border-border rounded-lg px-3 py-2 text-content w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
                     >
                       <option value="">Select group...</option>
                       {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
@@ -319,7 +319,7 @@ const MaintenanceWindows = () => {
 
                 {/* Days of Week */}
                 <div>
-                  <label className="block text-sm text-gray-400 mb-2">Days of Week</label>
+                  <label className="block text-sm text-content-muted mb-2">Days of Week</label>
                   <div className="flex gap-2 flex-wrap">
                     {DAY_NAMES.map((name, idx) => (
                       <button
@@ -329,7 +329,7 @@ const MaintenanceWindows = () => {
                         className={`px-3 py-1.5 rounded text-sm border ${
                           formSchedule.day_of_week.includes(idx)
                             ? 'bg-red-600 border-red-500 text-white'
-                            : 'bg-gray-950 border-gray-800 text-gray-400 hover:bg-gray-800'
+                            : 'bg-surface-sunken border-border text-content-muted hover:bg-surface-overlay'
                         }`}
                       >
                         {name}
@@ -341,29 +341,29 @@ const MaintenanceWindows = () => {
                 {/* Time Range */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm text-gray-400 mb-1">Start Time</label>
+                    <label className="block text-sm text-content-muted mb-1">Start Time</label>
                     <input
                       type="time"
                       value={formSchedule.start_time}
                       onChange={(e) => setFormSchedule({ ...formSchedule, start_time: e.target.value })}
-                      className="bg-gray-950 border border-gray-800 rounded-lg px-3 py-2 text-gray-200 w-full focus:outline-none focus:border-red-600"
+                      className="bg-surface-sunken border border-border rounded-lg px-3 py-2 text-content w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm text-gray-400 mb-1">End Time</label>
+                    <label className="block text-sm text-content-muted mb-1">End Time</label>
                     <input
                       type="time"
                       value={formSchedule.end_time}
                       onChange={(e) => setFormSchedule({ ...formSchedule, end_time: e.target.value })}
-                      className="bg-gray-950 border border-gray-800 rounded-lg px-3 py-2 text-gray-200 w-full focus:outline-none focus:border-red-600"
+                      className="bg-surface-sunken border border-border rounded-lg px-3 py-2 text-content w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm text-gray-400 mb-1">Timezone</label>
+                    <label className="block text-sm text-content-muted mb-1">Timezone</label>
                     <select
                       value={formSchedule.timezone}
                       onChange={(e) => setFormSchedule({ ...formSchedule, timezone: e.target.value })}
-                      className="bg-gray-950 border border-gray-800 rounded-lg px-3 py-2 text-gray-200 w-full focus:outline-none focus:border-red-600"
+                      className="bg-surface-sunken border border-border rounded-lg px-3 py-2 text-content w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
                     >
                       <option value="UTC">UTC</option>
                       <option value="America/New_York">Eastern (US)</option>
@@ -386,7 +386,7 @@ const MaintenanceWindows = () => {
                       onChange={(e) => setFormEnabled(e.target.checked)}
                       className="w-4 h-4 accent-red-600"
                     />
-                    <span className="text-gray-300 text-sm">Enabled</span>
+                    <span className="text-content text-sm">Enabled</span>
                   </label>
                 </div>
 
@@ -407,7 +407,7 @@ const MaintenanceWindows = () => {
         <Card className="mb-6">
           <CardHeader>Configured Windows</CardHeader>
           <div className="px-5 py-4">
-            {loading && <div className="p-4 text-gray-400">Loading...</div>}
+            {loading && <div className="p-4 text-content-muted">Loading...</div>}
 
             {!loading && windows.length === 0 && (
               <EmptyState
@@ -418,7 +418,7 @@ const MaintenanceWindows = () => {
 
             {!loading && windows.length > 0 && (
               <div className="space-y-2">
-                <div className="grid grid-cols-6 gap-4 p-3 bg-gray-900 border-b border-gray-800 font-medium text-gray-200 text-sm rounded-t-lg">
+                <div className="grid grid-cols-6 gap-4 p-3 bg-surface-raised border-b border-border font-medium text-content text-sm rounded-t-lg">
                   <div>Name</div>
                   <div>Target</div>
                   <div>Schedule</div>
@@ -427,7 +427,7 @@ const MaintenanceWindows = () => {
                   <div>Actions</div>
                 </div>
                 {windows.map(w => (
-                  <div key={w.id} className="grid grid-cols-6 gap-4 p-3 border-b border-gray-800 text-gray-300 hover:bg-white/[0.03]/50 text-sm items-center">
+                  <div key={w.id} className="grid grid-cols-6 gap-4 p-3 border-b border-border text-content hover:bg-white/[0.03]/50 text-sm items-center">
                     <div className="font-medium truncate">{w.name}</div>
                     <div className="truncate">
                       <Badge variant="neutral" className="mr-1">{w.target_type}</Badge>
@@ -441,7 +441,7 @@ const MaintenanceWindows = () => {
                         </Badge>
                       </button>
                     </div>
-                    <div className="text-xs text-gray-400">{formatTimestamp(w.created_at, { dateOnly: true })}</div>
+                    <div className="text-xs text-content-muted">{formatTimestamp(w.created_at, { dateOnly: true })}</div>
                     <div className="flex gap-1">
                       <Button variant="outline" size="sm" onClick={() => openEdit(w)} title="Edit">
                         <Pencil className="w-3 h-3" />
@@ -465,14 +465,14 @@ const MaintenanceWindows = () => {
               <EmptyState title="No upcoming maintenance windows" />
             ) : (
               <div className="space-y-2">
-                <div className="grid grid-cols-4 gap-4 p-3 bg-gray-900 border-b border-gray-800 font-medium text-gray-200 text-sm rounded-t-lg">
+                <div className="grid grid-cols-4 gap-4 p-3 bg-surface-raised border-b border-border font-medium text-content text-sm rounded-t-lg">
                   <div>Window</div>
                   <div>Target</div>
                   <div>Start</div>
                   <div>End</div>
                 </div>
                 {upcoming.map((u, idx) => (
-                  <div key={idx} className="grid grid-cols-4 gap-4 p-3 border-b border-gray-800 text-gray-300 text-sm">
+                  <div key={idx} className="grid grid-cols-4 gap-4 p-3 border-b border-border text-content text-sm">
                     <div className="font-medium">{u.window_name}</div>
                     <div>
                       <Badge variant="neutral" className="mr-1">{u.target_type}</Badge>

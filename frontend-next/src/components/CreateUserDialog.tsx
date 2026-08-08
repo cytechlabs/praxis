@@ -56,13 +56,13 @@ const CreateUserDialog = ({ isOpen, onClose, onSubmit }: CreateUserDialogProps) 
   };
 
   return (
-    <div className="fixed inset-0 bg-[#0c0c0f] bg-opacity-50 flex items-center justify-center z-40">
-      <div className="bg-[#0c0c0f] rounded-lg p-6 w-[500px] border border-gray-800/60">
-        <h2 className="text-xl mb-4 text-gray-200">Create New User</h2>
+    <div className="fixed inset-0 bg-surface/50 flex items-center justify-center z-40">
+      <div className="bg-surface-overlay rounded-lg p-6 w-[500px] border border-border/60">
+        <h2 className="text-xl mb-4 text-content">Create New User</h2>
 
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
-            <label htmlFor="username" className="block text-sm font-medium text-gray-300 mb-2">
+            <label htmlFor="username" className="block text-sm font-medium text-content mb-2">
               Username
             </label>
             <input
@@ -70,13 +70,13 @@ const CreateUserDialog = ({ isOpen, onClose, onSubmit }: CreateUserDialogProps) 
               id="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="w-full px-3 py-2 bg-gray-800 border border-gray-800/60 rounded text-gray-200 focus:outline-none focus:border-red-500"
+              className="w-full px-3 py-2 bg-surface-sunken border border-border/60 rounded text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
               required
             />
           </div>
 
           <div className="mb-4">
-            <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
+            <label htmlFor="email" className="block text-sm font-medium text-content mb-2">
               Email
             </label>
             <input
@@ -84,13 +84,13 @@ const CreateUserDialog = ({ isOpen, onClose, onSubmit }: CreateUserDialogProps) 
               id="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 bg-gray-800 border border-gray-800/60 rounded text-gray-200 focus:outline-none focus:border-red-500"
+              className="w-full px-3 py-2 bg-surface-sunken border border-border/60 rounded text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
               required
             />
           </div>
 
           <div className="mb-4">
-            <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
+            <label htmlFor="password" className="block text-sm font-medium text-content mb-2">
               Password
             </label>
             <input
@@ -98,7 +98,7 @@ const CreateUserDialog = ({ isOpen, onClose, onSubmit }: CreateUserDialogProps) 
               id="password"
               value={password}
               onChange={handlePasswordChange}
-              className="w-full px-3 py-2 bg-gray-800 border border-gray-800/60 rounded text-gray-200 focus:outline-none focus:border-red-500"
+              className="w-full px-3 py-2 bg-surface-sunken border border-border/60 rounded text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
               required
             />
             {passwordError && <div className="text-red-500 text-sm mt-1">{passwordError}</div>}
@@ -110,7 +110,7 @@ const CreateUserDialog = ({ isOpen, onClose, onSubmit }: CreateUserDialogProps) 
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white"
+              className="px-4 py-2 text-sm font-medium text-content hover:text-white"
               disabled={loading}
             >
               Cancel

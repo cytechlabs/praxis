@@ -245,9 +245,9 @@ const FleetDashboardPage = () => {
                   <div key={status}>
                     <div className="flex items-center justify-between text-sm mb-1.5">
                       <Badge variant={statusToBadgeVariant(status)}>{status}</Badge>
-                      <span className="text-gray-500 text-xs tabular-nums">{count} ({Math.round(pct)}%)</span>
+                      <span className="text-content-subtle text-xs tabular-nums">{count} ({Math.round(pct)}%)</span>
                     </div>
-                    <div className="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                    <div className="w-full h-1.5 bg-surface-overlay rounded-full overflow-hidden">
                       <div
                         className={`h-1.5 rounded-full transition-all duration-500 ${statusBarColors[status] || 'bg-gray-600'}`}
                         style={{ width: `${pct}%` }}
@@ -263,24 +263,24 @@ const FleetDashboardPage = () => {
         {/* Patch Compliance */}
         <Card>
           <CardHeader>
-            <span className="flex items-center gap-2"><PackageIcon className="w-4 h-4 text-gray-500" /> Patch Compliance</span>
+            <span className="flex items-center gap-2"><PackageIcon className="w-4 h-4 text-content-subtle" /> Patch Compliance</span>
           </CardHeader>
           <CardBody>
             <div className="grid grid-cols-3 gap-4 mb-4">
               <div className="text-center">
                 <div className="text-2xl font-bold text-emerald-400 tabular-nums">{data.patch_compliance.up_to_date}</div>
-                <div className="text-xs text-gray-500 mt-1">Systems Up to Date</div>
+                <div className="text-xs text-content-subtle mt-1">Systems Up to Date</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-orange-400 tabular-nums">{data.patch_compliance.with_updates}</div>
-                <div className="text-xs text-gray-500 mt-1">Systems with Updates</div>
+                <div className="text-xs text-content-subtle mt-1">Systems with Updates</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-red-400 tabular-nums">{data.patch_compliance.with_security_updates}</div>
-                <div className="text-xs text-gray-500 mt-1">Systems with Security Updates</div>
+                <div className="text-xs text-content-subtle mt-1">Systems with Security Updates</div>
               </div>
             </div>
-            <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden flex">
+            <div className="w-full h-2 bg-surface-overlay rounded-full overflow-hidden flex">
               <div className="h-2 bg-emerald-500 transition-all duration-500" style={{ width: `${upToDatePct}%` }} />
               <div className="h-2 bg-orange-500 transition-all duration-500" style={{ width: `${100 - upToDatePct}%` }} />
             </div>
@@ -300,8 +300,8 @@ const FleetDashboardPage = () => {
         <Card className="mb-4">
           <CardHeader>
             <span className="flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-gray-500" /> Open Patch Advisories
-              <span className="ml-2 text-xs font-normal text-gray-500">
+              <ShieldCheck className="w-4 h-4 text-content-subtle" /> Open Patch Advisories
+              <span className="ml-2 text-xs font-normal text-content-subtle">
                 {advisoryCounts.total} applicable rows across the fleet
               </span>
             </span>
@@ -332,7 +332,7 @@ const FleetDashboardPage = () => {
         <Card className="mb-4">
           <CardHeader>
             <span className="flex items-center gap-2">
-              <ShieldAlert className="w-4 h-4 text-gray-500" /> Distro Lifecycle
+              <ShieldAlert className="w-4 h-4 text-content-subtle" /> Distro Lifecycle
             </span>
           </CardHeader>
           <CardBody>
@@ -370,8 +370,8 @@ const FleetDashboardPage = () => {
             {/* PRA-240: explain WHY hosts are unknown so an all-unknown fleet is
                 actionable instead of an opaque gray tile. */}
             {lifecycle.counts.unknown > 0 && lifecycle.unknown_reasons && (
-              <div className="mt-3 border-t border-gray-800 pt-3">
-                <p className="text-xs text-gray-500 mb-2">
+              <div className="mt-3 border-t border-border pt-3">
+                <p className="text-xs text-content-subtle mb-2">
                   Why {lifecycle.counts.unknown}{' '}
                   {lifecycle.counts.unknown === 1 ? 'host is' : 'hosts are'} unknown:
                 </p>
@@ -395,7 +395,7 @@ const FleetDashboardPage = () => {
                   />
                 </div>
                 {lifecycle.unknown_reasons.other > 0 && (
-                  <p className="mt-2 text-xs text-gray-600">
+                  <p className="mt-2 text-xs text-content-subtle">
                     {lifecycle.unknown_reasons.other} unclassified.
                   </p>
                 )}
@@ -411,13 +411,13 @@ const FleetDashboardPage = () => {
           <CardHeader>Systems by Group</CardHeader>
           <CardBody>
             {data.systems_by_group.length === 0 ? (
-              <p className="text-gray-600 text-sm">No groups configured</p>
+              <p className="text-content-subtle text-sm">No groups configured</p>
             ) : (
               <div className="space-y-2">
                 {data.systems_by_group.map((g) => (
                   <div key={g.group} className="flex items-center justify-between text-sm">
-                    <span className="text-gray-300">{g.group}</span>
-                    <span className="text-gray-500 tabular-nums">{g.count}</span>
+                    <span className="text-content">{g.group}</span>
+                    <span className="text-content-subtle tabular-nums">{g.count}</span>
                   </div>
                 ))}
               </div>
@@ -430,13 +430,13 @@ const FleetDashboardPage = () => {
           <CardHeader>Systems by Distro</CardHeader>
           <CardBody>
             {data.systems_by_distro.length === 0 ? (
-              <p className="text-gray-600 text-sm">No data</p>
+              <p className="text-content-subtle text-sm">No data</p>
             ) : (
               <div className="space-y-2">
                 {data.systems_by_distro.map((d) => (
                   <div key={d.distro} className="flex items-center justify-between text-sm">
-                    <span className="text-gray-300">{d.distro}</span>
-                    <span className="text-gray-500 tabular-nums">{d.count}</span>
+                    <span className="text-content">{d.distro}</span>
+                    <span className="text-content-subtle tabular-nums">{d.count}</span>
                   </div>
                 ))}
               </div>
@@ -448,25 +448,25 @@ const FleetDashboardPage = () => {
       {/* Active Jobs */}
       <Card className="mb-4">
         <CardHeader>
-          <span className="flex items-center gap-2"><PlayCircle className="w-4 h-4 text-slate-300" /> Active Jobs</span>
+          <span className="flex items-center gap-2"><PlayCircle className="w-4 h-4 text-content" /> Active Jobs</span>
         </CardHeader>
         <CardBody>
           {data.active_jobs.length === 0 ? (
-            <p className="text-gray-600 text-sm">No jobs running</p>
+            <p className="text-content-subtle text-sm">No jobs running</p>
           ) : (
             <div className="space-y-3">
               {data.active_jobs.map((job) => (
-                <div key={job.job_id} className="bg-gray-900/50 border border-gray-800 rounded-lg p-3">
+                <div key={job.job_id} className="bg-surface-raised/50 border border-border rounded-lg p-3">
                   <div className="flex items-center justify-between mb-2">
                     <div>
-                      <span className="text-gray-200 font-medium text-sm">{job.name}</span>
-                      <span className="text-xs text-gray-600 ml-2 capitalize">{job.job_type.replace('_', ' ')}</span>
+                      <span className="text-content font-medium text-sm">{job.name}</span>
+                      <span className="text-xs text-content-subtle ml-2 capitalize">{job.job_type.replace('_', ' ')}</span>
                     </div>
-                    <span className="text-xs text-gray-400 tabular-nums">
+                    <span className="text-xs text-content-muted tabular-nums">
                       {job.systems_completed + job.systems_failed} / {job.systems_targeted} ({job.progress_pct}%)
                     </span>
                   </div>
-                  <div className="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                  <div className="w-full h-1.5 bg-surface-overlay rounded-full overflow-hidden">
                     <div className="h-1.5 bg-slate-500 rounded-full transition-all duration-500" style={{ width: `${job.progress_pct}%` }} />
                   </div>
                 </div>
@@ -480,22 +480,22 @@ const FleetDashboardPage = () => {
         {/* Recent Jobs */}
         <Card>
           <CardHeader>
-            <span className="flex items-center gap-2"><Clock className="w-4 h-4 text-gray-500" /> Recent Jobs</span>
+            <span className="flex items-center gap-2"><Clock className="w-4 h-4 text-content-subtle" /> Recent Jobs</span>
           </CardHeader>
           <CardBody>
             {data.recent_jobs.length === 0 ? (
-              <p className="text-gray-600 text-sm">No recent jobs</p>
+              <p className="text-content-subtle text-sm">No recent jobs</p>
             ) : (
               <div className="space-y-1">
                 {data.recent_jobs.map((j) => (
                   <Link
                     key={j.history_id}
                     href="/job-scheduling/job-history"
-                    className="flex items-center justify-between p-2 hover:bg-white/[0.03] rounded transition-colors text-sm focus:outline-none focus:ring-2 focus:ring-red-500/40"
+                    className="flex items-center justify-between p-2 hover:bg-white/[0.03] rounded transition-colors text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring"
                   >
                     <div className="flex-1 min-w-0">
-                      <div className="text-gray-300 truncate">{j.job_name}</div>
-                      <div className="text-xs text-gray-600">{j.ended_at ? formatTimestamp(j.ended_at) : '-'}</div>
+                      <div className="text-content truncate">{j.job_name}</div>
+                      <div className="text-xs text-content-subtle">{j.ended_at ? formatTimestamp(j.ended_at) : '-'}</div>
                     </div>
                     <Badge variant={statusToBadgeVariant(j.status)}>{j.status}</Badge>
                   </Link>
@@ -521,11 +521,11 @@ const FleetDashboardPage = () => {
                   <Link
                     key={a.system_id}
                     href={`/system-management/system/${a.system_id}`}
-                    className="flex items-center justify-between gap-2 p-2 hover:bg-white/[0.03] rounded transition-colors text-sm focus:outline-none focus:ring-2 focus:ring-red-500/40"
+                    className="flex items-center justify-between gap-2 p-2 hover:bg-white/[0.03] rounded transition-colors text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring"
                   >
                     <div className="flex-1 min-w-0">
-                      <div className="text-gray-300 truncate">{a.hostname}</div>
-                      <div className="text-xs text-gray-600 truncate">
+                      <div className="text-content truncate">{a.hostname}</div>
+                      <div className="text-xs text-content-subtle truncate">
                         {a.reasons.map((r) => r.detail).filter(Boolean).join(' · ')}
                       </div>
                     </div>
@@ -575,19 +575,19 @@ const LifecycleBucketTile: React.FC<{
   return (
     <Link
       href={`/system-management/all-systems?lifecycle=${statusValue}`}
-      className="block rounded-lg border border-gray-800 bg-gray-900/30 p-3 hover:bg-white/[0.03] transition-colors focus:outline-none focus:ring-2 focus:ring-red-500/40"
+      className="block rounded-lg border border-border bg-surface-raised/30 p-3 hover:bg-white/[0.03] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring"
     >
       <div className="flex items-center justify-between mb-2">
-        <span className="text-xs uppercase tracking-wide text-gray-500">{label}</span>
-        <span className="text-2xl font-bold text-gray-200 tabular-nums">{count}</span>
+        <span className="text-xs uppercase tracking-wide text-content-subtle">{label}</span>
+        <span className="text-2xl font-bold text-content tabular-nums">{count}</span>
       </div>
-      <div className="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden">
+      <div className="w-full h-1.5 bg-surface-overlay rounded-full overflow-hidden">
         <div
           className={`h-1.5 rounded-full transition-all duration-500 ${accent}`}
           style={{ width: `${pct}%` }}
         />
       </div>
-      <div className="mt-1 text-xs text-gray-600 tabular-nums">{pct}% of fleet</div>
+      <div className="mt-1 text-xs text-content-subtle tabular-nums">{pct}% of fleet</div>
     </Link>
   );
 };
@@ -602,13 +602,13 @@ const LifecycleUnknownReason: React.FC<{
 }> = ({ count, label, hint }) => (
   <Link
     href="/system-management/all-systems?lifecycle=unknown"
-    className="block rounded-lg border border-gray-800 bg-gray-900/30 p-2.5 hover:bg-white/[0.03] transition-colors focus:outline-none focus:ring-2 focus:ring-red-500/40"
+    className="block rounded-lg border border-border bg-surface-raised/30 p-2.5 hover:bg-white/[0.03] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring"
   >
     <div className="flex items-center justify-between">
-      <span className="text-xs text-gray-400">{label}</span>
-      <span className="text-lg font-bold text-gray-200 tabular-nums">{count}</span>
+      <span className="text-xs text-content-muted">{label}</span>
+      <span className="text-lg font-bold text-content tabular-nums">{count}</span>
     </div>
-    <p className="mt-1 text-[11px] leading-snug text-gray-600">{hint}</p>
+    <p className="mt-1 text-[11px] leading-snug text-content-subtle">{hint}</p>
   </Link>
 );
 
@@ -633,19 +633,19 @@ const AdvisorySeverityTile: React.FC<{
   return (
     <Link
       href={`/patch-advisories/all?severity=${severity}`}
-      className="block rounded-lg border border-gray-800 bg-gray-900/30 p-3 hover:bg-white/[0.03] transition-colors focus:outline-none focus:ring-2 focus:ring-red-500/40"
+      className="block rounded-lg border border-border bg-surface-raised/30 p-3 hover:bg-white/[0.03] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring"
     >
       <div className="flex items-center justify-between mb-2">
-        <span className="text-xs uppercase tracking-wide text-gray-500">{label}</span>
-        <span className="text-2xl font-bold text-gray-200 tabular-nums">{count}</span>
+        <span className="text-xs uppercase tracking-wide text-content-subtle">{label}</span>
+        <span className="text-2xl font-bold text-content tabular-nums">{count}</span>
       </div>
-      <div className="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden">
+      <div className="w-full h-1.5 bg-surface-overlay rounded-full overflow-hidden">
         <div
           className={`h-1.5 rounded-full transition-all duration-500 ${accent}`}
           style={{ width: `${pct}%` }}
         />
       </div>
-      <div className="mt-1 text-xs text-gray-600 tabular-nums">{pct}% of open</div>
+      <div className="mt-1 text-xs text-content-subtle tabular-nums">{pct}% of open</div>
     </Link>
   );
 };

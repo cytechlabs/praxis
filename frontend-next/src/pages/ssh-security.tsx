@@ -296,7 +296,7 @@ export default function SSHSecurityPage() {
         )}
 
         {/* Tabs */}
-        <div className="border-b border-gray-800 mb-6">
+        <div className="border-b border-border mb-6">
           <nav className="-mb-px flex space-x-8">
             {[
               { id: 'policies', name: 'Security Policies' },
@@ -309,7 +309,7 @@ export default function SSHSecurityPage() {
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${
                   activeTab === tab.id
                     ? 'border-red-500 text-red-400'
-                    : 'border-transparent text-gray-400 hover:text-gray-100 hover:border-gray-600'
+                    : 'border-transparent text-content-muted hover:text-content hover:border-border-strong'
                 }`}
               >
                 {tab.name}
@@ -326,16 +326,16 @@ export default function SSHSecurityPage() {
             {activeTab === 'policies' && (
               <Card>
                 <CardBody className="p-0">
-                  <ul className="divide-y divide-gray-800">
+                  <ul className="divide-y divide-border">
                     {policies.map((policy) => (
                       <li key={policy.id} className="px-6 py-4">
                         <div className="flex items-center justify-between">
                           <div className="flex-1">
-                            <h3 className="text-lg font-medium text-gray-100">{policy.name}</h3>
+                            <h3 className="text-lg font-medium text-content">{policy.name}</h3>
                             {policy.description && (
-                              <p className="text-sm text-gray-400 mt-1">{policy.description}</p>
+                              <p className="text-sm text-content-muted mt-1">{policy.description}</p>
                             )}
-                            <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-400">
+                            <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-content-muted">
                               <div>Max Auth Tries: {policy.max_auth_tries}</div>
                               <div>Connection Timeout: {policy.connection_timeout}s</div>
                               <div>Host Key Verification: {policy.require_host_key_verification ? 'Yes' : 'No'}</div>
@@ -376,42 +376,42 @@ export default function SSHSecurityPage() {
               <Card>
                 <CardBody className="p-0">
                   <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-800">
-                      <thead className="bg-gray-950">
+                    <table className="min-w-full divide-y divide-border">
+                      <thead className="bg-surface-sunken">
                         <tr>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">
                             Timestamp
                           </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">
                             Event Type
                           </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">
                             System ID
                           </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">
                             Username
                           </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">
                             Status
                           </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">
                             Source IP
                           </th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-800">
+                      <tbody className="divide-y divide-border">
                         {logs.map((log) => (
                           <tr key={log.id}>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-content-muted">
                               {log.timestamp ? formatTimestamp(log.timestamp) : 'N/A'}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-content-muted">
                               {log.event_type}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-content-muted">
                               {log.system_id}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-content-muted">
                               {log.username || 'N/A'}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
@@ -419,7 +419,7 @@ export default function SSHSecurityPage() {
                                 {log.success ? 'Success' : 'Failed'}
                               </Badge>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-content-muted">
                               {log.source_ip || 'N/A'}
                             </td>
                           </tr>
@@ -439,39 +439,39 @@ export default function SSHSecurityPage() {
               <Card>
                 <CardBody className="p-0">
                   <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-800">
-                      <thead className="bg-gray-950">
+                    <table className="min-w-full divide-y divide-border">
+                      <thead className="bg-surface-sunken">
                         <tr>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">
                             Hostname
                           </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">
                             Key Type
                           </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">
                             Fingerprint
                           </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">
                             Verified
                           </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">
                             Last Seen
                           </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">
                             Actions
                           </th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-800">
+                      <tbody className="divide-y divide-border">
                         {hostKeys.map((hostKey) => (
                           <tr key={hostKey.id}>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-100">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-content">
                               {hostKey.hostname}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-content-muted">
                               {hostKey.key_type}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400 font-mono">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-content-muted font-mono">
                               {hostKey.fingerprint.substring(0, 16)}...
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
@@ -479,7 +479,7 @@ export default function SSHSecurityPage() {
                                 {hostKey.verified ? 'Verified' : 'Unverified'}
                               </Badge>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-content-muted">
                               {hostKey.last_seen ? formatTimestamp(hostKey.last_seen) : 'N/A'}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -522,14 +522,14 @@ export default function SSHSecurityPage() {
 
         {/* Host Key Review Modal */}
         {reviewingHostKey && (
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-            <div className="relative top-10 mx-auto p-5 border border-gray-800 w-11/12 md:w-3/4 lg:w-2/3 shadow-lg rounded-md bg-gray-950">
+          <div className="fixed inset-0 bg-surface/50 overflow-y-auto h-full w-full z-50">
+            <div className="relative top-10 mx-auto p-5 border border-border w-11/12 md:w-3/4 lg:w-2/3 shadow-lg rounded-md bg-surface-overlay">
               <div className="mt-3">
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-medium text-gray-100">SSH Host Key Review</h3>
+                  <h3 className="text-lg font-medium text-content">SSH Host Key Review</h3>
                   <button
                     onClick={() => setReviewingHostKey(null)}
-                    className="text-gray-400 hover:text-gray-200"
+                    className="text-content-muted hover:text-content"
                   >
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -538,64 +538,64 @@ export default function SSHSecurityPage() {
                 </div>
 
                 <div className="space-y-4">
-                  <div className="bg-gray-950 border border-gray-800 rounded-lg p-4">
-                    <h4 className="text-md font-medium text-gray-100 mb-3">Host Information</h4>
+                  <div className="bg-surface-sunken border border-border rounded-lg p-4">
+                    <h4 className="text-md font-medium text-content mb-3">Host Information</h4>
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
-                        <span className="text-gray-400">Hostname:</span>
-                        <span className="text-gray-100 ml-2 font-mono">{reviewingHostKey.hostname}</span>
+                        <span className="text-content-muted">Hostname:</span>
+                        <span className="text-content ml-2 font-mono">{reviewingHostKey.hostname}</span>
                       </div>
                       <div>
-                        <span className="text-gray-400">System ID:</span>
-                        <span className="text-gray-100 ml-2">{reviewingHostKey.system_id}</span>
+                        <span className="text-content-muted">System ID:</span>
+                        <span className="text-content ml-2">{reviewingHostKey.system_id}</span>
                       </div>
                       <div>
-                        <span className="text-gray-400">Key Type:</span>
-                        <span className="text-gray-100 ml-2 font-mono">{reviewingHostKey.key_type}</span>
+                        <span className="text-content-muted">Key Type:</span>
+                        <span className="text-content ml-2 font-mono">{reviewingHostKey.key_type}</span>
                       </div>
                       <div>
-                        <span className="text-gray-400">Status:</span>
+                        <span className="text-content-muted">Status:</span>
                         <Badge className="ml-2" variant={reviewingHostKey.verified ? 'success' : 'warning'}>
                           {reviewingHostKey.verified ? 'Verified' : 'Unverified'}
                         </Badge>
                       </div>
                       <div>
-                        <span className="text-gray-400">First Seen:</span>
-                        <span className="text-gray-100 ml-2">
+                        <span className="text-content-muted">First Seen:</span>
+                        <span className="text-content ml-2">
                           {reviewingHostKey.first_seen ? formatTimestamp(reviewingHostKey.first_seen) : 'N/A'}
                         </span>
                       </div>
                       <div>
-                        <span className="text-gray-400">Last Seen:</span>
-                        <span className="text-gray-100 ml-2">
+                        <span className="text-content-muted">Last Seen:</span>
+                        <span className="text-content ml-2">
                           {reviewingHostKey.last_seen ? formatTimestamp(reviewingHostKey.last_seen) : 'N/A'}
                         </span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="bg-gray-950 border border-gray-800 rounded-lg p-4">
-                    <h4 className="text-md font-medium text-gray-100 mb-3">SSH Key Fingerprint</h4>
-                    <div className="bg-gray-950 border border-gray-700 rounded p-3">
+                  <div className="bg-surface-sunken border border-border rounded-lg p-4">
+                    <h4 className="text-md font-medium text-content mb-3">SSH Key Fingerprint</h4>
+                    <div className="bg-surface-sunken border border-border-strong rounded p-3">
                       <code className="text-green-400 text-sm break-all">{reviewingHostKey.fingerprint}</code>
                     </div>
-                    <p className="text-xs text-gray-600 mt-2">
+                    <p className="text-xs text-content-subtle mt-2">
                       Verify this fingerprint matches your server&apos;s actual host key before marking as verified.
                     </p>
                   </div>
 
-                  <div className="bg-gray-950 border border-gray-800 rounded-lg p-4">
-                    <h4 className="text-md font-medium text-gray-100 mb-3">Public Key</h4>
-                    <div className="bg-gray-950 border border-gray-700 rounded p-3 max-h-32 overflow-y-auto">
+                  <div className="bg-surface-sunken border border-border rounded-lg p-4">
+                    <h4 className="text-md font-medium text-content mb-3">Public Key</h4>
+                    <div className="bg-surface-sunken border border-border-strong rounded p-3 max-h-32 overflow-y-auto">
                       <code className="text-green-400 text-xs break-all whitespace-pre-wrap">{reviewingHostKey.public_key}</code>
                     </div>
                   </div>
 
-                  <div className="bg-gray-950 border border-gray-800 rounded-lg p-4">
-                    <h4 className="text-md font-medium text-gray-100 mb-3">Verification Instructions</h4>
-                    <div className="text-sm text-gray-400 space-y-2">
+                  <div className="bg-surface-sunken border border-border rounded-lg p-4">
+                    <h4 className="text-md font-medium text-content mb-3">Verification Instructions</h4>
+                    <div className="text-sm text-content-muted space-y-2">
                       <p>To verify this host key, run the following command on your server:</p>
-                      <div className="bg-gray-950 border border-gray-700 rounded p-2">
+                      <div className="bg-surface-sunken border border-border-strong rounded p-2">
                         <code className="text-green-400 text-xs">
                           ssh-keyscan -t {reviewingHostKey.key_type.replace('ssh-', '')} {reviewingHostKey.hostname} | ssh-keygen -lf -
                         </code>
@@ -623,49 +623,49 @@ export default function SSHSecurityPage() {
 
         {/* Create Policy Modal */}
         {showCreateModal && (
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-            <div className="relative top-20 mx-auto p-5 border border-gray-800 w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-gray-950">
+          <div className="fixed inset-0 bg-surface/50 overflow-y-auto h-full w-full z-50">
+            <div className="relative top-20 mx-auto p-5 border border-border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-surface-overlay">
               <div className="mt-3">
-                <h3 className="text-lg font-medium text-gray-100 mb-4">Create SSH Security Policy</h3>
+                <h3 className="text-lg font-medium text-content mb-4">Create SSH Security Policy</h3>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-400">Name</label>
+                    <label className="block text-sm font-medium text-content-muted">Name</label>
                     <input
                       type="text"
                       value={newPolicy.name || ''}
                       onChange={(e) => setNewPolicy({ ...newPolicy, name: e.target.value })}
-                      className="mt-1 block w-full bg-white/[0.02] border border-gray-700 rounded-md px-3 py-2 text-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-600"
+                      className="mt-1 block w-full bg-white/[0.02] border border-border-strong rounded-md px-3 py-2 text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-400">Description</label>
+                    <label className="block text-sm font-medium text-content-muted">Description</label>
                     <textarea
                       value={newPolicy.description || ''}
                       onChange={(e) => setNewPolicy({ ...newPolicy, description: e.target.value })}
-                      className="mt-1 block w-full bg-white/[0.02] border border-gray-700 rounded-md px-3 py-2 text-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-600"
+                      className="mt-1 block w-full bg-white/[0.02] border border-border-strong rounded-md px-3 py-2 text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
                       rows={3}
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-400">Max Auth Tries</label>
+                      <label className="block text-sm font-medium text-content-muted">Max Auth Tries</label>
                       <input
                         type="number"
                         value={newPolicy.max_auth_tries || 3}
                         onChange={(e) => setNewPolicy({ ...newPolicy, max_auth_tries: parseInt(e.target.value) })}
-                        className="mt-1 block w-full bg-white/[0.02] border border-gray-700 rounded-md px-3 py-2 text-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-600"
+                        className="mt-1 block w-full bg-white/[0.02] border border-border-strong rounded-md px-3 py-2 text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
                         min="1"
                         max="10"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-400">Connection Timeout (seconds)</label>
+                      <label className="block text-sm font-medium text-content-muted">Connection Timeout (seconds)</label>
                       <input
                         type="number"
                         value={newPolicy.connection_timeout || 10}
                         onChange={(e) => setNewPolicy({ ...newPolicy, connection_timeout: parseInt(e.target.value) })}
-                        className="mt-1 block w-full bg-white/[0.02] border border-gray-700 rounded-md px-3 py-2 text-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-600"
+                        className="mt-1 block w-full bg-white/[0.02] border border-border-strong rounded-md px-3 py-2 text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
                         min="5"
                         max="300"
                       />
@@ -687,49 +687,49 @@ export default function SSHSecurityPage() {
 
         {/* Edit Policy Modal */}
         {editingPolicy && (
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-            <div className="relative top-20 mx-auto p-5 border border-gray-800 w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-gray-950">
+          <div className="fixed inset-0 bg-surface/50 overflow-y-auto h-full w-full z-50">
+            <div className="relative top-20 mx-auto p-5 border border-border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-surface-overlay">
               <div className="mt-3">
-                <h3 className="text-lg font-medium text-gray-100 mb-4">Edit SSH Security Policy</h3>
+                <h3 className="text-lg font-medium text-content mb-4">Edit SSH Security Policy</h3>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-400">Name</label>
+                    <label className="block text-sm font-medium text-content-muted">Name</label>
                     <input
                       type="text"
                       value={editingPolicy.name || ''}
                       onChange={(e) => setEditingPolicy({ ...editingPolicy, name: e.target.value })}
-                      className="mt-1 block w-full bg-white/[0.02] border border-gray-700 rounded-md px-3 py-2 text-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-600"
+                      className="mt-1 block w-full bg-white/[0.02] border border-border-strong rounded-md px-3 py-2 text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-400">Description</label>
+                    <label className="block text-sm font-medium text-content-muted">Description</label>
                     <textarea
                       value={editingPolicy.description || ''}
                       onChange={(e) => setEditingPolicy({ ...editingPolicy, description: e.target.value })}
-                      className="mt-1 block w-full bg-white/[0.02] border border-gray-700 rounded-md px-3 py-2 text-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-600"
+                      className="mt-1 block w-full bg-white/[0.02] border border-border-strong rounded-md px-3 py-2 text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
                       rows={3}
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-400">Max Auth Tries</label>
+                      <label className="block text-sm font-medium text-content-muted">Max Auth Tries</label>
                       <input
                         type="number"
                         value={editingPolicy.max_auth_tries || 3}
                         onChange={(e) => setEditingPolicy({ ...editingPolicy, max_auth_tries: parseInt(e.target.value) })}
-                        className="mt-1 block w-full bg-white/[0.02] border border-gray-700 rounded-md px-3 py-2 text-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-600"
+                        className="mt-1 block w-full bg-white/[0.02] border border-border-strong rounded-md px-3 py-2 text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
                         min="1"
                         max="10"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-400">Connection Timeout (seconds)</label>
+                      <label className="block text-sm font-medium text-content-muted">Connection Timeout (seconds)</label>
                       <input
                         type="number"
                         value={editingPolicy.connection_timeout || 10}
                         onChange={(e) => setEditingPolicy({ ...editingPolicy, connection_timeout: parseInt(e.target.value) })}
-                        className="mt-1 block w-full bg-white/[0.02] border border-gray-700 rounded-md px-3 py-2 text-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-600"
+                        className="mt-1 block w-full bg-white/[0.02] border border-border-strong rounded-md px-3 py-2 text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
                         min="5"
                         max="300"
                       />

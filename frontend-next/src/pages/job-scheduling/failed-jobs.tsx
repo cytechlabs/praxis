@@ -129,7 +129,7 @@ const FailedJobs = () => {
         <Card>
           <div className="p-6">
             {/* Table Header */}
-            <div className="grid grid-cols-7 gap-4 p-4 bg-gray-900 border-b border-gray-800 font-medium text-gray-200 text-sm rounded-t-lg">
+            <div className="grid grid-cols-7 gap-4 p-4 bg-surface-raised border-b border-border font-medium text-content text-sm rounded-t-lg">
               <div>Job Name</div>
               <div>Job Type</div>
               <div>Systems Failed</div>
@@ -140,7 +140,7 @@ const FailedJobs = () => {
             </div>
 
             {/* Loading */}
-            {loading && <div className="p-4 text-gray-400">Loading...</div>}
+            {loading && <div className="p-4 text-content-muted">Loading...</div>}
 
             {/* Empty State */}
             {!loading && failedJobs.length === 0 && (
@@ -155,7 +155,7 @@ const FailedJobs = () => {
             {!loading &&
               failedJobs.map((item) => (
                 <React.Fragment key={item.id}>
-                  <div className="grid grid-cols-7 gap-4 p-4 border-b border-gray-800 text-gray-300 hover:bg-white/[0.03]/50 text-sm items-center">
+                  <div className="grid grid-cols-7 gap-4 p-4 border-b border-border text-content hover:bg-white/[0.03]/50 text-sm items-center">
                     <div className="truncate font-medium" title={item.job_name}>{item.job_name}</div>
                     <div>
                       <Badge variant="danger">failed</Badge>
@@ -206,22 +206,22 @@ const FailedJobs = () => {
                     </div>
                   </div>
                   {expandedId === item.id && (
-                    <div className="col-span-7 bg-white/[0.02] p-4 border-t border-gray-800/50">
+                    <div className="col-span-7 bg-white/[0.02] p-4 border-t border-border/50">
                       <div className="grid grid-cols-3 gap-4 mb-3">
-                        <div><span className="text-gray-400 text-xs">Systems Targeted</span><p className="text-gray-200">{item.systems_targeted}</p></div>
-                        <div><span className="text-gray-400 text-xs">Completed</span><p className="text-green-400">{item.systems_completed}</p></div>
-                        <div><span className="text-gray-400 text-xs">Failed</span><p className="text-red-400">{item.systems_failed}</p></div>
+                        <div><span className="text-content-muted text-xs">Systems Targeted</span><p className="text-content">{item.systems_targeted}</p></div>
+                        <div><span className="text-content-muted text-xs">Completed</span><p className="text-green-400">{item.systems_completed}</p></div>
+                        <div><span className="text-content-muted text-xs">Failed</span><p className="text-red-400">{item.systems_failed}</p></div>
                       </div>
                       {item.error_message && (
                         <div className="mb-3">
-                          <span className="text-gray-400 text-xs block mb-1">Error Message</span>
-                          <p className="text-red-300 text-sm bg-gray-900 rounded p-2 border border-gray-800/50">{item.error_message}</p>
+                          <span className="text-content-muted text-xs block mb-1">Error Message</span>
+                          <p className="text-red-300 text-sm bg-surface-raised rounded p-2 border border-border/50">{item.error_message}</p>
                         </div>
                       )}
                       {item.result && (
                         <div>
-                          <span className="text-gray-400 text-xs block mb-1">Detailed Results</span>
-                          <pre className="text-gray-300 text-xs bg-gray-900 rounded p-2 border border-gray-800/50 overflow-x-auto max-h-40 overflow-y-auto">
+                          <span className="text-content-muted text-xs block mb-1">Detailed Results</span>
+                          <pre className="text-content text-xs bg-surface-raised rounded p-2 border border-border/50 overflow-x-auto max-h-40 overflow-y-auto">
                             {formatJobResultDetail(item.result)}
                           </pre>
                         </div>
@@ -233,8 +233,8 @@ const FailedJobs = () => {
 
             {/* Pagination */}
             {!loading && totalPages > 1 && (
-              <div className="flex items-center justify-between p-4 border-t border-gray-800">
-                <span className="text-sm text-gray-400">
+              <div className="flex items-center justify-between p-4 border-t border-border">
+                <span className="text-sm text-content-muted">
                   Showing {page * limit + 1}-{Math.min((page + 1) * limit, total)} of {total}
                 </span>
                 <div className="flex items-center gap-2">

@@ -83,8 +83,8 @@ const TransportBadge: React.FC<Props> = ({
         {meta.label}
       </Badge>
       {transportPreference && (
-        <span className="text-xs text-gray-500">
-          Preference: <span className="text-gray-400">{transportPreference}</span>
+        <span className="text-xs text-content-subtle">
+          Preference: <span className="text-content-muted">{transportPreference}</span>
         </span>
       )}
     </div>

@@ -95,7 +95,7 @@ const ComplianceSystemEvidencePage: React.FC = () => {
   if (!Number.isFinite(systemId)) {
     return (
       <MainLayout>
-        <div className="p-6 text-gray-400">Invalid system id.</div>
+        <div className="p-6 text-content-muted">Invalid system id.</div>
       </MainLayout>
     );
   }
@@ -114,19 +114,19 @@ const ComplianceSystemEvidencePage: React.FC = () => {
             <div className="flex items-center gap-2">
               <Link
                 href="/compliance"
-                className="inline-flex items-center gap-1.5 text-sm text-gray-300 hover:text-gray-100"
+                className="inline-flex items-center gap-1.5 text-sm text-content hover:text-content"
               >
                 <ArrowLeft size={14} /> Compliance dashboard
               </Link>
               <Link
                 href={`/compliance/systems/${systemId}/remediation`}
-                className="inline-flex items-center gap-1.5 text-sm text-gray-300 hover:text-gray-100"
+                className="inline-flex items-center gap-1.5 text-sm text-content hover:text-content"
               >
                 Remediation inventory →
               </Link>
               <Link
                 href={`/system-management/system/${systemId}`}
-                className="inline-flex items-center gap-1.5 text-sm text-gray-300 hover:text-gray-100"
+                className="inline-flex items-center gap-1.5 text-sm text-content hover:text-content"
               >
                 System detail →
               </Link>
@@ -147,11 +147,11 @@ const ComplianceSystemEvidencePage: React.FC = () => {
           <CardBody>
             <div className="flex items-center mb-4 gap-4 flex-wrap">
               <div className="flex items-center gap-2">
-                <label className="text-xs text-gray-400 uppercase tracking-wide">
+                <label className="text-xs text-content-muted uppercase tracking-wide">
                   Verdict
                 </label>
                 <select
-                  className="bg-gray-900 border border-gray-800 rounded px-3 py-1.5 text-sm text-gray-100"
+                  className="bg-surface-sunken border border-border rounded px-3 py-1.5 text-sm text-content"
                   value={verdict}
                   onChange={(e) => {
                     setVerdict(e.target.value as Verdict | '');
@@ -167,14 +167,14 @@ const ComplianceSystemEvidencePage: React.FC = () => {
                 </select>
               </div>
               <div className="flex items-center gap-2">
-                <label className="text-xs text-gray-400 uppercase tracking-wide">
+                <label className="text-xs text-content-muted uppercase tracking-wide">
                   Policy ID
                 </label>
                 <input
                   type="number"
                   min={1}
                   placeholder="any"
-                  className="w-24 bg-gray-900 border border-gray-800 rounded px-3 py-1.5 text-sm text-gray-100"
+                  className="w-24 bg-surface-sunken border border-border rounded px-3 py-1.5 text-sm text-content"
                   value={policyIdText}
                   onChange={(e) => {
                     setPolicyIdText(e.target.value);
@@ -201,7 +201,7 @@ const ComplianceSystemEvidencePage: React.FC = () => {
               <>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead className="text-left text-gray-400 border-b border-gray-800">
+                    <thead className="text-left text-content-muted border-b border-border">
                       <tr>
                         <th className="py-2 pr-3">Evaluated</th>
                         <th className="py-2 pr-3">Policy</th>
@@ -215,8 +215,8 @@ const ComplianceSystemEvidencePage: React.FC = () => {
                     </thead>
                     <tbody>
                       {page.items.map((r) => (
-                        <tr key={r.id} className="border-b border-gray-900/50">
-                          <td className="py-2 pr-3 text-xs text-gray-300">
+                        <tr key={r.id} className="border-b border-border/50">
+                          <td className="py-2 pr-3 text-xs text-content">
                             {formatTimestamp(r.evaluated_at)}
                           </td>
                           <td className="py-2 pr-3">
@@ -235,13 +235,13 @@ const ComplianceSystemEvidencePage: React.FC = () => {
                               {r.status_label}
                             </Badge>
                           </td>
-                          <td className="py-2 pr-3 text-xs text-gray-300">
+                          <td className="py-2 pr-3 text-xs text-content">
                             {r.runner_label}
                           </td>
-                          <td className="py-2 pr-3 text-xs text-gray-400">
+                          <td className="py-2 pr-3 text-xs text-content-muted">
                             {r.verdict_reason_label ?? '-'}
                           </td>
-                          <td className="py-2 pr-3 text-xs text-gray-400 font-mono">
+                          <td className="py-2 pr-3 text-xs text-content-muted font-mono">
                             {r.observed_value ?? '-'}
                           </td>
                           <td className="py-2 pr-3 text-right">
@@ -255,7 +255,7 @@ const ComplianceSystemEvidencePage: React.FC = () => {
                     </tbody>
                   </table>
                 </div>
-                <div className="mt-3 flex items-center justify-between text-xs text-gray-400">
+                <div className="mt-3 flex items-center justify-between text-xs text-content-muted">
                   <span>
                     Showing {page.items.length} of {page.total} (offset {page.offset})
                   </span>

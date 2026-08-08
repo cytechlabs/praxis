@@ -155,8 +155,8 @@ const NotificationPreferencesTab: React.FC = () => {
       <div className="flex items-center gap-3 mb-6">
         <Bell className="text-red-500" size={24} />
         <div>
-          <h2 className="text-lg font-semibold text-gray-200">Notification Preferences</h2>
-          <p className="text-sm text-gray-400">
+          <h2 className="text-lg font-semibold text-content">Notification Preferences</h2>
+          <p className="text-sm text-content-muted">
             Choose which notification types appear in your notification bell. Disabled types are hidden from your feed.
           </p>
         </div>
@@ -164,8 +164,8 @@ const NotificationPreferencesTab: React.FC = () => {
 
       <div className="space-y-6">
         {CATEGORIES.map((category) => (
-          <div key={category.label} className="bg-gray-800 border border-gray-700 rounded-lg p-4">
-            <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">
+          <div key={category.label} className="bg-surface-overlay border border-border-strong rounded-lg p-4">
+            <h3 className="text-sm font-semibold text-content uppercase tracking-wider mb-3">
               {category.label}
             </h3>
             <div className="space-y-3">
@@ -174,8 +174,8 @@ const NotificationPreferencesTab: React.FC = () => {
                 return (
                   <div key={key} className="flex items-center justify-between">
                     <div className="flex-1">
-                      <div className="text-sm text-gray-200">{label}</div>
-                      <div className="text-xs text-gray-500">{description}</div>
+                      <div className="text-sm text-content">{label}</div>
+                      <div className="text-xs text-content-subtle">{description}</div>
                     </div>
                     <button
                       onClick={() => handleToggle(key)}
@@ -199,7 +199,7 @@ const NotificationPreferencesTab: React.FC = () => {
         ))}
       </div>
 
-      <div className="flex justify-end mt-6 pt-4 border-t border-gray-700">
+      <div className="flex justify-end mt-6 pt-4 border-t border-border-strong">
         <button
           onClick={handleSave}
           disabled={!hasChanges || saving}

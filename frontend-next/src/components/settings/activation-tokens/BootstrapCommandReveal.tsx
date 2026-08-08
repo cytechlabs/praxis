@@ -43,11 +43,11 @@ const BootstrapCommandReveal = ({ created, onClose }: Props) => {
       </div>
 
       <div>
-        <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-400">
+        <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-content-muted">
           Activation token
         </label>
         <div className="flex gap-2">
-          <code className="flex-1 break-all rounded-md border border-slate-700 bg-slate-900 p-2 font-mono text-sm text-slate-200">
+          <code className="flex-1 break-all rounded-md border border-border-strong bg-surface-raised p-2 font-mono text-sm text-content">
             {created.plaintext}
           </code>
           <Button variant="outline" onClick={() => copy(created.plaintext, 'token')}>
@@ -57,12 +57,12 @@ const BootstrapCommandReveal = ({ created, onClose }: Props) => {
       </div>
 
       <div>
-        <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-400">
+        <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-content-muted">
           One-line bootstrap command
         </label>
         {cmd ? (
           <div className="flex gap-2">
-            <code className="flex-1 break-all rounded-md border border-slate-700 bg-slate-900 p-2 font-mono text-xs text-slate-200">
+            <code className="flex-1 break-all rounded-md border border-border-strong bg-surface-raised p-2 font-mono text-xs text-content">
               {cmd}
             </code>
             <Button variant="outline" onClick={() => copy(cmd, 'curl')}>
@@ -70,8 +70,8 @@ const BootstrapCommandReveal = ({ created, onClose }: Props) => {
             </Button>
           </div>
         ) : (
-          <div className="rounded-md border border-slate-700 bg-slate-900 p-3 text-sm text-slate-400">
-            <strong className="text-slate-300">No bootstrap command available.</strong>{' '}
+          <div className="rounded-md border border-border-strong bg-surface-raised p-3 text-sm text-content-muted">
+            <strong className="text-content">No bootstrap command available.</strong>{' '}
             {created.bootstrap_command_unavailable_reason ?? 'Not configured.'} The
             token is still valid; assemble the curl command manually using the
             token above.

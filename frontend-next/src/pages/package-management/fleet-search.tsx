@@ -298,31 +298,31 @@ const FleetSearch = () => {
             </div>
             <div className="flex flex-wrap items-end gap-3">
               <div className="flex-1 min-w-[200px]">
-                <label className="block text-sm text-gray-400 mb-1">Package Name</label>
+                <label className="block text-sm text-content-muted mb-1">Package Name</label>
                 <input
                   type="text"
                   placeholder="e.g. openssl, nginx, curl..."
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  className="w-full px-4 py-2 bg-gray-950 border border-gray-800 rounded-md text-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500"
+                  className="w-full px-4 py-2 bg-surface-sunken border border-border rounded-md text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring"
                 />
               </div>
               <div className="w-48">
-                <label className="block text-sm text-gray-400 mb-1">Version Filter</label>
+                <label className="block text-sm text-content-muted mb-1">Version Filter</label>
                 <input
                   type="text"
                   placeholder="e.g. 3.0, 1.18"
                   value={versionFilter}
                   onChange={(e) => setVersionFilter(e.target.value)}
-                  className="w-full px-4 py-2 bg-gray-950 border border-gray-800 rounded-md text-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500"
+                  className="w-full px-4 py-2 bg-surface-sunken border border-border rounded-md text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring"
                 />
               </div>
               <div className="w-40">
-                <label className="block text-sm text-gray-400 mb-1">Held Status</label>
+                <label className="block text-sm text-content-muted mb-1">Held Status</label>
                 <select
                   value={heldFilter}
                   onChange={(e) => setHeldFilter(e.target.value as '' | 'true' | 'false')}
-                  className="w-full px-4 py-2 bg-gray-950 border border-gray-800 rounded-md text-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500"
+                  className="w-full px-4 py-2 bg-surface-sunken border border-border rounded-md text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring"
                 >
                   <option value="">All</option>
                   <option value="true">Held Only</option>
@@ -330,11 +330,11 @@ const FleetSearch = () => {
                 </select>
               </div>
               <div className="w-44">
-                <label className="block text-sm text-gray-400 mb-1">Update Status</label>
+                <label className="block text-sm text-content-muted mb-1">Update Status</label>
                 <select
                   value={updateFilter}
                   onChange={(e) => setUpdateFilter(e.target.value as '' | 'true' | 'false')}
-                  className="w-full px-4 py-2 bg-gray-950 border border-gray-800 rounded-md text-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500"
+                  className="w-full px-4 py-2 bg-surface-sunken border border-border rounded-md text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring"
                 >
                   <option value="">All</option>
                   <option value="true">Out of Date</option>
@@ -367,8 +367,8 @@ const FleetSearch = () => {
 
           {/* Bulk Action Toolbar */}
           {selected.size > 0 && (
-            <div className="mb-4 flex items-center gap-3 bg-gray-950 border border-gray-800 rounded-lg p-3">
-              <span className="text-gray-300 text-sm font-medium">
+            <div className="mb-4 flex items-center gap-3 bg-surface-sunken border border-border rounded-lg p-3">
+              <span className="text-content text-sm font-medium">
                 {selected.size} selected
               </span>
               <Button
@@ -396,15 +396,15 @@ const FleetSearch = () => {
                 Update
               </Button>
               {bulkAction && (
-                <span className="text-gray-400 text-sm">Processing...</span>
+                <span className="text-content-muted text-sm">Processing...</span>
               )}
             </div>
           )}
 
           {/* Results Table */}
           {searched && (
-            <div className="border border-gray-800 rounded-lg">
-              <div className="grid grid-cols-[1.4fr_1.4fr_1.4fr_0.7fr_1fr_0.6fr_0.7fr_0.7fr] gap-3 p-4 bg-gray-950 border-b border-gray-800 font-medium text-gray-200">
+            <div className="border border-border rounded-lg">
+              <div className="grid grid-cols-[1.4fr_1.4fr_1.4fr_0.7fr_1fr_0.6fr_0.7fr_0.7fr] gap-3 p-4 bg-surface-sunken border-b border-border font-medium text-content">
                 <div className="flex items-center">
                   <input
                     type="checkbox"
@@ -423,16 +423,16 @@ const FleetSearch = () => {
                 <div>Actions</div>
               </div>
               {loading ? (
-                <div className="p-4 text-gray-400">Searching...</div>
+                <div className="p-4 text-content-muted">Searching...</div>
               ) : results.length === 0 ? (
-                <div className="p-4 text-gray-400">
+                <div className="p-4 text-content-muted">
                   No packages found matching your search criteria.
                 </div>
               ) : (
                 results.map((pkg) => (
                   <div
                     key={`${pkg.system_id}-${pkg.package_id}`}
-                    className="grid grid-cols-[1.4fr_1.4fr_1.4fr_0.7fr_1fr_0.6fr_0.7fr_0.7fr] gap-3 p-4 border-b border-gray-800 last:border-b-0 hover:bg-gray-950"
+                    className="grid grid-cols-[1.4fr_1.4fr_1.4fr_0.7fr_1fr_0.6fr_0.7fr_0.7fr] gap-3 p-4 border-b border-border last:border-b-0 hover:bg-surface-overlay"
                   >
                     <div className="flex items-center">
                       <input
@@ -441,9 +441,9 @@ const FleetSearch = () => {
                         onChange={() => toggleSelect(pkg.package_id)}
                         className="mr-2 accent-red-600"
                       />
-                      <span className="font-medium text-gray-300">{pkg.name}</span>
+                      <span className="font-medium text-content">{pkg.name}</span>
                     </div>
-                    <div className="text-gray-400 font-mono text-xs break-all">{pkg.installed_version}</div>
+                    <div className="text-content-muted font-mono text-xs break-all">{pkg.installed_version}</div>
                     <div>
                       {pkg.has_update ? (
                         <span
@@ -460,18 +460,18 @@ const FleetSearch = () => {
                       )}
                     </div>
                     <div>
-                      <span className="px-2 py-1 bg-gray-800 text-gray-300 rounded text-sm">
+                      <span className="px-2 py-1 bg-surface-overlay text-content rounded text-sm">
                         {pkg.package_type || 'unknown'}
                       </span>
                     </div>
-                    <div className="text-gray-400">{pkg.hostname}</div>
+                    <div className="text-content-muted">{pkg.hostname}</div>
                     <div>
                       {pkg.is_security_critical ? (
                         <span className="px-2 py-1 bg-red-900 text-red-300 rounded text-sm">
                           Critical
                         </span>
                       ) : (
-                        <span className="text-gray-500 text-sm">No</span>
+                        <span className="text-content-subtle text-sm">No</span>
                       )}
                     </div>
                     <div>
@@ -514,7 +514,7 @@ const FleetSearch = () => {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="mt-4 flex justify-between items-center text-sm text-gray-400">
+            <div className="mt-4 flex justify-between items-center text-sm text-content-muted">
               <div>
                 Showing {offset + 1}-{Math.min(offset + limit, total)} of {total} results
               </div>
@@ -527,7 +527,7 @@ const FleetSearch = () => {
                 >
                   Previous
                 </Button>
-                <span className="px-3 py-1 text-gray-300">
+                <span className="px-3 py-1 text-content">
                   Page {currentPage} of {totalPages}
                 </span>
                 <Button
@@ -544,8 +544,8 @@ const FleetSearch = () => {
 
           {/* Use Cases */}
           {!searched && (
-            <div className="mt-4 text-gray-400">
-              <p className="mb-2 text-gray-300 font-medium">Use cases:</p>
+            <div className="mt-4 text-content-muted">
+              <p className="mb-2 text-content font-medium">Use cases:</p>
               <ul className="list-disc list-inside space-y-1 text-sm">
                 <li>CVE response: &quot;Which systems have openssl installed?&quot;</li>
                 <li>Compliance: &quot;What version of nginx is on every server?&quot;</li>

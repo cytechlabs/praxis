@@ -155,7 +155,7 @@ const AlertsPage: React.FC = () => {
         <CardBody>
           {/* Filter + summary */}
           <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
-            <div className="inline-flex rounded-md border border-gray-800 overflow-hidden text-sm">
+            <div className="inline-flex rounded-md border border-border overflow-hidden text-sm">
               {(['all', 'unread'] as FilterMode[]).map((mode) => (
                 <button
                   key={mode}
@@ -165,27 +165,27 @@ const AlertsPage: React.FC = () => {
                   className={`px-3 py-1 capitalize transition-colors ${
                     filter === mode
                       ? 'bg-red-500/15 text-red-300'
-                      : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'
+                      : 'text-content-muted hover:text-content hover:bg-white/5'
                   }`}
                 >
                   {mode}
                 </button>
               ))}
             </div>
-            <span className="text-xs text-gray-500 tabular-nums">
+            <span className="text-xs text-content-subtle tabular-nums">
               {unreadCount} unread
             </span>
           </div>
 
           {loading ? (
-            <div className="py-12 text-center text-sm text-gray-500">Loading alerts…</div>
+            <div className="py-12 text-center text-sm text-content-subtle">Loading alerts…</div>
           ) : notifications.length === 0 ? (
-            <div className="py-12 text-center text-sm text-gray-600">
-              <Bell className="w-6 h-6 mx-auto mb-2 text-gray-700" />
+            <div className="py-12 text-center text-sm text-content-subtle">
+              <Bell className="w-6 h-6 mx-auto mb-2 text-content-subtle" />
               {filter === 'unread' ? 'No unread alerts' : 'No alerts'}
             </div>
           ) : (
-            <ul className="divide-y divide-gray-800/60">
+            <ul className="divide-y divide-border/60">
               {notifications.map((n) => {
                 const unread = !n.is_read;
                 const variant = eventVariant({ type: n.type, severity: n.severity });
@@ -199,7 +199,7 @@ const AlertsPage: React.FC = () => {
                     <span
                       aria-hidden="true"
                       className={`mt-1.5 w-2 h-2 rounded-full flex-shrink-0 ${
-                        unread ? eventDotClass(variant) : 'bg-transparent border border-gray-700'
+                        unread ? eventDotClass(variant) : 'bg-transparent border border-border-strong'
                       }`}
                     />
                     <div className="flex-1 min-w-0">
@@ -214,15 +214,15 @@ const AlertsPage: React.FC = () => {
                             Unread
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-0.5 text-[10px] uppercase tracking-wide text-gray-600">
+                          <span className="inline-flex items-center gap-0.5 text-[10px] uppercase tracking-wide text-content-subtle">
                             <Check className="w-3 h-3" /> Read
                           </span>
                         )}
                       </div>
                       {n.message && (
-                        <p className="text-xs text-gray-500 mt-0.5 break-words">{n.message}</p>
+                        <p className="text-xs text-content-subtle mt-0.5 break-words">{n.message}</p>
                       )}
-                      <p className="text-xs text-gray-700 mt-1">{formatTimestamp(n.created_at)}</p>
+                      <p className="text-xs text-content-subtle mt-1">{formatTimestamp(n.created_at)}</p>
                     </div>
                     {unread && (
                       <Button
@@ -243,7 +243,7 @@ const AlertsPage: React.FC = () => {
           )}
 
           {!loading && total > notifications.length && (
-            <p className="mt-4 text-center text-xs text-gray-600">
+            <p className="mt-4 text-center text-xs text-content-subtle">
               Showing {notifications.length} of {total}. Mark alerts read to clear the
               list, or refine with the filter above.
             </p>

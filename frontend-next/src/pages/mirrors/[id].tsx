@@ -106,7 +106,7 @@ const MirrorDetailPage: React.FC = () => {
         <div className="p-6">
           <Link
             href="/mirrors/all"
-            className="mb-4 inline-flex items-center gap-1 text-sm text-gray-400 hover:text-gray-200"
+            className="mb-4 inline-flex items-center gap-1 text-sm text-content-muted hover:text-content"
           >
             <ArrowLeft size={14} /> Back to mirrors
           </Link>
@@ -147,7 +147,7 @@ const MirrorDetailPage: React.FC = () => {
       <div className="p-6">
         <Link
           href="/mirrors/all"
-          className="mb-4 inline-flex items-center gap-1 text-sm text-gray-400 hover:text-gray-200"
+          className="mb-4 inline-flex items-center gap-1 text-sm text-content-muted hover:text-content"
         >
           <ArrowLeft size={14} /> Back to mirrors
         </Link>
@@ -252,27 +252,27 @@ const MirrorDetailPage: React.FC = () => {
 
         {/* PRA-198: make the bounded historical-byte policy visible where
             operators read retention / disk state. */}
-        <p className="mb-6 rounded border border-zinc-800 bg-[#111115] p-3 text-xs leading-relaxed text-gray-500">
-          Retention keeps run <span className="text-gray-300">metadata and manifests</span>, not
-          historical bytes. In 1.0, mirror bytes are <span className="text-gray-300">live-only</span> -
+        <p className="mb-6 rounded border border-border bg-surface-raised p-3 text-xs leading-relaxed text-content-subtle">
+          Retention keeps run <span className="text-content">metadata and manifests</span>, not
+          historical bytes. In 1.0, mirror bytes are <span className="text-content">live-only</span> -
           only the last-promoted sync exists on disk. A channel run pin is a tracking pin, not a byte
           freeze: an airgap export reproduces a pinned state byte-exact only while that run is still
-          live. A pin that no longer matches live is <span className="text-gray-300">refused</span>{' '}
-          (<code className="text-gray-300">historical_bytes_unavailable</code>) rather than exporting
+          live. A pin that no longer matches live is <span className="text-content">refused</span>{' '}
+          (<code className="text-content">historical_bytes_unavailable</code>) rather than exporting
           the wrong bytes - export the latest snapshot, re-pin to the current run, or keep the earlier
           bundle tar as a byte-exact archive.
         </p>
 
         {/* Status summary */}
-        <section className="mb-6 flex flex-wrap items-center gap-3 rounded border border-zinc-800 bg-[#111115] p-4 text-sm">
-          <span className="text-gray-400">Sync:</span>
+        <section className="mb-6 flex flex-wrap items-center gap-3 rounded border border-border bg-surface-raised p-4 text-sm">
+          <span className="text-content-muted">Sync:</span>
           <Badge
             variant={syncStatusVariant(mirror.last_sync_status)}
             pulse={mirror.last_sync_status === 'running'}
           >
             {mirror.last_sync_status}
           </Badge>
-          <span className="ml-3 text-gray-400">Trust:</span>
+          <span className="ml-3 text-content-muted">Trust:</span>
           <Badge variant={signingStatusVariant(mirror.signing_status)}>
             {signingStatusLabel(mirror.signing_status)}
           </Badge>
@@ -296,17 +296,17 @@ const MirrorDetailPage: React.FC = () => {
 
         {/* Sync history */}
         <section>
-          <h2 className="mb-2 text-sm font-medium uppercase text-gray-400">
+          <h2 className="mb-2 text-sm font-medium uppercase text-content-muted">
             Sync history
           </h2>
           {runs.length === 0 ? (
-            <div className="rounded border border-zinc-800 bg-[#111115] p-4 text-sm text-gray-400">
+            <div className="rounded border border-border bg-surface-raised p-4 text-sm text-content-muted">
               No sync runs yet.
             </div>
           ) : (
-            <div className="overflow-x-auto rounded border border-zinc-800 bg-[#111115]">
+            <div className="overflow-x-auto rounded border border-border bg-surface-raised">
               <table className="w-full text-sm">
-                <thead className="border-b border-zinc-800 text-left text-gray-400">
+                <thead className="border-b border-border text-left text-content-muted">
                   <tr>
                     <th className="px-4 py-2">Run</th>
                     <th className="px-4 py-2">Status</th>
@@ -317,11 +317,11 @@ const MirrorDetailPage: React.FC = () => {
                     <th className="px-4 py-2 text-right">Manifest</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-800">
+                <tbody className="divide-y divide-border">
                   {runs.map((r) => (
                     <React.Fragment key={r.id}>
-                      <tr className="hover:bg-zinc-900/40">
-                        <td className="px-4 py-2 font-mono text-gray-300">#{r.id}</td>
+                      <tr className="hover:bg-surface-overlay/40">
+                        <td className="px-4 py-2 font-mono text-content">#{r.id}</td>
                         <td className="px-4 py-2">
                           <Badge
                             variant={syncStatusVariant(r.status)}
@@ -335,16 +335,16 @@ const MirrorDetailPage: React.FC = () => {
                             </Badge>
                           )}
                         </td>
-                        <td className="px-4 py-2 text-gray-400">
+                        <td className="px-4 py-2 text-content-muted">
                           {formatTimestamp(r.started_at)}
                         </td>
-                        <td className="px-4 py-2 text-gray-400">
+                        <td className="px-4 py-2 text-content-muted">
                           {formatTimestamp(r.finished_at) || '-'}
                         </td>
-                        <td className="px-4 py-2 text-gray-400">
+                        <td className="px-4 py-2 text-content-muted">
                           {formatBytes(r.byte_count)}
                         </td>
-                        <td className="px-4 py-2 text-gray-400">
+                        <td className="px-4 py-2 text-content-muted">
                           {r.package_count ?? '-'}
                         </td>
                         <td className="px-4 py-2 text-right">
@@ -360,7 +360,7 @@ const MirrorDetailPage: React.FC = () => {
                               onClick={() =>
                                 setExpandedRun(expandedRun === r.id ? null : r.id)
                               }
-                              className="text-gray-400 hover:text-gray-200"
+                              className="text-content-muted hover:text-content"
                             >
                               {expandedRun === r.id ? 'hide error' : 'show error'}
                             </button>
@@ -373,7 +373,7 @@ const MirrorDetailPage: React.FC = () => {
                         <tr>
                           <td
                             colSpan={7}
-                            className="border-t border-zinc-800 bg-black/40 px-4 py-2 font-mono text-xs text-red-300"
+                            className="border-t border-border bg-black/40 px-4 py-2 font-mono text-xs text-red-300"
                           >
                             {r.error_text}
                           </td>
@@ -396,9 +396,9 @@ const DefField: React.FC<{ label: string; value: React.ReactNode; mono?: boolean
   value,
   mono,
 }) => (
-  <div className="rounded border border-zinc-800 bg-[#111115] p-3">
-    <div className="text-xs uppercase text-gray-500">{label}</div>
-    <div className={`mt-1 text-sm text-gray-200 ${mono ? 'font-mono' : ''}`}>
+  <div className="rounded border border-border bg-surface-raised p-3">
+    <div className="text-xs uppercase text-content-subtle">{label}</div>
+    <div className={`mt-1 text-sm text-content ${mono ? 'font-mono' : ''}`}>
       {value}
     </div>
   </div>

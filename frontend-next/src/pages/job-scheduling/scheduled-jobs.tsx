@@ -402,30 +402,30 @@ const ScheduledJobs = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Name */}
                   <div>
-                    <label className="block text-sm text-gray-400 mb-1">Name *</label>
+                    <label className="block text-sm text-content-muted mb-1">Name *</label>
                     <input
                       type="text"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="bg-gray-950 border border-gray-800 rounded-lg px-3 py-2 text-gray-200 w-full focus:outline-none focus:border-red-600"
+                      className="bg-surface-sunken border border-border rounded-lg px-3 py-2 text-content w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
                       placeholder="e.g., Weekly Security Updates"
                     />
                   </div>
 
                   {/* Job Type */}
                   <div>
-                    <label className="block text-sm text-gray-400 mb-1">Job Type</label>
+                    <label className="block text-sm text-content-muted mb-1">Job Type</label>
                     <select
                       value={formData.job_type}
                       onChange={(e) => setFormData({ ...formData, job_type: e.target.value })}
-                      className="bg-gray-950 border border-gray-800 rounded-lg px-3 py-2 text-gray-200 focus:outline-none focus:border-red-600 w-full"
+                      className="bg-surface-sunken border border-border rounded-lg px-3 py-2 text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong w-full"
                     >
                       <option value="update">Update</option>
                       <option value="security_update">Security Update</option>
                       <option value="audit">Audit</option>
                       <option value="package_scan">Package Scan</option>
                     </select>
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-content-subtle mt-1">
                       {formData.job_type === 'update' || formData.job_type === 'security_update'
                         ? 'Scheduled runs execute only inside a maintenance window.'
                         : 'Read/refresh job - scheduled runs execute any time; no maintenance window required.'}
@@ -435,11 +435,11 @@ const ScheduledJobs = () => {
 
                 {/* Description */}
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Description</label>
+                  <label className="block text-sm text-content-muted mb-1">Description</label>
                   <textarea
                     value={formData.description || ''}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    className="bg-gray-950 border border-gray-800 rounded-lg px-3 py-2 text-gray-200 w-full focus:outline-none focus:border-red-600"
+                    className="bg-surface-sunken border border-border rounded-lg px-3 py-2 text-content w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
                     rows={2}
                     placeholder="Optional description of this job"
                   />
@@ -448,7 +448,7 @@ const ScheduledJobs = () => {
                 {/* Recurring + Schedule */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm text-gray-400 mb-1">Recurring</label>
+                    <label className="block text-sm text-content-muted mb-1">Recurring</label>
                     <label className="flex items-center gap-2 cursor-pointer mt-1">
                       <input
                         type="checkbox"
@@ -456,18 +456,18 @@ const ScheduledJobs = () => {
                         onChange={(e) => setFormData({ ...formData, is_recurring: e.target.checked })}
                         className="w-4 h-4 accent-red-600"
                       />
-                      <span className="text-gray-300 text-sm">This is a recurring job</span>
+                      <span className="text-content text-sm">This is a recurring job</span>
                     </label>
                   </div>
 
                   {formData.is_recurring && (
                     <div>
-                      <label className="block text-sm text-gray-400 mb-1">Schedule *</label>
+                      <label className="block text-sm text-content-muted mb-1">Schedule *</label>
                       <div className="flex items-center gap-2 flex-wrap">
                         <select
                           value={scheduleConfig.frequency}
                           onChange={(e) => setScheduleConfig({ ...scheduleConfig, frequency: e.target.value })}
-                          className="bg-gray-950 border border-gray-800 rounded-lg px-3 py-2 text-gray-200 focus:outline-none focus:border-red-600"
+                          className="bg-surface-sunken border border-border rounded-lg px-3 py-2 text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
                         >
                           <option value="daily">Every day</option>
                           <option value="weekly">Every week on</option>
@@ -477,7 +477,7 @@ const ScheduledJobs = () => {
                           <select
                             value={scheduleConfig.dayOfWeek}
                             onChange={(e) => setScheduleConfig({ ...scheduleConfig, dayOfWeek: e.target.value })}
-                            className="bg-gray-950 border border-gray-800 rounded-lg px-3 py-2 text-gray-200 focus:outline-none focus:border-red-600"
+                            className="bg-surface-sunken border border-border rounded-lg px-3 py-2 text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
                           >
                             <option value="0">Sunday</option>
                             <option value="1">Monday</option>
@@ -492,19 +492,19 @@ const ScheduledJobs = () => {
                           <select
                             value={scheduleConfig.dayOfMonth}
                             onChange={(e) => setScheduleConfig({ ...scheduleConfig, dayOfMonth: e.target.value })}
-                            className="bg-gray-950 border border-gray-800 rounded-lg px-3 py-2 text-gray-200 focus:outline-none focus:border-red-600"
+                            className="bg-surface-sunken border border-border rounded-lg px-3 py-2 text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
                           >
                             {Array.from({ length: 28 }, (_, i) => (
                               <option key={i + 1} value={String(i + 1)}>{ordinal(i + 1)}</option>
                             ))}
                           </select>
                         )}
-                        <span className="text-gray-400 text-sm">at</span>
+                        <span className="text-content-muted text-sm">at</span>
                         <input
                           type="time"
                           value={scheduleConfig.time}
                           onChange={(e) => setScheduleConfig({ ...scheduleConfig, time: e.target.value })}
-                          className="bg-gray-950 border border-gray-800 rounded-lg px-3 py-2 text-gray-200 focus:outline-none focus:border-red-600"
+                          className="bg-surface-sunken border border-border rounded-lg px-3 py-2 text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
                         />
                       </div>
                     </div>
@@ -514,11 +514,11 @@ const ScheduledJobs = () => {
                 {/* Target */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm text-gray-400 mb-1">Target Type</label>
+                    <label className="block text-sm text-content-muted mb-1">Target Type</label>
                     <select
                       value={formData.target_type}
                       onChange={(e) => setFormData({ ...formData, target_type: e.target.value, target_ids: [] })}
-                      className="bg-gray-950 border border-gray-800 rounded-lg px-3 py-2 text-gray-200 focus:outline-none focus:border-red-600 w-full"
+                      className="bg-surface-sunken border border-border rounded-lg px-3 py-2 text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong w-full"
                     >
                       <option value="all">All Systems</option>
                       <option value="system">Specific Systems</option>
@@ -530,9 +530,9 @@ const ScheduledJobs = () => {
 
                   {formData.target_type === 'system' && (
                     <div>
-                      <label className="block text-sm text-gray-400 mb-1">Select Systems</label>
-                      <div className="bg-gray-950 border border-gray-800 rounded-lg p-3 max-h-40 overflow-y-auto space-y-1">
-                        {systems.length === 0 && <p className="text-gray-500 text-sm">No systems available</p>}
+                      <label className="block text-sm text-content-muted mb-1">Select Systems</label>
+                      <div className="bg-surface-sunken border border-border rounded-lg p-3 max-h-40 overflow-y-auto space-y-1">
+                        {systems.length === 0 && <p className="text-content-subtle text-sm">No systems available</p>}
                         {systems.map((s) => (
                           <label key={s.id} className="flex items-center gap-2 cursor-pointer">
                             <input
@@ -541,7 +541,7 @@ const ScheduledJobs = () => {
                               onChange={() => handleTargetToggle(s.id)}
                               className="w-4 h-4 accent-red-600"
                             />
-                            <span className="text-gray-300 text-sm">{s.hostname}</span>
+                            <span className="text-content text-sm">{s.hostname}</span>
                           </label>
                         ))}
                       </div>
@@ -550,9 +550,9 @@ const ScheduledJobs = () => {
 
                   {formData.target_type === 'group' && (
                     <div>
-                      <label className="block text-sm text-gray-400 mb-1">Select Groups</label>
-                      <div className="bg-gray-950 border border-gray-800 rounded-lg p-3 max-h-40 overflow-y-auto space-y-1">
-                        {groups.length === 0 && <p className="text-gray-500 text-sm">No groups available</p>}
+                      <label className="block text-sm text-content-muted mb-1">Select Groups</label>
+                      <div className="bg-surface-sunken border border-border rounded-lg p-3 max-h-40 overflow-y-auto space-y-1">
+                        {groups.length === 0 && <p className="text-content-subtle text-sm">No groups available</p>}
                         {groups.map((g) => (
                           <label key={g.id} className="flex items-center gap-2 cursor-pointer">
                             <input
@@ -561,7 +561,7 @@ const ScheduledJobs = () => {
                               onChange={() => handleTargetToggle(g.id)}
                               className="w-4 h-4 accent-red-600"
                             />
-                            <span className="text-gray-300 text-sm">{g.name}</span>
+                            <span className="text-content text-sm">{g.name}</span>
                           </label>
                         ))}
                       </div>
@@ -570,9 +570,9 @@ const ScheduledJobs = () => {
 
                   {formData.target_type === 'smart_group' && (
                     <div>
-                      <label className="block text-sm text-gray-400 mb-1">Select Smart Groups</label>
-                      <div className="bg-gray-950 border border-gray-800 rounded-lg p-3 max-h-40 overflow-y-auto space-y-1">
-                        {smartGroups.length === 0 && <p className="text-gray-500 text-sm">No smart groups defined</p>}
+                      <label className="block text-sm text-content-muted mb-1">Select Smart Groups</label>
+                      <div className="bg-surface-sunken border border-border rounded-lg p-3 max-h-40 overflow-y-auto space-y-1">
+                        {smartGroups.length === 0 && <p className="text-content-subtle text-sm">No smart groups defined</p>}
                         {smartGroups.map((g) => (
                           <label key={g.id} className="flex items-center gap-2 cursor-pointer">
                             <input
@@ -581,7 +581,7 @@ const ScheduledJobs = () => {
                               onChange={() => handleTargetToggle(g.id)}
                               className="w-4 h-4 accent-red-600"
                             />
-                            <span className="text-gray-300 text-sm">{g.name} <span className="text-gray-500 text-xs">({g.member_count} members)</span></span>
+                            <span className="text-content text-sm">{g.name} <span className="text-content-subtle text-xs">({g.member_count} members)</span></span>
                           </label>
                         ))}
                       </div>
@@ -590,9 +590,9 @@ const ScheduledJobs = () => {
 
                   {formData.target_type === 'tag' && (
                     <div>
-                      <label className="block text-sm text-gray-400 mb-1">Select Tags</label>
-                      <div className="bg-gray-950 border border-gray-800 rounded-lg p-3 max-h-40 overflow-y-auto space-y-1">
-                        {tags.length === 0 && <p className="text-gray-500 text-sm">No tags available</p>}
+                      <label className="block text-sm text-content-muted mb-1">Select Tags</label>
+                      <div className="bg-surface-sunken border border-border rounded-lg p-3 max-h-40 overflow-y-auto space-y-1">
+                        {tags.length === 0 && <p className="text-content-subtle text-sm">No tags available</p>}
                         {tags.map((t) => (
                           <label key={t.id} className="flex items-center gap-2 cursor-pointer">
                             <input
@@ -602,7 +602,7 @@ const ScheduledJobs = () => {
                               className="w-4 h-4 accent-red-600"
                             />
                             <span className="w-3 h-3 rounded-full inline-block flex-shrink-0" style={{ backgroundColor: t.color }} />
-                            <span className="text-gray-300 text-sm">{t.name}</span>
+                            <span className="text-content text-sm">{t.name}</span>
                           </label>
                         ))}
                       </div>
@@ -613,7 +613,7 @@ const ScheduledJobs = () => {
                 {/* Tag Match Logic */}
                 {formData.target_type === 'tag' && (formData.target_ids?.length || 0) > 1 && (
                   <div>
-                    <label className="block text-sm text-gray-400 mb-1">Match Logic</label>
+                    <label className="block text-sm text-content-muted mb-1">Match Logic</label>
                     <div className="flex gap-3">
                       <label className="flex items-center gap-2 cursor-pointer">
                         <input
@@ -624,7 +624,7 @@ const ScheduledJobs = () => {
                           onChange={() => setFormData({ ...formData, tag_match_logic: 'or' })}
                           className="accent-red-600"
                         />
-                        <span className="text-gray-300 text-sm">Any tag (OR)</span>
+                        <span className="text-content text-sm">Any tag (OR)</span>
                       </label>
                       <label className="flex items-center gap-2 cursor-pointer">
                         <input
@@ -635,7 +635,7 @@ const ScheduledJobs = () => {
                           onChange={() => setFormData({ ...formData, tag_match_logic: 'and' })}
                           className="accent-red-600"
                         />
-                        <span className="text-gray-300 text-sm">All tags (AND)</span>
+                        <span className="text-content text-sm">All tags (AND)</span>
                       </label>
                     </div>
                   </div>
@@ -650,28 +650,28 @@ const ScheduledJobs = () => {
                       onChange={(e) => setShowPackageFilter(e.target.checked)}
                       className="w-4 h-4 accent-red-600"
                     />
-                    <span className="text-gray-300 text-sm">Add package filter (optional)</span>
+                    <span className="text-content text-sm">Add package filter (optional)</span>
                   </label>
 
                   {showPackageFilter && (
                     <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4 pl-6">
                       <div>
-                        <label className="block text-sm text-gray-400 mb-1">Package Names (comma-separated)</label>
+                        <label className="block text-sm text-content-muted mb-1">Package Names (comma-separated)</label>
                         <input
                           type="text"
                           value={packageNames}
                           onChange={(e) => setPackageNames(e.target.value)}
-                          className="bg-gray-950 border border-gray-800 rounded-lg px-3 py-2 text-gray-200 w-full focus:outline-none focus:border-red-600"
+                          className="bg-surface-sunken border border-border rounded-lg px-3 py-2 text-content w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
                           placeholder="e.g., openssl, nginx, curl"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm text-gray-400 mb-1">Keywords (comma-separated)</label>
+                        <label className="block text-sm text-content-muted mb-1">Keywords (comma-separated)</label>
                         <input
                           type="text"
                           value={packageKeywords}
                           onChange={(e) => setPackageKeywords(e.target.value)}
-                          className="bg-gray-950 border border-gray-800 rounded-lg px-3 py-2 text-gray-200 w-full focus:outline-none focus:border-red-600"
+                          className="bg-surface-sunken border border-border rounded-lg px-3 py-2 text-content w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
                           placeholder="e.g., security, critical"
                         />
                       </div>
@@ -683,7 +683,7 @@ const ScheduledJobs = () => {
                             onChange={(e) => setSecurityOnly(e.target.checked)}
                             className="w-4 h-4 accent-red-600"
                           />
-                          <span className="text-gray-300 text-sm">Security updates only</span>
+                          <span className="text-content text-sm">Security updates only</span>
                         </label>
                       </div>
                     </div>
@@ -692,7 +692,7 @@ const ScheduledJobs = () => {
 
                 {/* Concurrency Control (PRA-101) */}
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">
+                  <label className="block text-sm text-content-muted mb-1">
                     Max Parallel Systems
                   </label>
                   <div className="flex items-center gap-3">
@@ -707,9 +707,9 @@ const ScheduledJobs = () => {
                           max_parallel: Math.max(1, Math.min(50, parseInt(e.target.value) || 1)),
                         })
                       }
-                      className="bg-gray-950 border border-gray-800 rounded-lg px-3 py-2 text-gray-200 w-28 focus:outline-none focus:border-red-600"
+                      className="bg-surface-sunken border border-border rounded-lg px-3 py-2 text-content w-28 focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
                     />
-                    <span className="text-gray-500 text-sm">
+                    <span className="text-content-subtle text-sm">
                       {(formData.max_parallel || 1) === 1
                         ? 'Sequential (one system at a time, safest)'
                         : `Run on up to ${formData.max_parallel} systems in parallel`}
@@ -731,17 +731,17 @@ const ScheduledJobs = () => {
                       }}
                       className="w-4 h-4 accent-red-600"
                     />
-                    <span className="text-gray-300 text-sm">Run after another job (chain dependency)</span>
+                    <span className="text-content text-sm">Run after another job (chain dependency)</span>
                   </label>
 
                   {showDependency && (
                     <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4 pl-6">
                       <div>
-                        <label className="block text-sm text-gray-400 mb-1">Run After Job</label>
+                        <label className="block text-sm text-content-muted mb-1">Run After Job</label>
                         <select
                           value={formData.depends_on_job_id || ''}
                           onChange={(e) => setFormData({ ...formData, depends_on_job_id: e.target.value ? Number(e.target.value) : null })}
-                          className="bg-gray-950 border border-gray-800 rounded-lg px-3 py-2 text-gray-200 w-full focus:outline-none focus:border-red-600"
+                          className="bg-surface-sunken border border-border rounded-lg px-3 py-2 text-content w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
                         >
                           <option value="">None (no dependency)</option>
                           {jobs.filter((j) => j.id !== editingJob?.id).map((j) => (
@@ -750,11 +750,11 @@ const ScheduledJobs = () => {
                         </select>
                       </div>
                       <div>
-                        <label className="block text-sm text-gray-400 mb-1">Condition</label>
+                        <label className="block text-sm text-content-muted mb-1">Condition</label>
                         <select
                           value={formData.chain_condition || 'on_success'}
                           onChange={(e) => setFormData({ ...formData, chain_condition: e.target.value })}
-                          className="bg-gray-950 border border-gray-800 rounded-lg px-3 py-2 text-gray-200 w-full focus:outline-none focus:border-red-600"
+                          className="bg-surface-sunken border border-border rounded-lg px-3 py-2 text-content w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
                         >
                           <option value="on_success">On Success (only if dependency succeeded)</option>
                           <option value="on_complete">On Completion (regardless of outcome)</option>
@@ -783,9 +783,9 @@ const ScheduledJobs = () => {
         <Card>
           <div className="p-6">
             <div className="flex items-center gap-4 mb-4">
-              <Filter className="w-4 h-4 text-gray-400" />
+              <Filter className="w-4 h-4 text-content-muted" />
               <div className="flex items-center gap-2">
-                <label className="text-sm text-gray-400">Status:</label>
+                <label className="text-sm text-content-muted">Status:</label>
                 <Select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
@@ -800,7 +800,7 @@ const ScheduledJobs = () => {
                 </Select>
               </div>
               <div className="flex items-center gap-2">
-                <label className="text-sm text-gray-400">Job Type:</label>
+                <label className="text-sm text-content-muted">Job Type:</label>
                 <Select
                   value={typeFilter}
                   onChange={(e) => setTypeFilter(e.target.value)}
@@ -815,7 +815,7 @@ const ScheduledJobs = () => {
             </div>
 
             {/* Table Header */}
-            <div className="grid grid-cols-8 gap-4 p-4 bg-gray-900 border-b border-gray-800 font-medium text-gray-200 text-sm rounded-t-lg">
+            <div className="grid grid-cols-8 gap-4 p-4 bg-surface-raised border-b border-border font-medium text-content text-sm rounded-t-lg">
               <div>Name</div>
               <div>Job Type</div>
               <div>Schedule</div>
@@ -827,7 +827,7 @@ const ScheduledJobs = () => {
             </div>
 
             {/* Loading */}
-            {loading && <div className="p-4 text-gray-400">Loading...</div>}
+            {loading && <div className="p-4 text-content-muted">Loading...</div>}
 
             {/* Paginated view */}
             {!loading && jobs.length === 0 && (
@@ -840,11 +840,11 @@ const ScheduledJobs = () => {
             {/* Table Rows */}
             {!loading &&
               jobs.slice(pageOffset, pageOffset + pageLimit).map((job) => (
-                <div key={job.id} className="grid grid-cols-8 gap-4 p-4 border-b border-gray-800 text-gray-300 hover:bg-white/[0.03]/50 text-sm items-center">
+                <div key={job.id} className="grid grid-cols-8 gap-4 p-4 border-b border-border text-content hover:bg-white/[0.03]/50 text-sm items-center">
                   <div className="truncate font-medium" title={job.name}>
                     {job.name}
                     {job.depends_on_job_id && (
-                      <span className="ml-1 text-xs text-slate-300" title={`Depends on: ${job.dependency_name || 'Job #' + job.depends_on_job_id} (${job.chain_condition || 'on_success'})`}>
+                      <span className="ml-1 text-xs text-content" title={`Depends on: ${job.dependency_name || 'Job #' + job.depends_on_job_id} (${job.chain_condition || 'on_success'})`}>
                         &rarr; {job.dependency_name || `Job #${job.depends_on_job_id}`}
                       </span>
                     )}
@@ -852,9 +852,9 @@ const ScheduledJobs = () => {
                   <div className="capitalize">{job.job_type.replace('_', ' ')}</div>
                   <div className="truncate" title={job.schedule || undefined}>
                     {job.is_recurring ? (
-                      <span className="flex items-center gap-1"><RefreshCw className="w-3 h-3 text-slate-300" /> {scheduleToLabel(job.schedule)}</span>
+                      <span className="flex items-center gap-1"><RefreshCw className="w-3 h-3 text-content" /> {scheduleToLabel(job.schedule)}</span>
                     ) : (
-                      <span className="flex items-center gap-1"><Clock className="w-3 h-3 text-gray-400" /> One-time</span>
+                      <span className="flex items-center gap-1"><Clock className="w-3 h-3 text-content-muted" /> One-time</span>
                     )}
                   </div>
                   <div className="truncate" title={getTargetDisplay(job)}>{getTargetDisplay(job)}</div>
@@ -921,15 +921,15 @@ const ScheduledJobs = () => {
 
         {/* Dry Run Modal (PRA-82) */}
         {dryRunResult && (
-          <div className="fixed inset-0 bg-[#0c0c0f]/70 flex items-center justify-center p-4 z-50">
-            <div className="bg-gray-950 border border-slate-700 rounded-lg p-6 max-w-4xl w-full max-h-[80vh] overflow-y-auto">
+          <div className="fixed inset-0 bg-surface/70 flex items-center justify-center p-4 z-50">
+            <div className="bg-surface-overlay border border-border-strong rounded-lg p-6 max-w-4xl w-full max-h-[80vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-gray-200">
+                <h2 className="text-xl font-semibold text-content">
                   Dry Run: {dryRunResult.job_name}
                 </h2>
                 <button
                   onClick={() => setDryRunResult(null)}
-                  className="text-gray-400 hover:text-gray-200"
+                  className="text-content-muted hover:text-content"
                 >
                   ✕
                 </button>
@@ -941,18 +941,18 @@ const ScheduledJobs = () => {
               </div>
               <div className="space-y-3">
                 {dryRunResult.preview.map((sys) => (
-                  <div key={sys.system_id} className="bg-gray-900 border border-gray-700 rounded p-3">
+                  <div key={sys.system_id} className="bg-surface-raised border border-border-strong rounded p-3">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium text-gray-200">{sys.hostname}</span>
-                      <span className="text-xs text-gray-400">{sys.action}</span>
+                      <span className="font-medium text-content">{sys.hostname}</span>
+                      <span className="text-xs text-content-muted">{sys.action}</span>
                     </div>
                     {sys.packages_affected.length > 0 ? (
                       <div className="text-sm space-y-1">
                         {sys.packages_affected.map((pkg) => (
-                          <div key={pkg.name} className="flex items-center gap-2 text-gray-300">
+                          <div key={pkg.name} className="flex items-center gap-2 text-content">
                             <span className="font-medium">{pkg.name}</span>
-                            <span className="text-gray-500">{pkg.from_version}</span>
-                            <span className="text-gray-500">→</span>
+                            <span className="text-content-subtle">{pkg.from_version}</span>
+                            <span className="text-content-subtle">→</span>
                             <span className={pkg.type === 'security' ? 'text-red-400' : 'text-orange-400'}>
                               {pkg.to_version}
                             </span>
@@ -963,7 +963,7 @@ const ScheduledJobs = () => {
                         ))}
                       </div>
                     ) : (
-                      <div className="text-sm text-gray-500">
+                      <div className="text-sm text-content-subtle">
                         {sys.installed_packages !== undefined
                           ? `${sys.installed_packages} packages installed`
                           : 'No changes'}

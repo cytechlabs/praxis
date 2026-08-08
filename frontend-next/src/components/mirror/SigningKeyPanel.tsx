@@ -203,16 +203,16 @@ const SigningKeyPanel: React.FC<SigningKeyPanelProps> = ({
   };
 
   return (
-    <section className="rounded border border-zinc-800 bg-[#111115] p-4">
+    <section className="rounded border border-border bg-surface-raised p-4">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-200">
+        <h2 className="flex items-center gap-2 text-sm font-semibold text-content">
           <KeyRound size={16} /> Signing keys
         </h2>
         <button
           type="button"
           onClick={refresh}
           disabled={loading}
-          className="text-xs text-gray-400 hover:text-gray-200"
+          className="text-xs text-content-muted hover:text-content"
           title="Refresh trust bundle"
         >
           <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
@@ -225,11 +225,11 @@ const SigningKeyPanel: React.FC<SigningKeyPanelProps> = ({
         </div>
       )}
 
-      {loading && bundle === null && <div className="text-sm text-gray-400">Loading…</div>}
+      {loading && bundle === null && <div className="text-sm text-content-muted">Loading…</div>}
 
       {bundle && bundle.keys.length === 0 && (
         <div className="space-y-3">
-          <p className="text-sm text-gray-400">
+          <p className="text-sm text-content-muted">
             No signing key yet. Praxis can&apos;t sign mirror metadata until one
             exists. Generate one to enable native + manifest signing on the
             next sync.
@@ -247,18 +247,18 @@ const SigningKeyPanel: React.FC<SigningKeyPanelProps> = ({
             {bundle.keys.map((k) => (
               <li
                 key={k.fingerprint}
-                className="flex items-center justify-between rounded border border-zinc-800/60 bg-black/20 px-3 py-2"
+                className="flex items-center justify-between rounded border border-border/60 bg-black/20 px-3 py-2"
               >
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-2">
                     <Badge variant={STATUS_VARIANT[k.status]}>
                       {STATUS_LABEL[k.status]}
                     </Badge>
-                    <span className="font-mono text-xs text-gray-400">
+                    <span className="font-mono text-xs text-content-muted">
                       {k.fingerprint}
                     </span>
                   </div>
-                  <span className="text-xs text-gray-500">{k.uid}</span>
+                  <span className="text-xs text-content-subtle">{k.uid}</span>
                 </div>
                 {k.status === 'rotating_out' && (
                   <Button
@@ -275,7 +275,7 @@ const SigningKeyPanel: React.FC<SigningKeyPanelProps> = ({
             ))}
           </ul>
 
-          <div className="flex flex-wrap items-center gap-2 border-t border-zinc-800/60 pt-3">
+          <div className="flex flex-wrap items-center gap-2 border-t border-border/60 pt-3">
             {!pending && active && (
               <Button onClick={handleRotatePrepare} disabled={busy} variant="outline">
                 <RotateCw size={14} className="mr-1" /> Rotate
@@ -289,12 +289,12 @@ const SigningKeyPanel: React.FC<SigningKeyPanelProps> = ({
                     <RotateCw size={14} className="mr-1" /> Cut over
                   </Button>
                   {canForceCutover && (
-                    <label className="flex items-center gap-1 text-xs text-gray-400">
+                    <label className="flex items-center gap-1 text-xs text-content-muted">
                       <input
                         type="checkbox"
                         checked={forceCutover}
                         onChange={(e) => setForceCutover(e.target.checked)}
-                        className="rounded border-zinc-700 bg-zinc-900"
+                        className="rounded border-border-strong bg-surface-sunken"
                       />
                       Force (override gate; emits audit event)
                     </label>
@@ -348,7 +348,7 @@ const CutoverPreviewSummary: React.FC<{
           the host counts above.
         </div>
       ) : (
-        <div className="mt-1 text-gray-400">
+        <div className="mt-1 text-content-muted">
           Run install-trust on those hosts before cutting over, or enable Force
           to override.
         </div>

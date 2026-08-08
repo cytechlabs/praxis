@@ -36,8 +36,8 @@ interface RoleGuardProps {
 const Forbidden: React.FC = () => (
   <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
     <ShieldX size={64} className="text-red-500 mb-6" />
-    <h1 className="text-2xl font-bold text-gray-100 mb-2">Access Denied</h1>
-    <p className="text-gray-400 max-w-md">
+    <h1 className="text-2xl font-bold text-content mb-2">Access Denied</h1>
+    <p className="text-content-muted max-w-md">
       You do not have permission to access this page. Contact your administrator
       if you believe this is an error.
     </p>

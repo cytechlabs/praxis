@@ -126,7 +126,7 @@ const AllCredentialsPage: React.FC = () => {
               <SkeletonTable rows={5} cols={5} />
             ) : filteredCredentials.length === 0 ? (
               <EmptyState
-                icon={<Key size={24} className="text-gray-500" />}
+                icon={<Key size={24} className="text-content-subtle" />}
                 title={search ? 'No credentials match your search' : 'No credentials found'}
                 description={!search ? 'Get started by adding your first credential.' : undefined}
                 action={
@@ -141,47 +141,47 @@ const AllCredentialsPage: React.FC = () => {
               />
             ) : (
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-800">
+                <table className="min-w-full divide-y divide-border">
                   <thead>
                     <tr>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">
                         Name
                       </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">
                         Type
                       </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">
                         Details
                       </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">
                         Systems
                       </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-content-muted uppercase tracking-wider">
                         Actions
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-800">
+                  <tbody className="divide-y divide-border">
                     {paginatedCredentials.map((credential) => (
                       <tr key={credential.id} className="hover:bg-white/[0.03]/50">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
                             {getCredentialTypeIcon(credential.auth_method)}
-                            <span className="ml-2 text-gray-100">{credential.name}</span>
+                            <span className="ml-2 text-content">{credential.name}</span>
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="px-2 py-1 text-xs rounded-full bg-gray-800 text-gray-300">
+                          <span className="px-2 py-1 text-xs rounded-full bg-surface-overlay text-content">
                             {getCredentialTypeLabel(credential)}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           {credential.username ? (
-                            <div className="text-gray-300">
-                              <span className="text-gray-400">Username:</span> {credential.username}
+                            <div className="text-content">
+                              <span className="text-content-muted">Username:</span> {credential.username}
                             </div>
                           ) : (
-                            <span className="text-gray-600">-</span>
+                            <span className="text-content-subtle">-</span>
                           )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -191,7 +191,7 @@ const AllCredentialsPage: React.FC = () => {
                                 <Link
                                   key={system.id}
                                   href={`/system-management/system/${system.id}`}
-                                  className="inline-flex items-center px-2 py-1 text-xs bg-gray-800 text-gray-300 rounded hover:bg-gray-700"
+                                  className="inline-flex items-center px-2 py-1 text-xs bg-border text-content rounded hover:bg-border-strong"
                                 >
                                   <Server size={12} className="mr-1" />
                                   {system.hostname}
@@ -199,14 +199,14 @@ const AllCredentialsPage: React.FC = () => {
                               ))}
                             </div>
                           ) : (
-                            <span className="text-gray-600">No systems</span>
+                            <span className="text-content-subtle">No systems</span>
                           )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex space-x-2">
                             <Link
                               href={`/credentials/edit/${credential.id}`}
-                              className="text-slate-300 hover:text-slate-300"
+                              className="text-content hover:text-content"
                               title="Edit Credential"
                             >
                               Edit

@@ -115,7 +115,7 @@ const ComplianceSystemRemediationPage: React.FC = () => {
   if (!Number.isFinite(systemId)) {
     return (
       <MainLayout>
-        <div className="p-6 text-gray-400">Invalid system id.</div>
+        <div className="p-6 text-content-muted">Invalid system id.</div>
       </MainLayout>
     );
   }
@@ -134,13 +134,13 @@ const ComplianceSystemRemediationPage: React.FC = () => {
             <div className="flex items-center gap-2">
               <Link
                 href={`/compliance/systems/${systemId}`}
-                className="inline-flex items-center gap-1.5 text-sm text-gray-300 hover:text-gray-100"
+                className="inline-flex items-center gap-1.5 text-sm text-content hover:text-content"
               >
                 <ArrowLeft size={14} /> System compliance
               </Link>
               <Link
                 href="/compliance/remediation"
-                className="inline-flex items-center gap-1.5 text-sm text-gray-300 hover:text-gray-100"
+                className="inline-flex items-center gap-1.5 text-sm text-content hover:text-content"
               >
                 Fleet remediation →
               </Link>
@@ -188,7 +188,7 @@ const ComplianceSystemRemediationPage: React.FC = () => {
                   <Stat
                     label="Generated"
                     value={
-                      <span className="text-xs text-gray-300">
+                      <span className="text-xs text-content">
                         {formatTimestamp(inventory.generated_at)}
                       </span>
                     }
@@ -261,7 +261,7 @@ const RequestSection: React.FC<{
         <>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="text-left text-gray-400 border-b border-gray-800">
+              <thead className="text-left text-content-muted border-b border-border">
                 <tr>
                   <th className="py-2 pr-3">Request</th>
                   <th className="py-2 pr-3">State</th>
@@ -274,7 +274,7 @@ const RequestSection: React.FC<{
               </thead>
               <tbody>
                 {page.items.map((r) => (
-                  <tr key={r.id} className="border-b border-gray-900/50">
+                  <tr key={r.id} className="border-b border-border/50">
                     <td className="py-2 pr-3 font-mono">#{r.id}</td>
                     <td className="py-2 pr-3">
                       <Badge
@@ -291,7 +291,7 @@ const RequestSection: React.FC<{
                         {r.policy_slug}
                       </Link>
                     </td>
-                    <td className="py-2 pr-3 font-mono text-xs text-gray-300">
+                    <td className="py-2 pr-3 font-mono text-xs text-content">
                       {r.check_slug}
                     </td>
                     <td className="py-2 pr-3">
@@ -299,13 +299,13 @@ const RequestSection: React.FC<{
                         {SEVERITY_LABELS[r.severity_snapshot]}
                       </Badge>
                     </td>
-                    <td className="py-2 pr-3 text-xs text-gray-300">
+                    <td className="py-2 pr-3 text-xs text-content">
                       {formatTimestamp(r.created_at)}
                     </td>
                     <td className="py-2 pr-3 text-right">
                       <Link
                         href={`/compliance/remediation/requests/${r.id}`}
-                        className="inline-flex items-center gap-1 text-xs text-gray-300 hover:text-gray-100"
+                        className="inline-flex items-center gap-1 text-xs text-content hover:text-content"
                       >
                         Open <ExternalLink size={12} />
                       </Link>
@@ -341,7 +341,7 @@ const PlanSection: React.FC<{
         <>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="text-left text-gray-400 border-b border-gray-800">
+              <thead className="text-left text-content-muted border-b border-border">
                 <tr>
                   <th className="py-2 pr-3">Plan</th>
                   <th className="py-2 pr-3">State</th>
@@ -355,14 +355,14 @@ const PlanSection: React.FC<{
               </thead>
               <tbody>
                 {page.items.map((p) => (
-                  <tr key={p.id} className="border-b border-gray-900/50">
+                  <tr key={p.id} className="border-b border-border/50">
                     <td className="py-2 pr-3 font-mono">#{p.id}</td>
                     <td className="py-2 pr-3">
                       <Badge variant={remediationPlanStateBadgeVariant(p.state)}>
                         {humanizeStatus(p.state)}
                       </Badge>
                     </td>
-                    <td className="py-2 pr-3 text-xs text-gray-300">
+                    <td className="py-2 pr-3 text-xs text-content">
                       {PLAN_KIND_LABELS[p.plan_kind] ?? p.plan_kind}
                     </td>
                     <td className="py-2 pr-3 text-xs">
@@ -397,7 +397,7 @@ const PlanSection: React.FC<{
                     <td className="py-2 pr-3 text-right">
                       <Link
                         href={`/compliance/remediation/plans/${p.id}`}
-                        className="inline-flex items-center gap-1 text-xs text-gray-300 hover:text-gray-100"
+                        className="inline-flex items-center gap-1 text-xs text-content hover:text-content"
                       >
                         Open <ExternalLink size={12} />
                       </Link>
@@ -420,8 +420,8 @@ const SectionHeader: React.FC<{ title: string; total: number }> = ({
   total,
 }) => (
   <div className="flex items-center justify-between mb-3">
-    <h2 className="text-lg font-semibold text-gray-200">{title}</h2>
-    <span className="text-xs text-gray-400">{total} total</span>
+    <h2 className="text-lg font-semibold text-content">{title}</h2>
+    <span className="text-xs text-content-muted">{total} total</span>
   </div>
 );
 
@@ -430,7 +430,7 @@ const Pager: React.FC<{
   offset: number;
   onPage: (offset: number) => void;
 }> = ({ page, offset, onPage }) => (
-  <div className="mt-3 flex items-center justify-between text-xs text-gray-400">
+  <div className="mt-3 flex items-center justify-between text-xs text-content-muted">
     <span>
       Showing {page.items.length} of {page.total} (offset {page.offset})
     </span>
@@ -462,8 +462,8 @@ const Stat: React.FC<{ label: string; value: React.ReactNode }> = ({
   value,
 }) => (
   <div className="min-w-[8rem]">
-    <p className="text-xs uppercase tracking-wide text-gray-500">{label}</p>
-    <p className="text-2xl font-semibold text-gray-100 mt-0.5">{value}</p>
+    <p className="text-xs uppercase tracking-wide text-content-subtle">{label}</p>
+    <p className="text-2xl font-semibold text-content mt-0.5">{value}</p>
   </div>
 );
 

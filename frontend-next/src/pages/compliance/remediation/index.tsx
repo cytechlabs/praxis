@@ -105,7 +105,7 @@ const ComplianceRemediationDashboardPage: React.FC = () => {
             <div className="flex items-center gap-2">
               <Link
                 href="/compliance"
-                className="inline-flex items-center gap-1.5 text-sm text-gray-300 hover:text-gray-100"
+                className="inline-flex items-center gap-1.5 text-sm text-content hover:text-content"
               >
                 <ArrowLeft size={14} /> Compliance dashboard
               </Link>
@@ -122,7 +122,7 @@ const ComplianceRemediationDashboardPage: React.FC = () => {
               */}
               {!bulkExportsEntitled ? (
                 <span
-                  className="inline-flex items-center gap-1 text-[11px] text-gray-500"
+                  className="inline-flex items-center gap-1 text-[11px] text-content-subtle"
                   title="Bulk evidence/remediation exports are part of the paid Praxis edition."
                   data-testid="remediation-exports-paid-locked"
                 >
@@ -151,7 +151,7 @@ const ComplianceRemediationDashboardPage: React.FC = () => {
                 </>
               ) : (
                 <span
-                  className="text-[11px] text-gray-500"
+                  className="text-[11px] text-content-subtle"
                   title="Bulk export requires the admin or maintainer role."
                   data-testid="remediation-requests-export-rbac-required"
                 >
@@ -167,7 +167,7 @@ const ComplianceRemediationDashboardPage: React.FC = () => {
 
         <Card>
           <CardBody>
-            <p className="text-xs text-gray-400 leading-relaxed">
+            <p className="text-xs text-content-muted leading-relaxed">
               This dashboard rolls up compliance remediation requests, plan
               previews, and execution attempts recorded by the API. Open a
               remediation request from a failing evidence row; approve /
@@ -208,7 +208,7 @@ const ComplianceRemediationDashboardPage: React.FC = () => {
                         <span className="text-emerald-400">
                           {summary.current_plan_ready_count}
                         </span>
-                        <span className="text-gray-500"> / </span>
+                        <span className="text-content-subtle"> / </span>
                         <span className="text-yellow-400">
                           {summary.current_plan_not_ready_count}
                         </span>
@@ -222,7 +222,7 @@ const ComplianceRemediationDashboardPage: React.FC = () => {
                         <span className="text-emerald-400">
                           {summary.current_plan_acknowledged_count}
                         </span>
-                        <span className="text-gray-500"> / </span>
+                        <span className="text-content-subtle"> / </span>
                         <span className="text-yellow-400">
                           {summary.current_plan_unacknowledged_count}
                         </span>
@@ -240,7 +240,7 @@ const ComplianceRemediationDashboardPage: React.FC = () => {
                   <Stat
                     label="Generated"
                     value={
-                      <span className="text-xs text-gray-300">
+                      <span className="text-xs text-content">
                         {formatTimestamp(summary.generated_at)}
                       </span>
                     }
@@ -252,16 +252,16 @@ const ComplianceRemediationDashboardPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Card>
                 <CardBody>
-                  <h2 className="text-lg font-semibold text-gray-200 mb-3">
+                  <h2 className="text-lg font-semibold text-content mb-3">
                     Requests by state
                   </h2>
                   {summary.request_total === 0 ? (
-                    <p className="text-gray-500 text-sm">
+                    <p className="text-content-subtle text-sm">
                       No remediation requests have been opened yet.
                     </p>
                   ) : (
                     <table className="w-full text-sm">
-                      <thead className="text-left text-gray-400 border-b border-gray-800">
+                      <thead className="text-left text-content-muted border-b border-border">
                         <tr>
                           <th className="py-2 pr-3">State</th>
                           <th className="py-2 pr-3">Count</th>
@@ -271,7 +271,7 @@ const ComplianceRemediationDashboardPage: React.FC = () => {
                         {REMEDIATION_REQUEST_STATES.map((state) => (
                           <tr
                             key={state}
-                            className="border-b border-gray-900/50"
+                            className="border-b border-border/50"
                           >
                             <td className="py-2 pr-3">
                               <Badge
@@ -280,7 +280,7 @@ const ComplianceRemediationDashboardPage: React.FC = () => {
                                 {state}
                               </Badge>
                             </td>
-                            <td className="py-2 pr-3 font-mono text-gray-200">
+                            <td className="py-2 pr-3 font-mono text-content">
                               {summary.request_counts_by_state[state] ?? 0}
                             </td>
                           </tr>
@@ -293,16 +293,16 @@ const ComplianceRemediationDashboardPage: React.FC = () => {
 
               <Card>
                 <CardBody>
-                  <h2 className="text-lg font-semibold text-gray-200 mb-3">
+                  <h2 className="text-lg font-semibold text-content mb-3">
                     Current plans by state
                   </h2>
                   {summary.current_plan_total === 0 ? (
-                    <p className="text-gray-500 text-sm">
+                    <p className="text-content-subtle text-sm">
                       No remediation plan previews have been built yet.
                     </p>
                   ) : (
                     <table className="w-full text-sm">
-                      <thead className="text-left text-gray-400 border-b border-gray-800">
+                      <thead className="text-left text-content-muted border-b border-border">
                         <tr>
                           <th className="py-2 pr-3">State</th>
                           <th className="py-2 pr-3">Count</th>
@@ -313,7 +313,7 @@ const ComplianceRemediationDashboardPage: React.FC = () => {
                           ([state, count]) => (
                             <tr
                               key={state}
-                              className="border-b border-gray-900/50"
+                              className="border-b border-border/50"
                             >
                               <td className="py-2 pr-3">
                                 <Badge
@@ -330,7 +330,7 @@ const ComplianceRemediationDashboardPage: React.FC = () => {
                                   {state}
                                 </Badge>
                               </td>
-                              <td className="py-2 pr-3 font-mono text-gray-200">
+                              <td className="py-2 pr-3 font-mono text-content">
                                 {count}
                               </td>
                             </tr>
@@ -345,16 +345,16 @@ const ComplianceRemediationDashboardPage: React.FC = () => {
 
             <Card>
               <CardBody>
-                <h2 className="text-lg font-semibold text-gray-200 mb-3">
+                <h2 className="text-lg font-semibold text-content mb-3">
                   By severity
                 </h2>
                 {summary.per_severity.length === 0 ? (
-                  <p className="text-gray-500 text-sm">
+                  <p className="text-content-subtle text-sm">
                     No remediation requests recorded yet.
                   </p>
                 ) : (
                   <table className="w-full text-sm">
-                    <thead className="text-left text-gray-400 border-b border-gray-800">
+                    <thead className="text-left text-content-muted border-b border-border">
                       <tr>
                         <th className="py-2 pr-3">Severity</th>
                         <th className="py-2 pr-3">Requested</th>
@@ -368,7 +368,7 @@ const ComplianceRemediationDashboardPage: React.FC = () => {
                       {summary.per_severity.map((row) => (
                         <tr
                           key={row.severity}
-                          className="border-b border-gray-900/50"
+                          className="border-b border-border/50"
                         >
                           <td className="py-2 pr-3">
                             <Badge
@@ -390,10 +390,10 @@ const ComplianceRemediationDashboardPage: React.FC = () => {
                           <td className="py-2 pr-3 font-mono text-red-400">
                             {row.rejected}
                           </td>
-                          <td className="py-2 pr-3 font-mono text-gray-400">
+                          <td className="py-2 pr-3 font-mono text-content-muted">
                             {row.cancelled}
                           </td>
-                          <td className="py-2 pr-3 font-mono text-gray-200">
+                          <td className="py-2 pr-3 font-mono text-content">
                             {row.total}
                           </td>
                         </tr>
@@ -407,10 +407,10 @@ const ComplianceRemediationDashboardPage: React.FC = () => {
             <Card>
               <CardBody>
                 <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-lg font-semibold text-gray-200">
+                  <h2 className="text-lg font-semibold text-content">
                     Recent remediation requests
                   </h2>
-                  <span className="text-xs text-gray-400">
+                  <span className="text-xs text-content-muted">
                     {recent?.total ?? 0} total
                   </span>
                 </div>
@@ -422,7 +422,7 @@ const ComplianceRemediationDashboardPage: React.FC = () => {
                 ) : recent ? (
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
-                      <thead className="text-left text-gray-400 border-b border-gray-800">
+                      <thead className="text-left text-content-muted border-b border-border">
                         <tr>
                           <th className="py-2 pr-3">Request</th>
                           <th className="py-2 pr-3">State</th>
@@ -438,7 +438,7 @@ const ComplianceRemediationDashboardPage: React.FC = () => {
                         {recent.items.map((r) => (
                           <tr
                             key={r.id}
-                            className="border-b border-gray-900/50 hover:bg-gray-900/30"
+                            className="border-b border-border/50 hover:bg-surface-overlay/30"
                           >
                             <td className="py-2 pr-3 font-mono">#{r.id}</td>
                             <td className="py-2 pr-3">
@@ -458,7 +458,7 @@ const ComplianceRemediationDashboardPage: React.FC = () => {
                                 {r.policy_slug}
                               </Link>
                             </td>
-                            <td className="py-2 pr-3 font-mono text-xs text-gray-300">
+                            <td className="py-2 pr-3 font-mono text-xs text-content">
                               {r.check_slug}
                             </td>
                             <td className="py-2 pr-3">
@@ -476,13 +476,13 @@ const ComplianceRemediationDashboardPage: React.FC = () => {
                                 {SEVERITY_LABELS[r.severity_snapshot]}
                               </Badge>
                             </td>
-                            <td className="py-2 pr-3 text-xs text-gray-300">
+                            <td className="py-2 pr-3 text-xs text-content">
                               {formatTimestamp(r.created_at)}
                             </td>
                             <td className="py-2 pr-3 text-right">
                               <Link
                                 href={`/compliance/remediation/requests/${r.id}`}
-                                className="inline-flex items-center gap-1 text-xs text-gray-300 hover:text-gray-100"
+                                className="inline-flex items-center gap-1 text-xs text-content hover:text-content"
                               >
                                 Open <ExternalLink size={12} />
                               </Link>
@@ -507,8 +507,8 @@ const Stat: React.FC<{ label: string; value: React.ReactNode }> = ({
   value,
 }) => (
   <div className="min-w-[8rem]">
-    <p className="text-xs uppercase tracking-wide text-gray-500">{label}</p>
-    <p className="text-2xl font-semibold text-gray-100 mt-0.5">{value}</p>
+    <p className="text-xs uppercase tracking-wide text-content-subtle">{label}</p>
+    <p className="text-2xl font-semibold text-content mt-0.5">{value}</p>
   </div>
 );
 

@@ -18,8 +18,8 @@ import {
 } from '@/services/mirrorService';
 
 const inputCls =
-  'w-full rounded border border-zinc-700 bg-black/30 px-2 py-1.5 text-sm text-gray-200 focus:border-blue-500 focus:outline-none';
-const labelCls = 'block text-xs uppercase tracking-wide text-gray-500 mb-1';
+  'w-full rounded border border-border-strong bg-black/30 px-2 py-1.5 text-sm text-content focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong focus:outline-none';
+const labelCls = 'block text-xs uppercase tracking-wide text-content-subtle mb-1';
 
 function csvToList(v: string): string[] {
   return v
@@ -236,7 +236,7 @@ const MirrorForm: React.FC<Props> = ({ open, onClose, onSaved, existing }) => {
         </div>
 
         <div className="flex items-center gap-6 pt-1">
-          <label className="flex items-center gap-2 text-sm text-gray-300">
+          <label className="flex items-center gap-2 text-sm text-content">
             <input
               type="checkbox"
               checked={enabled}
@@ -244,7 +244,7 @@ const MirrorForm: React.FC<Props> = ({ open, onClose, onSaved, existing }) => {
             />
             Enabled
           </label>
-          <label className="flex items-center gap-2 text-sm text-gray-300">
+          <label className="flex items-center gap-2 text-sm text-content">
             <input
               type="checkbox"
               checked={verifySig}
@@ -258,7 +258,7 @@ const MirrorForm: React.FC<Props> = ({ open, onClose, onSaved, existing }) => {
           <button
             type="button"
             onClick={onClose}
-            className="rounded px-3 py-1.5 text-sm text-gray-300 hover:bg-white/5"
+            className="rounded px-3 py-1.5 text-sm text-content hover:bg-white/5"
           >
             Cancel
           </button>

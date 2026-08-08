@@ -141,39 +141,39 @@ const GeneralSettingsTab: React.FC = () => {
     : [{ value: form.timezone, label: form.timezone }, ...TIMEZONE_OPTIONS];
 
   if (loading) {
-    return <div className="text-gray-400 py-8">Loading settings...</div>;
+    return <div className="text-content-muted py-8">Loading settings...</div>;
   }
 
   return (
     <div className="max-w-2xl">
       <div className="space-y-6">
         {/* App Name */}
-        <div className="bg-[#0c0c0f] border border-gray-800/60 rounded-lg p-4">
+        <div className="bg-surface-raised border border-border/60 rounded-lg p-4">
           <div className="flex items-center gap-2 mb-1">
             <Type size={16} className="text-red-500" />
-            <label className="text-sm font-medium text-gray-200">Application Name</label>
+            <label className="text-sm font-medium text-content">Application Name</label>
           </div>
-          <p className="text-xs text-gray-500 mb-2">Display name shown in the browser tab and navigation.</p>
+          <p className="text-xs text-content-subtle mb-2">Display name shown in the browser tab and navigation.</p>
           <input
             type="text"
             value={form.app_name}
             onChange={(e) => setForm({ ...form, app_name: e.target.value })}
-            className="w-full bg-[#09090b] border border-gray-700/60 rounded px-3 py-2 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-600"
+            className="w-full bg-surface-sunken border border-border-strong/60 rounded px-3 py-2 text-sm text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
           />
         </div>
 
         {/* Timezone */}
-        <div className="bg-[#0c0c0f] border border-gray-800/60 rounded-lg p-4">
+        <div className="bg-surface-raised border border-border/60 rounded-lg p-4">
           <div className="flex items-center gap-2 mb-1">
             <Globe size={16} className="text-red-500" />
-            <label htmlFor="general-timezone" className="text-sm font-medium text-gray-200">Timezone</label>
+            <label htmlFor="general-timezone" className="text-sm font-medium text-content">Timezone</label>
           </div>
-          <p className="text-xs text-gray-500 mb-2">All timestamps will be displayed in this timezone. Backend always stores UTC.</p>
+          <p className="text-xs text-content-subtle mb-2">All timestamps will be displayed in this timezone. Backend always stores UTC.</p>
           <select
             id="general-timezone"
             value={form.timezone}
             onChange={(e) => setForm({ ...form, timezone: e.target.value })}
-            className="w-full bg-[#09090b] border border-gray-700/60 rounded px-3 py-2 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-600"
+            className="w-full bg-surface-sunken border border-border-strong/60 rounded px-3 py-2 text-sm text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
           >
             {timezoneOptions.map((tz) => (
               <option key={tz.value} value={tz.value}>
@@ -184,16 +184,16 @@ const GeneralSettingsTab: React.FC = () => {
         </div>
 
         {/* Date Format */}
-        <div className="bg-[#0c0c0f] border border-gray-800/60 rounded-lg p-4">
+        <div className="bg-surface-raised border border-border/60 rounded-lg p-4">
           <div className="flex items-center gap-2 mb-1">
             <Calendar size={16} className="text-red-500" />
-            <label className="text-sm font-medium text-gray-200">Date Format</label>
+            <label className="text-sm font-medium text-content">Date Format</label>
           </div>
-          <p className="text-xs text-gray-500 mb-2">How dates appear throughout the application.</p>
+          <p className="text-xs text-content-subtle mb-2">How dates appear throughout the application.</p>
           <select
             value={form.date_format}
             onChange={(e) => setForm({ ...form, date_format: e.target.value })}
-            className="w-full bg-[#09090b] border border-gray-700/60 rounded px-3 py-2 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-600"
+            className="w-full bg-surface-sunken border border-border-strong/60 rounded px-3 py-2 text-sm text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
           >
             {DATE_FORMAT_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -204,12 +204,12 @@ const GeneralSettingsTab: React.FC = () => {
         </div>
 
         {/* Time Format */}
-        <div className="bg-[#0c0c0f] border border-gray-800/60 rounded-lg p-4">
+        <div className="bg-surface-raised border border-border/60 rounded-lg p-4">
           <div className="flex items-center gap-2 mb-1">
             <Clock size={16} className="text-red-500" />
-            <label className="text-sm font-medium text-gray-200">Time Format</label>
+            <label className="text-sm font-medium text-content">Time Format</label>
           </div>
-          <p className="text-xs text-gray-500 mb-2">12-hour or 24-hour clock display.</p>
+          <p className="text-xs text-content-subtle mb-2">12-hour or 24-hour clock display.</p>
           <div className="flex gap-4">
             {TIME_FORMAT_OPTIONS.map((opt) => (
               <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
@@ -221,7 +221,7 @@ const GeneralSettingsTab: React.FC = () => {
                   onChange={(e) => setForm({ ...form, time_format: e.target.value })}
                   className="accent-red-600"
                 />
-                <span className="text-sm text-gray-300">{opt.label}</span>
+                <span className="text-sm text-content">{opt.label}</span>
               </label>
             ))}
           </div>

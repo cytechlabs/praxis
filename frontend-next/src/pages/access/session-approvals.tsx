@@ -105,10 +105,10 @@ const SessionApprovalsPage = () => {
 
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-semibold text-gray-100 flex items-center gap-2">
+          <h1 className="text-xl font-semibold text-content flex items-center gap-2">
             <ClipboardCheck size={18} /> Session Approvals
           </h1>
-          <p className="text-sm text-gray-400 mt-1">
+          <p className="text-sm text-content-muted mt-1">
             Four-eyes gate for high-privilege fleet roles. Granted approvals are single-use and expire after 5 minutes.
           </p>
         </div>
@@ -121,14 +121,14 @@ const SessionApprovalsPage = () => {
         <CardHeader>{filtered.length} {filtered.length === 1 ? 'request' : 'requests'}</CardHeader>
         <CardBody>
           {loading ? (
-            <div className="text-gray-500 text-sm">Loading…</div>
+            <div className="text-content-subtle text-sm">Loading…</div>
           ) : filtered.length === 0 ? (
             <EmptyState title="Nothing waiting" description="No requests to review." icon={<Clock size={28} />} />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left text-xs uppercase tracking-wide text-gray-500 border-b border-gray-800">
+                  <tr className="text-left text-xs uppercase tracking-wide text-content-subtle border-b border-border">
                     <th className="py-2 pr-4">Requester</th>
                     <th className="py-2 pr-4">Host</th>
                     <th className="py-2 pr-4">Role</th>
@@ -141,14 +141,14 @@ const SessionApprovalsPage = () => {
                 </thead>
                 <tbody>
                   {filtered.map((r) => (
-                    <tr key={r.id} className="border-b border-gray-900 hover:bg-white/5">
-                      <td className="py-3 pr-4 text-xs font-mono text-gray-200">{r.requester_username || `#${r.requester_id}`}</td>
-                      <td className="py-3 pr-4 text-xs font-mono text-gray-300">{r.hostname || `#${r.system_id}`}</td>
+                    <tr key={r.id} className="border-b border-border hover:bg-white/5">
+                      <td className="py-3 pr-4 text-xs font-mono text-content">{r.requester_username || `#${r.requester_id}`}</td>
+                      <td className="py-3 pr-4 text-xs font-mono text-content">{r.hostname || `#${r.system_id}`}</td>
                       <td className="py-3 pr-4 text-xs"><Badge variant="info">{r.fleet_role_name || `#${r.fleet_role_id}`}</Badge></td>
-                      <td className="py-3 pr-4 text-xs font-mono text-gray-400">{r.login}</td>
-                      <td className="py-3 pr-4 text-xs text-gray-500">{formatTimestamp(r.created_at)}</td>
+                      <td className="py-3 pr-4 text-xs font-mono text-content-muted">{r.login}</td>
+                      <td className="py-3 pr-4 text-xs text-content-subtle">{formatTimestamp(r.created_at)}</td>
                       <td className="py-3 pr-4 text-xs"><Badge variant={stateVariant(r.state)}>{humanizeStatus(r.state)}</Badge></td>
-                      <td className="py-3 pr-4 text-xs text-gray-500">
+                      <td className="py-3 pr-4 text-xs text-content-subtle">
                         {r.approver_username
                           ? `${r.approver_username}${r.decision_reason ? ` · ${r.decision_reason}` : ''}`
                           : '-'}
@@ -159,14 +159,14 @@ const SessionApprovalsPage = () => {
                             <button
                               onClick={() => { setDecisionTarget({ row: r, kind: 'grant' }); setDecisionReason(''); }}
                               aria-label="Grant"
-                              className="p-1.5 rounded-md text-gray-500 hover:text-emerald-400 hover:bg-emerald-500/10"
+                              className="p-1.5 rounded-md text-content-subtle hover:text-emerald-400 hover:bg-emerald-500/10"
                             >
                               <Check size={14} />
                             </button>
                             <button
                               onClick={() => { setDecisionTarget({ row: r, kind: 'deny' }); setDecisionReason(''); }}
                               aria-label="Deny"
-                              className="p-1.5 rounded-md text-gray-500 hover:text-red-400 hover:bg-red-500/10"
+                              className="p-1.5 rounded-md text-content-subtle hover:text-red-400 hover:bg-red-500/10"
                             >
                               <X size={14} />
                             </button>
@@ -190,22 +190,22 @@ const SessionApprovalsPage = () => {
       >
         <div className="space-y-3">
           {decisionTarget && (
-            <div className="text-xs text-gray-400">
-              <div><span className="text-gray-500">Requester:</span> <span className="font-mono text-gray-200">{decisionTarget.row.requester_username}</span></div>
-              <div><span className="text-gray-500">Host:</span> <span className="font-mono text-gray-200">{decisionTarget.row.hostname}</span></div>
-              <div><span className="text-gray-500">Role / Login:</span> <span className="font-mono text-gray-200">{decisionTarget.row.fleet_role_name} as {decisionTarget.row.login}</span></div>
+            <div className="text-xs text-content-muted">
+              <div><span className="text-content-subtle">Requester:</span> <span className="font-mono text-content">{decisionTarget.row.requester_username}</span></div>
+              <div><span className="text-content-subtle">Host:</span> <span className="font-mono text-content">{decisionTarget.row.hostname}</span></div>
+              <div><span className="text-content-subtle">Role / Login:</span> <span className="font-mono text-content">{decisionTarget.row.fleet_role_name} as {decisionTarget.row.login}</span></div>
               {decisionTarget.row.reason && (
-                <div className="mt-1"><span className="text-gray-500">Reason:</span> <span className="text-gray-300">{decisionTarget.row.reason}</span></div>
+                <div className="mt-1"><span className="text-content-subtle">Reason:</span> <span className="text-content">{decisionTarget.row.reason}</span></div>
               )}
             </div>
           )}
           <div>
-            <label className="block text-xs text-gray-400 mb-1">Decision note (optional)</label>
+            <label className="block text-xs text-content-muted mb-1">Decision note (optional)</label>
             <textarea
               value={decisionReason}
               onChange={(e) => setDecisionReason(e.target.value)}
               rows={3}
-              className="w-full bg-[#0c0c0f] border border-gray-800 rounded-md px-2 py-2 text-sm text-gray-200"
+              className="w-full bg-surface-sunken border border-border rounded-md px-2 py-2 text-sm text-content"
             />
           </div>
           <div className="flex justify-end gap-2 pt-1">

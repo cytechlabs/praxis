@@ -332,7 +332,7 @@ const SystemFactsPanel: React.FC<Props> = ({ systemId, canRefresh }) => {
           )}
           {collectedRel && (
             <span
-              className="text-xs text-gray-400"
+              className="text-xs text-content-muted"
               title={data.collected_at || ''}
             >
               Collected {collectedRel}
@@ -391,14 +391,14 @@ const SystemFactsPanel: React.FC<Props> = ({ systemId, canRefresh }) => {
       {lifecycle && (
         <div>
           <div className="mb-2 flex items-center gap-2">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-400">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-content-muted">
               Lifecycle
             </h3>
             <Badge variant={lifecycleBadge(lifecycle.status).variant}>
               {lifecycleBadge(lifecycle.status).label}
             </Badge>
           </div>
-          <div className="rounded border border-gray-800 bg-gray-900/30 p-3 text-sm">
+          <div className="rounded border border-border bg-surface-raised/30 p-3 text-sm">
             <FactRow
               label="Status"
               value={
@@ -444,7 +444,7 @@ const SystemFactsPanel: React.FC<Props> = ({ systemId, canRefresh }) => {
       {facts.disks && facts.disks.length > 0 && (
         <FactSection title="Storage">
           <table className="w-full text-sm">
-            <thead className="text-xs uppercase text-gray-500">
+            <thead className="text-xs uppercase text-content-subtle">
               <tr>
                 <th className="py-1 text-left">Mount</th>
                 <th className="py-1 text-left">Filesystem</th>
@@ -454,13 +454,13 @@ const SystemFactsPanel: React.FC<Props> = ({ systemId, canRefresh }) => {
             </thead>
             <tbody>
               {facts.disks.map((d, i) => (
-                <tr key={`${d.mountpoint}-${i}`} className="border-t border-gray-800">
-                  <td className="py-1.5 font-mono text-gray-300">{d.mountpoint}</td>
-                  <td className="py-1.5 text-gray-400">{d.filesystem}</td>
-                  <td className="py-1.5 text-right text-gray-300" title={`${d.total_bytes} bytes`}>
+                <tr key={`${d.mountpoint}-${i}`} className="border-t border-border">
+                  <td className="py-1.5 font-mono text-content">{d.mountpoint}</td>
+                  <td className="py-1.5 text-content-muted">{d.filesystem}</td>
+                  <td className="py-1.5 text-right text-content" title={`${d.total_bytes} bytes`}>
                     {formatBytes(d.total_bytes)}
                   </td>
-                  <td className="py-1.5 text-right text-gray-300" title={`${d.free_bytes} bytes`}>
+                  <td className="py-1.5 text-right text-content" title={`${d.free_bytes} bytes`}>
                     {formatBytes(d.free_bytes)}
                   </td>
                 </tr>
@@ -476,17 +476,17 @@ const SystemFactsPanel: React.FC<Props> = ({ systemId, canRefresh }) => {
           page-level error. */}
       {data.partial_errors.length > 0 && (
         <details
-          className="rounded border border-gray-800 bg-gray-900/30 p-3 text-sm"
+          className="rounded border border-border bg-surface-raised/30 p-3 text-sm"
           open={showPartials}
           onToggle={(e) => setShowPartials((e.target as HTMLDetailsElement).open)}
         >
-          <summary className="cursor-pointer text-gray-300">
+          <summary className="cursor-pointer text-content">
             {data.partial_errors.length} collection issue{data.partial_errors.length === 1 ? '' : 's'}
           </summary>
-          <ul className="mt-2 space-y-1 text-xs text-gray-400">
+          <ul className="mt-2 space-y-1 text-xs text-content-muted">
             {data.partial_errors.map((e, i) => (
               <li key={`${e.key}-${i}`}>
-                <span className="font-mono text-gray-300">{e.key}</span>: {e.error}
+                <span className="font-mono text-content">{e.key}</span>: {e.error}
               </li>
             ))}
           </ul>
@@ -503,10 +503,10 @@ const FactSection: React.FC<{ title: string; children: React.ReactNode }> = ({
   children,
 }) => (
   <div>
-    <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-400">
+    <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-content-muted">
       {title}
     </h3>
-    <div className="rounded border border-gray-800 bg-gray-900/30 p-3 text-sm">{children}</div>
+    <div className="rounded border border-border bg-surface-raised/30 p-3 text-sm">{children}</div>
   </div>
 );
 
@@ -515,10 +515,10 @@ const FactRow: React.FC<{ label: string; value: string | null; rawTitle?: string
   value,
   rawTitle,
 }) => (
-  <div className="flex justify-between gap-4 border-b border-gray-800/60 py-1.5 last:border-b-0">
-    <span className="text-gray-500">{label}</span>
+  <div className="flex justify-between gap-4 border-b border-border/60 py-1.5 last:border-b-0">
+    <span className="text-content-subtle">{label}</span>
     <span
-      className={value === null ? 'text-gray-600 italic' : 'text-gray-200'}
+      className={value === null ? 'text-content-subtle italic' : 'text-content'}
       title={rawTitle}
     >
       {value === null ? '-' : value}

@@ -63,7 +63,7 @@ const ManifestSummaryPage: React.FC = () => {
       <div className="p-6">
         <Link
           href={`/mirrors/${id}`}
-          className="mb-4 inline-flex items-center gap-1 text-sm text-gray-400 hover:text-gray-200"
+          className="mb-4 inline-flex items-center gap-1 text-sm text-content-muted hover:text-content"
         >
           <ArrowLeft size={14} /> Back to mirror
         </Link>
@@ -76,7 +76,7 @@ const ManifestSummaryPage: React.FC = () => {
         {error && <ErrorState title="Couldn’t load manifest" />}
 
         {!manifest && !error && (
-          <div className="text-gray-400">Loading manifest…</div>
+          <div className="text-content-muted">Loading manifest…</div>
         )}
 
         {manifest && (
@@ -105,17 +105,17 @@ const ManifestSummaryPage: React.FC = () => {
 
             {archCounts.length > 0 && (
               <section className="mb-6">
-                <h2 className="mb-2 text-sm font-medium uppercase text-gray-400">
+                <h2 className="mb-2 text-sm font-medium uppercase text-content-muted">
                   Packages by architecture
                 </h2>
                 <div className="flex flex-wrap gap-2">
                   {archCounts.map(([arch, n]) => (
                     <span
                       key={arch}
-                      className="rounded border border-zinc-800 bg-[#111115] px-3 py-1 text-sm text-gray-200"
+                      className="rounded border border-border bg-surface-raised px-3 py-1 text-sm text-content"
                     >
                       <span className="font-mono">{arch}</span>
-                      <span className="ml-2 text-gray-400">{n}</span>
+                      <span className="ml-2 text-content-muted">{n}</span>
                     </span>
                   ))}
                 </div>
@@ -123,12 +123,12 @@ const ManifestSummaryPage: React.FC = () => {
             )}
 
             <section>
-              <h2 className="mb-2 text-sm font-medium uppercase text-gray-400">
+              <h2 className="mb-2 text-sm font-medium uppercase text-content-muted">
                 Files ({manifest.files.length})
               </h2>
-              <div className="overflow-x-auto rounded border border-zinc-800 bg-[#111115]">
+              <div className="overflow-x-auto rounded border border-border bg-surface-raised">
                 <table className="w-full text-sm">
-                  <thead className="border-b border-zinc-800 text-left text-gray-400">
+                  <thead className="border-b border-border text-left text-content-muted">
                     <tr>
                       <th className="px-4 py-2">Filename</th>
                       <th className="px-4 py-2">Package</th>
@@ -137,18 +137,18 @@ const ManifestSummaryPage: React.FC = () => {
                       <th className="px-4 py-2">Size</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-zinc-800">
+                  <tbody className="divide-y divide-border">
                     {manifest.files.map((f) => (
-                      <tr key={f.filename} className="hover:bg-zinc-900/40">
-                        <td className="px-4 py-2 font-mono text-xs text-gray-300">
+                      <tr key={f.filename} className="hover:bg-surface-overlay/40">
+                        <td className="px-4 py-2 font-mono text-xs text-content">
                           {f.filename}
                         </td>
-                        <td className="px-4 py-2 text-gray-300">{f.package || '-'}</td>
-                        <td className="px-4 py-2 font-mono text-xs text-gray-400">
+                        <td className="px-4 py-2 text-content">{f.package || '-'}</td>
+                        <td className="px-4 py-2 font-mono text-xs text-content-muted">
                           {f.version || '-'}
                         </td>
-                        <td className="px-4 py-2 text-gray-400">{f.arch || '-'}</td>
-                        <td className="px-4 py-2 text-gray-400">
+                        <td className="px-4 py-2 text-content-muted">{f.arch || '-'}</td>
+                        <td className="px-4 py-2 text-content-muted">
                           {formatBytes(f.size)}
                         </td>
                       </tr>
@@ -170,14 +170,14 @@ const Field: React.FC<{
   mono?: boolean;
   hint?: string;
 }> = ({ label, value, mono, hint }) => (
-  <div className="rounded border border-zinc-800 bg-[#111115] p-3">
-    <div className="text-xs uppercase text-gray-500">{label}</div>
+  <div className="rounded border border-border bg-surface-raised p-3">
+    <div className="text-xs uppercase text-content-subtle">{label}</div>
     <div
-      className={`mt-1 break-all text-sm text-gray-200 ${mono ? 'font-mono' : ''}`}
+      className={`mt-1 break-all text-sm text-content ${mono ? 'font-mono' : ''}`}
     >
       {value}
     </div>
-    {hint && <div className="mt-1 text-xs text-gray-500">{hint}</div>}
+    {hint && <div className="mt-1 text-xs text-content-subtle">{hint}</div>}
   </div>
 );
 

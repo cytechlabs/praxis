@@ -422,18 +422,18 @@ const SystemDetails = () => {
           const hookOn = !!system.principals_hook_deployed;
           const status = hookOn ? 'enrolled' : caOn ? 'partial' : 'not_enrolled';
           return (
-            <div className="mb-4 bg-gray-800 border border-gray-700 rounded-lg p-4 flex items-center justify-between">
+            <div className="mb-4 bg-surface-overlay border border-border-strong rounded-lg p-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 {status === 'enrolled' ? (
                   <ShieldCheck className="text-green-400" size={24} />
                 ) : (
-                  <ShieldOff className="text-gray-500" size={24} />
+                  <ShieldOff className="text-content-subtle" size={24} />
                 )}
                 <div>
-                  <div className="text-sm font-medium text-gray-200">
+                  <div className="text-sm font-medium text-content">
                     Access Broker
                   </div>
-                  <div className="text-xs text-gray-400">
+                  <div className="text-xs text-content-muted">
                     {status === 'enrolled' && `Enrolled ${system.principals_hook_deployed_at ? formatTimestamp(system.principals_hook_deployed_at) : ''} - sshd trusts the Praxis CA and resolves principals per-login. Run Check access to confirm host AllowUsers/AllowGroups policy admits provisioned logins.`}
                     {status === 'partial' && `CA trust deployed ${system.ca_trust_deployed_at ? formatTimestamp(system.ca_trust_deployed_at) : ''} - principals hook not installed; finish enrollment to allow fleet-role based access`}
                     {status === 'not_enrolled' && 'Not enrolled - SSH connections use stored credentials only'}
@@ -541,12 +541,12 @@ const SystemDetails = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Basic Information Section */}
               <div className="md:col-span-2">
-                <h2 className="text-xl font-semibold text-gray-200 mb-4">Basic Information</h2>
-                <div className="bg-gray-900/30 p-4 rounded-lg border border-gray-800">
+                <h2 className="text-xl font-semibold text-content mb-4">Basic Information</h2>
+                <div className="bg-surface-raised/30 p-4 rounded-lg border border-border">
                   <div className="flex justify-between items-center mb-4">
                     <div>
-                      <h3 className="text-lg font-medium text-gray-200">{system.hostname}</h3>
-                      <p className="text-gray-400">{system.ip_address}</p>
+                      <h3 className="text-lg font-medium text-content">{system.hostname}</h3>
+                      <p className="text-content-muted">{system.ip_address}</p>
                     </div>
                     <div className="flex items-center gap-3">
                       <StatusBadge status={system.status} />
@@ -560,26 +560,26 @@ const SystemDetails = () => {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <p className="text-sm text-gray-400">Distribution</p>
-                      <p className="text-gray-200">
+                      <p className="text-sm text-content-muted">Distribution</p>
+                      <p className="text-content">
                         <span className="font-medium">{system.distribution.name}</span>
-                        <span className="ml-1 text-gray-400">{system.os_version}</span>
+                        <span className="ml-1 text-content-muted">{system.os_version}</span>
                       </p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-400">Group</p>
-                      <p className="text-gray-200">{system.group.name}</p>
+                      <p className="text-sm text-content-muted">Group</p>
+                      <p className="text-content">{system.group.name}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-400">Registered At</p>
-                      <p className="text-gray-200">{formatTimestamp(system.registered_at)}</p>
+                      <p className="text-sm text-content-muted">Registered At</p>
+                      <p className="text-content">{formatTimestamp(system.registered_at)}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-400">Update Policy</p>
-                      <p className="text-gray-200">{system.update_policy || 'Not specified'}</p>
+                      <p className="text-sm text-content-muted">Update Policy</p>
+                      <p className="text-content">{system.update_policy || 'Not specified'}</p>
                     </div>
                     <div className="md:col-span-2">
-                      <p className="text-sm text-gray-400 mb-1">Tags</p>
+                      <p className="text-sm text-content-muted mb-1">Tags</p>
                       <div className="flex flex-wrap gap-2 items-center">
                         {system.tags && system.tags.length > 0 ? (
                           system.tags.map(tag => (
@@ -601,26 +601,26 @@ const SystemDetails = () => {
                             </span>
                           ))
                         ) : (
-                          <span className="text-gray-500 text-sm">No tags assigned</span>
+                          <span className="text-content-subtle text-sm">No tags assigned</span>
                         )}
                         {canWrite && (
                           <div className="relative">
                             <button
                               onClick={() => setShowTagDropdown(!showTagDropdown)}
-                              className="px-2 py-0.5 rounded-full text-xs border border-dashed border-gray-500 text-gray-400 hover:border-red-500 hover:text-red-400"
+                              className="px-2 py-0.5 rounded-full text-xs border border-dashed border-border-strong text-content-muted hover:border-red-500 hover:text-red-400"
                             >
                               + Add Tag
                             </button>
                             {showTagDropdown && (
-                              <div className="absolute top-8 left-0 z-50 bg-gray-800 border border-gray-800 rounded-lg p-3 w-64 shadow-lg">
+                              <div className="absolute top-8 left-0 z-50 bg-surface-overlay border border-border rounded-lg p-3 w-64 shadow-lg">
                                 {availableTags.length > 0 && (
                                   <div className="mb-2 max-h-32 overflow-y-auto">
-                                    <p className="text-xs text-gray-400 mb-1">Existing tags</p>
+                                    <p className="text-xs text-content-muted mb-1">Existing tags</p>
                                     {availableTags.map(tag => (
                                       <button
                                         key={tag.id}
                                         onClick={() => handleAddTag(tag.id)}
-                                        className="flex items-center gap-2 w-full text-left px-2 py-1 rounded hover:bg-gray-700 text-sm text-gray-300"
+                                        className="flex items-center gap-2 w-full text-left px-2 py-1 rounded hover:bg-border text-sm text-content"
                                       >
                                         <span className="w-3 h-3 rounded-full inline-block flex-shrink-0" style={{ backgroundColor: tag.color }} />
                                         {tag.name}
@@ -628,8 +628,8 @@ const SystemDetails = () => {
                                     ))}
                                   </div>
                                 )}
-                                <div className="border-t border-gray-700 pt-2">
-                                  <p className="text-xs text-gray-400 mb-1">Create new tag</p>
+                                <div className="border-t border-border-strong pt-2">
+                                  <p className="text-xs text-content-muted mb-1">Create new tag</p>
                                   <div className="flex gap-2">
                                     <input
                                       type="color"
@@ -642,7 +642,7 @@ const SystemDetails = () => {
                                       value={newTagName}
                                       onChange={e => setNewTagName(e.target.value)}
                                       placeholder="Tag name"
-                                      className="flex-1 bg-gray-900 border border-gray-600 rounded px-2 py-1 text-sm text-gray-200 focus:outline-none focus:border-red-500"
+                                      className="flex-1 bg-surface-sunken border border-border-strong rounded px-2 py-1 text-sm text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
                                       onKeyDown={e => e.key === 'Enter' && handleCreateAndAddTag()}
                                     />
                                     <Button
@@ -657,7 +657,7 @@ const SystemDetails = () => {
                                 </div>
                                 <button
                                   onClick={() => setShowTagDropdown(false)}
-                                  className="mt-2 text-xs text-gray-500 hover:text-gray-300 w-full text-center"
+                                  className="mt-2 text-xs text-content-subtle hover:text-content w-full text-center"
                                 >
                                   Close
                                 </button>
@@ -685,14 +685,14 @@ const SystemDetails = () => {
                   inside the toggle component. */}
               {isAdmin && (
                 <div className="md:col-span-2">
-                  <h2 className="text-xl font-semibold text-gray-200 mb-4">Transport</h2>
-                  <div className="bg-gray-900/30 p-4 rounded-lg border border-gray-800">
+                  <h2 className="text-xl font-semibold text-content mb-4">Transport</h2>
+                  <div className="bg-surface-raised/30 p-4 rounded-lg border border-border">
                     <div className="flex flex-col gap-3">
-                      <p className="text-sm text-gray-400">
-                        Routing preference for non-interactive ops on this host (command exec, file transfer, facts). <span className="text-gray-300">Auto</span> uses the agent when its tunnel is healthy and SSH otherwise; <span className="text-gray-300">SSH</span> always uses SSH; <span className="text-gray-300">Agent</span> forces the agent and disables SSH fallback for those supported ops.
+                      <p className="text-sm text-content-muted">
+                        Routing preference for non-interactive ops on this host (command exec, file transfer, facts). <span className="text-content">Auto</span> uses the agent when its tunnel is healthy and SSH otherwise; <span className="text-content">SSH</span> always uses SSH; <span className="text-content">Agent</span> forces the agent and disables SSH fallback for those supported ops.
                       </p>
-                      <p className="text-xs text-gray-500">
-                        Interactive browser terminal sessions always use SSH regardless of this setting - the agent does not provide browser shells in this release. <span className="text-gray-400">Connect</span> requires SSH reachability and deployed CA trust.
+                      <p className="text-xs text-content-subtle">
+                        Interactive browser terminal sessions always use SSH regardless of this setting - the agent does not provide browser shells in this release. <span className="text-content-muted">Connect</span> requires SSH reachability and deployed CA trust.
                       </p>
                       <TransportPreferenceToggle
                         value={(system.transport_preference ?? 'auto') as TransportPreference}
@@ -707,65 +707,65 @@ const SystemDetails = () => {
               {/* Metadata Section */}
               {system.metadata && (
                 <div className="md:col-span-2">
-                  <h2 className="text-xl font-semibold text-gray-200 mb-4">System Metadata</h2>
-                  <div className="bg-gray-900/30 p-4 rounded-lg border border-gray-800">
+                  <h2 className="text-xl font-semibold text-content mb-4">System Metadata</h2>
+                  <div className="bg-surface-raised/30 p-4 rounded-lg border border-border">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div>
-                        <p className="text-sm text-gray-400">Environment</p>
-                        <p className="text-gray-200">{system.metadata.environment_type || 'Not specified'}</p>
+                        <p className="text-sm text-content-muted">Environment</p>
+                        <p className="text-content">{system.metadata.environment_type || 'Not specified'}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-400">Owner Contact</p>
-                        <p className="text-gray-200">{system.metadata.owner_contact || 'Not specified'}</p>
+                        <p className="text-sm text-content-muted">Owner Contact</p>
+                        <p className="text-content">{system.metadata.owner_contact || 'Not specified'}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-400">SSH Port</p>
-                        <p className="text-gray-200">{system.metadata.ssh_port || '22'}</p>
+                        <p className="text-sm text-content-muted">SSH Port</p>
+                        <p className="text-content">{system.metadata.ssh_port || '22'}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-400">Connection Status</p>
-                        <p className="text-gray-200">{system.metadata.connection_status || 'Unknown'}</p>
+                        <p className="text-sm text-content-muted">Connection Status</p>
+                        <p className="text-content">{system.metadata.connection_status || 'Unknown'}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-400">Last Connection</p>
-                        <p className="text-gray-200">
+                        <p className="text-sm text-content-muted">Last Connection</p>
+                        <p className="text-content">
                           {system.metadata.last_connection
                             ? formatTimestamp(system.metadata.last_connection)
                             : 'Never connected'}
                         </p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-400">Location</p>
-                        <p className="text-gray-200">{system.metadata.location || 'Not specified'}</p>
+                        <p className="text-sm text-content-muted">Location</p>
+                        <p className="text-content">{system.metadata.location || 'Not specified'}</p>
                       </div>
                       {system.metadata.cpu_arch && (
                         <div>
-                          <p className="text-sm text-gray-400">CPU Architecture</p>
-                          <p className="text-gray-200">{system.metadata.cpu_arch}</p>
+                          <p className="text-sm text-content-muted">CPU Architecture</p>
+                          <p className="text-content">{system.metadata.cpu_arch}</p>
                         </div>
                       )}
                       {system.metadata.cpu_cores && (
                         <div>
-                          <p className="text-sm text-gray-400">CPU Cores</p>
-                          <p className="text-gray-200">{system.metadata.cpu_cores}</p>
+                          <p className="text-sm text-content-muted">CPU Cores</p>
+                          <p className="text-content">{system.metadata.cpu_cores}</p>
                         </div>
                       )}
                       {system.metadata.memory_total && (
                         <div>
-                          <p className="text-sm text-gray-400">Memory</p>
-                          <p className="text-gray-200">{Math.round(system.metadata.memory_total / (1024 * 1024 * 1024))} GB</p>
+                          <p className="text-sm text-content-muted">Memory</p>
+                          <p className="text-content">{Math.round(system.metadata.memory_total / (1024 * 1024 * 1024))} GB</p>
                         </div>
                       )}
                       {system.metadata.disk_total && (
                         <div>
-                          <p className="text-sm text-gray-400">Disk Space</p>
-                          <p className="text-gray-200">{Math.round(system.metadata.disk_total / (1024 * 1024 * 1024))} GB</p>
+                          <p className="text-sm text-content-muted">Disk Space</p>
+                          <p className="text-content">{Math.round(system.metadata.disk_total / (1024 * 1024 * 1024))} GB</p>
                         </div>
                       )}
                       {system.metadata.maintenance_window && (
                         <div>
-                          <p className="text-sm text-gray-400">Maintenance Window</p>
-                          <p className="text-gray-200">{system.metadata.maintenance_window}</p>
+                          <p className="text-sm text-content-muted">Maintenance Window</p>
+                          <p className="text-content">{system.metadata.maintenance_window}</p>
                         </div>
                       )}
                     </div>

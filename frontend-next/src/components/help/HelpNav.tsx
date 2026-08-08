@@ -21,7 +21,7 @@ const HelpNav: React.FC<HelpNavProps> = ({ items }) => {
     <nav className="space-y-6 text-sm">
       {Object.entries(sections).map(([section, sectionItems]) => (
         <div key={section}>
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-content-subtle mb-2">
             {section}
           </h3>
           <ul className="space-y-0.5">
@@ -36,7 +36,7 @@ const HelpNav: React.FC<HelpNavProps> = ({ items }) => {
                       className={`block px-2.5 py-1.5 rounded text-sm transition-colors ${
                         isActive
                           ? 'bg-red-500/10 text-red-400 border-l-2 border-red-500 pl-2'
-                          : 'text-gray-400 hover:text-gray-200 hover:bg-white/[0.03]'
+                          : 'text-content-muted hover:text-content hover:bg-white/[0.03]'
                       }`}
                     >
                       {item.title}
