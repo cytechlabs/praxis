@@ -1,0 +1,578 @@
+<!DOCTYPE html><html lang="en" dir="ltr" data-theme="dark" data-has-toc data-has-sidebar class="astro-vdxcvpsm"> <head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>Agent protocol | Praxis</title><link rel="shortcut icon" href="/help/favicon.svg" type="image/svg+xml"/><meta name="generator" content="Astro v7.2.0"/><meta name="generator" content="Starlight v0.41.7"/><meta property="og:title" content="Agent protocol"/><meta property="og:type" content="article"/><meta property="og:locale" content="en"/><meta property="og:description" content="Thin-agent identity, tunnel, operation, and audit protocol contract."/><meta property="og:site_name" content="Praxis"/><meta name="twitter:card" content="summary_large_image"/><meta name="description" content="Thin-agent identity, tunnel, operation, and audit protocol contract."/> <script>
+	window.StarlightThemeProvider = (() => {
+		const storedTheme =
+			typeof localStorage !== 'undefined' && localStorage.getItem('starlight-theme');
+		const theme =
+			storedTheme ||
+			(window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+		document.documentElement.dataset.theme = theme === 'light' ? 'light' : 'dark';
+		return {
+			updatePickers(theme = storedTheme || 'auto') {
+				document.querySelectorAll('starlight-theme-select').forEach((picker) => {
+					const select = picker.querySelector('select');
+					if (select) select.value = theme;
+					/** @type {HTMLTemplateElement | null} */
+					const tmpl = document.querySelector(`#theme-icons`);
+					const newIcon = tmpl && tmpl.content.querySelector('.' + theme);
+					if (newIcon) {
+						const oldIcon = picker.querySelector('svg.label-icon');
+						if (oldIcon) {
+							oldIcon.replaceChildren(...newIcon.cloneNode(true).childNodes);
+						}
+					}
+				});
+			},
+		};
+	})();
+</script> <template id="theme-icons"> <svg aria-hidden="true" class="light astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M5 12a1 1 0 0 0-1-1H3a1 1 0 0 0 0 2h1a1 1 0 0 0 1-1Zm.64 5-.71.71a1 1 0 0 0 0 1.41 1 1 0 0 0 1.41 0l.71-.71A1 1 0 0 0 5.64 17ZM12 5a1 1 0 0 0 1-1V3a1 1 0 0 0-2 0v1a1 1 0 0 0 1 1Zm5.66 2.34a1 1 0 0 0 .7-.29l.71-.71a1 1 0 1 0-1.41-1.41l-.66.71a1 1 0 0 0 0 1.41 1 1 0 0 0 .66.29Zm-12-.29a1 1 0 0 0 1.41 0 1 1 0 0 0 0-1.41l-.71-.71a1.004 1.004 0 1 0-1.43 1.41l.73.71ZM21 11h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0-2Zm-2.64 6A1 1 0 0 0 17 18.36l.71.71a1 1 0 0 0 1.41 0 1 1 0 0 0 0-1.41l-.76-.66ZM12 6.5a5.5 5.5 0 1 0 5.5 5.5A5.51 5.51 0 0 0 12 6.5Zm0 9a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Zm0 3.5a1 1 0 0 0-1 1v1a1 1 0 0 0 2 0v-1a1 1 0 0 0-1-1Z"/></svg> <svg aria-hidden="true" class="dark astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21.64 13a1 1 0 0 0-1.05-.14 8.049 8.049 0 0 1-3.37.73 8.15 8.15 0 0 1-8.14-8.1 8.59 8.59 0 0 1 .25-2A1 1 0 0 0 8 2.36a10.14 10.14 0 1 0 14 11.69 1 1 0 0 0-.36-1.05Zm-9.5 6.69A8.14 8.14 0 0 1 7.08 5.22v.27a10.15 10.15 0 0 0 10.14 10.14 9.784 9.784 0 0 0 2.1-.22 8.11 8.11 0 0 1-7.18 4.32v-.04Z"/></svg> <svg aria-hidden="true" class="auto astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg> </template><link rel="stylesheet" href="/help/_astro/print.ehPL0gv-.css" media="print"><link rel="stylesheet" href="/help/_astro/common.fMBtDe11.css"><script type="module" src="/help/_astro/page.Dwipeu-R.js"></script></head> <body class="astro-vdxcvpsm"> <a class="sl-skip-link astro-vxeigawq" href="#_top">Skip to content</a> <div class="page sl-flex astro-gqpr5s5a"> <header class="header astro-gqpr5s5a"><div class="header astro-nczgtkxc"> <div class="title-wrapper sl-flex astro-nczgtkxc"> <a href="/help" class="site-title sl-flex astro-clw6ags5">  <img class="astro-clw6ags5" alt="Praxis" src="/help/_astro/praxis-mark._9LsDocr.svg" width="1000" height="1000">    <span class="astro-clw6ags5" translate="no"> Praxis </span> </a> </div> <div class="sl-flex print:hidden astro-nczgtkxc"> <site-search class="astro-nczgtkxc astro-r5ar4xm7" data-translations="{&quot;placeholder&quot;:&quot;Search&quot;}" data-strip-trailing-slash> <button data-open-modal disabled aria-label="Search" aria-keyshortcuts="Control+K" class="astro-r5ar4xm7"> <svg aria-hidden="true" class="astro-r5ar4xm7 astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21.71 20.29 18 16.61A9 9 0 1 0 16.61 18l3.68 3.68a.999.999 0 0 0 1.42 0 1 1 0 0 0 0-1.39ZM11 18a7 7 0 1 1 0-14 7 7 0 0 1 0 14Z"/></svg> <span class="sl-hidden md:sl-block astro-r5ar4xm7" aria-hidden="true">Search</span> <kbd class="sl-hidden md:sl-flex astro-r5ar4xm7" style="display: none;"> <kbd class="astro-r5ar4xm7">Ctrl</kbd><kbd class="astro-r5ar4xm7">K</kbd> </kbd> </button> <dialog style="padding:0" aria-label="Search" class="astro-r5ar4xm7"> <div class="dialog-frame sl-flex astro-r5ar4xm7">  <button data-close-modal class="sl-flex md:sl-hidden astro-r5ar4xm7"> Cancel </button> <div class="search-container astro-r5ar4xm7"> <div id="starlight__search" class="astro-r5ar4xm7"></div> </div> </div> </dialog> </site-search>  <script>
+	(() => {
+		const openBtn = document.querySelector('button[data-open-modal]');
+		const shortcut = openBtn?.querySelector('kbd');
+		if (!openBtn || !(shortcut instanceof HTMLElement)) return;
+		const platformKey = shortcut.querySelector('kbd');
+		if (platformKey && /(Mac|iPhone|iPod|iPad)/i.test(navigator.platform)) {
+			platformKey.textContent = '⌘';
+			openBtn.setAttribute('aria-keyshortcuts', 'Meta+K');
+		}
+		shortcut.style.display = '';
+	})();
+</script> <script type="module" src="/help/_astro/Search.astro_astro_type_script_index_0_lang.y9085PDE.js"></script> </div> <div class="sl-hidden md:sl-flex print:hidden right-group astro-nczgtkxc"> <div class="sl-flex social-icons astro-nczgtkxc">  </div> <starlight-theme-select>  <label style="--sl-select-width: 6.25em" class="astro-r2p65idu"> <span class="sr-only astro-r2p65idu">Select theme</span> <svg aria-hidden="true" class="icon label-icon astro-r2p65idu astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg> <select autocomplete="off" class="astro-r2p65idu"> <option value="dark" class="astro-r2p65idu">Dark</option><option value="light" class="astro-r2p65idu">Light</option><option value="auto" selected class="astro-r2p65idu">Auto</option> </select> <svg aria-hidden="true" class="icon caret astro-r2p65idu astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M17 9.17a1 1 0 0 0-1.41 0L12 12.71 8.46 9.17a1 1 0 1 0-1.41 1.42l4.24 4.24a1.002 1.002 0 0 0 1.42 0L17 10.59a1.002 1.002 0 0 0 0-1.42Z"/></svg> </label> </starlight-theme-select>  <script>
+	StarlightThemeProvider.updatePickers();
+</script> <script type="module">var e=`starlight-theme`,t=e=>e===`auto`||e===`dark`||e===`light`?e:`auto`,n=()=>t(typeof localStorage<`u`&&localStorage.getItem(e));function r(t){typeof localStorage<`u`&&localStorage.setItem(e,t===`light`||t===`dark`?t:``)}var i=()=>matchMedia(`(prefers-color-scheme: light)`).matches?`light`:`dark`;function a(e){StarlightThemeProvider.updatePickers(e),document.documentElement.dataset.theme=e===`auto`?i():e,r(e)}matchMedia(`(prefers-color-scheme: light)`).addEventListener(`change`,()=>{n()===`auto`&&a(`auto`)});var o=class extends HTMLElement{constructor(){super(),a(n()),this.querySelector(`select`)?.addEventListener(`change`,e=>{e.currentTarget instanceof HTMLSelectElement&&a(t(e.currentTarget.value))})}};customElements.define(`starlight-theme-select`,o);</script>  <script type="module">var e=class extends HTMLElement{constructor(){super();let e=this.querySelector(`select`);e&&(e.addEventListener(`change`,e=>{e.currentTarget instanceof HTMLSelectElement&&(window.location.pathname=e.currentTarget.value)}),window.addEventListener(`pageshow`,t=>{if(!t.persisted)return;let n=e.querySelector(`option[selected]`)?.index;n!==e.selectedIndex&&(e.selectedIndex=n??0)}))}};customElements.define(`starlight-lang-select`,e);</script> </div> </div></header> <nav class="sidebar print:hidden astro-gqpr5s5a" aria-label="Main"> <starlight-menu-button class="print:hidden astro-vvx7mffu"> <button aria-expanded="false" aria-label="Menu" aria-controls="starlight__sidebar" class="sl-flex md:sl-hidden astro-vvx7mffu"> <svg aria-hidden="true" class="open-menu astro-vvx7mffu astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M3 8h18a1 1 0 1 0 0-2H3a1 1 0 0 0 0 2Zm18 8H3a1 1 0 0 0 0 2h18a1 1 0 0 0 0-2Zm0-5H3a1 1 0 0 0 0 2h18a1 1 0 0 0 0-2Z"/></svg> <svg aria-hidden="true" class="close-menu astro-vvx7mffu astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="m13.41 12 6.3-6.29a1.004 1.004 0 1 0-1.42-1.42L12 10.59l-6.29-6.3a1.004 1.004 0 0 0-1.42 1.42l6.3 6.29-6.3 6.29a1 1 0 0 0 0 1.42.998.998 0 0 0 1.42 0l6.29-6.3 6.29 6.3a.999.999 0 0 0 1.42 0 1 1 0 0 0 0-1.42L13.41 12Z"/></svg> </button> </starlight-menu-button> <script type="module">var e=class extends HTMLElement{btn=this.querySelector(`button`);constructor(){super(),this.btn.addEventListener(`click`,()=>this.toggleExpanded());let e=this.closest(`nav`);e&&e.addEventListener(`keyup`,e=>this.closeOnEscape(e)),matchMedia(`(min-width: 50em)`).addEventListener(`change`,()=>this.setExpanded(!1))}setExpanded(e){this.setAttribute(`aria-expanded`,String(e)),document.body.toggleAttribute(`data-mobile-menu-expanded`,e),document.querySelectorAll(`.main-frame, .sl-skip-link`).forEach(t=>{t.toggleAttribute(`inert`,e)})}toggleExpanded(){this.setExpanded(this.getAttribute(`aria-expanded`)!==`true`)}closeOnEscape(e){e.code===`Escape`&&(this.setExpanded(!1),this.btn.focus())}};customElements.define(`starlight-menu-button`,e);</script> <div id="starlight__sidebar" class="sidebar-pane astro-gqpr5s5a"> <div class="sidebar-content sl-flex astro-gqpr5s5a"> <sl-sidebar-state-persist data-hash="0oj573e" class="astro-f5yvicm7"> <script aria-hidden="true">
+		(() => {
+			try {
+				if (!matchMedia('(min-width: 50em)').matches) return;
+				/** @type {HTMLElement | null} */
+				const target = document.querySelector('sl-sidebar-state-persist');
+				const state = JSON.parse(sessionStorage.getItem('sl-sidebar-state') || '0');
+				if (!target || !state || target.dataset.hash !== state.hash) return;
+				window._starlightScrollRestore = state.scroll;
+				customElements.define(
+					'sl-sidebar-restore',
+					class SidebarRestore extends HTMLElement {
+						connectedCallback() {
+							try {
+								const idx = parseInt(this.dataset.index || '');
+								const details = this.closest('details');
+								if (details && typeof state.open[idx] === 'boolean') details.open = state.open[idx];
+							} catch {}
+						}
+					}
+				);
+			} catch {}
+		})();
+	</script> <ul class="top-level astro-ojxuodky"> <li class="astro-ojxuodky"> <details open class="astro-ojxuodky"> <summary class="astro-ojxuodky"> <span class="group-label astro-ojxuodky"> <span class="large astro-ojxuodky">Get started</span>  </span> <svg aria-hidden="true" class="caret astro-ojxuodky astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </summary> <sl-sidebar-restore data-index="0"></sl-sidebar-restore> <ul class="astro-ojxuodky"> <li class="astro-ojxuodky"> <a href="/help/product-overview" class="astro-ojxuodky"> <span class="astro-ojxuodky">Product overview</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/requirements" class="astro-ojxuodky"> <span class="astro-ojxuodky">Requirements</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/install" class="astro-ojxuodky"> <span class="astro-ojxuodky">Install Praxis</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/first-run" class="astro-ojxuodky"> <span class="astro-ojxuodky">First run</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/enroll-hosts" class="astro-ojxuodky"> <span class="astro-ojxuodky">Enroll hosts</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/getting-started" class="astro-ojxuodky"> <span class="astro-ojxuodky">Getting started</span>  </a> </li> </ul> </details> </li><li class="astro-ojxuodky"> <details open class="astro-ojxuodky"> <summary class="astro-ojxuodky"> <span class="group-label astro-ojxuodky"> <span class="large astro-ojxuodky">Concepts</span>  </span> <svg aria-hidden="true" class="caret astro-ojxuodky astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </summary> <sl-sidebar-restore data-index="1"></sl-sidebar-restore> <ul class="astro-ojxuodky"> <li class="astro-ojxuodky"> <a href="/help/fleet-lifecycle-architecture" class="astro-ojxuodky"> <span class="astro-ojxuodky">Fleet lifecycle architecture</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/security-model" class="astro-ojxuodky"> <span class="astro-ojxuodky">Security model and trust boundaries</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/transports" class="astro-ojxuodky"> <span class="astro-ojxuodky">Transports</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/editions" class="astro-ojxuodky"> <span class="astro-ojxuodky">Editions and feature tiers</span>  </a> </li> </ul> </details> </li><li class="astro-ojxuodky"> <details open class="astro-ojxuodky"> <summary class="astro-ojxuodky"> <span class="group-label astro-ojxuodky"> <span class="large astro-ojxuodky">Using Praxis</span>  </span> <svg aria-hidden="true" class="caret astro-ojxuodky astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </summary> <sl-sidebar-restore data-index="2"></sl-sidebar-restore> <ul class="astro-ojxuodky"> <li class="astro-ojxuodky"> <a href="/help/fleet-and-hosts" class="astro-ojxuodky"> <span class="astro-ojxuodky">Fleet and hosts</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/packages" class="astro-ojxuodky"> <span class="astro-ojxuodky">Packages</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/patch-workflows" class="astro-ojxuodky"> <span class="astro-ojxuodky">Patch workflows</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/jobs-and-scheduling" class="astro-ojxuodky"> <span class="astro-ojxuodky">Jobs and scheduling</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/ssh-and-security" class="astro-ojxuodky"> <span class="astro-ojxuodky">SSH and security</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/credentials-and-vault" class="astro-ojxuodky"> <span class="astro-ojxuodky">Credentials and secrets</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/monitoring-and-alerts" class="astro-ojxuodky"> <span class="astro-ojxuodky">Monitoring and alerts</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/compliance-workflows" class="astro-ojxuodky"> <span class="astro-ojxuodky">Compliance workflows</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/mirrors-and-airgap" class="astro-ojxuodky"> <span class="astro-ojxuodky">Mirrors and content</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/reports-and-schedules" class="astro-ojxuodky"> <span class="astro-ojxuodky">Reports and schedules</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/settings" class="astro-ojxuodky"> <span class="astro-ojxuodky">Settings</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/admin" class="astro-ojxuodky"> <span class="astro-ojxuodky">Administration</span>  </a> </li> </ul> </details> </li><li class="astro-ojxuodky"> <details open class="astro-ojxuodky"> <summary class="astro-ojxuodky"> <span class="group-label astro-ojxuodky"> <span class="large astro-ojxuodky">How-to guides</span>  </span> <svg aria-hidden="true" class="caret astro-ojxuodky astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </summary> <sl-sidebar-restore data-index="3"></sl-sidebar-restore> <ul class="astro-ojxuodky"> <li class="astro-ojxuodky"> <a href="/help/guide-critical-updates" class="astro-ojxuodky"> <span class="astro-ojxuodky">Respond to a critical update</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/guide-patch-windows" class="astro-ojxuodky"> <span class="astro-ojxuodky">Run a patch window</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/guide-rollback" class="astro-ojxuodky"> <span class="astro-ojxuodky">Roll back a bad update</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/guide-onboarding-offboarding" class="astro-ojxuodky"> <span class="astro-ojxuodky">Onboard and offboard people</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/guide-temporary-access" class="astro-ojxuodky"> <span class="astro-ojxuodky">Grant temporary access</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/guide-access-review" class="astro-ojxuodky"> <span class="astro-ojxuodky">Run an access review</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/guide-evidence-export" class="astro-ojxuodky"> <span class="astro-ojxuodky">Export evidence for an audit</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/guide-safe-upgrade" class="astro-ojxuodky"> <span class="astro-ojxuodky">Upgrade safely</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/guide-license-rotation" class="astro-ojxuodky"> <span class="astro-ojxuodky">Rotate a licence</span>  </a> </li> </ul> </details> </li><li class="astro-ojxuodky"> <details open class="astro-ojxuodky"> <summary class="astro-ojxuodky"> <span class="group-label astro-ojxuodky"> <span class="large astro-ojxuodky">Operations</span>  </span> <svg aria-hidden="true" class="caret astro-ojxuodky astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </summary> <sl-sidebar-restore data-index="4"></sl-sidebar-restore> <ul class="astro-ojxuodky"> <li class="astro-ojxuodky"> <a href="/help/production-hardening" class="astro-ojxuodky"> <span class="astro-ojxuodky">Production hardening and operations</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/backup-restore" class="astro-ojxuodky"> <span class="astro-ojxuodky">Backup and restore</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/airgap" class="astro-ojxuodky"> <span class="astro-ojxuodky">Airgap export and import</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/oidc-setup" class="astro-ojxuodky"> <span class="astro-ojxuodky">Single sign-on setup</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/remediation-workflow" class="astro-ojxuodky"> <span class="astro-ojxuodky">Remediation workflow</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/scaling-assessment-500-hosts" class="astro-ojxuodky"> <span class="astro-ojxuodky">Capacity and scaling</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/demo-walkthrough-operator" class="astro-ojxuodky"> <span class="astro-ojxuodky">Operator walkthrough</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/demo-walkthrough-auditor" class="astro-ojxuodky"> <span class="astro-ojxuodky">Auditor walkthrough</span>  </a> </li> </ul> </details> </li><li class="astro-ojxuodky"> <details open class="astro-ojxuodky"> <summary class="astro-ojxuodky"> <span class="group-label astro-ojxuodky"> <span class="large astro-ojxuodky">Security</span>  </span> <svg aria-hidden="true" class="caret astro-ojxuodky astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </summary> <sl-sidebar-restore data-index="5"></sl-sidebar-restore> <ul class="astro-ojxuodky"> <li class="astro-ojxuodky"> <a href="/help/access-revocation" class="astro-ojxuodky"> <span class="astro-ojxuodky">Access revocation</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/compliance-map" class="astro-ojxuodky"> <span class="astro-ojxuodky">Compliance evidence map</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/audit-schema" class="astro-ojxuodky"> <span class="astro-ojxuodky">Audit event schema</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/dependency-security-policy" class="astro-ojxuodky"> <span class="astro-ojxuodky">Dependency and container security policy</span>  </a> </li> </ul> </details> </li><li class="astro-ojxuodky"> <details open class="astro-ojxuodky"> <summary class="astro-ojxuodky"> <span class="group-label astro-ojxuodky"> <span class="large astro-ojxuodky">Release and upgrade</span>  </span> <svg aria-hidden="true" class="caret astro-ojxuodky astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </summary> <sl-sidebar-restore data-index="6"></sl-sidebar-restore> <ul class="astro-ojxuodky"> <li class="astro-ojxuodky"> <a href="/help/licensing" class="astro-ojxuodky"> <span class="astro-ojxuodky">Licensing and activation</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/verify-release-artifacts" class="astro-ojxuodky"> <span class="astro-ojxuodky">Verify release artifacts</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/upgrade" class="astro-ojxuodky"> <span class="astro-ojxuodky">Upgrade</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/upgrade-notes-1-0" class="astro-ojxuodky"> <span class="astro-ojxuodky">Upgrade notes for 1.0</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/uninstall" class="astro-ojxuodky"> <span class="astro-ojxuodky">Uninstall</span>  </a> </li> </ul> </details> </li><li class="astro-ojxuodky"> <details open class="astro-ojxuodky"> <summary class="astro-ojxuodky"> <span class="group-label astro-ojxuodky"> <span class="large astro-ojxuodky">Reference</span>  </span> <svg aria-hidden="true" class="caret astro-ojxuodky astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </summary> <sl-sidebar-restore data-index="7"></sl-sidebar-restore> <ul class="astro-ojxuodky"> <li class="astro-ojxuodky"> <a href="/help/support-matrix" class="astro-ojxuodky"> <span class="astro-ojxuodky">Linux support matrix</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/agent-capability-matrix" class="astro-ojxuodky"> <span class="astro-ojxuodky">Agent and SSH capability matrix</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/agent-protocol" aria-current="page" class="astro-ojxuodky"> <span class="astro-ojxuodky">Agent protocol</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/reporting-contract" class="astro-ojxuodky"> <span class="astro-ojxuodky">Reporting contract</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/eol-data" class="astro-ojxuodky"> <span class="astro-ojxuodky">Distribution lifecycle data</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/browser-support" class="astro-ojxuodky"> <span class="astro-ojxuodky">Browser and viewport support</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/known-limitations" class="astro-ojxuodky"> <span class="astro-ojxuodky">Known limitations</span>  </a> </li> </ul> </details> </li><li class="astro-ojxuodky"> <details open class="astro-ojxuodky"> <summary class="astro-ojxuodky"> <span class="group-label astro-ojxuodky"> <span class="large astro-ojxuodky">Troubleshooting and support</span>  </span> <svg aria-hidden="true" class="caret astro-ojxuodky astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </summary> <sl-sidebar-restore data-index="8"></sl-sidebar-restore> <ul class="astro-ojxuodky"> <li class="astro-ojxuodky"> <a href="/help/troubleshooting" class="astro-ojxuodky"> <span class="astro-ojxuodky">Troubleshooting</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/support" class="astro-ojxuodky"> <span class="astro-ojxuodky">Support</span>  </a> </li> </ul> </details> </li> </ul>  <script aria-hidden="true">
+		(() => {
+			const scroller = document.getElementById('starlight__sidebar');
+			if (!window._starlightScrollRestore || !scroller) return;
+			scroller.scrollTop = window._starlightScrollRestore;
+			delete window._starlightScrollRestore;
+		})();
+	</script></sl-sidebar-state-persist> <div class="md:sl-hidden"> <div class="mobile-preferences sl-flex astro-b5gddk54"> <div class="social-icons astro-b5gddk54">  </div> <starlight-theme-select>  <label style="--sl-select-width: 6.25em" class="astro-r2p65idu"> <span class="sr-only astro-r2p65idu">Select theme</span> <svg aria-hidden="true" class="icon label-icon astro-r2p65idu astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg> <select autocomplete="off" class="astro-r2p65idu"> <option value="dark" class="astro-r2p65idu">Dark</option><option value="light" class="astro-r2p65idu">Light</option><option value="auto" selected class="astro-r2p65idu">Auto</option> </select> <svg aria-hidden="true" class="icon caret astro-r2p65idu astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M17 9.17a1 1 0 0 0-1.41 0L12 12.71 8.46 9.17a1 1 0 1 0-1.41 1.42l4.24 4.24a1.002 1.002 0 0 0 1.42 0L17 10.59a1.002 1.002 0 0 0 0-1.42Z"/></svg> </label> </starlight-theme-select>  <script>
+	StarlightThemeProvider.updatePickers();
+</script>    </div> </div> </div> </div> </nav> <div class="main-frame astro-gqpr5s5a">  <script type="module">var e=document.getElementById(`starlight__sidebar`),t=e?.querySelector(`sl-sidebar-state-persist`),n=`sl-sidebar-state`,r=()=>{let r=[],i=t?.dataset.hash||``;try{let e=sessionStorage.getItem(n),t=JSON.parse(e||`{}`);Array.isArray(t.open)&&t.hash===i&&(r=t.open)}catch{}return{hash:i,open:r,scroll:e?.scrollTop||0}},i=e=>{try{sessionStorage.setItem(n,JSON.stringify(e))}catch{}},a=()=>i(r()),o=(e,t)=>{let n=r();n.open[t]=e,i(n)};t?.addEventListener(`click`,e=>{if(!(e.target instanceof Element))return;let t=e.target.closest(`summary`)?.closest(`details`);if(!t)return;let n=t.querySelector(`sl-sidebar-restore`),r=parseInt(n?.dataset.index||``);isNaN(r)||o(!t.open,r)}),addEventListener(`visibilitychange`,()=>{document.visibilityState===`hidden`&&a()});</script><div class="lg:sl-flex astro-abfeecmu"> <aside class="right-sidebar-container print:hidden astro-abfeecmu"> <div class="right-sidebar astro-abfeecmu">  <div class="lg:sl-hidden astro-q5mffni3"> <mobile-starlight-toc data-min-h="2" data-max-h="3" class="astro-5ulgm6bh"> <nav aria-labelledby="starlight__on-this-page--mobile" class="astro-5ulgm6bh"> <details id="starlight__mobile-toc" class="astro-5ulgm6bh"> <summary id="starlight__on-this-page--mobile" class="sl-flex astro-5ulgm6bh"> <span class="toggle sl-flex astro-5ulgm6bh"> On this page <svg aria-hidden="true" class="caret astro-5ulgm6bh astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </span> <span class="display-current astro-5ulgm6bh"></span> </summary> <div class="dropdown astro-5ulgm6bh"> <ul class="isMobile astro-cxyftcne" style="--depth: 0;"> <li style="--depth: 0;" class="astro-cxyftcne"> <a href="#_top" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Overview</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#overview" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Overview</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#versioning" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Versioning</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#identity-model" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Identity model</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#bootstrap-m13-ssh-once" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Bootstrap (M13: SSH-once)</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#reverse-tunnel" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Reverse tunnel</span> </a> <ul class="isMobile astro-cxyftcne" style="--depth: 1;"> <li style="--depth: 1;" class="astro-cxyftcne"> <a href="#process-topology" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Process topology</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#two-channels" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Two channels</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#per-op-wss-frame-envelope" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Per-op WSS frame envelope</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#control-wss-message-types" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Control WSS message types</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#per-op-wss-open-flow" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Per-op WSS open flow</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#duplicate-tunnel-handling" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Duplicate tunnel handling</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#cert-expiry-enforcement" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Cert expiry enforcement</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#connection-level-constraints" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Connection-level constraints</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#what-backend-rejects-on-connect" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">What backend rejects on connect</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#reconnection--no-resume" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Reconnection — no resume</span> </a>  </li> </ul> </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#capabilities" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Capabilities</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#interactive-sessions-10-transport-split" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Interactive sessions (1.0 transport split)</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#audit" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Audit</span> </a>  </li> </ul> </div> </details> </nav> </mobile-starlight-toc> <script type="module" src="/help/_astro/MobileTableOfContents.astro_astro_type_script_index_0_lang.BcSo_yiZ.js"></script> </div> <div class="right-sidebar-panel sl-hidden lg:sl-block astro-q5mffni3"> <div class="sl-container astro-q5mffni3"> <starlight-toc data-min-h="2" data-max-h="3"> <nav aria-labelledby="starlight__on-this-page"> <h2 id="starlight__on-this-page">On this page</h2> <ul class="astro-cxyftcne" style="--depth: 0;"> <li style="--depth: 0;" class="astro-cxyftcne"> <a href="#_top" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Overview</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#overview" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Overview</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#versioning" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Versioning</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#identity-model" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Identity model</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#bootstrap-m13-ssh-once" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Bootstrap (M13: SSH-once)</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#reverse-tunnel" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Reverse tunnel</span> </a> <ul class="astro-cxyftcne" style="--depth: 1;"> <li style="--depth: 1;" class="astro-cxyftcne"> <a href="#process-topology" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Process topology</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#two-channels" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Two channels</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#per-op-wss-frame-envelope" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Per-op WSS frame envelope</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#control-wss-message-types" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Control WSS message types</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#per-op-wss-open-flow" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Per-op WSS open flow</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#duplicate-tunnel-handling" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Duplicate tunnel handling</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#cert-expiry-enforcement" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Cert expiry enforcement</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#connection-level-constraints" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Connection-level constraints</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#what-backend-rejects-on-connect" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">What backend rejects on connect</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#reconnection--no-resume" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Reconnection — no resume</span> </a>  </li> </ul> </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#capabilities" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Capabilities</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#interactive-sessions-10-transport-split" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Interactive sessions (1.0 transport split)</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#audit" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Audit</span> </a>  </li> </ul> </nav> </starlight-toc> <script type="module" src="/help/_astro/TableOfContents.astro_astro_type_script_index_0_lang.Csloo1VZ.js"></script> </div> </div>  </div> </aside> <div class="main-pane astro-abfeecmu">  <main data-pagefind-body class="astro-vdxcvpsm" lang="en" dir="ltr">    <div class="content-panel astro-oil7k7jf"> <div class="sl-container astro-oil7k7jf"> <h1 id="_top" class="astro-2sm4b3ln">Agent protocol</h1> </div> </div> <div class="content-panel astro-oil7k7jf"> <div class="sl-container astro-oil7k7jf"> <div class="sl-markdown-content"> <p><strong>Status:</strong> Draft.</p>
+<h2 id="overview">Overview</h2>
+<p>The Praxis thin agent (M13) is an outbound-only Linux daemon that gives the
+control plane a multiplexed, mTLS-authenticated channel to a host without
+requiring inbound SSH from the control plane. The SSH path remains the
+default; the agent is opt-in per system.</p>
+<p>Trust boundary is rooted in a dedicated Vault PKI mount,
+<code>praxis-agent-ca</code>. Agents present a 1h mTLS cert; the backend verifies
+the chain on every tunnel connect and on every renewal CSR.</p>
+<h2 id="versioning">Versioning</h2>
+<p>Every protocol message carries a single-byte protocol version. The current
+version is <strong><code>0x01</code></strong>. Backward compatibility within a major version is
+mandatory; protocol-breaking changes bump the version byte and require a
+coordinated agent rollout.</p>
+<h2 id="identity-model">Identity model</h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>CA mount</td><td><code>praxis-agent-ca</code> (Vault PKI)</td></tr><tr><td>Role</td><td><code>agent</code></td></tr><tr><td>Cert TTL</td><td>1h (role max)</td></tr><tr><td>Renewal cadence</td><td>45 min over the live tunnel</td></tr><tr><td>Renewal grace</td><td>24h past expiry, provided <code>agent_status = active</code></td></tr><tr><td>Cert subject</td><td>CN = <code>system-&#x3C;id>.agent.praxis.internal</code> (backend-controlled; CSR CN ignored)</td></tr><tr><td>Cert SAN</td><td>URI = <code>praxis://system/&#x3C;id></code> (real identity; backend-set, CSR SANs ignored)</td></tr><tr><td>Key type</td><td>EC P-256</td></tr><tr><td>Revocation</td><td><code>agent_status -> revoked</code>; serial blocklisted; no CRL/OCSP</td></tr></tbody></table>
+<p>State machine (single source of truth on <code>System.agent_status</code>):</p>
+<div class="expressive-code"><link rel="stylesheet" href="/help/_astro/ec.w36nc.css"><script type="module" src="/help/_astro/ec.0vx5m.js"></script><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="plaintext"><code><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">not_enrolled -> active &#x3C;-> disabled</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">                   </span></span><span style="--0:#d6deeb;--1:#403f53">|</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">                   </span></span><span style="--0:#d6deeb;--1:#403f53">v</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">                </span></span><span style="--0:#d6deeb;--1:#403f53">revoked  (terminal — re-enrollment requires a new identity)</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="not_enrolled -> active <-> disabled                   |                   v                revoked  (terminal — re-enrollment requires a new identity)"><div></div></button></div></figure></div>
+<h2 id="bootstrap-m13-ssh-once">Bootstrap (M13: SSH-once)</h2>
+<ol>
+<li>Operator runs <code>curl https://&#x3C;praxis>/install.sh | sh</code> on the target
+host with a one-time bootstrap token (M13 still uses an SSH-validated
+path; M14 will refactor to activation-token).</li>
+<li>Installer drops the agent binary, generates a P-256 keypair, builds a
+CSR. The CSR’s CN/SANs are placeholders — the Vault role is configured
+with <code>use_csr_common_name=use_csr_sans=false</code>, so the backend
+discards them and substitutes its own values.</li>
+<li>Backend opens an SSH session to the host using the existing bootstrap
+credential, validates the requesting host matches <code>system_id</code>.</li>
+<li>Backend signs the CSR via <code>praxis-agent-ca/sign/agent</code> with
+backend-controlled <code>CN=system-&#x3C;id>.agent.praxis.internal</code> and
+<code>URI SAN=praxis://system/&#x3C;id></code>, then returns
+<code>{certificate, ca_chain, serial_number, expires_at}</code>.</li>
+<li>Agent installs the cert, starts the systemd service, opens the
+reverse tunnel.</li>
+</ol>
+<p>M14 replaces step 3 with activation-token validation.</p>
+<h2 id="reverse-tunnel">Reverse tunnel</h2>
+<p><strong>Mux strategy: Praxis-owned WebSocket protocol — NOT yamux.</strong> A pure-Python
+yamux port would be unmaintained code on a critical security path; HTTP/2
+would force broader transport changes (Hypercorn, etc.) before the spine
+is proven. We own the protocol on both sides instead.</p>
+<h3 id="process-topology">Process topology</h3>
+<p>The broker is a <strong>dedicated Python process</strong>, not a uvicorn-hosted
+FastAPI app. An early spike confirmed Uvicorn 0.27 does
+not surface the mTLS peer cert into ASGI scope, which makes per-route
+identity extraction impossible. Pivoted to:</p>
+<ul>
+<li><strong>Network layer:</strong> <code>websockets.serve()</code> + <code>asyncio.start_server</code> with
+an explicit <code>ssl.SSLContext</code> (<code>verify_mode=CERT_REQUIRED</code>, CA file
+pointed at the agent CA bundle).</li>
+<li><strong>Cert extraction:</strong> in the WS handler,
+<code>ws.transport.get_extra_info("ssl_object").getpeercert(binary_form=True)</code>
+yields the DER bytes, parsed with <code>cryptography</code> to extract
+URI SAN, serial, SHA-256 fingerprint, and <code>NotAfter</code>.</li>
+<li><strong>Process:</strong> <code>python -m app.broker.main</code> (or similar) running as its
+own Compose service on port <code>${PRAXIS_BROKER_PORT:-8443}</code>. Same image
+as the backend, different command. Independent healthcheck +
+restart policy.</li>
+</ul>
+<p>The :8443 listener is <strong>WebSocket-only and mTLS-only</strong>. It exposes
+<code>/agent/tunnel</code> and <code>/agent/op</code> and nothing else.</p>
+<p><code>/agent/ca-bundle</code> (anonymous, public certs) and any administrative
+read-only endpoints live on the <strong>main backend</strong> at :8000 to avoid
+the mTLS-only listener swallowing requests from clients without certs
+(and to break the bootstrap trust loop where an agent would need to
+trust the broker’s server cert before it can fetch the broker CA).</p>
+<p><code>AgentRegistry</code> (and the <code>OperationManager</code> op state) is in-memory and
+process-local. The main backend on :8000 reaches the broker out-of-process
+over the internal HTTP API for host-targeted operations. Because this state
+is not shared, <strong>1.0 supports exactly one broker instance</strong> — running broker
+replicas would split agent tunnels and in-flight ops across processes with no
+shared registry. The broker logs this invariant at startup. Externalizing the
+registry to a shared store (to allow horizontal broker scaling) is out of scope
+for 1.0. See <a href="/help/production-hardening">Production Hardening</a> → Unsupported
+Deployment Shapes.</p>
+<h3 id="two-channels">Two channels</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Channel</th><th>Purpose</th><th>Frame format</th></tr></thead><tbody><tr><td><strong>Control WSS</strong> (<code>/agent/tunnel</code>)</td><td>One per agent, persistent. Handshake, heartbeat, op orchestration, tunnel-level errors.</td><td>JSON over text frames, max 64 KiB.</td></tr><tr><td><strong>Per-op WSS</strong> (<code>/agent/op</code>)</td><td>Short-lived, agent-initiated outbound, nonce-redeemed. Carries op data.</td><td>Common binary envelope (below), max 1 MiB payload.</td></tr></tbody></table>
+<p>A third path — <strong>in-band binary frames on the control WSS</strong> — is
+<strong>reserved but not implemented in the current release</strong>. With per-op WSS for streams
+and <code>result_inline</code> (≤4 KiB) for trivial results, in-band fallback
+buys little and adds a second data path. Defer until concrete need.</p>
+<h3 id="per-op-wss-frame-envelope">Per-op WSS frame envelope</h3>
+<p>All per-op WSS data uses one common binary envelope so backend code paths
+don’t fork per op-type:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="plaintext"><code><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">| u8 protocol_version |</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">| u8 frame_op         |</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">| u8 channel          |</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">| u8 flags            |</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">| u32 payload_length  | (network byte order, max 1 MiB)</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">| payload[payload_length] |</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="| u8 protocol_version || u8 frame_op         || u8 channel          || u8 flags            || u32 payload_length  | (network byte order, max 1 MiB)| payload[payload_length] |"><div></div></button></div></figure></div>
+<p><strong><code>frame_op</code> values:</strong></p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Value</th><th>Name</th><th>Meaning</th></tr></thead><tbody><tr><td>0x01</td><td>DATA</td><td>Streaming chunk on this channel</td></tr><tr><td>0x02</td><td>CLOSE</td><td>Clean end of this channel (or whole op if channel = control)</td></tr><tr><td>0x03</td><td>ERROR</td><td>Abnormal end; payload is JSON <code>{code, detail}</code></td></tr><tr><td>0x04</td><td>CANCEL_ACK</td><td>Acknowledges a control-WSS <code>op_cancel</code></td></tr></tbody></table>
+<p><strong><code>channel</code> values:</strong></p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Value</th><th>Name</th><th>Direction</th><th>Notes</th></tr></thead><tbody><tr><td>0x01</td><td>stdin</td><td>backend → agent</td><td>Process input</td></tr><tr><td>0x02</td><td>stdout</td><td>agent → backend</td><td>Process output</td></tr><tr><td>0x03</td><td>stderr</td><td>agent → backend</td><td>Process error output</td></tr><tr><td>0x04</td><td>pty</td><td>bidirectional</td><td>Raw PTY bytes</td></tr><tr><td>0x05</td><td>file</td><td>direction depends on op</td><td><code>file.read</code> is agent→backend; <code>file.write</code> is backend→agent</td></tr><tr><td>0x06</td><td>control</td><td>bidirectional</td><td>Op-specific control messages (JSON payload), e.g. PTY resize <code>{"type":"resize","cols":80,"rows":24}</code></td></tr></tbody></table>
+<p><strong><code>flags</code>:</strong> reserved (<code>0x00</code> for v1).</p>
+<h3 id="control-wss-message-types">Control WSS message types</h3>
+<p>Every message: <code>{"type": "...", ...}</code> over text frames.</p>
+<h4 id="handshake-mandatory-first-exchange">Handshake (mandatory first exchange)</h4>
+<p><strong>Agent → Backend:</strong></p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="json"><code><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">{</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#096E72">"type"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">hello</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#096E72">"protocol_version"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">1</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#096E72">"agent_version"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">0.1.0</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#096E72">"capabilities"</span><span style="--0:#D6DEEB;--1:#403F53">: [</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">exec</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">pty</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">file.read</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">file.write</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">file.list</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">file.checksum</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">facts</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">heartbeat</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">],</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#096E72">"cert_fingerprint"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">sha256:abc...</span><span style="--0:#D9F5DD;--1:#111111">"</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">}</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="{  &#x22;type&#x22;: &#x22;hello&#x22;,  &#x22;protocol_version&#x22;: 1,  &#x22;agent_version&#x22;: &#x22;0.1.0&#x22;,  &#x22;capabilities&#x22;: [&#x22;exec&#x22;,&#x22;pty&#x22;,&#x22;file.read&#x22;,&#x22;file.write&#x22;,&#x22;file.list&#x22;,&#x22;file.checksum&#x22;,&#x22;facts&#x22;,&#x22;heartbeat&#x22;],  &#x22;cert_fingerprint&#x22;: &#x22;sha256:abc...&#x22;}"><div></div></button></div></figure></div>
+<p><code>cert_fingerprint</code> must equal the SHA-256 of the cert presented at
+TLS layer (defense-in-depth against any layer mismatch).</p>
+<p><strong>Backend → Agent:</strong></p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="json"><code><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">{</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#096E72">"type"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">welcome</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#096E72">"system_id"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">42</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#096E72">"tunnel_session_id"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">uuid</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#096E72">"cert_fingerprint"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">sha256:abc...</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#096E72">"accepted_capabilities"</span><span style="--0:#D6DEEB;--1:#403F53">: [</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">exec</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">pty</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">file.read</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">file.write</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">file.list</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">file.checksum</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">facts</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">heartbeat</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">],</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#096E72">"server_time"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">2026-04-26T03:00:00Z</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#096E72">"heartbeat_interval_seconds"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">30</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#096E72">"heartbeat_dead_seconds"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">90</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#096E72">"cert_expires_at"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">2026-04-26T04:00:00Z</span><span style="--0:#D9F5DD;--1:#111111">"</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">}</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="{  &#x22;type&#x22;: &#x22;welcome&#x22;,  &#x22;system_id&#x22;: 42,  &#x22;tunnel_session_id&#x22;: &#x22;uuid&#x22;,  &#x22;cert_fingerprint&#x22;: &#x22;sha256:abc...&#x22;,  &#x22;accepted_capabilities&#x22;: [&#x22;exec&#x22;,&#x22;pty&#x22;,&#x22;file.read&#x22;,&#x22;file.write&#x22;,&#x22;file.list&#x22;,&#x22;file.checksum&#x22;,&#x22;facts&#x22;,&#x22;heartbeat&#x22;],  &#x22;server_time&#x22;: &#x22;2026-04-26T03:00:00Z&#x22;,  &#x22;heartbeat_interval_seconds&#x22;: 30,  &#x22;heartbeat_dead_seconds&#x22;: 90,  &#x22;cert_expires_at&#x22;: &#x22;2026-04-26T04:00:00Z&#x22;}"><div></div></button></div></figure></div>
+<p>Backend echoes <code>cert_fingerprint</code> and includes <code>system_id</code> so the agent
+can confirm both sides see the same identity. <code>cert_expires_at</code> lets the
+agent schedule its own renewal before the broker enforces tunnel
+termination (see “Cert expiry” below).</p>
+<h4 id="heartbeat">Heartbeat</h4>
+<p>Both sides send independently every 30s:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="json"><code><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">{</span><span style="--0:#7FDBCA;--1:#096E72">"type"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">heartbeat</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"ts"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">2026-04-26T03:00:30Z</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">}</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="{&#x22;type&#x22;: &#x22;heartbeat&#x22;, &#x22;ts&#x22;: &#x22;2026-04-26T03:00:30Z&#x22;}"><div></div></button></div></figure></div>
+<p>No ack. <code>ts</code> is <strong>diagnostic only</strong> — liveness uses each side’s local
+monotonic receive clock (<code>time.monotonic()</code>). Either side declares the
+peer dead after 90s of silence and tears down.</p>
+<h4 id="operation-request-backend-initiated">Operation request (backend-initiated)</h4>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="json"><code><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">{</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#096E72">"type"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">op_request</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#096E72">"operation_id"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">12345</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#096E72">"op_type"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">exec</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#096E72">"params"</span><span style="--0:#D6DEEB;--1:#403F53">: {</span><span style="--0:#7FDBCA;--1:#096E72">"cmd"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">uname -a</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"timeout_s"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">30</span><span style="--0:#D6DEEB;--1:#403F53">},</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#096E72">"transport"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">per_op_wss</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#096E72">"nonce_expires_in_s"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">30</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">}</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="{  &#x22;type&#x22;: &#x22;op_request&#x22;,  &#x22;operation_id&#x22;: 12345,  &#x22;op_type&#x22;: &#x22;exec&#x22;,  &#x22;params&#x22;: {&#x22;cmd&#x22;: &#x22;uname -a&#x22;, &#x22;timeout_s&#x22;: 30},  &#x22;transport&#x22;: &#x22;per_op_wss&#x22;,  &#x22;nonce_expires_in_s&#x22;: 30}"><div></div></button></div></figure></div>
+<p><code>transport</code> for v1 is always <code>per_op_wss</code>. The nonce itself is delivered
+in a separate message immediately after, allowing the broker to compute
+and audit the nonce issuance:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="json"><code><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">{</span><span style="--0:#7FDBCA;--1:#096E72">"type"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">op_nonce</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"operation_id"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">12345</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"nonce"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">&#x3C;opaque-token></span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">}</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="{&#x22;type&#x22;: &#x22;op_nonce&#x22;, &#x22;operation_id&#x22;: 12345, &#x22;nonce&#x22;: &#x22;<opaque-token>&#x22;}"><div></div></button></div></figure></div>
+<p>(Nonces are split out of <code>op_request</code> so audit can capture issuance and
+the agent can request a re-issue if the WSS round trip lost the nonce
+without restating the whole op.)</p>
+<h4 id="operation-cancel">Operation cancel</h4>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="json"><code><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">{</span><span style="--0:#7FDBCA;--1:#096E72">"type"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">op_cancel</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"operation_id"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">12345</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"reason"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">user requested</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">}</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="{&#x22;type&#x22;: &#x22;op_cancel&#x22;, &#x22;operation_id&#x22;: 12345, &#x22;reason&#x22;: &#x22;user requested&#x22;}"><div></div></button></div></figure></div>
+<p>Agent terminates the op and sends <code>op_complete</code> with
+<code>outcome: "cancelled"</code>.</p>
+<h4 id="operation-complete-agent--backend">Operation complete (agent → backend)</h4>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="json"><code><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">{</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#096E72">"type"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">op_complete</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#096E72">"operation_id"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">12345</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#096E72">"outcome"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">success</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#096E72">"exit_code"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">0</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#096E72">"duration_ms"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">142</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#096E72">"error"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#FF6A83;--1:#A24848">null</span><span style="--0:#D6DEEB;--1:#403F53">,</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#7FDBCA;--1:#096E72">"result_inline"</span><span style="--0:#D6DEEB;--1:#403F53">: {</span><span style="--0:#7FDBCA;--1:#096E72">"facts"</span><span style="--0:#D6DEEB;--1:#403F53">: {</span><span style="--0:#FFFFFF;--1:#984E4D">...</span><span style="--0:#D6DEEB;--1:#403F53">}}</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">}</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="{  &#x22;type&#x22;: &#x22;op_complete&#x22;,  &#x22;operation_id&#x22;: 12345,  &#x22;outcome&#x22;: &#x22;success&#x22;,  &#x22;exit_code&#x22;: 0,  &#x22;duration_ms&#x22;: 142,  &#x22;error&#x22;: null,  &#x22;result_inline&#x22;: {&#x22;facts&#x22;: {...}}}"><div></div></button></div></figure></div>
+<p><code>result_inline</code> is <strong>optional, bounded to 4 KiB serialized JSON</strong>, used
+for trivial ops where opening a per-op WSS round trip is overkill:
+<code>facts</code>, <code>file.checksum</code>, small <code>file.list</code>, status checks. <strong>Never used
+for normal exec stdout/stderr</strong> — those go through stdout/stderr channels
+on the per-op WSS.</p>
+<h4 id="tunnel-level-error">Tunnel-level error</h4>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="json"><code><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">{</span><span style="--0:#7FDBCA;--1:#096E72">"type"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">error</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"code"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">protocol_violation</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"detail"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">...</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">}</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="{&#x22;type&#x22;: &#x22;error&#x22;, &#x22;code&#x22;: &#x22;protocol_violation&#x22;, &#x22;detail&#x22;: &#x22;...&#x22;}"><div></div></button></div></figure></div>
+<p>Either side may send; sender then closes the connection.</p>
+<h4 id="graceful-close">Graceful close</h4>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="json"><code><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">{</span><span style="--0:#7FDBCA;--1:#096E72">"type"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">bye</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"reason"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">agent shutdown</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">}</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="{&#x22;type&#x22;: &#x22;bye&#x22;, &#x22;reason&#x22;: &#x22;agent shutdown&#x22;}"><div></div></button></div></figure></div>
+<p>Other side acknowledges by closing.</p>
+<h3 id="per-op-wss-open-flow">Per-op WSS open flow</h3>
+<ol>
+<li>Backend sends <code>op_request</code> then <code>op_nonce</code> on control WSS.</li>
+<li>Agent dials WSS to <code>/agent/op</code>, presenting:
+<ul>
+<li>Same agent mTLS cert</li>
+<li>Header <code>X-Praxis-Op-Nonce: &#x3C;opaque-token></code> (NEVER in URL, NEVER
+logged in plaintext; broker stores hashed)</li>
+</ul>
+</li>
+<li>Backend re-validates mTLS identity, hashes the nonce, looks up
+<code>(operation_id, system_id, op_type, expires_at)</code>. Rejects on miss,
+expiry, system_id mismatch, or already-redeemed.</li>
+<li>Agent sends first message on the new WSS:
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="json"><code><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">{</span><span style="--0:#7FDBCA;--1:#096E72">"type"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C789D6;--1:#7C5686">op_attach</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#7FDBCA;--1:#096E72">"operation_id"</span><span style="--0:#D6DEEB;--1:#403F53">: </span><span style="--0:#F78C6C;--1:#AA0982">12345</span><span style="--0:#D6DEEB;--1:#403F53">}</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="{&#x22;type&#x22;: &#x22;op_attach&#x22;, &#x22;operation_id&#x22;: 12345}"><div></div></button></div></figure></div>
+Backend confirms operation_id matches the redeemed nonce. Mismatch
+closes the WSS with a protocol_violation error.</li>
+<li>After <code>op_attach</code>, all frames use the binary envelope above.</li>
+<li>Either side closes the WSS to end the op. Agent sends
+<code>op_complete</code> on the control WSS afterward.</li>
+</ol>
+<p><strong>Bounded concurrency (per agent):</strong></p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Limit</th><th>Default</th></tr></thead><tbody><tr><td>Concurrent per-op WSS</td><td>16</td></tr><tr><td>In-flight nonces (issued, not redeemed)</td><td>32</td></tr><tr><td>Nonce TTL</td><td>30s</td></tr></tbody></table>
+<p>Nonces stored server-side as <strong>SHA-256 of the raw token</strong>. The raw
+token only exists in transit (control WSS → agent → header). Logs
+record the hash, never the raw value.</p>
+<h3 id="duplicate-tunnel-handling">Duplicate tunnel handling</h3>
+<p>If a system already has an active tunnel and a new tunnel for the same
+<code>system_id</code> connects with a valid cert:</p>
+<ol>
+<li><strong>Newest valid tunnel wins.</strong></li>
+<li>Old tunnel is sent <code>{"type": "bye", "reason": "replaced"}</code> and
+closed.</li>
+<li>All in-flight ops on the old tunnel are cancelled
+(<code>op_complete: "cancelled"</code> reported up to the main backend if the
+op was backend-initiated).</li>
+<li>Audit event: <code>agent.tunnel.replaced</code> with both <code>tunnel_session_id</code>
+values.</li>
+</ol>
+<h3 id="cert-expiry-enforcement">Cert expiry enforcement</h3>
+<p>TLS validates the cert at connect time only — a tunnel can outlive its
+cert. The broker enforces freshness:</p>
+<ol>
+<li>On connect, broker reads cert <code>NotAfter</code> and schedules a kill timer.</li>
+<li>On every cert renewal (over the live tunnel via <code>/agent/renew</code>),
+broker updates <code>System.agent_cert_*</code> AND reschedules the kill timer
+to the new <code>NotAfter</code>.</li>
+<li>When the timer fires:
+<ul>
+<li>Broker sends <code>{"type": "bye", "reason": "cert_expired"}</code> on the
+control WSS, closes.</li>
+<li>All in-flight ops cancelled.</li>
+<li>Audit: <code>agent.tunnel.cert_expired</code>.</li>
+</ul>
+</li>
+<li>Agent must reconnect with a freshly renewed cert.</li>
+</ol>
+<h3 id="connection-level-constraints">Connection-level constraints</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Limit</th><th>Value</th></tr></thead><tbody><tr><td>Heartbeat interval</td><td>30s</td></tr><tr><td>Heartbeat dead threshold</td><td>90s</td></tr><tr><td>Reconnect backoff (agent side)</td><td>1s → 2s → 4s → … cap 60s</td></tr><tr><td>Max control WSS message size</td><td>64 KiB</td></tr><tr><td>Max per-op WSS frame payload</td><td>1 MiB</td></tr><tr><td>Max in-flight ops per agent</td><td>16</td></tr><tr><td>Max in-flight nonces per agent</td><td>32</td></tr><tr><td>Nonce TTL</td><td>30s</td></tr></tbody></table>
+<h3 id="what-backend-rejects-on-connect">What backend rejects on connect</h3>
+<ul>
+<li>TLS chain doesn’t validate against <code>praxis-agent-ca</code></li>
+<li>No URI SAN matching <code>praxis://system/&#x3C;id></code></li>
+<li><code>AgentIdentityService.is_serial_active(serial)</code> returns False
+(status not active, expired, or unknown serial)</li>
+<li><code>cert_fingerprint</code> in <code>hello</code> mismatches TLS-layer cert</li>
+<li><code>protocol_version</code> not in supported set ({1} for v1)</li>
+</ul>
+<p>Each rejection emits <code>agent.tunnel.rejected</code> with reason code.</p>
+<h3 id="reconnection--no-resume">Reconnection — no resume</h3>
+<p>A new tunnel is a new session. Backend does NOT resume in-flight ops
+across tunnel restarts. If a backend-initiated op was outstanding when
+the old tunnel died, it’s reported as <code>cancelled</code> to the main backend,
+which decides whether to re-issue.</p>
+<h2 id="capabilities">Capabilities</h2>
+<p>Agent exposes primitives only — no policy. Initial capability set:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Capability</th><th>Purpose</th></tr></thead><tbody><tr><td><code>exec</code></td><td>Run a command (sync or streaming stdout/stderr/exit)</td></tr><tr><td><code>pty</code></td><td>Allocate a PTY for an interactive session (agent primitive exists; <strong>not</strong> wired to browser sessions in 1.0 — see “Interactive sessions” below)</td></tr><tr><td><code>file.read</code></td><td>Stream a file from host -> control plane</td></tr><tr><td><code>file.write</code></td><td>Stream a file from control plane -> host</td></tr><tr><td><code>file.list</code></td><td>List a directory</td></tr><tr><td><code>file.checksum</code></td><td>SHA-256 of a file</td></tr><tr><td><code>facts</code></td><td>Return host inventory dict</td></tr><tr><td><code>heartbeat</code></td><td>Liveness ping; both sides send independently every 30s, peer declared dead after 90s of silence</td></tr></tbody></table>
+<p>All package, job, repo, and compliance logic stays backend-side and is
+expressed in terms of the above primitives.</p>
+<h2 id="interactive-sessions-10-transport-split">Interactive sessions (1.0 transport split)</h2>
+<p>The agent exposes a <code>pty</code> primitive and advertises it in the handshake
+<code>capabilities</code> list, but <strong>browser interactive terminal sessions in 1.0
+always use SSH transport, never the agent tunnel.</strong> This boundary is
+deliberate and explicit:</p>
+<ul>
+<li><code>session_service.open_session</code> opens a paramiko <code>invoke_shell</code> PTY
+over SSH using a short-lived Vault-signed user certificate. The cert
+principal is the fleet-role-resolved login, so the remote shell runs as
+the authorized Unix user.</li>
+<li><code>AgentTransport.open_pty</code> raises <code>TransportUnsupported</code> with a
+message routing callers to SSH. <code>BrokerClient</code> has no <code>pty</code> method.
+No backend code path issues a <code>pty</code> op to the agent.</li>
+<li>A host’s <strong>transport preference</strong> (<code>auto</code> / <code>ssh</code> / <code>agent</code>)
+governs only non-interactive ops (exec, file transfer, facts). Even with
+preference <code>agent</code>, an interactive session uses SSH; the UI states
+this so the preference does not imply a browser shell over the agent.</li>
+</ul>
+<p><strong>Why agent PTY is deferred.</strong> The agent runs as <code>root</code> and has no
+per-user identity-switching design (<code>sudo -Hiu</code> / <code>runuser</code>). Routing a
+fleet-role-authorized session to the agent would yield a root shell
+regardless of the operator’s resolved login, breaking session attribution
+and least-privilege. SSH carries the Unix principal in the signed cert and
+preserves the existing recording, multi-subscriber fanout, idle/max-duration
+sweeps, and <code>session.*</code> audit attribution. Wiring agent PTY would require
+that identity-switching design plus a broker per-op WSS PTY bridge and a
+transport-neutral <code>SessionRuntime</code> refactor — a broad change deferred past
+1.0.</p>
+<p><strong>Operator-facing rule:</strong> interactive shells require SSH reachability and
+deployed CA trust on the target host. Agent-only hosts with no inbound SSH
+do not offer a browser terminal in 1.0.</p>
+<h2 id="audit">Audit</h2>
+<p>Every agent-mediated operation is tagged <code>transport: agent</code> in the
+audit log (vs <code>transport: ssh</code> for the legacy path). Cert lifecycle
+events emit dedicated audit types:</p>
+<ul>
+<li><code>agent.cert.issued</code></li>
+<li><code>agent.cert.renewed</code></li>
+<li><code>agent.cert.revoked</code></li>
+<li><code>agent.disabled</code></li>
+<li><code>agent.enabled</code></li>
+</ul>
+<p>(Wired in later commits.)</p> </div> <div class="pagination-links print:hidden astro-jgq3vlii" dir="ltr"> <a href="/help/agent-capability-matrix" rel="prev" class="astro-jgq3vlii"> <svg aria-hidden="true" class="astro-jgq3vlii astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.5rem;"><path d="M17 11H9.41l3.3-3.29a1.004 1.004 0 1 0-1.42-1.42l-5 5a1 1 0 0 0-.21.33 1 1 0 0 0 0 .76 1 1 0 0 0 .21.33l5 5a1.002 1.002 0 0 0 1.639-.325 1 1 0 0 0-.219-1.095L9.41 13H17a1 1 0 0 0 0-2Z"/></svg> <span class="astro-jgq3vlii"> Previous <br class="astro-jgq3vlii"> <span class="link-title astro-jgq3vlii">Agent and SSH capability matrix</span> </span> </a> <a href="/help/reporting-contract" rel="next" class="astro-jgq3vlii"> <svg aria-hidden="true" class="astro-jgq3vlii astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.5rem;"><path d="M17.92 11.62a1.001 1.001 0 0 0-.21-.33l-5-5a1.003 1.003 0 1 0-1.42 1.42l3.3 3.29H7a1 1 0 0 0 0 2h7.59l-3.3 3.29a1.002 1.002 0 0 0 .325 1.639 1 1 0 0 0 1.095-.219l5-5a1 1 0 0 0 .21-.33 1 1 0 0 0 0-.76Z"/></svg> <span class="astro-jgq3vlii"> Next <br class="astro-jgq3vlii"> <span class="link-title astro-jgq3vlii">Reporting contract</span> </span> </a> </div> <footer class="praxis-docs-footer astro-jo6i4kqk"> <p class="astro-jo6i4kqk">
+Praxis documentation. This page is part of a single documentation set that
+    is published on the web and bundled with the application for offline use.
+</p> </footer> </div> </div>  </main> </div> </div> </div> </div> </body> </html>

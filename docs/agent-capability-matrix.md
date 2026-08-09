@@ -1,4 +1,7 @@
-# Agent vs SSH Capability Matrix (1.0)
+---
+title: Agent and SSH capability matrix
+description: Which operations each transport supports, so you can tell where the thin agent and SSH differ.
+---
 
 Status: **1.0 readiness reference**. This document is derived from a
 code/test/smoke audit of the thin agent, the agent broker, and the backend
@@ -215,4 +218,4 @@ These are **not** 1.0 agent claims. Advertise them as SSH-backed or deferred.
    process logs only; the broker is a separate container and the agent lives on
    the remote host. Follow-up PRA.
 6. **Distro/init scope.** Linux only, systemd only (or `--no-systemd` +
-   operator-managed supervision), amd64/arm64 only. See `docs/support-matrix.md`.
+   operator-managed supervision), amd64/arm64 only. See the [Linux support matrix](support-matrix.md).

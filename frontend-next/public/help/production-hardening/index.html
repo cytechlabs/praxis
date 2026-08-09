@@ -1,0 +1,1049 @@
+<!DOCTYPE html><html lang="en" dir="ltr" data-theme="dark" data-has-toc data-has-sidebar class="astro-vdxcvpsm"> <head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>Production hardening and operations | Praxis</title><link rel="shortcut icon" href="/help/favicon.svg" type="image/svg+xml"/><meta name="generator" content="Astro v7.2.0"/><meta name="generator" content="Starlight v0.41.7"/><meta property="og:title" content="Production hardening and operations"/><meta property="og:type" content="article"/><meta property="og:locale" content="en"/><meta property="og:description" content="Supported deployment shapes, environment validation, secrets posture, and database migration practice."/><meta property="og:site_name" content="Praxis"/><meta name="twitter:card" content="summary_large_image"/><meta name="description" content="Supported deployment shapes, environment validation, secrets posture, and database migration practice."/> <script>
+	window.StarlightThemeProvider = (() => {
+		const storedTheme =
+			typeof localStorage !== 'undefined' && localStorage.getItem('starlight-theme');
+		const theme =
+			storedTheme ||
+			(window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+		document.documentElement.dataset.theme = theme === 'light' ? 'light' : 'dark';
+		return {
+			updatePickers(theme = storedTheme || 'auto') {
+				document.querySelectorAll('starlight-theme-select').forEach((picker) => {
+					const select = picker.querySelector('select');
+					if (select) select.value = theme;
+					/** @type {HTMLTemplateElement | null} */
+					const tmpl = document.querySelector(`#theme-icons`);
+					const newIcon = tmpl && tmpl.content.querySelector('.' + theme);
+					if (newIcon) {
+						const oldIcon = picker.querySelector('svg.label-icon');
+						if (oldIcon) {
+							oldIcon.replaceChildren(...newIcon.cloneNode(true).childNodes);
+						}
+					}
+				});
+			},
+		};
+	})();
+</script> <template id="theme-icons"> <svg aria-hidden="true" class="light astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M5 12a1 1 0 0 0-1-1H3a1 1 0 0 0 0 2h1a1 1 0 0 0 1-1Zm.64 5-.71.71a1 1 0 0 0 0 1.41 1 1 0 0 0 1.41 0l.71-.71A1 1 0 0 0 5.64 17ZM12 5a1 1 0 0 0 1-1V3a1 1 0 0 0-2 0v1a1 1 0 0 0 1 1Zm5.66 2.34a1 1 0 0 0 .7-.29l.71-.71a1 1 0 1 0-1.41-1.41l-.66.71a1 1 0 0 0 0 1.41 1 1 0 0 0 .66.29Zm-12-.29a1 1 0 0 0 1.41 0 1 1 0 0 0 0-1.41l-.71-.71a1.004 1.004 0 1 0-1.43 1.41l.73.71ZM21 11h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0-2Zm-2.64 6A1 1 0 0 0 17 18.36l.71.71a1 1 0 0 0 1.41 0 1 1 0 0 0 0-1.41l-.76-.66ZM12 6.5a5.5 5.5 0 1 0 5.5 5.5A5.51 5.51 0 0 0 12 6.5Zm0 9a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Zm0 3.5a1 1 0 0 0-1 1v1a1 1 0 0 0 2 0v-1a1 1 0 0 0-1-1Z"/></svg> <svg aria-hidden="true" class="dark astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21.64 13a1 1 0 0 0-1.05-.14 8.049 8.049 0 0 1-3.37.73 8.15 8.15 0 0 1-8.14-8.1 8.59 8.59 0 0 1 .25-2A1 1 0 0 0 8 2.36a10.14 10.14 0 1 0 14 11.69 1 1 0 0 0-.36-1.05Zm-9.5 6.69A8.14 8.14 0 0 1 7.08 5.22v.27a10.15 10.15 0 0 0 10.14 10.14 9.784 9.784 0 0 0 2.1-.22 8.11 8.11 0 0 1-7.18 4.32v-.04Z"/></svg> <svg aria-hidden="true" class="auto astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg> </template><link rel="stylesheet" href="/help/_astro/print.ehPL0gv-.css" media="print"><link rel="stylesheet" href="/help/_astro/common.fMBtDe11.css"><script type="module" src="/help/_astro/page.Dwipeu-R.js"></script></head> <body class="astro-vdxcvpsm"> <a class="sl-skip-link astro-vxeigawq" href="#_top">Skip to content</a> <div class="page sl-flex astro-gqpr5s5a"> <header class="header astro-gqpr5s5a"><div class="header astro-nczgtkxc"> <div class="title-wrapper sl-flex astro-nczgtkxc"> <a href="/help" class="site-title sl-flex astro-clw6ags5">  <img class="astro-clw6ags5" alt="Praxis" src="/help/_astro/praxis-mark._9LsDocr.svg" width="1000" height="1000">    <span class="astro-clw6ags5" translate="no"> Praxis </span> </a> </div> <div class="sl-flex print:hidden astro-nczgtkxc"> <site-search class="astro-nczgtkxc astro-r5ar4xm7" data-translations="{&quot;placeholder&quot;:&quot;Search&quot;}" data-strip-trailing-slash> <button data-open-modal disabled aria-label="Search" aria-keyshortcuts="Control+K" class="astro-r5ar4xm7"> <svg aria-hidden="true" class="astro-r5ar4xm7 astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21.71 20.29 18 16.61A9 9 0 1 0 16.61 18l3.68 3.68a.999.999 0 0 0 1.42 0 1 1 0 0 0 0-1.39ZM11 18a7 7 0 1 1 0-14 7 7 0 0 1 0 14Z"/></svg> <span class="sl-hidden md:sl-block astro-r5ar4xm7" aria-hidden="true">Search</span> <kbd class="sl-hidden md:sl-flex astro-r5ar4xm7" style="display: none;"> <kbd class="astro-r5ar4xm7">Ctrl</kbd><kbd class="astro-r5ar4xm7">K</kbd> </kbd> </button> <dialog style="padding:0" aria-label="Search" class="astro-r5ar4xm7"> <div class="dialog-frame sl-flex astro-r5ar4xm7">  <button data-close-modal class="sl-flex md:sl-hidden astro-r5ar4xm7"> Cancel </button> <div class="search-container astro-r5ar4xm7"> <div id="starlight__search" class="astro-r5ar4xm7"></div> </div> </div> </dialog> </site-search>  <script>
+	(() => {
+		const openBtn = document.querySelector('button[data-open-modal]');
+		const shortcut = openBtn?.querySelector('kbd');
+		if (!openBtn || !(shortcut instanceof HTMLElement)) return;
+		const platformKey = shortcut.querySelector('kbd');
+		if (platformKey && /(Mac|iPhone|iPod|iPad)/i.test(navigator.platform)) {
+			platformKey.textContent = '⌘';
+			openBtn.setAttribute('aria-keyshortcuts', 'Meta+K');
+		}
+		shortcut.style.display = '';
+	})();
+</script> <script type="module" src="/help/_astro/Search.astro_astro_type_script_index_0_lang.y9085PDE.js"></script> </div> <div class="sl-hidden md:sl-flex print:hidden right-group astro-nczgtkxc"> <div class="sl-flex social-icons astro-nczgtkxc">  </div> <starlight-theme-select>  <label style="--sl-select-width: 6.25em" class="astro-r2p65idu"> <span class="sr-only astro-r2p65idu">Select theme</span> <svg aria-hidden="true" class="icon label-icon astro-r2p65idu astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg> <select autocomplete="off" class="astro-r2p65idu"> <option value="dark" class="astro-r2p65idu">Dark</option><option value="light" class="astro-r2p65idu">Light</option><option value="auto" selected class="astro-r2p65idu">Auto</option> </select> <svg aria-hidden="true" class="icon caret astro-r2p65idu astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M17 9.17a1 1 0 0 0-1.41 0L12 12.71 8.46 9.17a1 1 0 1 0-1.41 1.42l4.24 4.24a1.002 1.002 0 0 0 1.42 0L17 10.59a1.002 1.002 0 0 0 0-1.42Z"/></svg> </label> </starlight-theme-select>  <script>
+	StarlightThemeProvider.updatePickers();
+</script> <script type="module">var e=`starlight-theme`,t=e=>e===`auto`||e===`dark`||e===`light`?e:`auto`,n=()=>t(typeof localStorage<`u`&&localStorage.getItem(e));function r(t){typeof localStorage<`u`&&localStorage.setItem(e,t===`light`||t===`dark`?t:``)}var i=()=>matchMedia(`(prefers-color-scheme: light)`).matches?`light`:`dark`;function a(e){StarlightThemeProvider.updatePickers(e),document.documentElement.dataset.theme=e===`auto`?i():e,r(e)}matchMedia(`(prefers-color-scheme: light)`).addEventListener(`change`,()=>{n()===`auto`&&a(`auto`)});var o=class extends HTMLElement{constructor(){super(),a(n()),this.querySelector(`select`)?.addEventListener(`change`,e=>{e.currentTarget instanceof HTMLSelectElement&&a(t(e.currentTarget.value))})}};customElements.define(`starlight-theme-select`,o);</script>  <script type="module">var e=class extends HTMLElement{constructor(){super();let e=this.querySelector(`select`);e&&(e.addEventListener(`change`,e=>{e.currentTarget instanceof HTMLSelectElement&&(window.location.pathname=e.currentTarget.value)}),window.addEventListener(`pageshow`,t=>{if(!t.persisted)return;let n=e.querySelector(`option[selected]`)?.index;n!==e.selectedIndex&&(e.selectedIndex=n??0)}))}};customElements.define(`starlight-lang-select`,e);</script> </div> </div></header> <nav class="sidebar print:hidden astro-gqpr5s5a" aria-label="Main"> <starlight-menu-button class="print:hidden astro-vvx7mffu"> <button aria-expanded="false" aria-label="Menu" aria-controls="starlight__sidebar" class="sl-flex md:sl-hidden astro-vvx7mffu"> <svg aria-hidden="true" class="open-menu astro-vvx7mffu astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M3 8h18a1 1 0 1 0 0-2H3a1 1 0 0 0 0 2Zm18 8H3a1 1 0 0 0 0 2h18a1 1 0 0 0 0-2Zm0-5H3a1 1 0 0 0 0 2h18a1 1 0 0 0 0-2Z"/></svg> <svg aria-hidden="true" class="close-menu astro-vvx7mffu astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="m13.41 12 6.3-6.29a1.004 1.004 0 1 0-1.42-1.42L12 10.59l-6.29-6.3a1.004 1.004 0 0 0-1.42 1.42l6.3 6.29-6.3 6.29a1 1 0 0 0 0 1.42.998.998 0 0 0 1.42 0l6.29-6.3 6.29 6.3a.999.999 0 0 0 1.42 0 1 1 0 0 0 0-1.42L13.41 12Z"/></svg> </button> </starlight-menu-button> <script type="module">var e=class extends HTMLElement{btn=this.querySelector(`button`);constructor(){super(),this.btn.addEventListener(`click`,()=>this.toggleExpanded());let e=this.closest(`nav`);e&&e.addEventListener(`keyup`,e=>this.closeOnEscape(e)),matchMedia(`(min-width: 50em)`).addEventListener(`change`,()=>this.setExpanded(!1))}setExpanded(e){this.setAttribute(`aria-expanded`,String(e)),document.body.toggleAttribute(`data-mobile-menu-expanded`,e),document.querySelectorAll(`.main-frame, .sl-skip-link`).forEach(t=>{t.toggleAttribute(`inert`,e)})}toggleExpanded(){this.setExpanded(this.getAttribute(`aria-expanded`)!==`true`)}closeOnEscape(e){e.code===`Escape`&&(this.setExpanded(!1),this.btn.focus())}};customElements.define(`starlight-menu-button`,e);</script> <div id="starlight__sidebar" class="sidebar-pane astro-gqpr5s5a"> <div class="sidebar-content sl-flex astro-gqpr5s5a"> <sl-sidebar-state-persist data-hash="0oj573e" class="astro-f5yvicm7"> <script aria-hidden="true">
+		(() => {
+			try {
+				if (!matchMedia('(min-width: 50em)').matches) return;
+				/** @type {HTMLElement | null} */
+				const target = document.querySelector('sl-sidebar-state-persist');
+				const state = JSON.parse(sessionStorage.getItem('sl-sidebar-state') || '0');
+				if (!target || !state || target.dataset.hash !== state.hash) return;
+				window._starlightScrollRestore = state.scroll;
+				customElements.define(
+					'sl-sidebar-restore',
+					class SidebarRestore extends HTMLElement {
+						connectedCallback() {
+							try {
+								const idx = parseInt(this.dataset.index || '');
+								const details = this.closest('details');
+								if (details && typeof state.open[idx] === 'boolean') details.open = state.open[idx];
+							} catch {}
+						}
+					}
+				);
+			} catch {}
+		})();
+	</script> <ul class="top-level astro-ojxuodky"> <li class="astro-ojxuodky"> <details open class="astro-ojxuodky"> <summary class="astro-ojxuodky"> <span class="group-label astro-ojxuodky"> <span class="large astro-ojxuodky">Get started</span>  </span> <svg aria-hidden="true" class="caret astro-ojxuodky astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </summary> <sl-sidebar-restore data-index="0"></sl-sidebar-restore> <ul class="astro-ojxuodky"> <li class="astro-ojxuodky"> <a href="/help/product-overview" class="astro-ojxuodky"> <span class="astro-ojxuodky">Product overview</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/requirements" class="astro-ojxuodky"> <span class="astro-ojxuodky">Requirements</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/install" class="astro-ojxuodky"> <span class="astro-ojxuodky">Install Praxis</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/first-run" class="astro-ojxuodky"> <span class="astro-ojxuodky">First run</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/enroll-hosts" class="astro-ojxuodky"> <span class="astro-ojxuodky">Enroll hosts</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/getting-started" class="astro-ojxuodky"> <span class="astro-ojxuodky">Getting started</span>  </a> </li> </ul> </details> </li><li class="astro-ojxuodky"> <details open class="astro-ojxuodky"> <summary class="astro-ojxuodky"> <span class="group-label astro-ojxuodky"> <span class="large astro-ojxuodky">Concepts</span>  </span> <svg aria-hidden="true" class="caret astro-ojxuodky astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </summary> <sl-sidebar-restore data-index="1"></sl-sidebar-restore> <ul class="astro-ojxuodky"> <li class="astro-ojxuodky"> <a href="/help/fleet-lifecycle-architecture" class="astro-ojxuodky"> <span class="astro-ojxuodky">Fleet lifecycle architecture</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/security-model" class="astro-ojxuodky"> <span class="astro-ojxuodky">Security model and trust boundaries</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/transports" class="astro-ojxuodky"> <span class="astro-ojxuodky">Transports</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/editions" class="astro-ojxuodky"> <span class="astro-ojxuodky">Editions and feature tiers</span>  </a> </li> </ul> </details> </li><li class="astro-ojxuodky"> <details open class="astro-ojxuodky"> <summary class="astro-ojxuodky"> <span class="group-label astro-ojxuodky"> <span class="large astro-ojxuodky">Using Praxis</span>  </span> <svg aria-hidden="true" class="caret astro-ojxuodky astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </summary> <sl-sidebar-restore data-index="2"></sl-sidebar-restore> <ul class="astro-ojxuodky"> <li class="astro-ojxuodky"> <a href="/help/fleet-and-hosts" class="astro-ojxuodky"> <span class="astro-ojxuodky">Fleet and hosts</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/packages" class="astro-ojxuodky"> <span class="astro-ojxuodky">Packages</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/patch-workflows" class="astro-ojxuodky"> <span class="astro-ojxuodky">Patch workflows</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/jobs-and-scheduling" class="astro-ojxuodky"> <span class="astro-ojxuodky">Jobs and scheduling</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/ssh-and-security" class="astro-ojxuodky"> <span class="astro-ojxuodky">SSH and security</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/credentials-and-vault" class="astro-ojxuodky"> <span class="astro-ojxuodky">Credentials and secrets</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/monitoring-and-alerts" class="astro-ojxuodky"> <span class="astro-ojxuodky">Monitoring and alerts</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/compliance-workflows" class="astro-ojxuodky"> <span class="astro-ojxuodky">Compliance workflows</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/mirrors-and-airgap" class="astro-ojxuodky"> <span class="astro-ojxuodky">Mirrors and content</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/reports-and-schedules" class="astro-ojxuodky"> <span class="astro-ojxuodky">Reports and schedules</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/settings" class="astro-ojxuodky"> <span class="astro-ojxuodky">Settings</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/admin" class="astro-ojxuodky"> <span class="astro-ojxuodky">Administration</span>  </a> </li> </ul> </details> </li><li class="astro-ojxuodky"> <details open class="astro-ojxuodky"> <summary class="astro-ojxuodky"> <span class="group-label astro-ojxuodky"> <span class="large astro-ojxuodky">How-to guides</span>  </span> <svg aria-hidden="true" class="caret astro-ojxuodky astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </summary> <sl-sidebar-restore data-index="3"></sl-sidebar-restore> <ul class="astro-ojxuodky"> <li class="astro-ojxuodky"> <a href="/help/guide-critical-updates" class="astro-ojxuodky"> <span class="astro-ojxuodky">Respond to a critical update</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/guide-patch-windows" class="astro-ojxuodky"> <span class="astro-ojxuodky">Run a patch window</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/guide-rollback" class="astro-ojxuodky"> <span class="astro-ojxuodky">Roll back a bad update</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/guide-onboarding-offboarding" class="astro-ojxuodky"> <span class="astro-ojxuodky">Onboard and offboard people</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/guide-temporary-access" class="astro-ojxuodky"> <span class="astro-ojxuodky">Grant temporary access</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/guide-access-review" class="astro-ojxuodky"> <span class="astro-ojxuodky">Run an access review</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/guide-evidence-export" class="astro-ojxuodky"> <span class="astro-ojxuodky">Export evidence for an audit</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/guide-safe-upgrade" class="astro-ojxuodky"> <span class="astro-ojxuodky">Upgrade safely</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/guide-license-rotation" class="astro-ojxuodky"> <span class="astro-ojxuodky">Rotate a licence</span>  </a> </li> </ul> </details> </li><li class="astro-ojxuodky"> <details open class="astro-ojxuodky"> <summary class="astro-ojxuodky"> <span class="group-label astro-ojxuodky"> <span class="large astro-ojxuodky">Operations</span>  </span> <svg aria-hidden="true" class="caret astro-ojxuodky astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </summary> <sl-sidebar-restore data-index="4"></sl-sidebar-restore> <ul class="astro-ojxuodky"> <li class="astro-ojxuodky"> <a href="/help/production-hardening" aria-current="page" class="astro-ojxuodky"> <span class="astro-ojxuodky">Production hardening and operations</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/backup-restore" class="astro-ojxuodky"> <span class="astro-ojxuodky">Backup and restore</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/airgap" class="astro-ojxuodky"> <span class="astro-ojxuodky">Airgap export and import</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/oidc-setup" class="astro-ojxuodky"> <span class="astro-ojxuodky">Single sign-on setup</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/remediation-workflow" class="astro-ojxuodky"> <span class="astro-ojxuodky">Remediation workflow</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/scaling-assessment-500-hosts" class="astro-ojxuodky"> <span class="astro-ojxuodky">Capacity and scaling</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/demo-walkthrough-operator" class="astro-ojxuodky"> <span class="astro-ojxuodky">Operator walkthrough</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/demo-walkthrough-auditor" class="astro-ojxuodky"> <span class="astro-ojxuodky">Auditor walkthrough</span>  </a> </li> </ul> </details> </li><li class="astro-ojxuodky"> <details open class="astro-ojxuodky"> <summary class="astro-ojxuodky"> <span class="group-label astro-ojxuodky"> <span class="large astro-ojxuodky">Security</span>  </span> <svg aria-hidden="true" class="caret astro-ojxuodky astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </summary> <sl-sidebar-restore data-index="5"></sl-sidebar-restore> <ul class="astro-ojxuodky"> <li class="astro-ojxuodky"> <a href="/help/access-revocation" class="astro-ojxuodky"> <span class="astro-ojxuodky">Access revocation</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/compliance-map" class="astro-ojxuodky"> <span class="astro-ojxuodky">Compliance evidence map</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/audit-schema" class="astro-ojxuodky"> <span class="astro-ojxuodky">Audit event schema</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/dependency-security-policy" class="astro-ojxuodky"> <span class="astro-ojxuodky">Dependency and container security policy</span>  </a> </li> </ul> </details> </li><li class="astro-ojxuodky"> <details open class="astro-ojxuodky"> <summary class="astro-ojxuodky"> <span class="group-label astro-ojxuodky"> <span class="large astro-ojxuodky">Release and upgrade</span>  </span> <svg aria-hidden="true" class="caret astro-ojxuodky astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </summary> <sl-sidebar-restore data-index="6"></sl-sidebar-restore> <ul class="astro-ojxuodky"> <li class="astro-ojxuodky"> <a href="/help/licensing" class="astro-ojxuodky"> <span class="astro-ojxuodky">Licensing and activation</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/verify-release-artifacts" class="astro-ojxuodky"> <span class="astro-ojxuodky">Verify release artifacts</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/upgrade" class="astro-ojxuodky"> <span class="astro-ojxuodky">Upgrade</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/upgrade-notes-1-0" class="astro-ojxuodky"> <span class="astro-ojxuodky">Upgrade notes for 1.0</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/uninstall" class="astro-ojxuodky"> <span class="astro-ojxuodky">Uninstall</span>  </a> </li> </ul> </details> </li><li class="astro-ojxuodky"> <details open class="astro-ojxuodky"> <summary class="astro-ojxuodky"> <span class="group-label astro-ojxuodky"> <span class="large astro-ojxuodky">Reference</span>  </span> <svg aria-hidden="true" class="caret astro-ojxuodky astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </summary> <sl-sidebar-restore data-index="7"></sl-sidebar-restore> <ul class="astro-ojxuodky"> <li class="astro-ojxuodky"> <a href="/help/support-matrix" class="astro-ojxuodky"> <span class="astro-ojxuodky">Linux support matrix</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/agent-capability-matrix" class="astro-ojxuodky"> <span class="astro-ojxuodky">Agent and SSH capability matrix</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/agent-protocol" class="astro-ojxuodky"> <span class="astro-ojxuodky">Agent protocol</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/reporting-contract" class="astro-ojxuodky"> <span class="astro-ojxuodky">Reporting contract</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/eol-data" class="astro-ojxuodky"> <span class="astro-ojxuodky">Distribution lifecycle data</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/browser-support" class="astro-ojxuodky"> <span class="astro-ojxuodky">Browser and viewport support</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/known-limitations" class="astro-ojxuodky"> <span class="astro-ojxuodky">Known limitations</span>  </a> </li> </ul> </details> </li><li class="astro-ojxuodky"> <details open class="astro-ojxuodky"> <summary class="astro-ojxuodky"> <span class="group-label astro-ojxuodky"> <span class="large astro-ojxuodky">Troubleshooting and support</span>  </span> <svg aria-hidden="true" class="caret astro-ojxuodky astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </summary> <sl-sidebar-restore data-index="8"></sl-sidebar-restore> <ul class="astro-ojxuodky"> <li class="astro-ojxuodky"> <a href="/help/troubleshooting" class="astro-ojxuodky"> <span class="astro-ojxuodky">Troubleshooting</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/support" class="astro-ojxuodky"> <span class="astro-ojxuodky">Support</span>  </a> </li> </ul> </details> </li> </ul>  <script aria-hidden="true">
+		(() => {
+			const scroller = document.getElementById('starlight__sidebar');
+			if (!window._starlightScrollRestore || !scroller) return;
+			scroller.scrollTop = window._starlightScrollRestore;
+			delete window._starlightScrollRestore;
+		})();
+	</script></sl-sidebar-state-persist> <div class="md:sl-hidden"> <div class="mobile-preferences sl-flex astro-b5gddk54"> <div class="social-icons astro-b5gddk54">  </div> <starlight-theme-select>  <label style="--sl-select-width: 6.25em" class="astro-r2p65idu"> <span class="sr-only astro-r2p65idu">Select theme</span> <svg aria-hidden="true" class="icon label-icon astro-r2p65idu astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg> <select autocomplete="off" class="astro-r2p65idu"> <option value="dark" class="astro-r2p65idu">Dark</option><option value="light" class="astro-r2p65idu">Light</option><option value="auto" selected class="astro-r2p65idu">Auto</option> </select> <svg aria-hidden="true" class="icon caret astro-r2p65idu astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M17 9.17a1 1 0 0 0-1.41 0L12 12.71 8.46 9.17a1 1 0 1 0-1.41 1.42l4.24 4.24a1.002 1.002 0 0 0 1.42 0L17 10.59a1.002 1.002 0 0 0 0-1.42Z"/></svg> </label> </starlight-theme-select>  <script>
+	StarlightThemeProvider.updatePickers();
+</script>    </div> </div> </div> </div> </nav> <div class="main-frame astro-gqpr5s5a">  <script type="module">var e=document.getElementById(`starlight__sidebar`),t=e?.querySelector(`sl-sidebar-state-persist`),n=`sl-sidebar-state`,r=()=>{let r=[],i=t?.dataset.hash||``;try{let e=sessionStorage.getItem(n),t=JSON.parse(e||`{}`);Array.isArray(t.open)&&t.hash===i&&(r=t.open)}catch{}return{hash:i,open:r,scroll:e?.scrollTop||0}},i=e=>{try{sessionStorage.setItem(n,JSON.stringify(e))}catch{}},a=()=>i(r()),o=(e,t)=>{let n=r();n.open[t]=e,i(n)};t?.addEventListener(`click`,e=>{if(!(e.target instanceof Element))return;let t=e.target.closest(`summary`)?.closest(`details`);if(!t)return;let n=t.querySelector(`sl-sidebar-restore`),r=parseInt(n?.dataset.index||``);isNaN(r)||o(!t.open,r)}),addEventListener(`visibilitychange`,()=>{document.visibilityState===`hidden`&&a()});</script><div class="lg:sl-flex astro-abfeecmu"> <aside class="right-sidebar-container print:hidden astro-abfeecmu"> <div class="right-sidebar astro-abfeecmu">  <div class="lg:sl-hidden astro-q5mffni3"> <mobile-starlight-toc data-min-h="2" data-max-h="3" class="astro-5ulgm6bh"> <nav aria-labelledby="starlight__on-this-page--mobile" class="astro-5ulgm6bh"> <details id="starlight__mobile-toc" class="astro-5ulgm6bh"> <summary id="starlight__on-this-page--mobile" class="sl-flex astro-5ulgm6bh"> <span class="toggle sl-flex astro-5ulgm6bh"> On this page <svg aria-hidden="true" class="caret astro-5ulgm6bh astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </span> <span class="display-current astro-5ulgm6bh"></span> </summary> <div class="dropdown astro-5ulgm6bh"> <ul class="isMobile astro-cxyftcne" style="--depth: 0;"> <li style="--depth: 0;" class="astro-cxyftcne"> <a href="#_top" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Overview</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#scope" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Scope</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#supported-deployment-shapes" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Supported Deployment Shapes</span> </a> <ul class="isMobile astro-cxyftcne" style="--depth: 1;"> <li style="--depth: 1;" class="astro-cxyftcne"> <a href="#1-bundled-default" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">1. Bundled (default)</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#2-external-postgres-and-external-secrets-service" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">2. External Postgres and External Secrets Service</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#3-bundled-or-external--caddy-reverse-proxy" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">3. Bundled (or external) + Caddy reverse proxy</span> </a>  </li> </ul> </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#fresh-install-path" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Fresh Install Path</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#upgrade-and-migration-posture" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Upgrade And Migration Posture</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#backup--restore-drill" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Backup / Restore Drill</span> </a> <ul class="isMobile astro-cxyftcne" style="--depth: 1;"> <li style="--depth: 1;" class="astro-cxyftcne"> <a href="#full-app-state-encrypted-bundle" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Full-app-state encrypted bundle</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#praxis-10-rpo--rto-contract-bundled-mode" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Praxis 1.0 RPO / RTO contract (bundled mode)</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#fatal-failure-modes-operator-must-know" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Fatal failure modes (operator must know)</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#backup-correctness-notes" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Backup correctness notes</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#rotating-the-bundled-postgresql-password" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Rotating the bundled PostgreSQL password</span> </a>  </li> </ul> </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#secrets-service-openbao-unseal-and-token-rotation" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Secrets Service (OpenBao) Unseal And Token Rotation</span> </a> <ul class="isMobile astro-cxyftcne" style="--depth: 1;"> <li style="--depth: 1;" class="astro-cxyftcne"> <a href="#bundled-vault-manual-unseal-key-rotation" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Bundled Vault: manual unseal-key rotation</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#bundled-vault-manual-root-token-rotation" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Bundled Vault: manual root-token rotation</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#bundled-vault-backend-service-token-rotation" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Bundled Vault: backend service-token rotation</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#external-openbao--vault-compatible-provisioning-checklist" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">External OpenBao / Vault-compatible: provisioning checklist</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#fatal-vault-failure-modes-operator-must-know" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Fatal Vault failure modes (operator must know)</span> </a>  </li> </ul> </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#production-env-validation-and-startup-checks" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Production Env Validation And Startup Checks</span> </a> <ul class="isMobile astro-cxyftcne" style="--depth: 1;"> <li style="--depth: 1;" class="astro-cxyftcne"> <a href="#production-fail-clear-validation" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Production fail-clear validation</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#stored-email-serialization-userresponse" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Stored-email serialization (UserResponse)</span> </a>  </li> </ul> </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#audit-file-sink-confinement" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Audit File Sink Confinement</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#bundled-vs-external-data-tier-boundary" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Bundled-vs-External Data Tier Boundary</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#unsupported-deployment-shapes" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Unsupported Deployment Shapes</span> </a> <ul class="isMobile astro-cxyftcne" style="--depth: 1;"> <li style="--depth: 1;" class="astro-cxyftcne"> <a href="#orchestration--topology" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Orchestration / topology</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#data-tier-scale-out" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Data tier scale-out</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#backup-restore-durability" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Backup, restore, durability</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#edge--tls--external-trust" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Edge / TLS / external trust</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#agent-side-surface" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Agent-side surface</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#compliance--scanning--os-surface" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Compliance / scanning / OS surface</span> </a>  </li> </ul> </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#verification--support-status" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Verification &amp; Support Status</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#known-limitations--future-work" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Known Limitations &amp; Future Work</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#references" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">References</span> </a>  </li> </ul> </div> </details> </nav> </mobile-starlight-toc> <script type="module" src="/help/_astro/MobileTableOfContents.astro_astro_type_script_index_0_lang.BcSo_yiZ.js"></script> </div> <div class="right-sidebar-panel sl-hidden lg:sl-block astro-q5mffni3"> <div class="sl-container astro-q5mffni3"> <starlight-toc data-min-h="2" data-max-h="3"> <nav aria-labelledby="starlight__on-this-page"> <h2 id="starlight__on-this-page">On this page</h2> <ul class="astro-cxyftcne" style="--depth: 0;"> <li style="--depth: 0;" class="astro-cxyftcne"> <a href="#_top" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Overview</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#scope" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Scope</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#supported-deployment-shapes" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Supported Deployment Shapes</span> </a> <ul class="astro-cxyftcne" style="--depth: 1;"> <li style="--depth: 1;" class="astro-cxyftcne"> <a href="#1-bundled-default" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">1. Bundled (default)</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#2-external-postgres-and-external-secrets-service" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">2. External Postgres and External Secrets Service</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#3-bundled-or-external--caddy-reverse-proxy" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">3. Bundled (or external) + Caddy reverse proxy</span> </a>  </li> </ul> </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#fresh-install-path" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Fresh Install Path</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#upgrade-and-migration-posture" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Upgrade And Migration Posture</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#backup--restore-drill" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Backup / Restore Drill</span> </a> <ul class="astro-cxyftcne" style="--depth: 1;"> <li style="--depth: 1;" class="astro-cxyftcne"> <a href="#full-app-state-encrypted-bundle" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Full-app-state encrypted bundle</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#praxis-10-rpo--rto-contract-bundled-mode" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Praxis 1.0 RPO / RTO contract (bundled mode)</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#fatal-failure-modes-operator-must-know" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Fatal failure modes (operator must know)</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#backup-correctness-notes" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Backup correctness notes</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#rotating-the-bundled-postgresql-password" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Rotating the bundled PostgreSQL password</span> </a>  </li> </ul> </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#secrets-service-openbao-unseal-and-token-rotation" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Secrets Service (OpenBao) Unseal And Token Rotation</span> </a> <ul class="astro-cxyftcne" style="--depth: 1;"> <li style="--depth: 1;" class="astro-cxyftcne"> <a href="#bundled-vault-manual-unseal-key-rotation" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Bundled Vault: manual unseal-key rotation</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#bundled-vault-manual-root-token-rotation" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Bundled Vault: manual root-token rotation</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#bundled-vault-backend-service-token-rotation" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Bundled Vault: backend service-token rotation</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#external-openbao--vault-compatible-provisioning-checklist" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">External OpenBao / Vault-compatible: provisioning checklist</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#fatal-vault-failure-modes-operator-must-know" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Fatal Vault failure modes (operator must know)</span> </a>  </li> </ul> </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#production-env-validation-and-startup-checks" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Production Env Validation And Startup Checks</span> </a> <ul class="astro-cxyftcne" style="--depth: 1;"> <li style="--depth: 1;" class="astro-cxyftcne"> <a href="#production-fail-clear-validation" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Production fail-clear validation</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#stored-email-serialization-userresponse" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Stored-email serialization (UserResponse)</span> </a>  </li> </ul> </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#audit-file-sink-confinement" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Audit File Sink Confinement</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#bundled-vs-external-data-tier-boundary" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Bundled-vs-External Data Tier Boundary</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#unsupported-deployment-shapes" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Unsupported Deployment Shapes</span> </a> <ul class="astro-cxyftcne" style="--depth: 1;"> <li style="--depth: 1;" class="astro-cxyftcne"> <a href="#orchestration--topology" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Orchestration / topology</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#data-tier-scale-out" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Data tier scale-out</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#backup-restore-durability" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Backup, restore, durability</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#edge--tls--external-trust" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Edge / TLS / external trust</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#agent-side-surface" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Agent-side surface</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#compliance--scanning--os-surface" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Compliance / scanning / OS surface</span> </a>  </li> </ul> </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#verification--support-status" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Verification &amp; Support Status</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#known-limitations--future-work" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Known Limitations &amp; Future Work</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#references" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">References</span> </a>  </li> </ul> </nav> </starlight-toc> <script type="module" src="/help/_astro/TableOfContents.astro_astro_type_script_index_0_lang.Csloo1VZ.js"></script> </div> </div>  </div> </aside> <div class="main-pane astro-abfeecmu">  <main data-pagefind-body class="astro-vdxcvpsm" lang="en" dir="ltr">    <div class="content-panel astro-oil7k7jf"> <div class="sl-container astro-oil7k7jf"> <h1 id="_top" class="astro-2sm4b3ln">Production hardening and operations</h1> </div> </div> <div class="content-panel astro-oil7k7jf"> <div class="sl-container astro-oil7k7jf"> <div class="sl-markdown-content"> <p>This guide covers operating the Praxis <strong>control plane</strong> (Praxis itself) in
+production: supported deployment shapes, fresh install, upgrade and migration
+posture, backup/restore, Vault unseal and token rotation, environment
+validation, the bundled-vs-external data-tier boundary, and the deployment
+shapes that are explicitly out of scope for 1.0.</p>
+<blockquote>
+<p><strong>Managed-host platforms.</strong> This document covers the <strong>control-plane</strong>
+deployment (Praxis itself). For the supported Linux distributions,
+package-manager families, and architectures of the <strong>managed fleet</strong>, see
+the <a href="/help/support-matrix">Linux Support Matrix</a>.</p>
+</blockquote>
+<h2 id="scope">Scope</h2>
+<p>In scope:</p>
+<ul>
+<li>Fresh install from <code>docker compose</code> to first enrolled host.</li>
+<li>Upgrade from representative earlier database states through the current
+Alembic head.</li>
+<li>Backup/restore, including documented RPO/RTO assumptions.</li>
+<li>Vault unseal and token rotation guidance.</li>
+<li>Database migration review and rollback posture.</li>
+<li>Production environment validation and startup checks.</li>
+<li>The bundled-vs-external Postgres/Vault support boundary.</li>
+</ul>
+<p>Out of scope for 1.0:</p>
+<ul>
+<li>Remote-host deployment automation (no Ansible/Terraform/SSH-to-prod
+flows are part of Praxis 1.0; operators run <code>docker compose</code> on the
+control-plane host themselves).</li>
+<li>Reboot/rollback of the control plane host OS.</li>
+<li>OpenSCAP execution against the control plane.</li>
+<li>Package-manager driven install (no <code>.deb</code>/<code>.rpm</code> for Praxis itself —
+only container images on GHCR).</li>
+</ul>
+<h2 id="supported-deployment-shapes">Supported Deployment Shapes</h2>
+<p>The repository supports exactly three production deployment shapes,
+all driven from <code>docker-compose.yml</code> plus the <code>docker-compose.prod.yml</code>
+overlay.</p>
+<h3 id="1-bundled-default">1. Bundled (default)</h3>
+<p><code>COMPOSE_PROFILES=bundled</code> (the default in <code>.env.example</code>) brings up
+PostgreSQL 15, OpenBao 2.6.1 (the bundled secrets runtime; a drop-in for
+HashiCorp Vault, driven via the <code>bao</code> CLI), the <code>db_backup</code> cron sidecar,
+the backend, frontend, broker, and Prometheus inside a two-tier docker
+network (<code>frontend_net</code>, <code>backend_net</code>).</p>
+<p>Reference: <code>docker-compose.yml</code>, <code>docker-compose.prod.yml</code>.</p>
+<h3 id="2-external-postgres-and-external-secrets-service">2. External Postgres <strong>and</strong> External Secrets Service</h3>
+<p>Remove <code>COMPOSE_PROFILES=bundled</code> from <code>.env</code> and set <code>DATABASE_URL</code>,
+<code>VAULT_ADDR</code>, and <code>VAULT_TOKEN</code> to point at the operator’s own
+infrastructure (an external OpenBao or HashiCorp Vault — the API is
+compatible). The <code>db</code>, <code>vault</code>, and <code>db_backup</code> services are all
+gated behind the same <code>bundled</code> profile, so disabling the profile
+turns off all three at once: the supported external path is
+<strong>fully external</strong> (operator-owned Postgres <strong>and</strong> operator-owned
+secrets service). External Postgres + bundled secrets, or bundled
+Postgres + external secrets, are <strong>not</strong> supported deployment shapes
+in 1.0 — those mixes require operator-authored compose changes that
+this repo does not ship or verify.</p>
+<p>Reference: <code>docker-compose.yml</code> (profile gating on <code>db</code>, <code>vault</code>,
+<code>db_backup</code>).</p>
+<h3 id="3-bundled-or-external--caddy-reverse-proxy">3. Bundled (or external) + Caddy reverse proxy</h3>
+<p>Adding <code>--profile proxy</code> to compose brings up Caddy on ports 80/443
+with three TLS modes (<code>internal</code>, <code>acme</code>, <code>byo</code>) selected by
+<code>PRAXIS_TLS_MODE</code>.</p>
+<p>Browser ingress is intentional and goes through Caddy only. Under the
+prod overlay the backend and frontend publish <strong>no</strong> direct host ports
+(<code>ports: !override []</code>); they are reachable only over the
+Docker networks that Caddy proxies to. This fails secure in Compose
+itself — a direct client cannot bypass Caddy/TLS — so <code>--profile proxy</code>
+is required for the public browser path. Running the prod overlay
+<em>without</em> <code>--profile proxy</code> yields a healthy but deliberately
+unreachable stack (useful for headless smokes / API-over-network use,
+not for browser access).</p>
+<p>Reference: <code>docker-compose.prod.yml</code>, <code>caddy/Caddyfile</code>.</p>
+<p>Deliberately unsupported shapes are consolidated under the
+<strong>Unsupported Deployment Shapes</strong> section below; see there for the
+operator-facing single-line rationales.</p>
+<h2 id="fresh-install-path">Fresh Install Path</h2>
+<p>The published path (from <code>README.md</code>) is (<code>--profile proxy</code> starts Caddy, the
+browser ingress — backend/frontend publish no direct host ports, so omit it only
+for a headless / external-reverse-proxy deployment):</p>
+<div class="expressive-code"><link rel="stylesheet" href="/help/_astro/ec.w36nc.css"><script type="module" src="/help/_astro/ec.0vx5m.js"></script><figure class="frame is-terminal not-content"><figcaption class="header"><span class="title"></span><span class="sr-only">Terminal window</span></figcaption><pre data-language="bash"><code><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">git</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">clone</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">https://github.com/cytechlabs/praxis.git</span></div></div><div class="ec-line"><div class="code"><span style="--0:#C5E478;--1:#3B61B0">cd</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">praxis</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">cp</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">.env.example</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">.env</span></div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F"># Edit .env: set SECRET_KEY, ADMIN_PASSWORD, and POSTGRES_PASSWORD</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">docker</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">compose</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-f</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">docker-compose.yml</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-f</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">docker-compose.prod.yml</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#82AAFF;--1:#3B61B0">--profile</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">bundled</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--profile</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">proxy</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">pull</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">docker</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">compose</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-f</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">docker-compose.yml</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-f</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">docker-compose.prod.yml</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#82AAFF;--1:#3B61B0">--profile</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">bundled</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--profile</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">proxy</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">up</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-d</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="git clone https://github.com/cytechlabs/praxis.gitcd praxiscp .env.example .envdocker compose -f docker-compose.yml -f docker-compose.prod.yml \    --profile bundled --profile proxy pulldocker compose -f docker-compose.yml -f docker-compose.prod.yml \    --profile bundled --profile proxy up -d"><div></div></button></div></figure></div>
+<p>Generate the required secrets by hand into <code>.env</code> — e.g.
+<code>SECRET_KEY=$(openssl rand -hex 32)</code>, <code>POSTGRES_PASSWORD=$(openssl rand -hex 24)</code>,
+plus a strong <code>ADMIN_PASSWORD</code>. None of these have a default; no password ships
+in the source tree.</p>
+<p>Where each one is enforced differs, and the distinction matters when reading
+failures:</p>
+<ul>
+<li><code>SECRET_KEY</code> is required by Compose interpolation. Nothing is created at all;
+<code>docker compose config</code>, <code>up</code>, and <code>pull</code> all abort.</li>
+<li><code>POSTGRES_PASSWORD</code> is enforced at <strong>startup</strong>, not at interpolation.
+Requiring it in Compose would also force external-database deployments to
+define a variable they never use, because Compose evaluates every
+interpolation eagerly regardless of the active profile. Instead the stack
+renders and containers are created, then fail immediately: the bundled <code>db</code>
+entrypoint exits before the server accepts connections, the backend and
+broker exit during startup validation before binding a listener, and the
+backup sidecar exits before running <code>pg_dump</code>. Nothing serves traffic and no
+data is written on a credential-less bundled deployment.</li>
+</ul>
+<p><code>POSTGRES_PASSWORD</code> applies to <strong>bundled mode only</strong>. External-database
+deployments supply their credentials inside <code>DATABASE_URL</code> and must leave
+<code>POSTGRES_PASSWORD</code> unset; there is nothing to duplicate.</p>
+<p>Keep <code>POSTGRES_PASSWORD</code> in the unreserved URL character set (letters, digits,
+<code>- . _ ~</code>): it is embedded in a connection string, so <code>@ : / ? # [ ] %</code> break
+the URL, and a literal <code>$</code> must be written <code>$$</code> to survive Compose
+interpolation. Local development uses this same production-parity stack
+(there is no separate dev runtime); the only difference from a release is
+building from source (<code>up -d --build</code>) instead of pulling a pinned image.</p>
+<p>What is verified today:</p>
+<ul>
+<li>From-scratch cold build + boot is gated by
+<code>scripts/test-cold-rebuild.sh</code>, which runs the canonical bundled
+production-parity stack (<code>docker-compose.yml</code> +
+<code>docker-compose.prod.yml</code>) through <code>down -v</code> → <code>build --no-cache</code> →
+<code>up -d</code> and waits for the backend <code>/health</code>. There is no separate dev
+runtime, so this gate builds and boots the SAME production images a
+release runs; the full pytest suite is covered by CI’s backend-test
+lanes (and the local venv workflow), and the app-level auth round
+trip by the fresh-install smoke below.</li>
+<li>The production compose overlay bring-up is gated by
+<code>scripts/test-fresh-install-smoke.sh</code>. The smoke
+brings up <code>docker-compose.yml</code> + <code>docker-compose.prod.yml</code> +
+<code>scripts/fresh-install-smoke.override.yml</code> in an isolated compose
+project (<code>praxis-fresh-install-smoke</code>) under <code>--profile bundled</code>,
+generates ephemeral <code>SECRET_KEY</code> / <code>ADMIN_PASSWORD</code> /
+<code>POSTGRES_PASSWORD</code> to a <code>mktemp -d</code> env file (never to <code>.env</code>),
+builds the prod images locally, waits for backend <code>/health</code>, then
+drives an authenticated <code>/auth/login</code> + <code>/auth/me</code> read, an
+admin-RBAC-gated <code>/agent/activation-tokens</code> list, and the
+anonymous <code>/agent/bootstrap.sh</code> + <code>/agent/ca-bundle</code> routes. On
+success it tears its own project down; on failure it leaves the
+project up with logs.</li>
+<li>The first-enrolled-host redemption path is gated by
+<code>scripts/test-first-enrolled-host-smoke.sh</code>.
+The smoke seeds a synthetic credential + system via direct SQL
+against the smoke-owned db, mints an activation token via
+<code>POST /agent/activation-tokens</code>, spins up a disposable
+<code>ubuntu:22.04</code> container on the smoke project’s <code>backend_net</code>
+acting as the dummy host, installs curl + openssl + jq (the
+same tools the committed <code>bootstrap.sh</code> lists as host prereqs),
+generates an EC P-256 keypair + CSR with openssl, fetches
+<code>/agent/ca-bundle</code>, and <code>POST</code>s <code>/agent/enroll</code> with the
+<code>X-Praxis-Activation-Token</code> header. The smoke asserts the
+response carries an x509 certificate, the original
+<code>system_id</code>, and <code>agent_status=active</code>, then re-reads the
+System row from Postgres to confirm <code>agent_status</code> flipped and
+<code>agent_cert_serial</code> is populated. Successful round-trip
+produces a Vault-signed agent cert and persists serial +
+fingerprint + expiry on the backing System row.</li>
+</ul>
+<p>What this smoke does NOT cover (intentional boundary):</p>
+<ul>
+<li><code>backend/app/api/routes/_assets/bootstrap.sh</code> end-to-end. The
+script hard-requires systemd (<code>systemctl required</code>) and a
+real <code>praxis-agent</code> Go binary from the pinned GitHub Release
+tag (<code>agent-v0.0.0-rc1</code>). Running it would either need a
+systemd-in-docker dummy host (privileged container) or a
+GitHub-Releases dependency in the smoke; both make the local
+drill slower and more brittle than the <code>/agent/enroll</code>
+redemption proof, which exercises the actual Praxis-specific
+surface (token redemption, Vault CSR signing, <code>System.agent_status</code>
+transition).</li>
+<li>The agent’s mTLS handshake against the broker
+(<code>/agent/tunnel</code>). That path is orthogonal to “first-enrolled-host”
+semantics and would require the real agent binary.</li>
+</ul>
+<p>What is documented but not verified end-to-end:</p>
+<ul>
+<li>The GHCR-pull form of the prod overlay path
+(<code>docker-compose.prod.yml</code> with <code>--profile bundled pull</code>) is
+documented in <code>README.md</code>. The fresh-install smoke exercises
+<code>--profile bundled up --build</code> (local build) rather than <code>pull</code>,
+so the pull path itself is not regressed against by CI today.</li>
+<li>The Caddy <code>--profile proxy</code> path with <code>acme</code> and <code>byo</code> TLS modes
+is documented in <code>README.md</code> but is not exercised by any CI job.</li>
+</ul>
+<p>Gaps to close in later releases:</p>
+<ul>
+<li>The <code>--profile bundled pull</code> path could be added to a future
+optional smoke variant when a published <code>PRAXIS_VERSION</code> GHCR
+tag is the actual ship target. The fresh-install smoke already
+exercises the harder local-build path.</li>
+<li>Caddy <code>internal</code> / <code>byo</code> TLS modes could be added to a future
+smoke variant; <code>acme</code> requires live DNS and stays out of scope.</li>
+</ul>
+<h2 id="upgrade-and-migration-posture">Upgrade And Migration Posture</h2>
+<p>The migration story today:</p>
+<ul>
+<li>A single linear Alembic chain lives under
+<code>backend/alembic/versions/</code>. The earliest revision is
+<code>20260402_2146_240b0ad2f12f_initial_schema.py</code>; the most recent
+revision at the time this baseline was written is
+<code>20260520_0001_pra175_compliance_dispatch_details.py</code>. The
+current head should be confirmed with <code>alembic heads</code> rather than
+read from this doc, because M19 will keep adding revisions.</li>
+<li><code>docker compose exec backend alembic upgrade head</code> applies migrations;
+<code>docker compose exec backend alembic downgrade -1</code> rolls back one. There is
+no scripted multi-revision rollback path.</li>
+<li>The dev cold-rebuild gate runs <code>init.sql</code> against a fresh Postgres
+and then runs <code>alembic upgrade head</code> implicitly through the backend
+startup path. This proves the migration chain reaches head <strong>from
+empty</strong>.</li>
+<li>The upgrade smoke at <code>scripts/test-upgrade-smoke.sh</code>
+proves the chain also converges on head from a representative
+pre-M13 (revision <code>pra149_review</code>) and pre-M15 (revision
+<code>pra156_lifecycle_notif_state</code>) production-shaped state.
+Committed fixtures live under
+<code>backend/tests/fixtures/upgrade/pre_m13.sql</code> and <code>pre_m15.sql</code>;
+the script can regenerate them in place via
+<code>scripts/test-upgrade-smoke.sh --regenerate</code>.</li>
+<li>There is one repeating live-data gotcha: <code>init.sql</code> seeds rows with
+explicit ids (e.g. <code>groups.id=1</code>, <code>distros.id=1..5</code>,
+<code>credentials.id=1</code>) but does not advance the sequences. The
+cold-rebuild script papers over this with explicit <code>setval()</code> calls
+(see <code>scripts/test-cold-rebuild.sh</code>); a fresh prod install hitting
+Alembic-only schema creation will not have this problem, but any
+operator who relies on <code>init.sql</code> for seed data outside the bundled
+compose will. This belongs in the install runbook.</li>
+</ul>
+<p>What is verified today:</p>
+<ul>
+<li>Migration from a representative pre-M13 (revision <code>pra149_review</code>)
+and pre-M15 (revision <code>pra156_lifecycle_notif_state</code>) database
+snapshot through the current head, including the M13 thin-agent
+identity columns, the M14 facts/lifecycle tables, and the M15
+mirror/content schema. Verification runs via
+<code>scripts/test-upgrade-smoke.sh</code> against committed fixtures; it
+is <strong>not</strong> in CI (same reason as the cold-rebuild gate — it is
+slow and hostile to parallel pytest).</li>
+</ul>
+<p>What is unverified today:</p>
+<ul>
+<li>The upgrade smoke covers two representative boundaries but does
+not yet capture every operator-shaped intermediate state. If
+later milestones introduce destructive schema changes (column
+drops, table renames, data backfills), a new fixture at the
+matching boundary should be added via <code>--regenerate</code> and
+committed.</li>
+<li>No down-revision is verified beyond <code>alembic downgrade -1</code> working
+in principle. Down-revisions are not part of CI.</li>
+</ul>
+<p>Migration-rollback posture for Praxis 1.0:</p>
+<ul>
+<li>Forward migrations are the supported path. The supported recovery
+story is <strong>restore the dump that was taken before the upgrade</strong>
+(see Backup/Restore Drill below), not “downgrade through Alembic”.</li>
+<li>This is the rollback contract that should be made explicit in the
+install runbook in a later release.</li>
+</ul>
+<h2 id="backup--restore-drill">Backup / Restore Drill</h2>
+<p><code>scripts/backup.sh</code>:</p>
+<ul>
+<li>Runs inside the <code>db_backup</code> alpine sidecar container under cron at
+<code>0 2 * * *</code> (02:00 daily, container time).</li>
+<li>Connects to the bundled <code>db</code> service over the docker network using
+<code>${POSTGRES_USER:-postgres}</code> and the deployment’s required
+<code>POSTGRES_PASSWORD</code> (the script has no password fallback and exits with a
+named error if the sidecar receives none).</li>
+<li>Writes a custom-format pg_dump to a restrictive (0600) same-directory
+temp file that does <strong>not</strong> match <code>*.dump</code>, validates the completed
+dump with <code>pg_restore --list</code>, then atomically renames it to
+<code>/backups/${POSTGRES_DB}-YYYYMMDDHHMMSS.dump</code> on the <code>backup_data</code>
+named volume. A failed, interrupted, or validation-failed
+dump is cleaned up and never leaves a final-looking <code>.dump</code> that
+restore selection could pick.</li>
+<li>Retains backups for 30 days (<code>find ... -mtime +30 -exec rm</code>), scoped
+to final <code>*.dump</code> files only — in-progress temp files never match.</li>
+<li>Has <strong>no off-host destination</strong>. The dump never leaves the docker
+host unless the operator copies it.</li>
+</ul>
+<p>Restore path:</p>
+<ul>
+<li>Restore the newest dump with:
+<div class="expressive-code"><figure class="frame is-terminal not-content"><figcaption class="header"><span class="title"></span><span class="sr-only">Terminal window</span></figcaption><pre data-language="bash"><code><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">docker</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">compose</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">exec</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">db</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">sh</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-c</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">ls -t /backups/*.dump | head -n 1 </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#ECC48D;--1:#984E4D">    </span></span><span style="--0:#ECC48D;--1:#984E4D">| xargs -I {} pg_restore --verbose --clean --if-exists </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#ECC48D;--1:#984E4D">          </span></span><span style="--0:#ECC48D;--1:#984E4D">-U postgres -d praxis {}</span><span style="--0:#D9F5DD;--1:#111111">"</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="docker compose exec db sh -c &#x22;ls -t /backups/*.dump | head -n 1 \    | xargs -I {} pg_restore --verbose --clean --if-exists \          -U postgres -d praxis {}&#x22;"><div></div></button></div></figure></div>
+</li>
+<li>This picks the most recent dump, runs <code>pg_restore --clean --if-exists</code> against the live <code>praxis</code> database. There is no
+scripted point-in-time selection and no scripted post-restore
+verification. Backups are integrity-checked at creation time —
+<code>backup.sh</code> validates each dump with <code>pg_restore --list</code> before
+publishing it — but the restore itself is not
+independently verified.</li>
+</ul>
+<h3 id="full-app-state-encrypted-bundle">Full-app-state encrypted bundle</h3>
+<p><code>scripts/backup.sh</code> above covers <strong>only PostgreSQL</strong>. For full bundled-deployment
+recovery — after operator error, host loss, or volume corruption — use the encrypted
+<strong>full-bundle</strong> path, which wraps <code>scripts/backup.sh</code> and additionally captures
+<code>vault_data</code>, <code>recordings_data</code>, <code>mirror_data</code>, and (opt-in) the <code>vault_recovery</code>
+unseal keys, all encrypted under an operator passphrase with a checksummed manifest and
+atomic publish:</p>
+<ul>
+<li>Back up:  <code>PRAXIS_BACKUP_PASSPHRASE=... scripts/backup-bundle.sh --include-recovery -o &#x3C;off-host-staging></code></li>
+<li>Restore:  <code>PRAXIS_BACKUP_PASSPHRASE=... scripts/restore-bundle.sh --bundle &#x3C;file> --env-file &#x3C;.env></code></li>
+<li>Smoke:    <code>scripts/test-bundle-backup-restore-smoke.sh</code></li>
+</ul>
+<p>The bundle is created on the host; <strong>moving it off-host is the operator’s
+responsibility</strong> in 1.0. A working Vault restore needs the unseal keys (in the bundle
+via <code>--include-recovery</code>, or supplied out of band). See
+<a href="/help/backup-restore">docs/backup-restore.md</a> for the full contract, recovery-material
+handling (the secrets-volume separation is preserved), required downtime, supported target shape,
+and what is not covered in 1.0.</p>
+<p>What is <strong>not</strong> backed up by <code>scripts/backup.sh</code> (the DB-only cron path — all of these
+ARE covered by <code>scripts/backup-bundle.sh</code> above, except Caddy/Prometheus):</p>
+<ul>
+<li>The Vault <code>vault_data</code> <strong>and</strong> <code>vault_recovery</code> named volumes.
+<code>vault_data</code> (runtime material, mounted read-only into backend +
+agent-broker) holds the backend service token, the SSH CA public key,
+the agent CA certificate, the broker server cert/key, all KV secrets,
+and PKI lease metadata; the SSH CA private key and PKI roots stay
+inside Vault’s own file storage on this volume. <code>vault_recovery</code>
+(operator-only, mounted <strong>only</strong> into the Vault container)
+holds the unseal-key file (<code>/vault/recovery/init-keys.json</code>) and the
+init root token (<code>/vault/recovery/root-token</code>). Losing either volume is
+fatal — see the Vault section.</li>
+<li>Caddy <code>caddy_data</code> / <code>caddy_config</code> (ACME account keys and issued
+certificates if <code>acme</code> mode is used).</li>
+<li><code>recordings_data</code> (session recordings).</li>
+<li><code>mirror_data</code> (mirrored repository content).</li>
+</ul>
+<p>What is verified today:</p>
+<ul>
+<li><code>scripts/test-backup-restore-smoke.sh</code> exercises
+the round trip end-to-end in an isolated compose project: insert a
+synthetic sentinel into <code>app_settings</code>, invoke <code>scripts/backup.sh</code>
+via the <code>db_backup</code> sidecar, assert the produced dump is
+non-empty, delete the sentinel, run
+<code>pg_restore --clean --if-exists</code> (the restore invocation above),
+assert the sentinel returned with its
+original value, and re-verify backend <code>/health</code>. Custom-format
+dumps are not grep-able as plain text; the round trip is what
+proves the dump’s contents are restorable.</li>
+</ul>
+<h3 id="praxis-10-rpo--rto-contract-bundled-mode">Praxis 1.0 RPO / RTO contract (bundled mode)</h3>
+<ul>
+<li><strong>RPO ≈ 24 hours.</strong> <code>scripts/backup.sh</code> runs once a day at 02:00
+container time. Any writes between two cron runs are lost if the
+host disk dies and no off-host backup was taken between them.</li>
+<li><strong>RTO</strong>: minutes to single-digit hours for the bundled
+small-deployment shape, depending on dump size, image
+availability, and operator involvement (the operator runs
+<code>pg_restore --clean --if-exists</code> against a fresh stack). The
+The backup/restore smoke completes the full restore round-trip in well
+under five minutes on a developer laptop; production sizes
+dominated by the application database scale linearly with the
+dump.</li>
+<li><strong>Praxis 1.0 produces the dump only on the shared
+<code>backup_data</code> Docker volume.</strong> Copying the dump (and the
+<code>vault_data</code> / <code>vault_recovery</code> / <code>recordings_data</code> / <code>mirror_data</code>
+volumes — <code>vault_recovery</code> holds the unseal keys needed to bring Vault
+back up) off-host is the operator’s responsibility. The repo
+ships no off-host shipping automation.</li>
+</ul>
+<h3 id="fatal-failure-modes-operator-must-know">Fatal failure modes (operator must know)</h3>
+<ul>
+<li><strong>Losing the most recent dump together with <code>vault_data</code> /
+<code>vault_recovery</code> is fatal</strong> for the bundled deployment. <code>vault_data</code>
+holds the SSH CA private key, the agent and broker PKI roots, and all
+KV secrets; <code>vault_recovery</code> holds the unseal keys, without which the
+Vault on <code>vault_data</code> cannot be unsealed on the next restart. There is
+no recovery path from a Postgres dump alone. The supported recovery
+story is “restore all three from off-host backup,” not “regenerate from
+migrations.” Operators running the bundled shape must capture the DB
+dump, <code>vault_data</code>, <strong>and</strong> <code>vault_recovery</code> on the same off-host
+cadence.</li>
+</ul>
+<h3 id="backup-correctness-notes">Backup correctness notes</h3>
+<p>The bundled backup path is wired so the deployment’s <code>POSTGRES_PASSWORD</code> cannot
+silently produce empty dumps:</p>
+<ul>
+<li><code>docker-compose.yml</code>’s <code>db_backup</code> service declares <code>POSTGRES_USER</code> /
+<code>POSTGRES_PASSWORD</code> / <code>POSTGRES_DB</code> in its <code>environment:</code> block, reading the
+same required <code>POSTGRES_PASSWORD</code> the <code>db</code> service is provisioned with, so the
+sidecar and the database can never drift apart.</li>
+<li><code>scripts/backup.sh</code> runs under <code>set -euo pipefail</code>, so a failed <code>pg_dump</code>
+propagates immediately instead of printing a “Backup completed” success
+message over a zero-byte file.</li>
+</ul>
+<h3 id="rotating-the-bundled-postgresql-password">Rotating the bundled PostgreSQL password</h3>
+<p><code>POSTGRES_PASSWORD</code> provisions the superuser <strong>only on first initialization of
+an empty <code>postgres_data</code> volume</strong>. On an existing deployment, changing it in
+<code>.env</code> alone leaves the database with the old password and every service unable
+to authenticate. Rotate inside the database first, then in <code>.env</code>. The volume is
+preserved throughout; do not <code>down -v</code>.</p>
+<p>Use <code>psql</code>’s interactive <code>\password</code>. It prompts twice, hashes the new password
+client-side, and sends only the hash, so the cleartext never appears in <code>argv</code>,
+in shell history, or in the server’s statement log. Do not use
+<code>ALTER USER ... WITH PASSWORD '&#x3C;literal>'</code> for this. <code>exec db psql</code> reaches the
+database over the container’s local socket, so it connects regardless of which
+password the volume currently holds.</p>
+<div class="expressive-code"><figure class="frame is-terminal not-content"><figcaption class="header"><span class="title"></span><span class="sr-only">Terminal window</span></figcaption><pre data-language="bash"><code><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F"># 1. Open an interactive psql session on the bundled database. Note `-it` and</span></div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F">#    no `-T`: the prompt needs a TTY.</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">docker</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">compose</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-f</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">docker-compose.yml</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-f</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">docker-compose.prod.yml</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#82AAFF;--1:#3B61B0">--profile</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">bundled</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">exec</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-it</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">db</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#ECC48D;--1:#3B61B0">psql</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-U</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">${</span><span style="--0:#C5E478;--1:#3B61B0">POSTGRES_USER</span><span style="--0:#7FDBCA;--1:#096E72">:-</span><span style="--0:#C5E478;--1:#3B61B0">postgres</span><span style="--0:#ECC48D;--1:#984E4D">}</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-d</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">${</span><span style="--0:#C5E478;--1:#3B61B0">POSTGRES_DB</span><span style="--0:#7FDBCA;--1:#096E72">:-</span><span style="--0:#C5E478;--1:#3B61B0">praxis</span><span style="--0:#ECC48D;--1:#984E4D">}</span><span style="--0:#D9F5DD;--1:#111111">"</span></div></div><div class="ec-line"><div class="code">
+</div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F"># 2. At the psql prompt, rotate and quit:</span></div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F">#        \password</span></div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F">#        (enter the new password twice, e.g. from `openssl rand -hex 24`</span></div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F">#         generated in a separate shell)</span></div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F">#        \q</span></div></div><div class="ec-line"><div class="code">
+</div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F"># 3. Put the same value in .env (replace the POSTGRES_PASSWORD line).</span></div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F">#    Everything that connects reads it from there.</span></div></div><div class="ec-line"><div class="code">
+</div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F"># 4. Recreate the services that hold a connection string. This restarts</span></div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F">#    containers only; named volumes, including postgres_data, are untouched.</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">docker</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">compose</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-f</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">docker-compose.yml</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-f</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">docker-compose.prod.yml</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#82AAFF;--1:#3B61B0">--profile</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">bundled</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--profile</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">proxy</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">up</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-d</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#ECC48D;--1:#3B61B0">backend</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">agent-broker</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">db_backup</span></div></div><div class="ec-line"><div class="code">
+</div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F"># 5. Confirm the stack still authenticates.</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">docker</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">compose</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-f</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">docker-compose.yml</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-f</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">docker-compose.prod.yml</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#82AAFF;--1:#3B61B0">--profile</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">bundled</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">exec</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-T</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">backend</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">python</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-c</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5).status == 200 else 1)</span><span style="--0:#D9F5DD;--1:#111111">"</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="docker compose -f docker-compose.yml -f docker-compose.prod.yml \    --profile bundled exec -it db \    psql -U &#x22;${POSTGRES_USER:-postgres}&#x22; -d &#x22;${POSTGRES_DB:-praxis}&#x22;docker compose -f docker-compose.yml -f docker-compose.prod.yml \    --profile bundled --profile proxy up -d \    backend agent-broker db_backupdocker compose -f docker-compose.yml -f docker-compose.prod.yml \    --profile bundled exec -T backend python -c \    &#x22;import urllib.request,sys; sys.exit(0 if urllib.request.urlopen(&#x27;http://127.0.0.1:8000/health&#x27;, timeout=5).status == 200 else 1)&#x22;"><div></div></button></div></figure></div>
+<p>Recovery ordering matters. Step 1 and step 3 must agree:</p>
+<ul>
+<li><strong>Steps 1-2 done, step 3 skipped</strong>: the database holds the new password while
+<code>.env</code> still holds the old one. Backend, broker, and the nightly backup fail
+to authenticate. Fix by completing step 3.</li>
+<li><strong>Step 3 done, steps 1-2 skipped</strong>: <code>.env</code> holds a password the database was
+never given. Same failure. Fix by running steps 1-2 with the value now in
+<code>.env</code>, or by restoring the previous value in <code>.env</code>.</li>
+<li>In both cases the data is untouched. Nothing here drops or reinitializes
+<code>postgres_data</code>.</li>
+</ul>
+<p>Upgrading a deployment whose <code>postgres_data</code> volume was initialized with the
+old built-in <code>postgres</code> password: rotate before starting the app tier. The <code>db</code>
+entrypoint refuses to start on that value, and the backend and broker refuse to
+serve on it. Because <code>POSTGRES_PASSWORD</code> is only read when an empty volume is
+initialized, the database still holds the old password internally while you
+bring it up with the new one:</p>
+<div class="expressive-code"><figure class="frame is-terminal not-content"><figcaption class="header"><span class="title"></span><span class="sr-only">Terminal window</span></figcaption><pre data-language="bash"><code><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F"># 1. Put the new password in .env, then start ONLY the database.</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">docker</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">compose</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-f</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">docker-compose.yml</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-f</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">docker-compose.prod.yml</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#82AAFF;--1:#3B61B0">--profile</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">bundled</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">up</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-d</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">db</span></div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F"># 2. Run steps 1-2 above so the stored password matches .env.</span></div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F"># 3. Start the rest of the stack normally.</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="docker compose -f docker-compose.yml -f docker-compose.prod.yml \    --profile bundled up -d db"><div></div></button></div></figure></div>
+<h2 id="secrets-service-openbao-unseal-and-token-rotation">Secrets Service (OpenBao) Unseal And Token Rotation</h2>
+<p>The bundled secrets service is <strong>OpenBao</strong> (a Vault-compatible service); the <code>vault</code>
+Docker service name and <code>/vault</code> paths are kept for compatibility, and the bundled
+runbook commands below use the <code>bao</code> CLI inside that container. What ships today
+(<code>vault/config/vault.hcl</code>, <code>vault/scripts/</code>):</p>
+<ul>
+<li>File storage at <code>/vault/data</code> on the <code>vault_data</code> named volume.</li>
+<li>Single-listener, <strong>TLS disabled</strong> on the listener (network is
+docker-internal <code>backend_net</code>; backend reaches Vault as
+<code>http://vault:8200</code>).</li>
+<li><code>disable_mlock = true</code> (acceptable in a container, and documented as
+such by both OpenBao and HashiCorp Vault).</li>
+<li>Init script (<code>vault/scripts/init-vault.sh</code>) runs once: initializes
+Vault, writes <code>init-keys.json</code> and <code>root-token</code> to the operator-only
+recovery dir (<code>/vault/recovery</code>, the <code>vault_recovery</code> volume),
+unseals using the keys it just wrote, enables <code>kv-v2</code> at
+<code>praxis/</code>, enables the SSH CA at <code>ssh-client-signer</code>, enables the
+agent PKI at <code>praxis-agent-ca</code>, and enables the broker PKI at
+<code>praxis-broker-ca</code>. A scoped, long-lived backend service token is
+written to <code>/vault/data/backend-token</code> (runtime material).</li>
+<li>On every subsequent start, <code>startup.sh</code> re-runs <code>init-vault.sh</code>,
+which detects the already-initialized state and re-uses the saved
+<code>/vault/recovery/init-keys.json</code> to unseal. This is
+auto-unseal-by-disk-file: it makes the bundled stack restart cleanly
+without operator prompting. The unseal keys and root token
+live on <code>vault_recovery</code>, mounted only into the Vault container, so
+read access to the app-mounted <code>vault_data</code> volume (backend +
+agent-broker) yields only scoped service credentials and public cert
+material — not root or unseal material.</li>
+</ul>
+<p>Token rotation today:</p>
+<ul>
+<li>The backend service token is created once at init and is <strong>not</strong>
+rotated by any timer or script.</li>
+<li>The Vault root token is created once at init and is <strong>not</strong>
+rotated.</li>
+<li>The agent PKI role and the broker server cert role are reconciled
+every start (<code>init-vault.sh</code> rewrites the roles idempotently).</li>
+<li>Broker server cert hostname drift triggers a loud warning but the
+cert is <strong>not</strong> auto-rotated; the operator must rm the cert files
+and restart the Vault container (documented in-line in
+<code>init-vault.sh</code>).</li>
+</ul>
+<p>What is <strong>not</strong> documented and <strong>not</strong> scripted:</p>
+<ul>
+<li>Manual rekey procedure for <code>init-keys.json</code>. There is no operator
+workflow for “rotate unseal keys” or “rotate the root token” in
+this repo. The Vault docs cover it (<code>vault operator rekey</code>,
+<code>vault token revoke</code>) but applying it cleanly to the bundled
+<code>init-keys.json</code> workflow has not been written down here.</li>
+<li>Backend token rotation. There is no scripted “issue a new
+backend-service token, swap it onto the volume, restart backend”
+flow.</li>
+<li>Recovery procedure if <code>init-keys.json</code> is lost. This case is fatal
+for the data in that Vault — there is no key escrow.</li>
+</ul>
+<p>Bundled-vs-external Vault support boundary:</p>
+<ul>
+<li><strong>Bundled Vault is supported only as part of the fully-bundled
+deployment shape</strong> (bundled Postgres + bundled Vault together).
+Operators who need HA, KMS-backed auto-unseal, audit log
+shipping, or compliance-grade key management should switch the
+entire data tier to the fully-external shape and bring their own
+Vault (and their own Postgres). Bundled Vault paired with
+external Postgres is not a supported 1.0 shape.</li>
+<li>The repo guarantees the bundled init script provisions the
+required mounts/roles for any Vault it controls; it does not
+guarantee any feature parity for external Vault beyond
+KV-v2 + the documented SSH/PKI roles being reachable under the
+same paths. External-Vault operators are responsible for
+provisioning <code>praxis/</code>, <code>ssh-client-signer/</code>, <code>praxis-agent-ca/</code>,
+and <code>praxis-broker-ca/</code> with the same role definitions found in
+<code>vault/scripts/init-vault.sh</code>.</li>
+</ul>
+<h3 id="bundled-vault-manual-unseal-key-rotation">Bundled Vault: manual unseal-key rotation</h3>
+<p>The bundled Vault stores its unseal keys in
+<code>/vault/recovery/init-keys.json</code> on the operator-only <code>vault_recovery</code>
+volume (mounted only into the Vault container). The Vault
+container reads them on every start to auto-unseal. Rotation is
+<strong>manual</strong>; the repo ships no scheduled rekey job.</p>
+<p>Procedure (operator runs these from the host):</p>
+<div class="expressive-code"><figure class="frame is-terminal not-content"><figcaption class="header"><span class="title"></span><span class="sr-only">Terminal window</span></figcaption><pre data-language="bash"><code><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F"># 1. Make sure the bundled stack is up and Vault is unsealed.</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">docker</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">compose</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">ps</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">vault</span><span style="--0:#D6DEEB;--1:#403F53">       </span><span style="--0:#919F9F;--1:#5F636F"># State: Up (healthy)</span></div></div><div class="ec-line"><div class="code">
+</div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F"># 2. Take a fresh dump + copy the vault_data AND vault_recovery volumes</span></div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F">#    off-host BEFORE rotation. If rekey fails partway, you restore from</span></div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F">#    these (vault_recovery holds the current unseal keys).</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">docker</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">compose</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">exec</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">db_backup</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">/scripts/backup.sh</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">docker</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">run</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--rm</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-v</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">praxis_vault_data:/data</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-v</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C5E478;--1:#3B61B0">$PWD</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#3B61B0">:/out</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">alpine</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#ECC48D;--1:#3B61B0">tar</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">czf</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">/out/vault_data-pre-rekey-</span><span style="--0:#D6DEEB;--1:#403F53">$(</span><span style="--0:#82AAFF;--1:#3B61B0">date</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-u</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">+%Y%m%dT%H%M%SZ</span><span style="--0:#D6DEEB;--1:#403F53">)</span><span style="--0:#ECC48D;--1:#3B61B0">.tgz</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-C</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">/data</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">.</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">docker</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">run</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--rm</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-v</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">praxis_vault_recovery:/data</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-v</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C5E478;--1:#3B61B0">$PWD</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#3B61B0">:/out</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">alpine</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#ECC48D;--1:#3B61B0">tar</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">czf</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">/out/vault_recovery-pre-rekey-</span><span style="--0:#D6DEEB;--1:#403F53">$(</span><span style="--0:#82AAFF;--1:#3B61B0">date</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-u</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">+%Y%m%dT%H%M%SZ</span><span style="--0:#D6DEEB;--1:#403F53">)</span><span style="--0:#ECC48D;--1:#3B61B0">.tgz</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-C</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">/data</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">.</span></div></div><div class="ec-line"><div class="code">
+</div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F"># 3. Start a rekey ceremony. Defaults are 5 shares with threshold 3</span></div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F">#    (same as the original init); ``-init`` mode prints the new</span></div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F">#    unseal keys on completion.</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">docker</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">compose</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">exec</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">vault</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">sh</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-c</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#D9F5DD;--1:#111111">'</span><span style="--0:#ECC48D;--1:#984E4D">export VAULT_ADDR=http://127.0.0.1:8200; \</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#ECC48D;--1:#984E4D">    </span></span><span style="--0:#ECC48D;--1:#984E4D">bao login "$(cat /vault/recovery/root-token)" >/dev/null; \</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#ECC48D;--1:#984E4D">    </span></span><span style="--0:#ECC48D;--1:#984E4D">bao operator rekey -init -key-shares=5 -key-threshold=3</span><span style="--0:#D9F5DD;--1:#111111">'</span></div></div><div class="ec-line"><div class="code">
+</div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F"># Note the "Nonce" value printed. You will need to pass an OLD</span></div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F"># unseal key for each of the 3 threshold steps below.</span></div></div><div class="ec-line"><div class="code">
+</div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F"># 4. Submit the threshold-many existing unseal keys.</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">docker</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">compose</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">exec</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">vault</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">sh</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-c</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#D9F5DD;--1:#111111">'</span><span style="--0:#ECC48D;--1:#984E4D">export VAULT_ADDR=http://127.0.0.1:8200; \</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#ECC48D;--1:#984E4D">    </span></span><span style="--0:#ECC48D;--1:#984E4D">bao operator rekey -nonce &#x3C;NONCE> "&#x3C;old-unseal-key-1>"</span><span style="--0:#D9F5DD;--1:#111111">'</span></div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F"># Repeat with old-unseal-key-2, old-unseal-key-3. The third</span></div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F"># submission prints the NEW unseal keys (5 of them, plus a new</span></div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F"># threshold and a new root token IF you also ran rekey-recovery).</span></div></div><div class="ec-line"><div class="code">
+</div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F"># 5. Rewrite /vault/recovery/init-keys.json with the new unseal keys</span></div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F">#    so the next startup.sh re-unseal succeeds. The shape that</span></div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F">#    init-vault.sh expects is the same JSON Vault prints on init:</span></div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F">#    {"unseal_keys_b64":[...], "unseal_threshold":N, ...}.</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">docker</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">compose</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">exec</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">vault</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">sh</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-c</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#D9F5DD;--1:#111111">'</span><span style="--0:#ECC48D;--1:#984E4D">umask 077; cat > /vault/recovery/init-keys.json</span><span style="--0:#D9F5DD;--1:#111111">'</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#7FDBCA;--1:#096E72">&#x3C;</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">/path/to/new-init-keys.json</span></div></div><div class="ec-line"><div class="code">
+</div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F"># 6. Verify by sealing + restarting.</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">docker</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">compose</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">exec</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">vault</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">bao</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">operator</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">seal</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">docker</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">compose</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">restart</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">vault</span></div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F"># Wait for healthcheck to pass; startup.sh auto-unseals with the</span></div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F"># new keys.</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">docker</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">compose</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">ps</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">vault</span><span style="--0:#D6DEEB;--1:#403F53">       </span><span style="--0:#919F9F;--1:#5F636F"># State: Up (healthy)</span></div></div><div class="ec-line"><div class="code">
+</div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F"># 7. Destroy the off-host pre-rotation backup taken in step 2</span></div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F">#    AFTER you have confirmed the new keys work.</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="docker compose ps vault       # State: Up (healthy)docker compose exec db_backup /scripts/backup.shdocker run --rm -v praxis_vault_data:/data -v &#x22;$PWD&#x22;:/out alpine \    tar czf /out/vault_data-pre-rekey-$(date -u +%Y%m%dT%H%M%SZ).tgz -C /data .docker run --rm -v praxis_vault_recovery:/data -v &#x22;$PWD&#x22;:/out alpine \    tar czf /out/vault_recovery-pre-rekey-$(date -u +%Y%m%dT%H%M%SZ).tgz -C /data .docker compose exec vault sh -c &#x27;export VAULT_ADDR=http://127.0.0.1:8200; \    bao login &#x22;$(cat /vault/recovery/root-token)&#x22; >/dev/null; \    bao operator rekey -init -key-shares=5 -key-threshold=3&#x27;docker compose exec vault sh -c &#x27;export VAULT_ADDR=http://127.0.0.1:8200; \    bao operator rekey -nonce <NONCE> &#x22;<old-unseal-key-1>&#x22;&#x27;docker compose exec vault sh -c \    &#x27;umask 077; cat > /vault/recovery/init-keys.json&#x27; < /path/to/new-init-keys.jsondocker compose exec vault bao operator sealdocker compose restart vaultdocker compose ps vault       # State: Up (healthy)"><div></div></button></div></figure></div>
+<p>If rekey fails partway: restore <code>vault_recovery</code> (and, if needed,
+<code>vault_data</code>) from the off-host tarballs taken in step 2 and try again.
+<strong>Do not</strong> lose the old keys until the new keys are confirmed working.</p>
+<h3 id="bundled-vault-manual-root-token-rotation">Bundled Vault: manual root-token rotation</h3>
+<p>The init-time root token in <code>/vault/recovery/root-token</code> (operator-only
+<code>vault_recovery</code> volume, not app-readable) is also manually
+rotated.</p>
+<div class="expressive-code"><figure class="frame is-terminal not-content"><figcaption class="header"><span class="title"></span><span class="sr-only">Terminal window</span></figcaption><pre data-language="bash"><code><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F"># Issue a new root token, then revoke the old one.</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">docker</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">compose</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">exec</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">vault</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">sh</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-c</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#D9F5DD;--1:#111111">'</span><span style="--0:#ECC48D;--1:#984E4D">export VAULT_ADDR=http://127.0.0.1:8200; \</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#ECC48D;--1:#984E4D">    </span></span><span style="--0:#ECC48D;--1:#984E4D">bao login "$(cat /vault/recovery/root-token)" >/dev/null; \</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#ECC48D;--1:#984E4D">    </span></span><span style="--0:#ECC48D;--1:#984E4D">NEW_ROOT=$(bao token create -policy=root -orphan -ttl=0 -field=token); \</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#ECC48D;--1:#984E4D">    </span></span><span style="--0:#ECC48D;--1:#984E4D">umask 077; echo "$NEW_ROOT" > /vault/recovery/root-token.new</span><span style="--0:#D9F5DD;--1:#111111">'</span></div></div><div class="ec-line"><div class="code">
+</div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F"># Verify the new token works.</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">docker</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">compose</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">exec</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">vault</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">sh</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-c</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#D9F5DD;--1:#111111">'</span><span style="--0:#ECC48D;--1:#984E4D">export VAULT_ADDR=http://127.0.0.1:8200; \</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#ECC48D;--1:#984E4D">    </span></span><span style="--0:#ECC48D;--1:#984E4D">bao login "$(cat /vault/recovery/root-token.new)" >/dev/null; \</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#ECC48D;--1:#984E4D">    </span></span><span style="--0:#ECC48D;--1:#984E4D">bao token lookup</span><span style="--0:#D9F5DD;--1:#111111">'</span></div></div><div class="ec-line"><div class="code">
+</div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F"># Swap files atomically and revoke the old one.</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">docker</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">compose</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">exec</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">vault</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">sh</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-c</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#D9F5DD;--1:#111111">'</span><span style="--0:#ECC48D;--1:#984E4D">OLD=$(cat /vault/recovery/root-token); \</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#ECC48D;--1:#984E4D">     </span></span><span style="--0:#ECC48D;--1:#984E4D">mv /vault/recovery/root-token.new /vault/recovery/root-token; \</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#ECC48D;--1:#984E4D">     </span></span><span style="--0:#ECC48D;--1:#984E4D">bao login "$(cat /vault/recovery/root-token)" >/dev/null; \</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#ECC48D;--1:#984E4D">     </span></span><span style="--0:#ECC48D;--1:#984E4D">bao token revoke "$OLD"</span><span style="--0:#D9F5DD;--1:#111111">'</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="docker compose exec vault sh -c &#x27;export VAULT_ADDR=http://127.0.0.1:8200; \    bao login &#x22;$(cat /vault/recovery/root-token)&#x22; >/dev/null; \    NEW_ROOT=$(bao token create -policy=root -orphan -ttl=0 -field=token); \    umask 077; echo &#x22;$NEW_ROOT&#x22; > /vault/recovery/root-token.new&#x27;docker compose exec vault sh -c &#x27;export VAULT_ADDR=http://127.0.0.1:8200; \    bao login &#x22;$(cat /vault/recovery/root-token.new)&#x22; >/dev/null; \    bao token lookup&#x27;docker compose exec vault sh -c \    &#x27;OLD=$(cat /vault/recovery/root-token); \     mv /vault/recovery/root-token.new /vault/recovery/root-token; \     bao login &#x22;$(cat /vault/recovery/root-token)&#x22; >/dev/null; \     bao token revoke &#x22;$OLD&#x22;&#x27;"><div></div></button></div></figure></div>
+<p><code>init-vault.sh</code> reads <code>/vault/recovery/root-token</code> on every start to
+log in for the idempotent role/policy reconciliation, so the swap
+is picked up automatically on the next container restart.</p>
+<h3 id="bundled-vault-backend-service-token-rotation">Bundled Vault: backend service-token rotation</h3>
+<p>The backend reads <code>/vault/data/backend-token</code> (runtime material) at
+startup (<code>backend/scripts/start.prod.sh</code>). Rotating it requires issuing a
+new token under the <code>backend-service</code> policy, rewriting that file, and
+restarting the backend so it re-reads it. Note the file the backend reads
+stays in <code>vault_data</code>, but issuing the token requires logging in with the
+root token from the recovery volume (<code>/vault/recovery/root-token</code>).</p>
+<div class="expressive-code"><figure class="frame is-terminal not-content"><figcaption class="header"><span class="title"></span><span class="sr-only">Terminal window</span></figcaption><pre data-language="bash"><code><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F"># 1. Issue a new backend-service token (login uses the recovery root token).</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">docker</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">compose</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">exec</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">vault</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">sh</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-c</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#D9F5DD;--1:#111111">'</span><span style="--0:#ECC48D;--1:#984E4D">export VAULT_ADDR=http://127.0.0.1:8200; \</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#ECC48D;--1:#984E4D">    </span></span><span style="--0:#ECC48D;--1:#984E4D">bao login "$(cat /vault/recovery/root-token)" >/dev/null; \</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#ECC48D;--1:#984E4D">    </span></span><span style="--0:#ECC48D;--1:#984E4D">NEW_BE=$(bao token create -policy=backend-service -field=token); \</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#ECC48D;--1:#984E4D">    </span></span><span style="--0:#ECC48D;--1:#984E4D">echo "$NEW_BE" > /vault/data/backend-token.new</span><span style="--0:#D9F5DD;--1:#111111">'</span></div></div><div class="ec-line"><div class="code">
+</div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F"># 2. Swap files.</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">docker</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">compose</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">exec</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">vault</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">sh</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-c</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#D9F5DD;--1:#111111">'</span><span style="--0:#ECC48D;--1:#984E4D">OLD=$(cat /vault/data/backend-token); \</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#ECC48D;--1:#984E4D">     </span></span><span style="--0:#ECC48D;--1:#984E4D">mv /vault/data/backend-token.new /vault/data/backend-token; \</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#ECC48D;--1:#984E4D">     </span></span><span style="--0:#ECC48D;--1:#984E4D">echo "$OLD" > /tmp/old-backend-token</span><span style="--0:#D9F5DD;--1:#111111">'</span></div></div><div class="ec-line"><div class="code">
+</div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F"># 3. Restart the backend so start.prod.sh re-reads the file.</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">docker</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">compose</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">restart</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">backend</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">agent-broker</span></div></div><div class="ec-line"><div class="code">
+</div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F"># 4. After confirming the stack is healthy, revoke the old token.</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">docker</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">compose</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">exec</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">vault</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">sh</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-c</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#D9F5DD;--1:#111111">'</span><span style="--0:#ECC48D;--1:#984E4D">export VAULT_ADDR=http://127.0.0.1:8200; \</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#ECC48D;--1:#984E4D">    </span></span><span style="--0:#ECC48D;--1:#984E4D">bao login "$(cat /vault/recovery/root-token)" >/dev/null; \</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#ECC48D;--1:#984E4D">    </span></span><span style="--0:#ECC48D;--1:#984E4D">bao token revoke "$(cat /tmp/old-backend-token)"; \</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#ECC48D;--1:#984E4D">    </span></span><span style="--0:#ECC48D;--1:#984E4D">rm /tmp/old-backend-token</span><span style="--0:#D9F5DD;--1:#111111">'</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="docker compose exec vault sh -c &#x27;export VAULT_ADDR=http://127.0.0.1:8200; \    bao login &#x22;$(cat /vault/recovery/root-token)&#x22; >/dev/null; \    NEW_BE=$(bao token create -policy=backend-service -field=token); \    echo &#x22;$NEW_BE&#x22; > /vault/data/backend-token.new&#x27;docker compose exec vault sh -c \    &#x27;OLD=$(cat /vault/data/backend-token); \     mv /vault/data/backend-token.new /vault/data/backend-token; \     echo &#x22;$OLD&#x22; > /tmp/old-backend-token&#x27;docker compose restart backend agent-brokerdocker compose exec vault sh -c &#x27;export VAULT_ADDR=http://127.0.0.1:8200; \    bao login &#x22;$(cat /vault/recovery/root-token)&#x22; >/dev/null; \    bao token revoke &#x22;$(cat /tmp/old-backend-token)&#x22;; \    rm /tmp/old-backend-token&#x27;"><div></div></button></div></figure></div>
+<p>Backend and broker containers both read the same shared
+<code>vault_data</code> volume, so restarting both is required when rotating
+the backend service token.</p>
+<h3 id="external-openbao--vault-compatible-provisioning-checklist">External OpenBao / Vault-compatible: provisioning checklist</h3>
+<p>To run Praxis with an operator-owned external OpenBao (or HashiCorp
+Vault) service, that service must provide the same mounts, roles, and
+policy paths the bundled <code>vault/scripts/init-vault.sh</code> provisions. The
+checklist below mirrors <code>init-vault.sh</code> so an operator can replay it
+against their service without reading the script. The commands are
+identical whether you drive them with <code>bao</code> (OpenBao) or <code>vault</code>
+(HashiCorp Vault) — the CLI and API are compatible; <code>vault</code> is shown here.</p>
+<p><strong>Required secrets-engine mounts:</strong></p>
+<div class="expressive-code"><figure class="frame is-terminal not-content"><figcaption class="header"><span class="title"></span><span class="sr-only">Terminal window</span></figcaption><pre data-language="bash"><code><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">vault</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">secrets</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">enable</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-path=praxis</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">kv-v2</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">vault</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">secrets</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">enable</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-path=ssh-client-signer</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">ssh</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">vault</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">secrets</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">enable</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-path=praxis-agent-ca</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">pki</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">vault</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">secrets</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">enable</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-path=praxis-broker-ca</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">pki</span></div></div><div class="ec-line"><div class="code">
+</div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">vault</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">secrets</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">tune</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-max-lease-ttl=43800h</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">praxis-agent-ca</span><span style="--0:#D6DEEB;--1:#403F53">   </span><span style="--0:#919F9F;--1:#5F636F"># 5 years</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">vault</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">secrets</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">tune</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-max-lease-ttl=43800h</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">praxis-broker-ca</span><span style="--0:#D6DEEB;--1:#403F53">  </span><span style="--0:#919F9F;--1:#5F636F"># 5 years</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="vault secrets enable -path=praxis kv-v2vault secrets enable -path=ssh-client-signer sshvault secrets enable -path=praxis-agent-ca pkivault secrets enable -path=praxis-broker-ca pkivault secrets tune -max-lease-ttl=43800h praxis-agent-ca   # 5 yearsvault secrets tune -max-lease-ttl=43800h praxis-broker-ca  # 5 years"><div></div></button></div></figure></div>
+<p><strong>SSH CA:</strong></p>
+<div class="expressive-code"><figure class="frame is-terminal not-content"><figcaption class="header"><span class="title"></span><span class="sr-only">Terminal window</span></figcaption><pre data-language="bash"><code><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">vault</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">write</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-field=public_key</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">ssh-client-signer/config/ca</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--1:#3B61B0"><span style="--0:#ECC48D">generate_signing_key=</span><span style="--0:#82AAFF">true</span></span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#7FDBCA;--1:#096E72">></span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">/path/to/ssh-ca-public-key</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">vault</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">write</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">ssh-client-signer/roles/praxis-user</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">-</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#7FDBCA;--1:#096E72">&#x3C;&#x3C;</span><span style="--0:#D9F5DD;--1:#111111">'EOF'</span></div></div><div class="ec-line"><div class="code"><span style="--0:#ECC48D;--1:#984E4D">{</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#ECC48D;--1:#984E4D">  </span></span><span style="--0:#ECC48D;--1:#984E4D">"key_type": "ca",</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#ECC48D;--1:#984E4D">  </span></span><span style="--0:#ECC48D;--1:#984E4D">"allow_user_certificates": true,</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#ECC48D;--1:#984E4D">  </span></span><span style="--0:#ECC48D;--1:#984E4D">"allowed_users": "*",</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#ECC48D;--1:#984E4D">  </span></span><span style="--0:#ECC48D;--1:#984E4D">"allow_user_key_ids": true,</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#ECC48D;--1:#984E4D">  </span></span><span style="--0:#ECC48D;--1:#984E4D">"allowed_extensions": "permit-pty,permit-user-rc",</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#ECC48D;--1:#984E4D">  </span></span><span style="--0:#ECC48D;--1:#984E4D">"default_extensions": {"permit-pty": ""},</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#ECC48D;--1:#984E4D">  </span></span><span style="--0:#ECC48D;--1:#984E4D">"default_user": "",</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#ECC48D;--1:#984E4D">  </span></span><span style="--0:#ECC48D;--1:#984E4D">"ttl": "30m",</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#ECC48D;--1:#984E4D">  </span></span><span style="--0:#ECC48D;--1:#984E4D">"max_ttl": "1h"</span></div></div><div class="ec-line"><div class="code"><span style="--0:#ECC48D;--1:#984E4D">}</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D9F5DD;--1:#111111">EOF</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="vault write -field=public_key ssh-client-signer/config/ca \    generate_signing_key=true > /path/to/ssh-ca-public-keyvault write ssh-client-signer/roles/praxis-user - <<&#x27;EOF&#x27;{  &#x22;key_type&#x22;: &#x22;ca&#x22;,  &#x22;allow_user_certificates&#x22;: true,  &#x22;allowed_users&#x22;: &#x22;*&#x22;,  &#x22;allow_user_key_ids&#x22;: true,  &#x22;allowed_extensions&#x22;: &#x22;permit-pty,permit-user-rc&#x22;,  &#x22;default_extensions&#x22;: {&#x22;permit-pty&#x22;: &#x22;&#x22;},  &#x22;default_user&#x22;: &#x22;&#x22;,  &#x22;ttl&#x22;: &#x22;30m&#x22;,  &#x22;max_ttl&#x22;: &#x22;1h&#x22;}EOF"><div></div></button></div></figure></div>
+<p><strong>Agent PKI:</strong></p>
+<div class="expressive-code"><figure class="frame is-terminal not-content"><figcaption class="header"><span class="title"></span><span class="sr-only">Terminal window</span></figcaption><pre data-language="bash"><code><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">vault</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">write</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-field=certificate</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">praxis-agent-ca/root/generate/internal</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#ECC48D;--1:#3B61B0">common_name=</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">Praxis Agent CA</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">issuer_name=</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">praxis-agent-root</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#ECC48D;--1:#3B61B0">ttl=43800h</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#7FDBCA;--1:#096E72">></span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">/path/to/agent-ca-cert.pem</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">vault</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">write</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">praxis-agent-ca/roles/agent</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#ECC48D;--1:#3B61B0">allowed_domains=</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">agent.praxis.internal</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--1:#3B61B0"><span style="--0:#ECC48D">allow_subdomains=</span><span style="--0:#82AAFF">true</span></span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--1:#3B61B0"><span style="--0:#ECC48D">allow_any_name=</span><span style="--0:#82AAFF">false</span></span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--1:#3B61B0"><span style="--0:#ECC48D">allow_bare_domains=</span><span style="--0:#82AAFF">false</span></span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--1:#3B61B0"><span style="--0:#ECC48D">allow_glob_domains=</span><span style="--0:#82AAFF">false</span></span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--1:#3B61B0"><span style="--0:#ECC48D">allow_wildcard_certificates=</span><span style="--0:#82AAFF">false</span></span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--1:#3B61B0"><span style="--0:#ECC48D">allow_ip_sans=</span><span style="--0:#82AAFF">false</span></span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--1:#3B61B0"><span style="--0:#ECC48D">allow_localhost=</span><span style="--0:#82AAFF">false</span></span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--1:#3B61B0"><span style="--0:#ECC48D">use_csr_common_name=</span><span style="--0:#82AAFF">false</span></span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--1:#3B61B0"><span style="--0:#ECC48D">use_csr_sans=</span><span style="--0:#82AAFF">false</span></span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--1:#3B61B0"><span style="--0:#ECC48D">enforce_hostnames=</span><span style="--0:#82AAFF">true</span></span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#ECC48D;--1:#3B61B0">allowed_uri_sans=</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">praxis://system/*</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--1:#3B61B0"><span style="--0:#ECC48D">client_flag=</span><span style="--0:#82AAFF">true</span></span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--1:#3B61B0"><span style="--0:#ECC48D">server_flag=</span><span style="--0:#82AAFF">false</span></span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#ECC48D;--1:#3B61B0">key_type=ec</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">key_bits=</span><span style="--0:#F78C6C;--1:#AA0982">256</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#ECC48D;--1:#3B61B0">ttl=1h</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">max_ttl=1h</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--1:#3B61B0"><span style="--0:#ECC48D">no_store=</span><span style="--0:#82AAFF">false</span></span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="vault write -field=certificate praxis-agent-ca/root/generate/internal \    common_name=&#x22;Praxis Agent CA&#x22; issuer_name=&#x22;praxis-agent-root&#x22; \    ttl=43800h > /path/to/agent-ca-cert.pemvault write praxis-agent-ca/roles/agent \    allowed_domains=&#x22;agent.praxis.internal&#x22; \    allow_subdomains=true allow_any_name=false \    allow_bare_domains=false allow_glob_domains=false \    allow_wildcard_certificates=false allow_ip_sans=false \    allow_localhost=false use_csr_common_name=false \    use_csr_sans=false enforce_hostnames=true \    allowed_uri_sans=&#x22;praxis://system/*&#x22; \    client_flag=true server_flag=false \    key_type=ec key_bits=256 \    ttl=1h max_ttl=1h no_store=false"><div></div></button></div></figure></div>
+<p><strong>Broker PKI:</strong></p>
+<div class="expressive-code"><figure class="frame is-terminal not-content"><figcaption class="header"><span class="title"></span><span class="sr-only">Terminal window</span></figcaption><pre data-language="bash"><code><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">vault</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">write</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-field=certificate</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">praxis-broker-ca/root/generate/internal</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#ECC48D;--1:#3B61B0">common_name=</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">Praxis Broker CA</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">issuer_name=</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">praxis-broker-root</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#ECC48D;--1:#3B61B0">ttl=43800h</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#7FDBCA;--1:#096E72">></span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">/path/to/broker-ca-cert.pem</span></div></div><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">vault</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">write</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">praxis-broker-ca/roles/server</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#ECC48D;--1:#3B61B0">allowed_domains=</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">&#x3C;comma-separated-broker-hostnames></span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--1:#3B61B0"><span style="--0:#ECC48D">allow_subdomains=</span><span style="--0:#82AAFF">false</span></span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--1:#3B61B0"><span style="--0:#ECC48D">allow_any_name=</span><span style="--0:#82AAFF">false</span></span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--1:#3B61B0"><span style="--0:#ECC48D">allow_bare_domains=</span><span style="--0:#82AAFF">true</span></span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--1:#3B61B0"><span style="--0:#ECC48D">allow_glob_domains=</span><span style="--0:#82AAFF">false</span></span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--1:#3B61B0"><span style="--0:#ECC48D">allow_wildcard_certificates=</span><span style="--0:#82AAFF">false</span></span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--1:#3B61B0"><span style="--0:#ECC48D">allow_ip_sans=</span><span style="--0:#82AAFF">true</span></span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--1:#3B61B0"><span style="--0:#ECC48D">allow_localhost=</span><span style="--0:#82AAFF">true</span></span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--1:#3B61B0"><span style="--0:#ECC48D">use_csr_common_name=</span><span style="--0:#82AAFF">false</span></span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--1:#3B61B0"><span style="--0:#ECC48D">use_csr_sans=</span><span style="--0:#82AAFF">false</span></span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--1:#3B61B0"><span style="--0:#ECC48D">enforce_hostnames=</span><span style="--0:#82AAFF">false</span></span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--1:#3B61B0"><span style="--0:#ECC48D">client_flag=</span><span style="--0:#82AAFF">false</span></span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--1:#3B61B0"><span style="--0:#ECC48D">server_flag=</span><span style="--0:#82AAFF">true</span></span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#ECC48D;--1:#3B61B0">key_type=ec</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">key_bits=</span><span style="--0:#F78C6C;--1:#AA0982">256</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#ECC48D;--1:#3B61B0">ttl=8760h</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">max_ttl=8760h</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--1:#3B61B0"><span style="--0:#ECC48D">no_store=</span><span style="--0:#82AAFF">false</span></span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="vault write -field=certificate praxis-broker-ca/root/generate/internal \    common_name=&#x22;Praxis Broker CA&#x22; issuer_name=&#x22;praxis-broker-root&#x22; \    ttl=43800h > /path/to/broker-ca-cert.pemvault write praxis-broker-ca/roles/server \    allowed_domains=&#x22;<comma-separated-broker-hostnames>&#x22; \    allow_subdomains=false allow_any_name=false \    allow_bare_domains=true allow_glob_domains=false \    allow_wildcard_certificates=false allow_ip_sans=true \    allow_localhost=true use_csr_common_name=false \    use_csr_sans=false enforce_hostnames=false \    client_flag=false server_flag=true \    key_type=ec key_bits=256 \    ttl=8760h max_ttl=8760h no_store=false"><div></div></button></div></figure></div>
+<p>Then issue a broker server cert/key/CA bundle and mount them at
+<code>/vault/data/broker/{server.crt, server.key, ca.crt}</code> for the
+agent-broker process to pick up (or override via
+<code>PRAXIS_BROKER_TLS_CERT</code> / <code>_KEY</code> / <code>_CA_CLIENT</code>).</p>
+<p><strong>Backend service policy:</strong></p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="hcl"><code><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">path </span><span style="--0:#C5E478;--1:#3B61B0">"praxis/*"</span><span style="--0:#D6DEEB;--1:#403F53"> {</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#C5E478;--1:#3B61B0">capabilities </span><span style="--0:#C792EA;--1:#8844AE">=</span><span style="--0:#C5E478;--1:#3B61B0"> </span><span style="--0:#D6DEEB;--1:#403F53">[</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">create</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">read</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">update</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">delete</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">list</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">]</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">}</span></div></div><div class="ec-line"><div class="code">
+</div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F"># SSH CA operations</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">path </span><span style="--0:#C5E478;--1:#3B61B0">"ssh-client-signer/config/ca"</span><span style="--0:#D6DEEB;--1:#403F53">     { </span><span style="--0:#C5E478;--1:#3B61B0">capabilities </span><span style="--0:#C792EA;--1:#8844AE">=</span><span style="--0:#C5E478;--1:#3B61B0"> </span><span style="--0:#D6DEEB;--1:#403F53">[</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">read</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">] }</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">path </span><span style="--0:#C5E478;--1:#3B61B0">"ssh-client-signer/sign/praxis-user"</span><span style="--0:#D6DEEB;--1:#403F53"> { </span><span style="--0:#C5E478;--1:#3B61B0">capabilities </span><span style="--0:#C792EA;--1:#8844AE">=</span><span style="--0:#C5E478;--1:#3B61B0"> </span><span style="--0:#D6DEEB;--1:#403F53">[</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">create</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">update</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">] }</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">path </span><span style="--0:#C5E478;--1:#3B61B0">"ssh-client-signer/roles/praxis-user"</span><span style="--0:#D6DEEB;--1:#403F53"> { </span><span style="--0:#C5E478;--1:#3B61B0">capabilities </span><span style="--0:#C792EA;--1:#8844AE">=</span><span style="--0:#C5E478;--1:#3B61B0"> </span><span style="--0:#D6DEEB;--1:#403F53">[</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">read</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">] }</span></div></div><div class="ec-line"><div class="code">
+</div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F"># Agent CA operations</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">path </span><span style="--0:#C5E478;--1:#3B61B0">"praxis-agent-ca/cert/ca"</span><span style="--0:#D6DEEB;--1:#403F53">   { </span><span style="--0:#C5E478;--1:#3B61B0">capabilities </span><span style="--0:#C792EA;--1:#8844AE">=</span><span style="--0:#C5E478;--1:#3B61B0"> </span><span style="--0:#D6DEEB;--1:#403F53">[</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">read</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">] }</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">path </span><span style="--0:#C5E478;--1:#3B61B0">"praxis-agent-ca/sign/agent"</span><span style="--0:#D6DEEB;--1:#403F53"> { </span><span style="--0:#C5E478;--1:#3B61B0">capabilities </span><span style="--0:#C792EA;--1:#8844AE">=</span><span style="--0:#C5E478;--1:#3B61B0"> </span><span style="--0:#D6DEEB;--1:#403F53">[</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">create</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">update</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">] }</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">path </span><span style="--0:#C5E478;--1:#3B61B0">"praxis-agent-ca/roles/agent"</span><span style="--0:#D6DEEB;--1:#403F53"> { </span><span style="--0:#C5E478;--1:#3B61B0">capabilities </span><span style="--0:#C792EA;--1:#8844AE">=</span><span style="--0:#C5E478;--1:#3B61B0"> </span><span style="--0:#D6DEEB;--1:#403F53">[</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">read</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">] }</span></div></div><div class="ec-line"><div class="code">
+</div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F"># Broker CA operations</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">path </span><span style="--0:#C5E478;--1:#3B61B0">"praxis-broker-ca/cert/ca"</span><span style="--0:#D6DEEB;--1:#403F53">      { </span><span style="--0:#C5E478;--1:#3B61B0">capabilities </span><span style="--0:#C792EA;--1:#8844AE">=</span><span style="--0:#C5E478;--1:#3B61B0"> </span><span style="--0:#D6DEEB;--1:#403F53">[</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">read</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">] }</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">path </span><span style="--0:#C5E478;--1:#3B61B0">"praxis-broker-ca/issue/server"</span><span style="--0:#D6DEEB;--1:#403F53"> { </span><span style="--0:#C5E478;--1:#3B61B0">capabilities </span><span style="--0:#C792EA;--1:#8844AE">=</span><span style="--0:#C5E478;--1:#3B61B0"> </span><span style="--0:#D6DEEB;--1:#403F53">[</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">create</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">, </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">update</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">] }</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">path </span><span style="--0:#C5E478;--1:#3B61B0">"praxis-broker-ca/roles/server"</span><span style="--0:#D6DEEB;--1:#403F53"> { </span><span style="--0:#C5E478;--1:#3B61B0">capabilities </span><span style="--0:#C792EA;--1:#8844AE">=</span><span style="--0:#C5E478;--1:#3B61B0"> </span><span style="--0:#D6DEEB;--1:#403F53">[</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">read</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53">] }</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="path &#x22;praxis/*&#x22; {  capabilities = [&#x22;create&#x22;, &#x22;read&#x22;, &#x22;update&#x22;, &#x22;delete&#x22;, &#x22;list&#x22;]}# SSH CA operationspath &#x22;ssh-client-signer/config/ca&#x22;     { capabilities = [&#x22;read&#x22;] }path &#x22;ssh-client-signer/sign/praxis-user&#x22; { capabilities = [&#x22;create&#x22;, &#x22;update&#x22;] }path &#x22;ssh-client-signer/roles/praxis-user&#x22; { capabilities = [&#x22;read&#x22;] }# Agent CA operationspath &#x22;praxis-agent-ca/cert/ca&#x22;   { capabilities = [&#x22;read&#x22;] }path &#x22;praxis-agent-ca/sign/agent&#x22; { capabilities = [&#x22;create&#x22;, &#x22;update&#x22;] }path &#x22;praxis-agent-ca/roles/agent&#x22; { capabilities = [&#x22;read&#x22;] }# Broker CA operationspath &#x22;praxis-broker-ca/cert/ca&#x22;      { capabilities = [&#x22;read&#x22;] }path &#x22;praxis-broker-ca/issue/server&#x22; { capabilities = [&#x22;create&#x22;, &#x22;update&#x22;] }path &#x22;praxis-broker-ca/roles/server&#x22; { capabilities = [&#x22;read&#x22;] }"><div></div></button></div></figure></div>
+<p>Write the policy, then issue a long-lived token bound to it and
+hand the token to the backend via <code>VAULT_TOKEN</code>:</p>
+<div class="expressive-code"><figure class="frame is-terminal not-content"><figcaption class="header"><span class="title"></span><span class="sr-only">Terminal window</span></figcaption><pre data-language="bash"><code><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">vault</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">policy</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">write</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">backend-service</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">/path/to/backend-policy.hcl</span></div></div><div class="ec-line"><div class="code"><span style="--0:#C5E478;--1:#3B61B0">BACKEND_TOKEN</span><span style="--0:#C792EA;--1:#8844AE">=</span><span style="--0:#D6DEEB;--1:#403F53">$(</span><span style="--0:#82AAFF;--1:#3B61B0">vault</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">token</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">create</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-policy=backend-service</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-field=token</span><span style="--0:#D6DEEB;--1:#403F53">)</span></div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F"># Set in the operator's .env:</span></div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F">#   VAULT_ADDR=https://vault.your-corp.com:8200</span></div></div><div class="ec-line"><div class="code"><span style="--0:#919F9F;--1:#5F636F">#   VAULT_TOKEN=&#x3C;BACKEND_TOKEN></span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="vault policy write backend-service /path/to/backend-policy.hclBACKEND_TOKEN=$(vault token create -policy=backend-service -field=token)"><div></div></button></div></figure></div>
+<p>External-Vault operators are responsible for token renewal /
+rotation cadence; the repo’s bundled rotation procedures above
+do not apply, because there is no shared <code>vault_data</code> volume to
+rewrite.</p>
+<h3 id="fatal-vault-failure-modes-operator-must-know">Fatal Vault failure modes (operator must know)</h3>
+<ul>
+<li><strong>Losing <code>init-keys.json</code></strong> (on the <code>vault_recovery</code> volume) means
+the bundled Vault cannot be unsealed on next restart. There is no key
+escrow; recovery requires restoring <code>vault_recovery</code> from an off-host
+backup that captured <code>/vault/recovery/init-keys.json</code>. Capture
+<code>vault_recovery</code> (alongside <code>vault_data</code> and the Postgres dump) on the
+same off-host cadence (see the Backup/Restore section).</li>
+<li><strong>Losing the root token</strong> (<code>/vault/recovery/root-token</code>) is
+recoverable if you still have the unseal keys: run a Vault root-token
+regeneration ceremony (<code>vault operator generate-root</code>) using the
+threshold of unseal keys to mint a new root token.</li>
+<li><strong>Losing <code>vault_data</code> AND <code>vault_recovery</code> off-host backups</strong> is
+terminal for the bundled deployment — the SSH CA private key,
+agent/broker PKI roots, and KV secrets (on <code>vault_data</code>) and the
+unseal keys (on <code>vault_recovery</code>) are gone. The supported recovery
+story is “restore both volumes from an off-host backup that captured
+them together.”</li>
+</ul>
+<h2 id="production-env-validation-and-startup-checks">Production Env Validation And Startup Checks</h2>
+<p>What is enforced today on startup (<code>backend/app/api/main.py</code>,
+<code>backend/app/core/auth.py</code>):</p>
+<ul>
+<li><code>backend/app/api/main.py</code> raises <code>ValueError</code> if any of
+<code>SECRET_KEY</code>, <code>ALGORITHM</code>, <code>ACCESS_TOKEN_EXPIRE_MINUTES</code> is unset.</li>
+<li><code>backend/app/core/auth.py</code> raises <code>RuntimeError</code> if <code>SECRET_KEY</code>
+is unset (redundant with above).</li>
+<li><code>backend/app/core/auth.py</code> rejects a known-weak <code>SECRET_KEY</code> only
+when <code>ENVIRONMENT=production</code>. In any other environment the same
+weak secret is logged as a warning and accepted.</li>
+<li><code>docker-compose.yml</code> uses the <code>${SECRET_KEY:?...}</code> compose-substitution
+form on the <code>backend</code> and <code>agent-broker</code> services, so a missing
+<code>SECRET_KEY</code> short-circuits <code>docker compose up</code> with a clear error.</li>
+<li><code>backend/app/api/main.py</code> flips <code>docs_url</code> / <code>redoc_url</code> /
+<code>openapi_url</code> to <code>None</code> when <code>ENVIRONMENT=production</code>, hiding the
+OpenAPI surface from production deployments.</li>
+<li><code>docker-compose.prod.yml</code> forces <code>ENVIRONMENT=production</code> on the
+backend as a literal value, so applying the prod overlay
+cannot silently inherit the base dev default
+(<code>ENVIRONMENT=${ENVIRONMENT:-development}</code>) and leave the
+production-only gates above disabled. This holds even if the
+operator’s <code>.env</code> sets <code>ENVIRONMENT=development</code>.</li>
+</ul>
+<h3 id="production-fail-clear-validation">Production fail-clear validation</h3>
+<p><code>backend/app/core/startup_validation.py</code> is called from
+<code>backend/app/api/main.py</code> after the existing <code>required_env_vars</code>
+check. Production-only rejections fire only when
+<code>ENVIRONMENT=production</code>; the closed-set ENVIRONMENT check fires
+in every mode (so the common <code>ENVIRONMENT=prod</code> typo can’t
+silently demote a production deployment to dev behavior).</p>
+<p>Each rejection raises <code>StartupValidationError</code> with the variable
+name and the corrective action:</p>
+<ul>
+<li><strong><code>ENVIRONMENT</code> outside <code>{development, production, test}</code></strong> —
+fails before any other check so a typo like <code>ENVIRONMENT=prod</code>
+is caught immediately.</li>
+<li><strong>Missing, empty, or <code>postgres</code> bundled database password</strong>:
+<code>validate_database_credentials</code> inspects the password carried
+in <code>DATABASE_URL</code> and runs in <strong>every</strong> mode, not only
+production, because that URL is the sole credential the backend
+and broker containers receive. It is the enforcement point for
+the bundled credential, since Compose deliberately does not
+require <code>POSTGRES_PASSWORD</code> at interpolation. Production
+additionally rejects a <code>POSTGRES_PASSWORD</code> that is empty or the
+retired default for deployments that assemble their own URL.
+External-Postgres operators set their own <code>DATABASE_URL</code> and
+are exempt everywhere.</li>
+<li><strong>Empty <code>VAULT_TOKEN</code> with non-bundled <code>VAULT_ADDR</code></strong> —
+external-Vault deployments must supply a token. Bundled-Vault
+deployments read the token from the shared
+<code>/vault/data/backend-token</code> at runtime, so empty is correct
+there.</li>
+<li><strong>Empty <code>ADMIN_PASSWORD</code> on a fresh deployment</strong> — enforced
+inside <code>backend/scripts/create_admin_user.py</code> (which knows the
+current user count); in production with <code>user_count == 0</code> and
+empty <code>ADMIN_PASSWORD</code>, the script now raises instead of
+silently skipping admin creation and leaving a production stack
+with no usable login. Subsequent boots that already have users
+skip the gate.</li>
+</ul>
+<p>Test coverage:
+<code>backend/tests/services/test_pra179_startup_validation.py</code> (13
+tests) covers each rejection plus the bundled/external-mode
+asymmetries.</p>
+<p>Documented but not validated today (future
+candidates or explicit no-validate):</p>
+<ul>
+<li><code>CORS_ORIGINS</code> and <code>TRUSTED_HOSTS</code> have permissive defaults
+that are appropriate for dev but are not production-validated.
+Locking <code>TRUSTED_HOSTS</code> to a non-default value in production
+is a future follow-up; see <strong>Known Limitations &#x26; Future Work</strong>
+below.</li>
+<li><code>SECRET_KEY</code> weak-value rejection lives in
+<code>backend/app/core/auth.py</code> (unchanged); the new
+validator does not duplicate it. No-validate is intentional.</li>
+</ul>
+<h3 id="stored-email-serialization-userresponse">Stored-email serialization (<code>UserResponse</code>)</h3>
+<p><code>backend/app/api/schemas/auth.py</code> previously declared
+<code>UserResponse.email</code> as <code>EmailStr</code>. <code>EmailStr</code> requires
+<code>email-validator</code>, which rejects RFC 2606 reserved TLDs (<code>.invalid</code>,
+<code>.test</code>, …). An operator who set
+<code>ADMIN_EMAIL=admin@somecorp.invalid</code> — a defensible choice for
+internal-only deployments — saw every endpoint that returned
+<code>UserResponse</code> 500 with a Pydantic <code>ValidationError</code> at
+response-model serialization time, including <code>/auth/me</code> and
+<code>GET /users</code>.</p>
+<p>The <strong>response</strong> schemas were loosened (<code>UserBase</code>,
+<code>UserResponse</code>) to plain <code>str</code> for <code>email</code>. Input-side schemas
+(<code>UserCreate</code>, <code>UserUpdate</code>) keep <code>EmailStr</code> so self-service
+signup/edit still validates strictly; only already-stored values
+get the relaxed serialization path.</p>
+<p>Regression test:
+<code>backend/tests/api/test_pra179_user_response_reserved_tld.py</code>
+creates an admin with <code>admin-reserved@example.invalid</code>, hits
+<code>/auth/me</code> and <code>/users</code>, asserts both return 200 with the email
+round-tripped unchanged.</p>
+<h2 id="audit-file-sink-confinement">Audit File Sink Confinement</h2>
+<p>A <code>file</code> audit sink appends newline-delimited JSON to local disk. The delivery
+worker writes that path from inside the trust boundary, so every file sink is
+confined to one operator-approved directory:</p>
+<ul>
+<li><code>AUDIT_FILE_SINK_ROOT</code> sets the root. It defaults to
+<code>/data/praxis/audit-sinks</code>, backed by the dedicated <code>audit_sink_data</code> named
+volume that <code>docker-compose.yml</code> mounts into the <strong>backend only</strong>. Sink output
+therefore survives backend recreation, and no other service can read or write
+it. The production image pre-creates the mount point owned by the non-root
+runtime user (UID 1000), so the volume keeps that ownership on first mount.</li>
+<li>Sink targets are <strong>relative paths beneath the root</strong>, for example
+<code>exports/audit.jsonl</code>. Missing intermediate directories are created on first
+delivery.</li>
+<li>Absolute paths, empty or directory-only targets, <code>.</code> and <code>..</code> segments,
+repeated or trailing separators, and any symlinked path component are
+rejected. Rejection happens when the sink is created or updated (HTTP 400)
+and independently on every delivery. Saving a sink also refuses an
+already-existing symlink in the target’s parents or at the target itself, a
+parent that is not a directory, and an existing target that is not a regular
+file.</li>
+<li>Both checks walk the root and the target one component at a time from a
+descriptor on the filesystem root, with pinned directory descriptors and
+no-follow opens. Paths are never resolved before the policy is applied and are
+never reopened by name, so a symlink planted after the sink was saved cannot
+redirect the write outside the root.</li>
+<li>The root must be an absolute path with no <code>.</code> or <code>..</code> segments, must not be
+the filesystem root, and must not be <code>/app</code>, <code>/boot</code>, <code>/dev</code>, <code>/etc</code>,
+<code>/proc</code>, <code>/root</code>, <code>/run</code>, <code>/sys</code>, <code>/vault</code>, or anything beneath them. A root
+that is itself a symlink, or that sits behind a symlinked ancestor, is
+refused rather than followed. Change the root only together with the compose
+mount.</li>
+</ul>
+<p>Operator action for existing sinks: a <code>file</code> sink saved before this
+confinement keeps its stored target and stays visible in <strong>Settings > Audit
+Export</strong>, but its deliveries fail with an explanatory <code>last_error</code> and follow
+the normal retry then dead-letter path. Nothing is rewritten or silently
+redirected. Replace the target with a relative path under the root, then retry
+the dead-lettered deliveries.</p>
+<h2 id="bundled-vs-external-data-tier-boundary">Bundled-vs-External Data Tier Boundary</h2>
+<p>The bundled <code>db</code>, <code>vault</code>, and <code>db_backup</code> services share a single
+compose profile. The supported deployment shapes for the data tier
+are therefore exactly two:</p>
+<ol>
+<li><strong>Fully bundled</strong> — bundled Postgres + bundled Vault + bundled
+<code>db_backup</code> sidecar (<code>COMPOSE_PROFILES=bundled</code>).</li>
+<li><strong>Fully external</strong> — operator-owned Postgres + operator-owned
+Vault, no bundled data-tier services running, no <code>db_backup</code>
+sidecar.</li>
+</ol>
+<p>Mixed bundled/external data-tier shapes are <strong>not</strong> supported in
+Praxis 1.0. The repo neither ships a compose overlay nor exercises
+any test that brings up bundled Vault against external Postgres or
+the reverse; an operator who hand-rolls that mix is on their own.</p>
+<p>Bundled Postgres:</p>
+<ul>
+<li>Single-node, single-volume, default credentials unless overridden,
+daily pg_dump at 02:00 with 30-day local retention.</li>
+<li>Suitable for small single-node deployments where the operator
+takes responsibility for off-host backup of the docker volumes.</li>
+</ul>
+<p>External Postgres (only as part of the fully-external shape):</p>
+<ul>
+<li>Set <code>DATABASE_URL</code> (and <code>TEST_DATABASE_URL</code> if running the test
+suite against external Postgres). The bundled <code>db</code> service does
+not run (gated by <code>bundled</code> profile).</li>
+<li>The operator owns: HA, replication, backups, point-in-time
+recovery, monitoring, version pinning, and <code>pg_dump</code> schedule.</li>
+<li>The repo guarantees: schema is managed via Alembic, the connection
+string is the only contract, no Praxis component bypasses
+SQLAlchemy to issue server-specific DDL.</li>
+<li>Praxis 1.0 expects PostgreSQL 15.x (bundled image is
+<code>postgres:15.17-alpine</code>). External operators on newer majors are
+on their own for compatibility until that is explicitly verified.</li>
+</ul>
+<h2 id="unsupported-deployment-shapes">Unsupported Deployment Shapes</h2>
+<p>The operator-facing list of deployment shapes that are
+<strong>explicitly out of scope for Praxis 1.0</strong>. None of these are
+“we forgot to ship support” — each is an intentional boundary
+with a one-line rationale below. Operators who need any of these
+shapes today are running outside the supported deployment
+contract.</p>
+<h3 id="orchestration--topology">Orchestration / topology</h3>
+<ul>
+<li><strong>Docker Swarm.</strong> <code>docker-compose.prod.yml</code>’s preamble
+explicitly defers Swarm compatibility. No swarm-mode service
+definitions, no global / replicated mode stanzas, no
+swarm-routing mesh expectations.</li>
+<li><strong>Kubernetes.</strong> No manifests, helm charts, or kustomize
+overlays ship in this repo for 1.0. A future release can introduce
+them; nothing in 1.0 either ships or precludes that.</li>
+<li><strong>Multiple agent-broker instances / broker HA.</strong> The agent
+broker holds the agent tunnel registry (<code>AgentRegistry</code>) and
+in-flight operation state (<code>OperationManager</code>) <strong>in memory</strong>,
+per process. 1.0 runs exactly <strong>one</strong> broker instance; scaling
+the broker to replicas would split agent connections and op
+state across processes with no shared registry, so an op
+dispatched to one broker could not reach an agent connected to
+another. The broker logs this invariant at startup. Horizontal
+broker scaling requires a future shared registry and is out of
+scope for 1.0. (This is independent of the single-backend-worker
+requirement for interactive SSH sessions, documented above.)</li>
+<li><strong>Mixed bundled/external data tier.</strong> The bundled <code>db</code>,
+<code>vault</code>, and <code>db_backup</code> services share a single compose
+profile. The supported external shape is <em>fully</em> external
+Postgres <strong>and</strong> external Vault; bundled-Vault-with-external-
+Postgres (or the reverse) is not exercised by any test and is
+not a supported shape.</li>
+</ul>
+<h3 id="data-tier-scale-out">Data tier scale-out</h3>
+<ul>
+<li><strong>Multi-node Postgres replication or Patroni in bundled mode.</strong>
+The bundled <code>db</code> is a single <code>postgres:15.17-alpine</code> container.
+External-Postgres operators can run whatever their managed
+Postgres supports.</li>
+<li><strong>Vault HA, integrated storage (Raft), KMS-backed auto-unseal.</strong>
+Bundled Vault uses <code>storage "file"</code> with auto-unseal driven
+by an on-disk key file (see the Vault section above).
+Operators who need HA, KMS auto-unseal, audit log shipping,
+or compliance-grade key management must switch the entire
+data tier to the fully-external shape and bring their own
+Vault.</li>
+</ul>
+<h3 id="backup-restore-durability">Backup, restore, durability</h3>
+<ul>
+<li><strong>Off-host backup shipping automation.</strong> <code>scripts/backup.sh</code>
+produces dumps on the shared <code>backup_data</code> volume only.
+Copying dumps (and the other named volumes — <code>vault_data</code>,
+<code>vault_recovery</code>, <code>recordings_data</code>, <code>mirror_data</code>) off-host is
+operator-owned.
+See the <strong>Backup / Restore Drill</strong> section for the
+RPO/RTO contract and the failure boundary.</li>
+<li><strong>Backup encryption at rest.</strong> <code>scripts/backup.sh</code> writes
+custom-format pg_dump output unencrypted to the
+<code>backup_data</code> volume. Operators who need encryption at rest
+encrypt the volume (or the off-host destination) themselves.</li>
+<li><strong>Multi-revision Alembic downgrade.</strong> Forward migrations are
+the supported path. The Praxis 1.0 rollback contract is
+<strong>restore the pre-upgrade dump</strong>, not <code>alembic downgrade</code>.</li>
+</ul>
+<h3 id="edge--tls--external-trust">Edge / TLS / external trust</h3>
+<ul>
+<li><strong>Caddy <code>acme</code> live-DNS mode</strong> as a smoke-tested path. The
+<code>acme</code> mode is supported as a configuration option (set
+<code>PRAXIS_TLS_MODE=acme</code> + <code>PRAXIS_DOMAIN</code> + <code>PRAXIS_ACME_EMAIL</code>)
+but exercising it requires live DNS + port 443 reachable,
+which is not feasible inside a local hermetic smoke. The
+<code>internal</code> and <code>byo</code> Caddy modes have the same operator
+contract; only <code>acme</code> has the live-DNS requirement.</li>
+<li><strong>Operator-owned external Vault automation.</strong> The
+external-Vault provisioning checklist in this doc gives
+exact <code>vault</code> CLI commands, but the operator owns running
+them against their Vault. Praxis 1.0 ships no automation for
+external-Vault rotation, token renewal, or audit-log
+shipping.</li>
+</ul>
+<h3 id="agent-side-surface">Agent-side surface</h3>
+<ul>
+<li>**Activation-token agent bootstrap with the real Go binary
+<ul>
+<li>systemd unit.** The first-enrolled-host smoke
+verifies the <code>/agent/enroll</code> redemption end-to-end against a
+docker-side dummy host, but does <strong>not</strong> load the
+<code>praxis-agent</code> Go binary or run the agent’s mTLS handshake
+against the broker. Operators who need those paths
+exercised do so against their own host. See the Fresh
+Install Path section’s boundary note.</li>
+</ul>
+</li>
+<li><strong><code>bootstrap.sh</code> <code>curl --fail-with-body</code> on recent curl
+versions.</strong> The committed <code>bootstrap.sh:147</code> uses
+<code>curl -fsS --fail-with-body -X POST ...</code>, which conflicts
+with the <code>-f</code> in <code>-fsS</code> on curl 7.76+ (including the curl
+shipped in ubuntu:22.04). An operator running the script
+on a recent Ubuntu host hits this; the first-enrolled-host smoke
+bypasses it by re-implementing the enroll POST. Documented
+queued for a future change; <strong>not</strong> in scope for 1.0.</li>
+</ul>
+<h3 id="compliance--scanning--os-surface">Compliance / scanning / OS surface</h3>
+<ul>
+<li><strong>Embedded OpenSCAP runs.</strong> Compliance probes are deferred
+to future compliance surfaces; Praxis 1.0 does not
+introduce or exercise OpenSCAP.</li>
+<li><strong>Host package-manager mutation.</strong> Any change to the
+control-plane host’s apt/yum/dnf state is operator-owned.
+Praxis 1.0 ships container images; container internals
+install via the Dockerfiles and are out of operator scope.</li>
+</ul>
+<h2 id="verification--support-status">Verification &#x26; Support Status</h2>
+<p>Legend: <strong>Verified</strong> = exercised by an automated test/script in this repo;
+<strong>Documented</strong> = an operator procedure described here but run manually;
+<strong>Unsupported</strong> = explicitly out of scope for Praxis 1.0.</p>
+<p>Verified by repo tests/scripts:</p>
+<ul>
+<li>Dev cold rebuild (<code>down -v</code> -> <code>up --build</code> -> pytest) — <code>scripts/test-cold-rebuild.sh</code>.</li>
+<li>Prod-overlay fresh-install bring-up (bundled profile, locally built images;
+waits for <code>/health</code>, exercises authenticated and RBAC-gated routes) —
+<code>scripts/test-fresh-install-smoke.sh</code>.</li>
+<li>First-enrolled-host bootstrap (activation-token mint + redemption via
+<code>POST /agent/enroll</code> against a docker-side dummy host; asserts the System row
+reaches <code>agent_status=active</code> with a Vault-signed cert serial) —
+<code>scripts/test-first-enrolled-host-smoke.sh</code>.</li>
+<li>Alembic <code>upgrade head</code> from empty (cold-rebuild + CI) and from representative
+earlier snapshots (<code>pre_m13.sql</code>, <code>pre_m15.sql</code>) —
+<code>scripts/test-upgrade-smoke.sh</code>.</li>
+<li>Daily <code>pg_dump</code> via the <code>db_backup</code> sidecar + a <code>pg_restore</code> round-trip
+(sentinel insert -> backup -> delete -> restore -> re-verify <code>/health</code>) —
+<code>scripts/test-backup-restore-smoke.sh</code>.</li>
+<li>RPO/RTO targets — see the RPO/RTO contract above (RPO ~ 24 h, RTO minutes to
+single-digit hours).</li>
+<li>Startup validation: rejects missing/known-weak <code>SECRET_KEY</code>, empty
+<code>ADMIN_PASSWORD</code> in production, a missing/empty/default bundled database
+password, an empty <code>VAULT_TOKEN</code> in external mode, and unknown <code>ENVIRONMENT</code>
+values — <code>backend/app/core/startup_validation.py</code> (+ unit tests).</li>
+<li>Bundled database credential contract: no password ships in the source; the
+bundled <code>db</code> entrypoint, the backend/broker startup preflight, and
+<code>scripts/backup.sh</code> each exit before doing useful work when it is missing,
+empty, or the retired default; and external <code>DATABASE_URL</code> mode renders and
+runs without <code>POSTGRES_PASSWORD</code> —
+<code>backend/tests/services/test_pra387_postgres_credential_contract.py</code>.
+<code>UserResponse</code> serializes reserved-TLD emails as <code>str</code> (input schemas keep
+<code>EmailStr</code>).</li>
+</ul>
+<p>Documented operator procedures (manual, not automated):</p>
+<ul>
+<li>GHCR-pull form of the prod overlay (<code>--profile bundled pull</code>); the smoke
+covers <code>--build</code>.</li>
+<li>Caddy <code>internal</code> and <code>byo</code> TLS modes (<code>caddy/Caddyfile</code>).</li>
+<li>Bundled Vault init / auto-unseal and the unseal-key / root-token /
+backend-service-token rotation procedures above.</li>
+<li>External Vault provisioning checklist above.</li>
+<li>Off-host shipping of the backup dump + named volumes.</li>
+</ul>
+<p>Unsupported for 1.0 (see <strong>Unsupported Deployment Shapes</strong>):</p>
+<ul>
+<li>Docker Swarm, Kubernetes, multi-node bundled Postgres.</li>
+<li>Vault HA / integrated storage / KMS auto-unseal in bundled mode (external
+Vault only).</li>
+<li>Caddy <code>acme</code> TLS (needs live DNS + reachable :443).</li>
+<li>Backup encryption at rest; embedded OpenSCAP runs.</li>
+<li>Multi-revision Alembic downgrade — the supported rollback is “restore the
+pre-upgrade dump”, not downgrade through Alembic.</li>
+</ul>
+<h2 id="known-limitations--future-work">Known Limitations &#x26; Future Work</h2>
+<ul>
+<li><code>backend/app/api/routes/_assets/bootstrap.sh</code> uses a <code>curl --fail-with-body</code>
+flag pair that conflicts on curl 7.76+; the conflicting flag should be
+dropped.</li>
+<li><code>TRUSTED_HOSTS</code> (and optionally <code>CORS_ORIGINS</code>) are not production-validated
+today — they carry permissive dev defaults. A startup-validation rule could
+require a non-default <code>TRUSTED_HOSTS</code> in production.</li>
+<li>Optional automated coverage not yet present: a GHCR-pull install smoke, Caddy
+<code>internal</code> / <code>byo</code> TLS smokes, and in-container Vault rotation dry-runs
+against a throwaway smoke-Vault.</li>
+</ul>
+<h2 id="references">References</h2>
+<ul>
+<li><code>README.md</code> — public-facing install + deployment instructions.</li>
+<li><code>docker-compose.yml</code> — production-parity base services (prod images/
+entrypoints), two-tier network, health checks.</li>
+<li><code>docker-compose.prod.yml</code> — prod overlay (pinned images, logging,
+ENVIRONMENT=production, Caddy profile).</li>
+<li><code>caddy/Caddyfile</code> — TLS modes and edge headers.</li>
+<li><code>scripts/backup.sh</code> — daily pg_dump.</li>
+<li><code>scripts/test-cold-rebuild.sh</code> — from-scratch build + boot gate.</li>
+<li><code>scripts/test-fresh-install-smoke.sh</code>,
+<code>scripts/fresh-install-smoke.override.yml</code> — hermetic prod-overlay
+bring-up smoke.</li>
+<li><code>scripts/test-upgrade-smoke.sh</code>,
+<code>backend/tests/fixtures/upgrade/pre_m13.sql</code>,
+<code>backend/tests/fixtures/upgrade/pre_m15.sql</code> — upgrade smoke +
+committed pre-M13/pre-M15 schema fixtures.</li>
+<li><code>scripts/test-backup-restore-smoke.sh</code> — backup/restore round-trip
+smoke against the shipped backup path (no compose override).</li>
+<li><code>backend/app/core/startup_validation.py</code>,
+<code>backend/tests/services/test_pra179_startup_validation.py</code> —
+production env / startup fail-clear validator and its unit suite.</li>
+<li><code>backend/tests/api/test_pra179_user_response_reserved_tld.py</code> —
+regression test for the <code>UserResponse.email</code> / RFC 2606
+reserved-TLD serialization (input schemas keep <code>EmailStr</code>;
+response schemas loosened to <code>str</code>).</li>
+<li><code>scripts/test-first-enrolled-host-smoke.sh</code> —
+first-enrolled-host redemption smoke. Spins up an ubuntu:22.04
+dummy host on the smoke project’s <code>backend_net</code>, generates a
+CSR with openssl, redeems the activation token via
+<code>POST /agent/enroll</code>, and asserts the System row transitioned
+to <code>agent_status=active</code> with a Vault-signed cert serial.</li>
+<li><code>vault/config/vault.hcl</code>, <code>vault/scripts/init-vault.sh</code>,
+<code>vault/scripts/startup.sh</code> — bundled Vault provisioning.</li>
+<li><code>backend/app/api/main.py</code>, <code>backend/app/core/auth.py</code> — startup
+env validation today.</li>
+<li><code>backend/alembic/versions/</code> — single linear Alembic chain, M0
+through the latest revision named in the Upgrade And Migration
+Posture section above.</li>
+<li>Operator commands are direct <code>docker compose ...</code> invocations
+(there is no root <code>Makefile</code>); see the README “Common
+operator commands” table.</li>
+</ul> </div> <div class="pagination-links print:hidden astro-jgq3vlii" dir="ltr"> <a href="/help/guide-license-rotation" rel="prev" class="astro-jgq3vlii"> <svg aria-hidden="true" class="astro-jgq3vlii astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.5rem;"><path d="M17 11H9.41l3.3-3.29a1.004 1.004 0 1 0-1.42-1.42l-5 5a1 1 0 0 0-.21.33 1 1 0 0 0 0 .76 1 1 0 0 0 .21.33l5 5a1.002 1.002 0 0 0 1.639-.325 1 1 0 0 0-.219-1.095L9.41 13H17a1 1 0 0 0 0-2Z"/></svg> <span class="astro-jgq3vlii"> Previous <br class="astro-jgq3vlii"> <span class="link-title astro-jgq3vlii">Rotate a licence</span> </span> </a> <a href="/help/backup-restore" rel="next" class="astro-jgq3vlii"> <svg aria-hidden="true" class="astro-jgq3vlii astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.5rem;"><path d="M17.92 11.62a1.001 1.001 0 0 0-.21-.33l-5-5a1.003 1.003 0 1 0-1.42 1.42l3.3 3.29H7a1 1 0 0 0 0 2h7.59l-3.3 3.29a1.002 1.002 0 0 0 .325 1.639 1 1 0 0 0 1.095-.219l5-5a1 1 0 0 0 .21-.33 1 1 0 0 0 0-.76Z"/></svg> <span class="astro-jgq3vlii"> Next <br class="astro-jgq3vlii"> <span class="link-title astro-jgq3vlii">Backup and restore</span> </span> </a> </div> <footer class="praxis-docs-footer astro-jo6i4kqk"> <p class="astro-jo6i4kqk">
+Praxis documentation. This page is part of a single documentation set that
+    is published on the web and bundled with the application for offline use.
+</p> </footer> </div> </div>  </main> </div> </div> </div> </div> </body> </html>

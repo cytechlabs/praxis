@@ -1,0 +1,424 @@
+<!DOCTYPE html><html lang="en" dir="ltr" data-theme="dark" data-has-toc data-has-sidebar class="astro-vdxcvpsm"> <head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>Compliance evidence map | Praxis</title><link rel="shortcut icon" href="/help/favicon.svg" type="image/svg+xml"/><meta name="generator" content="Astro v7.2.0"/><meta name="generator" content="Starlight v0.41.7"/><meta property="og:title" content="Compliance evidence map"/><meta property="og:type" content="article"/><meta property="og:locale" content="en"/><meta property="og:description" content="Which Praxis evidence supports SOC 2, PCI DSS, and HIPAA control discussions, and where the boundary is."/><meta property="og:site_name" content="Praxis"/><meta name="twitter:card" content="summary_large_image"/><meta name="description" content="Which Praxis evidence supports SOC 2, PCI DSS, and HIPAA control discussions, and where the boundary is."/> <script>
+	window.StarlightThemeProvider = (() => {
+		const storedTheme =
+			typeof localStorage !== 'undefined' && localStorage.getItem('starlight-theme');
+		const theme =
+			storedTheme ||
+			(window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+		document.documentElement.dataset.theme = theme === 'light' ? 'light' : 'dark';
+		return {
+			updatePickers(theme = storedTheme || 'auto') {
+				document.querySelectorAll('starlight-theme-select').forEach((picker) => {
+					const select = picker.querySelector('select');
+					if (select) select.value = theme;
+					/** @type {HTMLTemplateElement | null} */
+					const tmpl = document.querySelector(`#theme-icons`);
+					const newIcon = tmpl && tmpl.content.querySelector('.' + theme);
+					if (newIcon) {
+						const oldIcon = picker.querySelector('svg.label-icon');
+						if (oldIcon) {
+							oldIcon.replaceChildren(...newIcon.cloneNode(true).childNodes);
+						}
+					}
+				});
+			},
+		};
+	})();
+</script> <template id="theme-icons"> <svg aria-hidden="true" class="light astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M5 12a1 1 0 0 0-1-1H3a1 1 0 0 0 0 2h1a1 1 0 0 0 1-1Zm.64 5-.71.71a1 1 0 0 0 0 1.41 1 1 0 0 0 1.41 0l.71-.71A1 1 0 0 0 5.64 17ZM12 5a1 1 0 0 0 1-1V3a1 1 0 0 0-2 0v1a1 1 0 0 0 1 1Zm5.66 2.34a1 1 0 0 0 .7-.29l.71-.71a1 1 0 1 0-1.41-1.41l-.66.71a1 1 0 0 0 0 1.41 1 1 0 0 0 .66.29Zm-12-.29a1 1 0 0 0 1.41 0 1 1 0 0 0 0-1.41l-.71-.71a1.004 1.004 0 1 0-1.43 1.41l.73.71ZM21 11h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0-2Zm-2.64 6A1 1 0 0 0 17 18.36l.71.71a1 1 0 0 0 1.41 0 1 1 0 0 0 0-1.41l-.76-.66ZM12 6.5a5.5 5.5 0 1 0 5.5 5.5A5.51 5.51 0 0 0 12 6.5Zm0 9a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Zm0 3.5a1 1 0 0 0-1 1v1a1 1 0 0 0 2 0v-1a1 1 0 0 0-1-1Z"/></svg> <svg aria-hidden="true" class="dark astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21.64 13a1 1 0 0 0-1.05-.14 8.049 8.049 0 0 1-3.37.73 8.15 8.15 0 0 1-8.14-8.1 8.59 8.59 0 0 1 .25-2A1 1 0 0 0 8 2.36a10.14 10.14 0 1 0 14 11.69 1 1 0 0 0-.36-1.05Zm-9.5 6.69A8.14 8.14 0 0 1 7.08 5.22v.27a10.15 10.15 0 0 0 10.14 10.14 9.784 9.784 0 0 0 2.1-.22 8.11 8.11 0 0 1-7.18 4.32v-.04Z"/></svg> <svg aria-hidden="true" class="auto astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg> </template><link rel="stylesheet" href="/help/_astro/print.ehPL0gv-.css" media="print"><link rel="stylesheet" href="/help/_astro/common.fMBtDe11.css"><script type="module" src="/help/_astro/page.Dwipeu-R.js"></script></head> <body class="astro-vdxcvpsm"> <a class="sl-skip-link astro-vxeigawq" href="#_top">Skip to content</a> <div class="page sl-flex astro-gqpr5s5a"> <header class="header astro-gqpr5s5a"><div class="header astro-nczgtkxc"> <div class="title-wrapper sl-flex astro-nczgtkxc"> <a href="/help" class="site-title sl-flex astro-clw6ags5">  <img class="astro-clw6ags5" alt="Praxis" src="/help/_astro/praxis-mark._9LsDocr.svg" width="1000" height="1000">    <span class="astro-clw6ags5" translate="no"> Praxis </span> </a> </div> <div class="sl-flex print:hidden astro-nczgtkxc"> <site-search class="astro-nczgtkxc astro-r5ar4xm7" data-translations="{&quot;placeholder&quot;:&quot;Search&quot;}" data-strip-trailing-slash> <button data-open-modal disabled aria-label="Search" aria-keyshortcuts="Control+K" class="astro-r5ar4xm7"> <svg aria-hidden="true" class="astro-r5ar4xm7 astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21.71 20.29 18 16.61A9 9 0 1 0 16.61 18l3.68 3.68a.999.999 0 0 0 1.42 0 1 1 0 0 0 0-1.39ZM11 18a7 7 0 1 1 0-14 7 7 0 0 1 0 14Z"/></svg> <span class="sl-hidden md:sl-block astro-r5ar4xm7" aria-hidden="true">Search</span> <kbd class="sl-hidden md:sl-flex astro-r5ar4xm7" style="display: none;"> <kbd class="astro-r5ar4xm7">Ctrl</kbd><kbd class="astro-r5ar4xm7">K</kbd> </kbd> </button> <dialog style="padding:0" aria-label="Search" class="astro-r5ar4xm7"> <div class="dialog-frame sl-flex astro-r5ar4xm7">  <button data-close-modal class="sl-flex md:sl-hidden astro-r5ar4xm7"> Cancel </button> <div class="search-container astro-r5ar4xm7"> <div id="starlight__search" class="astro-r5ar4xm7"></div> </div> </div> </dialog> </site-search>  <script>
+	(() => {
+		const openBtn = document.querySelector('button[data-open-modal]');
+		const shortcut = openBtn?.querySelector('kbd');
+		if (!openBtn || !(shortcut instanceof HTMLElement)) return;
+		const platformKey = shortcut.querySelector('kbd');
+		if (platformKey && /(Mac|iPhone|iPod|iPad)/i.test(navigator.platform)) {
+			platformKey.textContent = '⌘';
+			openBtn.setAttribute('aria-keyshortcuts', 'Meta+K');
+		}
+		shortcut.style.display = '';
+	})();
+</script> <script type="module" src="/help/_astro/Search.astro_astro_type_script_index_0_lang.y9085PDE.js"></script> </div> <div class="sl-hidden md:sl-flex print:hidden right-group astro-nczgtkxc"> <div class="sl-flex social-icons astro-nczgtkxc">  </div> <starlight-theme-select>  <label style="--sl-select-width: 6.25em" class="astro-r2p65idu"> <span class="sr-only astro-r2p65idu">Select theme</span> <svg aria-hidden="true" class="icon label-icon astro-r2p65idu astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg> <select autocomplete="off" class="astro-r2p65idu"> <option value="dark" class="astro-r2p65idu">Dark</option><option value="light" class="astro-r2p65idu">Light</option><option value="auto" selected class="astro-r2p65idu">Auto</option> </select> <svg aria-hidden="true" class="icon caret astro-r2p65idu astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M17 9.17a1 1 0 0 0-1.41 0L12 12.71 8.46 9.17a1 1 0 1 0-1.41 1.42l4.24 4.24a1.002 1.002 0 0 0 1.42 0L17 10.59a1.002 1.002 0 0 0 0-1.42Z"/></svg> </label> </starlight-theme-select>  <script>
+	StarlightThemeProvider.updatePickers();
+</script> <script type="module">var e=`starlight-theme`,t=e=>e===`auto`||e===`dark`||e===`light`?e:`auto`,n=()=>t(typeof localStorage<`u`&&localStorage.getItem(e));function r(t){typeof localStorage<`u`&&localStorage.setItem(e,t===`light`||t===`dark`?t:``)}var i=()=>matchMedia(`(prefers-color-scheme: light)`).matches?`light`:`dark`;function a(e){StarlightThemeProvider.updatePickers(e),document.documentElement.dataset.theme=e===`auto`?i():e,r(e)}matchMedia(`(prefers-color-scheme: light)`).addEventListener(`change`,()=>{n()===`auto`&&a(`auto`)});var o=class extends HTMLElement{constructor(){super(),a(n()),this.querySelector(`select`)?.addEventListener(`change`,e=>{e.currentTarget instanceof HTMLSelectElement&&a(t(e.currentTarget.value))})}};customElements.define(`starlight-theme-select`,o);</script>  <script type="module">var e=class extends HTMLElement{constructor(){super();let e=this.querySelector(`select`);e&&(e.addEventListener(`change`,e=>{e.currentTarget instanceof HTMLSelectElement&&(window.location.pathname=e.currentTarget.value)}),window.addEventListener(`pageshow`,t=>{if(!t.persisted)return;let n=e.querySelector(`option[selected]`)?.index;n!==e.selectedIndex&&(e.selectedIndex=n??0)}))}};customElements.define(`starlight-lang-select`,e);</script> </div> </div></header> <nav class="sidebar print:hidden astro-gqpr5s5a" aria-label="Main"> <starlight-menu-button class="print:hidden astro-vvx7mffu"> <button aria-expanded="false" aria-label="Menu" aria-controls="starlight__sidebar" class="sl-flex md:sl-hidden astro-vvx7mffu"> <svg aria-hidden="true" class="open-menu astro-vvx7mffu astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M3 8h18a1 1 0 1 0 0-2H3a1 1 0 0 0 0 2Zm18 8H3a1 1 0 0 0 0 2h18a1 1 0 0 0 0-2Zm0-5H3a1 1 0 0 0 0 2h18a1 1 0 0 0 0-2Z"/></svg> <svg aria-hidden="true" class="close-menu astro-vvx7mffu astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="m13.41 12 6.3-6.29a1.004 1.004 0 1 0-1.42-1.42L12 10.59l-6.29-6.3a1.004 1.004 0 0 0-1.42 1.42l6.3 6.29-6.3 6.29a1 1 0 0 0 0 1.42.998.998 0 0 0 1.42 0l6.29-6.3 6.29 6.3a.999.999 0 0 0 1.42 0 1 1 0 0 0 0-1.42L13.41 12Z"/></svg> </button> </starlight-menu-button> <script type="module">var e=class extends HTMLElement{btn=this.querySelector(`button`);constructor(){super(),this.btn.addEventListener(`click`,()=>this.toggleExpanded());let e=this.closest(`nav`);e&&e.addEventListener(`keyup`,e=>this.closeOnEscape(e)),matchMedia(`(min-width: 50em)`).addEventListener(`change`,()=>this.setExpanded(!1))}setExpanded(e){this.setAttribute(`aria-expanded`,String(e)),document.body.toggleAttribute(`data-mobile-menu-expanded`,e),document.querySelectorAll(`.main-frame, .sl-skip-link`).forEach(t=>{t.toggleAttribute(`inert`,e)})}toggleExpanded(){this.setExpanded(this.getAttribute(`aria-expanded`)!==`true`)}closeOnEscape(e){e.code===`Escape`&&(this.setExpanded(!1),this.btn.focus())}};customElements.define(`starlight-menu-button`,e);</script> <div id="starlight__sidebar" class="sidebar-pane astro-gqpr5s5a"> <div class="sidebar-content sl-flex astro-gqpr5s5a"> <sl-sidebar-state-persist data-hash="0oj573e" class="astro-f5yvicm7"> <script aria-hidden="true">
+		(() => {
+			try {
+				if (!matchMedia('(min-width: 50em)').matches) return;
+				/** @type {HTMLElement | null} */
+				const target = document.querySelector('sl-sidebar-state-persist');
+				const state = JSON.parse(sessionStorage.getItem('sl-sidebar-state') || '0');
+				if (!target || !state || target.dataset.hash !== state.hash) return;
+				window._starlightScrollRestore = state.scroll;
+				customElements.define(
+					'sl-sidebar-restore',
+					class SidebarRestore extends HTMLElement {
+						connectedCallback() {
+							try {
+								const idx = parseInt(this.dataset.index || '');
+								const details = this.closest('details');
+								if (details && typeof state.open[idx] === 'boolean') details.open = state.open[idx];
+							} catch {}
+						}
+					}
+				);
+			} catch {}
+		})();
+	</script> <ul class="top-level astro-ojxuodky"> <li class="astro-ojxuodky"> <details open class="astro-ojxuodky"> <summary class="astro-ojxuodky"> <span class="group-label astro-ojxuodky"> <span class="large astro-ojxuodky">Get started</span>  </span> <svg aria-hidden="true" class="caret astro-ojxuodky astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </summary> <sl-sidebar-restore data-index="0"></sl-sidebar-restore> <ul class="astro-ojxuodky"> <li class="astro-ojxuodky"> <a href="/help/product-overview" class="astro-ojxuodky"> <span class="astro-ojxuodky">Product overview</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/requirements" class="astro-ojxuodky"> <span class="astro-ojxuodky">Requirements</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/install" class="astro-ojxuodky"> <span class="astro-ojxuodky">Install Praxis</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/first-run" class="astro-ojxuodky"> <span class="astro-ojxuodky">First run</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/enroll-hosts" class="astro-ojxuodky"> <span class="astro-ojxuodky">Enroll hosts</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/getting-started" class="astro-ojxuodky"> <span class="astro-ojxuodky">Getting started</span>  </a> </li> </ul> </details> </li><li class="astro-ojxuodky"> <details open class="astro-ojxuodky"> <summary class="astro-ojxuodky"> <span class="group-label astro-ojxuodky"> <span class="large astro-ojxuodky">Concepts</span>  </span> <svg aria-hidden="true" class="caret astro-ojxuodky astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </summary> <sl-sidebar-restore data-index="1"></sl-sidebar-restore> <ul class="astro-ojxuodky"> <li class="astro-ojxuodky"> <a href="/help/fleet-lifecycle-architecture" class="astro-ojxuodky"> <span class="astro-ojxuodky">Fleet lifecycle architecture</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/security-model" class="astro-ojxuodky"> <span class="astro-ojxuodky">Security model and trust boundaries</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/transports" class="astro-ojxuodky"> <span class="astro-ojxuodky">Transports</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/editions" class="astro-ojxuodky"> <span class="astro-ojxuodky">Editions and feature tiers</span>  </a> </li> </ul> </details> </li><li class="astro-ojxuodky"> <details open class="astro-ojxuodky"> <summary class="astro-ojxuodky"> <span class="group-label astro-ojxuodky"> <span class="large astro-ojxuodky">Using Praxis</span>  </span> <svg aria-hidden="true" class="caret astro-ojxuodky astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </summary> <sl-sidebar-restore data-index="2"></sl-sidebar-restore> <ul class="astro-ojxuodky"> <li class="astro-ojxuodky"> <a href="/help/fleet-and-hosts" class="astro-ojxuodky"> <span class="astro-ojxuodky">Fleet and hosts</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/packages" class="astro-ojxuodky"> <span class="astro-ojxuodky">Packages</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/patch-workflows" class="astro-ojxuodky"> <span class="astro-ojxuodky">Patch workflows</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/jobs-and-scheduling" class="astro-ojxuodky"> <span class="astro-ojxuodky">Jobs and scheduling</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/ssh-and-security" class="astro-ojxuodky"> <span class="astro-ojxuodky">SSH and security</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/credentials-and-vault" class="astro-ojxuodky"> <span class="astro-ojxuodky">Credentials and secrets</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/monitoring-and-alerts" class="astro-ojxuodky"> <span class="astro-ojxuodky">Monitoring and alerts</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/compliance-workflows" class="astro-ojxuodky"> <span class="astro-ojxuodky">Compliance workflows</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/mirrors-and-airgap" class="astro-ojxuodky"> <span class="astro-ojxuodky">Mirrors and content</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/reports-and-schedules" class="astro-ojxuodky"> <span class="astro-ojxuodky">Reports and schedules</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/settings" class="astro-ojxuodky"> <span class="astro-ojxuodky">Settings</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/admin" class="astro-ojxuodky"> <span class="astro-ojxuodky">Administration</span>  </a> </li> </ul> </details> </li><li class="astro-ojxuodky"> <details open class="astro-ojxuodky"> <summary class="astro-ojxuodky"> <span class="group-label astro-ojxuodky"> <span class="large astro-ojxuodky">How-to guides</span>  </span> <svg aria-hidden="true" class="caret astro-ojxuodky astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </summary> <sl-sidebar-restore data-index="3"></sl-sidebar-restore> <ul class="astro-ojxuodky"> <li class="astro-ojxuodky"> <a href="/help/guide-critical-updates" class="astro-ojxuodky"> <span class="astro-ojxuodky">Respond to a critical update</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/guide-patch-windows" class="astro-ojxuodky"> <span class="astro-ojxuodky">Run a patch window</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/guide-rollback" class="astro-ojxuodky"> <span class="astro-ojxuodky">Roll back a bad update</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/guide-onboarding-offboarding" class="astro-ojxuodky"> <span class="astro-ojxuodky">Onboard and offboard people</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/guide-temporary-access" class="astro-ojxuodky"> <span class="astro-ojxuodky">Grant temporary access</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/guide-access-review" class="astro-ojxuodky"> <span class="astro-ojxuodky">Run an access review</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/guide-evidence-export" class="astro-ojxuodky"> <span class="astro-ojxuodky">Export evidence for an audit</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/guide-safe-upgrade" class="astro-ojxuodky"> <span class="astro-ojxuodky">Upgrade safely</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/guide-license-rotation" class="astro-ojxuodky"> <span class="astro-ojxuodky">Rotate a licence</span>  </a> </li> </ul> </details> </li><li class="astro-ojxuodky"> <details open class="astro-ojxuodky"> <summary class="astro-ojxuodky"> <span class="group-label astro-ojxuodky"> <span class="large astro-ojxuodky">Operations</span>  </span> <svg aria-hidden="true" class="caret astro-ojxuodky astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </summary> <sl-sidebar-restore data-index="4"></sl-sidebar-restore> <ul class="astro-ojxuodky"> <li class="astro-ojxuodky"> <a href="/help/production-hardening" class="astro-ojxuodky"> <span class="astro-ojxuodky">Production hardening and operations</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/backup-restore" class="astro-ojxuodky"> <span class="astro-ojxuodky">Backup and restore</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/airgap" class="astro-ojxuodky"> <span class="astro-ojxuodky">Airgap export and import</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/oidc-setup" class="astro-ojxuodky"> <span class="astro-ojxuodky">Single sign-on setup</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/remediation-workflow" class="astro-ojxuodky"> <span class="astro-ojxuodky">Remediation workflow</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/scaling-assessment-500-hosts" class="astro-ojxuodky"> <span class="astro-ojxuodky">Capacity and scaling</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/demo-walkthrough-operator" class="astro-ojxuodky"> <span class="astro-ojxuodky">Operator walkthrough</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/demo-walkthrough-auditor" class="astro-ojxuodky"> <span class="astro-ojxuodky">Auditor walkthrough</span>  </a> </li> </ul> </details> </li><li class="astro-ojxuodky"> <details open class="astro-ojxuodky"> <summary class="astro-ojxuodky"> <span class="group-label astro-ojxuodky"> <span class="large astro-ojxuodky">Security</span>  </span> <svg aria-hidden="true" class="caret astro-ojxuodky astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </summary> <sl-sidebar-restore data-index="5"></sl-sidebar-restore> <ul class="astro-ojxuodky"> <li class="astro-ojxuodky"> <a href="/help/access-revocation" class="astro-ojxuodky"> <span class="astro-ojxuodky">Access revocation</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/compliance-map" aria-current="page" class="astro-ojxuodky"> <span class="astro-ojxuodky">Compliance evidence map</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/audit-schema" class="astro-ojxuodky"> <span class="astro-ojxuodky">Audit event schema</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/dependency-security-policy" class="astro-ojxuodky"> <span class="astro-ojxuodky">Dependency and container security policy</span>  </a> </li> </ul> </details> </li><li class="astro-ojxuodky"> <details open class="astro-ojxuodky"> <summary class="astro-ojxuodky"> <span class="group-label astro-ojxuodky"> <span class="large astro-ojxuodky">Release and upgrade</span>  </span> <svg aria-hidden="true" class="caret astro-ojxuodky astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </summary> <sl-sidebar-restore data-index="6"></sl-sidebar-restore> <ul class="astro-ojxuodky"> <li class="astro-ojxuodky"> <a href="/help/licensing" class="astro-ojxuodky"> <span class="astro-ojxuodky">Licensing and activation</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/verify-release-artifacts" class="astro-ojxuodky"> <span class="astro-ojxuodky">Verify release artifacts</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/upgrade" class="astro-ojxuodky"> <span class="astro-ojxuodky">Upgrade</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/upgrade-notes-1-0" class="astro-ojxuodky"> <span class="astro-ojxuodky">Upgrade notes for 1.0</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/uninstall" class="astro-ojxuodky"> <span class="astro-ojxuodky">Uninstall</span>  </a> </li> </ul> </details> </li><li class="astro-ojxuodky"> <details open class="astro-ojxuodky"> <summary class="astro-ojxuodky"> <span class="group-label astro-ojxuodky"> <span class="large astro-ojxuodky">Reference</span>  </span> <svg aria-hidden="true" class="caret astro-ojxuodky astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </summary> <sl-sidebar-restore data-index="7"></sl-sidebar-restore> <ul class="astro-ojxuodky"> <li class="astro-ojxuodky"> <a href="/help/support-matrix" class="astro-ojxuodky"> <span class="astro-ojxuodky">Linux support matrix</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/agent-capability-matrix" class="astro-ojxuodky"> <span class="astro-ojxuodky">Agent and SSH capability matrix</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/agent-protocol" class="astro-ojxuodky"> <span class="astro-ojxuodky">Agent protocol</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/reporting-contract" class="astro-ojxuodky"> <span class="astro-ojxuodky">Reporting contract</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/eol-data" class="astro-ojxuodky"> <span class="astro-ojxuodky">Distribution lifecycle data</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/browser-support" class="astro-ojxuodky"> <span class="astro-ojxuodky">Browser and viewport support</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/known-limitations" class="astro-ojxuodky"> <span class="astro-ojxuodky">Known limitations</span>  </a> </li> </ul> </details> </li><li class="astro-ojxuodky"> <details open class="astro-ojxuodky"> <summary class="astro-ojxuodky"> <span class="group-label astro-ojxuodky"> <span class="large astro-ojxuodky">Troubleshooting and support</span>  </span> <svg aria-hidden="true" class="caret astro-ojxuodky astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </summary> <sl-sidebar-restore data-index="8"></sl-sidebar-restore> <ul class="astro-ojxuodky"> <li class="astro-ojxuodky"> <a href="/help/troubleshooting" class="astro-ojxuodky"> <span class="astro-ojxuodky">Troubleshooting</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/support" class="astro-ojxuodky"> <span class="astro-ojxuodky">Support</span>  </a> </li> </ul> </details> </li> </ul>  <script aria-hidden="true">
+		(() => {
+			const scroller = document.getElementById('starlight__sidebar');
+			if (!window._starlightScrollRestore || !scroller) return;
+			scroller.scrollTop = window._starlightScrollRestore;
+			delete window._starlightScrollRestore;
+		})();
+	</script></sl-sidebar-state-persist> <div class="md:sl-hidden"> <div class="mobile-preferences sl-flex astro-b5gddk54"> <div class="social-icons astro-b5gddk54">  </div> <starlight-theme-select>  <label style="--sl-select-width: 6.25em" class="astro-r2p65idu"> <span class="sr-only astro-r2p65idu">Select theme</span> <svg aria-hidden="true" class="icon label-icon astro-r2p65idu astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg> <select autocomplete="off" class="astro-r2p65idu"> <option value="dark" class="astro-r2p65idu">Dark</option><option value="light" class="astro-r2p65idu">Light</option><option value="auto" selected class="astro-r2p65idu">Auto</option> </select> <svg aria-hidden="true" class="icon caret astro-r2p65idu astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M17 9.17a1 1 0 0 0-1.41 0L12 12.71 8.46 9.17a1 1 0 1 0-1.41 1.42l4.24 4.24a1.002 1.002 0 0 0 1.42 0L17 10.59a1.002 1.002 0 0 0 0-1.42Z"/></svg> </label> </starlight-theme-select>  <script>
+	StarlightThemeProvider.updatePickers();
+</script>    </div> </div> </div> </div> </nav> <div class="main-frame astro-gqpr5s5a">  <script type="module">var e=document.getElementById(`starlight__sidebar`),t=e?.querySelector(`sl-sidebar-state-persist`),n=`sl-sidebar-state`,r=()=>{let r=[],i=t?.dataset.hash||``;try{let e=sessionStorage.getItem(n),t=JSON.parse(e||`{}`);Array.isArray(t.open)&&t.hash===i&&(r=t.open)}catch{}return{hash:i,open:r,scroll:e?.scrollTop||0}},i=e=>{try{sessionStorage.setItem(n,JSON.stringify(e))}catch{}},a=()=>i(r()),o=(e,t)=>{let n=r();n.open[t]=e,i(n)};t?.addEventListener(`click`,e=>{if(!(e.target instanceof Element))return;let t=e.target.closest(`summary`)?.closest(`details`);if(!t)return;let n=t.querySelector(`sl-sidebar-restore`),r=parseInt(n?.dataset.index||``);isNaN(r)||o(!t.open,r)}),addEventListener(`visibilitychange`,()=>{document.visibilityState===`hidden`&&a()});</script><div class="lg:sl-flex astro-abfeecmu"> <aside class="right-sidebar-container print:hidden astro-abfeecmu"> <div class="right-sidebar astro-abfeecmu">  <div class="lg:sl-hidden astro-q5mffni3"> <mobile-starlight-toc data-min-h="2" data-max-h="3" class="astro-5ulgm6bh"> <nav aria-labelledby="starlight__on-this-page--mobile" class="astro-5ulgm6bh"> <details id="starlight__mobile-toc" class="astro-5ulgm6bh"> <summary id="starlight__on-this-page--mobile" class="sl-flex astro-5ulgm6bh"> <span class="toggle sl-flex astro-5ulgm6bh"> On this page <svg aria-hidden="true" class="caret astro-5ulgm6bh astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </span> <span class="display-current astro-5ulgm6bh"></span> </summary> <div class="dropdown astro-5ulgm6bh"> <ul class="isMobile astro-cxyftcne" style="--depth: 0;"> <li style="--depth: 0;" class="astro-cxyftcne"> <a href="#_top" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Overview</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#soc-2" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">SOC 2</span> </a> <ul class="isMobile astro-cxyftcne" style="--depth: 1;"> <li style="--depth: 1;" class="astro-cxyftcne"> <a href="#cc61--the-entity-implements-logical-access-security-software" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">CC6.1 — The entity implements logical access security software</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#cc62--new-users-authorized-before-access-granted" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">CC6.2 — New users authorized before access granted</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#cc63--role-based-access-control" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">CC6.3 — Role-based access control</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#cc66--secure-network-access" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">CC6.6 — Secure network access</span> </a>  </li> </ul> </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#pci-dss-40" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">PCI DSS 4.0</span> </a> <ul class="isMobile astro-cxyftcne" style="--depth: 1;"> <li style="--depth: 1;" class="astro-cxyftcne"> <a href="#requirement-7--restrict-access-by-business-need-to-know" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Requirement 7 — Restrict access by business need to know</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#requirement-10--log-and-monitor-all-access" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Requirement 10 — Log and monitor all access</span> </a>  </li> </ul> </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#hipaa-security-rule" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">HIPAA Security Rule</span> </a> <ul class="isMobile astro-cxyftcne" style="--depth: 1;"> <li style="--depth: 1;" class="astro-cxyftcne"> <a href="#164308--administrative-safeguards" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">§164.308 — Administrative safeguards</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#164312--technical-safeguards" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">§164.312 — Technical safeguards</span> </a>  </li> </ul> </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#remediation-workflow-as-compliance-evidence" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Remediation workflow as compliance evidence</span> </a> <ul class="isMobile astro-cxyftcne" style="--depth: 1;"> <li style="--depth: 1;" class="astro-cxyftcne"> <a href="#soc-2-1" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">SOC 2</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#pci-dss-40-1" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">PCI DSS 4.0</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#hipaa-security-rule-1" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">HIPAA Security Rule</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#limitations-specific-to-the-remediation-workflow" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Limitations specific to the remediation workflow</span> </a>  </li> </ul> </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#how-to-use-this-map-in-an-audit" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">How to use this map in an audit</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#evidence-status-labels-and-deferred-coverage" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Evidence status, labels, and deferred coverage</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#limitations" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Limitations</span> </a>  </li> </ul> </div> </details> </nav> </mobile-starlight-toc> <script type="module" src="/help/_astro/MobileTableOfContents.astro_astro_type_script_index_0_lang.BcSo_yiZ.js"></script> </div> <div class="right-sidebar-panel sl-hidden lg:sl-block astro-q5mffni3"> <div class="sl-container astro-q5mffni3"> <starlight-toc data-min-h="2" data-max-h="3"> <nav aria-labelledby="starlight__on-this-page"> <h2 id="starlight__on-this-page">On this page</h2> <ul class="astro-cxyftcne" style="--depth: 0;"> <li style="--depth: 0;" class="astro-cxyftcne"> <a href="#_top" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Overview</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#soc-2" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">SOC 2</span> </a> <ul class="astro-cxyftcne" style="--depth: 1;"> <li style="--depth: 1;" class="astro-cxyftcne"> <a href="#cc61--the-entity-implements-logical-access-security-software" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">CC6.1 — The entity implements logical access security software</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#cc62--new-users-authorized-before-access-granted" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">CC6.2 — New users authorized before access granted</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#cc63--role-based-access-control" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">CC6.3 — Role-based access control</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#cc66--secure-network-access" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">CC6.6 — Secure network access</span> </a>  </li> </ul> </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#pci-dss-40" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">PCI DSS 4.0</span> </a> <ul class="astro-cxyftcne" style="--depth: 1;"> <li style="--depth: 1;" class="astro-cxyftcne"> <a href="#requirement-7--restrict-access-by-business-need-to-know" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Requirement 7 — Restrict access by business need to know</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#requirement-10--log-and-monitor-all-access" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Requirement 10 — Log and monitor all access</span> </a>  </li> </ul> </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#hipaa-security-rule" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">HIPAA Security Rule</span> </a> <ul class="astro-cxyftcne" style="--depth: 1;"> <li style="--depth: 1;" class="astro-cxyftcne"> <a href="#164308--administrative-safeguards" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">§164.308 — Administrative safeguards</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#164312--technical-safeguards" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">§164.312 — Technical safeguards</span> </a>  </li> </ul> </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#remediation-workflow-as-compliance-evidence" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Remediation workflow as compliance evidence</span> </a> <ul class="astro-cxyftcne" style="--depth: 1;"> <li style="--depth: 1;" class="astro-cxyftcne"> <a href="#soc-2-1" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">SOC 2</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#pci-dss-40-1" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">PCI DSS 4.0</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#hipaa-security-rule-1" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">HIPAA Security Rule</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#limitations-specific-to-the-remediation-workflow" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Limitations specific to the remediation workflow</span> </a>  </li> </ul> </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#how-to-use-this-map-in-an-audit" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">How to use this map in an audit</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#evidence-status-labels-and-deferred-coverage" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Evidence status, labels, and deferred coverage</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#limitations" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Limitations</span> </a>  </li> </ul> </nav> </starlight-toc> <script type="module" src="/help/_astro/TableOfContents.astro_astro_type_script_index_0_lang.Csloo1VZ.js"></script> </div> </div>  </div> </aside> <div class="main-pane astro-abfeecmu">  <main data-pagefind-body class="astro-vdxcvpsm" lang="en" dir="ltr">    <div class="content-panel astro-oil7k7jf"> <div class="sl-container astro-oil7k7jf"> <h1 id="_top" class="astro-2sm4b3ln">Compliance evidence map</h1> </div> </div> <div class="content-panel astro-oil7k7jf"> <div class="sl-container astro-oil7k7jf"> <div class="sl-markdown-content"> <p>Maps the Praxis audit event vocabulary to common compliance control frameworks. <strong>This is not a compliance attestation.</strong> It is the evidence map your auditor needs when they ask <em>“show me how access is controlled and audited.”</em></p>
+<p>Frameworks covered:</p>
+<ul>
+<li><strong>SOC 2 Type II</strong> — Trust Services Criteria (TSC) 2017, primarily CC6 (logical and physical access)</li>
+<li><strong>PCI DSS 4.0</strong> — requirements 7 (access control) and 10 (audit logging)</li>
+<li><strong>HIPAA Security Rule</strong> — 45 CFR §164.308 (administrative safeguards) and §164.312 (technical safeguards)</li>
+</ul>
+<hr>
+<h2 id="soc-2">SOC 2</h2>
+<h3 id="cc61--the-entity-implements-logical-access-security-software">CC6.1 — The entity implements logical access security software</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Control</th><th>Praxis evidence</th></tr></thead><tbody><tr><td>Authentication before access</td><td><code>session.open</code> events carry authenticated <code>actor</code> (OIDC or local). TOTP step-up for high-privilege fleet roles via <code>totp.step_up</code>.</td></tr><tr><td>Access granted per least privilege</td><td>Fleet-scoped RBAC (<code>binding.create</code> / <code>binding.delete</code>) with explicit <code>allowed_actions</code> per fleet role. <code>action_not_allowed</code> denials captured as <code>command.exec</code> outcome=<code>denied</code>.</td></tr><tr><td>Passwords protected</td><td>OIDC via BYO IdP (primary); local passwords bcrypt-hashed. TOTP secrets + recovery codes per <code>user.totp_secret</code> and bcrypt-hashed <code>user.totp_recovery_codes</code>.</td></tr></tbody></table>
+<h3 id="cc62--new-users-authorized-before-access-granted">CC6.2 — New users authorized before access granted</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Control</th><th>Praxis evidence</th></tr></thead><tbody><tr><td>Formal authorization</td><td><code>access_request.create</code> → <code>access_request.approve</code> (admin-gated) → binding materialised with time-bound <code>expires_at</code>.</td></tr><tr><td>Revocation</td><td><code>binding.delete</code> + automatic expiry. <code>access_request.revoke</code> early-close. Reconciler removes host accounts + archives home dirs on access revocation.</td></tr></tbody></table>
+<h3 id="cc63--role-based-access-control">CC6.3 — Role-based access control</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Control</th><th>Praxis evidence</th></tr></thead><tbody><tr><td>Roles defined</td><td><code>FleetRole</code> entities with <code>allowed_actions</code> + <code>os_groups</code>. Built-in: admin, maintainer, auditor. Fleet roles grant <strong>no standing sudo/root</strong>; privileged host work is done by named Praxis automation, and interactive root is out-of-band.</td></tr><tr><td>Role assignments</td><td><code>AccessBinding</code> (user or app-role → fleet-role → group). <code>binding.create</code> / <code>binding.delete</code> audit events.</td></tr><tr><td>Separation of duties</td><td>JIT request + approve flow is two-person by design (requester ≠ approver).</td></tr></tbody></table>
+<h3 id="cc66--secure-network-access">CC6.6 — Secure network access</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Control</th><th>Praxis evidence</th></tr></thead><tbody><tr><td>Cryptographic session controls</td><td>Every SSH session uses a Vault-signed short-lived user cert. Cert TTL matches fleet-role <code>max_session_s</code>. <code>session.open</code> context carries <code>cert_serial</code>.</td></tr><tr><td>CA trust + revocation</td><td>SSH CA rotation bumps the CA identifier and drops pooled connections so new operations re-sign; short-lived user certs are the containment boundary (no CRL/OCSP). <code>ca.rotate</code> and <code>ca.revoke</code> operations logged.</td></tr><tr><td>Strong authentication for privileged access</td><td>TOTP step-up required by <code>fleet_role.totp_required=True</code>. <code>totp.step_up</code> events capture each successful step-up.</td></tr></tbody></table>
+<hr>
+<h2 id="pci-dss-40">PCI DSS 4.0</h2>
+<h3 id="requirement-7--restrict-access-by-business-need-to-know">Requirement 7 — Restrict access by business need to know</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Requirement</th><th>Praxis evidence</th></tr></thead><tbody><tr><td>7.2.1 — Access control system</td><td>Fleet-scoped RBAC (access_bindings + access_grants), <code>allowed_actions</code> per role.</td></tr><tr><td>7.2.2 — Access based on job classification</td><td>Fleet roles (admin/maintainer/auditor) map to job classifications; custom roles extend. Bindings can target app-role (role inheritance) or specific users.</td></tr><tr><td>7.2.4 — Periodic review</td><td>Audit log supports queries like “show all active bindings” + <code>binding.*</code> event history per user.</td></tr><tr><td>7.2.5 — Application/system accounts</td><td>Per-user Linux accounts provisioned + tracked (<code>host_user_states</code>). Shared accounts only via explicit <code>role_account</code> login mode, and cert principals still identify the Praxis user in <code>session.open</code> context.</td></tr></tbody></table>
+<h3 id="requirement-10--log-and-monitor-all-access">Requirement 10 — Log and monitor all access</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Requirement</th><th>Praxis evidence</th></tr></thead><tbody><tr><td>10.2.1 — All individual user accesses to system components</td><td><code>session.open</code>, <code>session.close</code>, <code>command.exec</code>, <code>file.upload</code>, <code>file.download</code> events carry <code>actor.username</code> + <code>target.system_id</code>.</td></tr><tr><td>10.2.2 — Actions by individuals with admin privilege</td><td><code>command.exec</code> with <code>bypass_validation=true</code>, all <code>binding.*</code> and <code>access_request.approve</code> events capture admin actor.</td></tr><tr><td>10.2.4 — Invalid logical access attempts</td><td><code>outcome=denied</code> events: <code>command.exec</code> denials, authorization failures.</td></tr><tr><td>10.2.5 — Authentication credentials changes</td><td><code>totp.step_up</code>, binding lifecycle events.</td></tr><tr><td>10.3 — Log record content</td><td>Schema includes user id/IP, date/time, event type, success/failure, affected resource, origination.</td></tr><tr><td>10.5 — Secure and preserve audit trails</td><td>Events persist to DB independently of any external sink. External sinks (syslog/HTTP/file) provide optional immutable storage with HMAC-signed delivery.</td></tr><tr><td>10.7 — Retain audit trail</td><td>Audit events retained indefinitely in-app (no automatic pruning). External sinks control their own retention. Session recordings retain per fleet-role <code>recording_retention_days</code>.</td></tr></tbody></table>
+<hr>
+<h2 id="hipaa-security-rule">HIPAA Security Rule</h2>
+<h3 id="164308--administrative-safeguards">§164.308 — Administrative safeguards</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Standard</th><th>Praxis evidence</th></tr></thead><tbody><tr><td>(a)(3) Workforce security</td><td>Fleet-scoped bindings + JIT access requests with approval. Workforce members get access per role + scope, not flat admin.</td></tr><tr><td>(a)(4) Information access management</td><td><code>access_request.*</code> flow = documented access authorization. <code>binding.*</code> events record the resulting authorization.</td></tr><tr><td>(a)(5) Security awareness and training</td><td>Out of scope for Praxis — operational.</td></tr></tbody></table>
+<h3 id="164312--technical-safeguards">§164.312 — Technical safeguards</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Standard</th><th>Praxis evidence</th></tr></thead><tbody><tr><td>(a)(1) Access control — unique user ID</td><td>Every user has a distinct Praxis account; SSH cert principal = Praxis username even under role-account Linux mode.</td></tr><tr><td>(a)(1) Access control — emergency access</td><td>Admin app-role retains implicit access grants on every system (documented, audited).</td></tr><tr><td>(a)(1) Access control — automatic logoff</td><td><code>fleet_role.idle_timeout_s</code> + max session duration enforce automatic disconnect. Events: <code>session.idle_kill</code>, <code>session.max_duration</code>.</td></tr><tr><td>(b) Audit controls</td><td>In-app audit log + external sinks. Every session, command, and file transfer logged with stable schema.</td></tr><tr><td>(c) Integrity</td><td>HMAC-signed HTTP sinks prevent tampering in transit. DB-side audit records are append-only at the application layer.</td></tr><tr><td>(d) Person or entity authentication</td><td>OIDC (primary) + TOTP step-up for privileged fleet roles.</td></tr><tr><td>(e) Transmission security</td><td>TLS-wrapped syslog sinks, HTTPS HTTP sinks. SSH transport between Praxis and hosts.</td></tr></tbody></table>
+<hr>
+<h2 id="remediation-workflow-as-compliance-evidence">Remediation workflow as compliance evidence</h2>
+<p>Praxis records a structured remediation workflow on top of compliance evidence: a failing evidence row can become a tracked remediation request, that request can be approved or rejected by a separate operator, an approved request can produce a structured plan preview, the plan can be explicitly acknowledged, and the read layer exposes a <code>ready_for_execution</code> gate for a future execution capability. The whole workflow is <strong>non-executing today</strong> — no host mutation, no command dispatch, no approval auto-execution. See <a href="/help/remediation-workflow"><code>remediation-workflow.md</code></a> for the operator-facing walkthrough; see <a href="/help/audit-schema"><code>audit-schema.md</code></a> for the wire format.</p>
+<p>The workflow produces audit-trail evidence for the control families below. All events fire via the same <code>safe_emit</code> pipeline as the rest of the schema; consumers should not need a new sink configuration.</p>
+<h3 id="soc-2-1">SOC 2</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Trust Services Criterion</th><th>Praxis remediation evidence</th></tr></thead><tbody><tr><td>CC6.3 — Separation of duties</td><td><code>compliance_remediation.approved</code> and <code>compliance_remediation.rejected</code> enforce approver ≠ requester at the service layer; audit context carries <code>separation_of_duties_enforced=true</code>. <code>compliance_remediation_plan.acknowledged</code> is admin-only.</td></tr><tr><td>CC7.1 — Detection of vulnerabilities</td><td>A failing compliance check produces a <code>compliance_evidence.persisted</code> row; <code>compliance_remediation.requested</code> connects that finding to a tracked remediation intent so auditors can demonstrate that vulnerabilities are not just detected but also queued for follow-up.</td></tr><tr><td>CC8.1 — Authorized change management</td><td>Each remediation moves through a documented state machine: <code>compliance_remediation.requested</code> → <code>.approved</code> / <code>.rejected</code> / <code>.cancelled</code>, then <code>compliance_remediation_plan.built</code> → <code>.acknowledged</code>. Every transition records actor + decided reason + snapshot identity, which is the change-management evidence trail.</td></tr><tr><td>CC8.1 — Plan history / supersede</td><td><code>compliance_remediation_plan.superseded</code> is emitted whenever an acknowledged plan is rebuilt; the old row is preserved with its acknowledgement metadata intact, satisfying the “we can prove what was approved when” prong.</td></tr></tbody></table>
+<h3 id="pci-dss-40-1">PCI DSS 4.0</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Requirement</th><th>Praxis remediation evidence</th></tr></thead><tbody><tr><td>6.5 — Vulnerability remediation tracking</td><td><code>compliance_remediation.requested</code> opens the remediation ticket against a specific failing evidence row; subsequent <code>.approved</code> / <code>.rejected</code> / <code>.cancelled</code> events and the plan lifecycle events form the per-finding remediation history PCI auditors expect.</td></tr><tr><td>10.2.2 — Admin actions on critical functions</td><td><code>compliance_remediation.approved</code>, <code>compliance_remediation_plan.acknowledged</code>, and <code>compliance_remediation_plan.superseded</code> are admin-actor events with full snapshot identity in <code>context</code>, satisfying the “individual admin actions are logged” requirement.</td></tr><tr><td>10.3 — Log record content</td><td>Every remediation event carries <code>policy_id</code> / <code>policy_slug</code> / <code>policy_version</code> / <code>check_id</code> / <code>check_slug</code> / <code>check_kind</code> / <code>system_id</code> / <code>evidence_id</code> / <code>evaluation_run_id</code> / <code>verdict_snapshot</code> / <code>severity_snapshot</code> in <code>context</code>, plus the actor block on the envelope. Sufficient detail to reconstruct each decision without consulting Praxis runtime state.</td></tr></tbody></table>
+<h3 id="hipaa-security-rule-1">HIPAA Security Rule</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Standard</th><th>Praxis remediation evidence</th></tr></thead><tbody><tr><td>§164.308(a)(1) — Risk management activities</td><td>Compliance evidence catches risks; <code>compliance_remediation.requested</code> / <code>.approved</code> events record the documented risk-mitigation decisions per finding.</td></tr><tr><td>§164.308(a)(8) — Periodic technical / non-technical evaluation</td><td>The fleet summary (<code>GET /compliance/remediation/fleet-summary</code>) and per-host inventory (<code>GET /compliance/systems/{system_id}/remediation</code>) provide the periodic-review surface: counts by request state, current-plan state, acknowledged / ready / stale buckets, per-severity rollup.</td></tr><tr><td>§164.312(b) — Audit controls</td><td>All <code>compliance_remediation.*</code> and <code>compliance_remediation_plan.*</code> events persist to the standard <code>audit_events</code> table and fan out through the configured sinks. No remediation event is “fire-and-forget” — every transition is durable.</td></tr></tbody></table>
+<h3 id="limitations-specific-to-the-remediation-workflow">Limitations specific to the remediation workflow</h3>
+<ul>
+<li>The remediation workflow is <strong>non-executing</strong>: the audit trail proves intent and approval, not execution outcome. A future execution capability will add <code>compliance_remediation_execution.*</code> events that pair with each acknowledged-and-ready plan.</li>
+<li>Plans for <code>file_*</code>, <code>command_*</code>, and <code>fact_*</code> check kinds resolve to <code>*_review_required</code> previews because Praxis does not currently store the source content or operator-defined remediation steps needed to automate them. Auditors should treat those plans as documented operator intent, not as automated controls.</li>
+<li><code>ready_for_execution=true</code> indicates a plan has cleared every metadata gate (current + acknowledged + not stale + executable plan kind + approved request) but does not by itself prove remediation occurred — only that the operator authorized it. Pair with the future execution events when they ship.</li>
+</ul>
+<hr>
+<h2 id="how-to-use-this-map-in-an-audit">How to use this map in an audit</h2>
+<ol>
+<li>Point your auditor at this document for the mapping.</li>
+<li>Show them the live audit log at <code>/audit</code>.</li>
+<li>Demonstrate the filtering — e.g., all <code>command.exec</code> events with <code>outcome=denied</code> in the last 90 days for requirement 10.2.4.</li>
+<li>Export relevant events via the configured sink (or download a range via the built-in UI).</li>
+<li>For access-review evidence (PCI 7.2.4, SOC CC6.2), export <code>binding.*</code> and <code>access_request.*</code> events for the review period.</li>
+<li>For remediation evidence (SOC 2 CC8.1, PCI 6.5, HIPAA §164.308(a)(1)), export <code>compliance_remediation.*</code> and <code>compliance_remediation_plan.*</code> events for the review period; also pull the fleet remediation summary at the start and end of the period for the periodic-review story.</li>
+</ol>
+<h2 id="evidence-status-labels-and-deferred-coverage">Evidence status, labels, and deferred coverage</h2>
+<p>Compliance evidence records a <strong>stable internal enum</strong> in <code>verdict</code>,
+<code>verdict_reason</code>, <code>runner_owner</code>, and <code>runner_status</code> — pinned so auditor export
+scripts can rely on the exact strings. Alongside them, every read/export surface
+carries <strong>humanized product fields</strong> the operator UI renders:</p>
+<ul>
+<li><code>status</code> — the single <code>error</code> verdict is split into distinguishable states:
+<code>pass</code>, <code>fail</code>, <code>error</code> (a real problem), <code>awaiting_scan</code> (host not scanned
+yet), <code>coverage_pending</code> (Praxis doesn’t collect the required fact yet), and
+<code>unsupported</code>. Operators never see a not-yet-evaluated check as a red failure.</li>
+<li><code>status_label</code> / <code>verdict_reason_label</code> / <code>runner_label</code> — plain-language
+equivalents. CSV/JSONL exports carry both the stable enums and these labels.</li>
+</ul>
+<p><strong>Fact coverage:</strong> the CIS starter-pack SSH (<code>ssh.config.PermitRootLogin</code>,
+<code>ssh.config.PasswordAuthentication</code>) and kernel (<code>sysctl.kernel.randomize_va_space</code>,
+<code>sysctl.net.ipv4.ip_forward</code>, <code>sysctl.net.ipv4.conf.all.rp_filter</code>) checks are
+now backed by real read-only host facts (collected via <code>sshd -T</code> /
+<code>sysctl -n</code>) and produce genuine pass/fail once a host has been scanned. A host
+with no facts row still reads as <code>awaiting_scan</code>, and a fact the host didn’t
+report reads as a null/missing value — neither is faked as pass/fail. Any
+genuinely uncollected <em>future</em> fact key still surfaces as <code>coverage_pending</code>.</p>
+<h2 id="limitations">Limitations</h2>
+<ul>
+<li>Praxis does not attest to framework compliance. Running Praxis does not itself make you SOC 2 / PCI / HIPAA compliant.</li>
+<li>Control coverage gaps: physical security, endpoint DLP, network segmentation beyond the fleet, encryption at rest for the PostgreSQL data store — all out of scope for Praxis.</li>
+<li>Retention policies for the in-app <code>audit_events</code> table are not currently enforced. If your framework requires time-bound retention, configure a file or syslog sink that matches your retention standard and set up your own pruning.</li>
+</ul> </div> <div class="pagination-links print:hidden astro-jgq3vlii" dir="ltr"> <a href="/help/access-revocation" rel="prev" class="astro-jgq3vlii"> <svg aria-hidden="true" class="astro-jgq3vlii astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.5rem;"><path d="M17 11H9.41l3.3-3.29a1.004 1.004 0 1 0-1.42-1.42l-5 5a1 1 0 0 0-.21.33 1 1 0 0 0 0 .76 1 1 0 0 0 .21.33l5 5a1.002 1.002 0 0 0 1.639-.325 1 1 0 0 0-.219-1.095L9.41 13H17a1 1 0 0 0 0-2Z"/></svg> <span class="astro-jgq3vlii"> Previous <br class="astro-jgq3vlii"> <span class="link-title astro-jgq3vlii">Access revocation</span> </span> </a> <a href="/help/audit-schema" rel="next" class="astro-jgq3vlii"> <svg aria-hidden="true" class="astro-jgq3vlii astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.5rem;"><path d="M17.92 11.62a1.001 1.001 0 0 0-.21-.33l-5-5a1.003 1.003 0 1 0-1.42 1.42l3.3 3.29H7a1 1 0 0 0 0 2h7.59l-3.3 3.29a1.002 1.002 0 0 0 .325 1.639 1 1 0 0 0 1.095-.219l5-5a1 1 0 0 0 .21-.33 1 1 0 0 0 0-.76Z"/></svg> <span class="astro-jgq3vlii"> Next <br class="astro-jgq3vlii"> <span class="link-title astro-jgq3vlii">Audit event schema</span> </span> </a> </div> <footer class="praxis-docs-footer astro-jo6i4kqk"> <p class="astro-jo6i4kqk">
+Praxis documentation. This page is part of a single documentation set that
+    is published on the web and bundled with the application for offline use.
+</p> </footer> </div> </div>  </main> </div> </div> </div> </div> </body> </html>

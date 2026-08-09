@@ -1,0 +1,26 @@
+---
+import Pagination from '@astrojs/starlight/components/Pagination.astro';
+---
+
+<Pagination />
+
+<footer class="praxis-docs-footer">
+  <p>
+    Praxis documentation. This page is part of a single documentation set that
+    is published on the web and bundled with the application for offline use.
+  </p>
+</footer>
+
+<style>
+  .praxis-docs-footer {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--sl-color-gray-5);
+    color: var(--sl-color-gray-3);
+    font-size: var(--sl-text-sm);
+  }
+
+  .praxis-docs-footer p {
+    margin: 0;
+  }
+</style>

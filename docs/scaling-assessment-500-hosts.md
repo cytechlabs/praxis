@@ -1,4 +1,7 @@
-# 1.0 Scaling Assessment — 500-Host Single-Worker Envelope
+---
+title: Capacity and scaling
+description: The validated single-worker envelope, where the limits are, and what to watch as a fleet grows.
+---
 
 **Question:** can the intentionally single-worker Praxis 1.0 backend + single-broker
 topology support the paid **Business cap of 500 managed hosts**?
@@ -13,7 +16,7 @@ The measured envelope stays clean at **1000 hosts** (2× the promise). The limit
 matter are NOT host count — they are *concurrent interactive sessions* (process-local)
 and *simultaneous command fan-out concurrency* (SSH/broker-bound); both are bounded and
 degrade gracefully, and neither is exceeded by having 500 hosts enrolled. See
-[Limits & tuning](#limits-what-is-not-promised-and-tuning) and
+[Limits & tuning](#5-limits-what-is-not-promised-and-tuning) and
 [Follow-ups](#follow-ups).
 
 > Measurement caveat: absolute millisecond numbers below were captured in the dev

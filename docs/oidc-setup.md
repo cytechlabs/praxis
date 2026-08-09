@@ -1,4 +1,7 @@
-# OIDC / SSO setup
+---
+title: Single sign-on setup
+description: Configure OIDC single sign-on, map identity provider roles to Praxis roles, and troubleshoot the flow.
+---
 
 Praxis authenticates single sign-on users with the **OIDC Authorization Code
 flow** against a **confidential client**. Any provider that publishes a standard

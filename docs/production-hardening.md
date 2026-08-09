@@ -1,4 +1,7 @@
-# Production Hardening And Operations
+---
+title: Production hardening and operations
+description: Supported deployment shapes, environment validation, secrets posture, and database migration practice.
+---
 
 This guide covers operating the Praxis **control plane** (Praxis itself) in
 production: supported deployment shapes, fresh install, upgrade and migration

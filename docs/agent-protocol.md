@@ -1,4 +1,7 @@
-# Praxis Agent Protocol
+---
+title: Agent protocol
+description: Thin-agent identity, tunnel, operation, and audit protocol contract.
+---
 
 **Status:** Draft.
 

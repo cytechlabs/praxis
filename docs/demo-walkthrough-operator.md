@@ -1,4 +1,7 @@
-# Operator demo walkthrough (1.0)
+---
+title: Operator walkthrough
+description: A guided tour of the day-to-day operator path from fleet posture to a dispatched, verified patch.
+---
 
 A repeatable, one-page proof path for the complete Praxis lifecycle story —
 suitable for sales demos, support reproductions, and release QA. It runs against

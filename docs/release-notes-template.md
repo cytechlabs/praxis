@@ -85,7 +85,7 @@ sha256sum -c checksums.txt
 
 ### Upgrade notes
 
-`<Link to the version-specific upgrade notes, e.g. docs/upgrade-notes-1.0.md,
+`<Link to the version-specific upgrade notes, e.g. docs/upgrade-notes-1-0.md,
 and call out any migration or configuration steps.>`
 
 ### Known limitations

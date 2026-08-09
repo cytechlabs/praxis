@@ -263,6 +263,68 @@ jobs:
       - name: Unit tests (Vitest)
         run: npm test
 
+  # The documentation site is built from docs/ and shipped two ways: published
+  # on the public docs domain, and committed under frontend-next/public/help/
+  # so the frontend image serves it offline. The bundled copy has to be
+  # committed because the frontend image is built with frontend-next/ as its
+  # Docker context and cannot reach docs/. This lane is what stops that
+  # committed copy from going stale or diverging from the public site.
+  #
+  # Only first-party actions/* are used here; no third-party action is
+  # introduced that would need SHA pinning.
+  docs-build:
+    name: Documentation
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: docs-site/package-lock.json
+
+      - name: Install dependencies
+        working-directory: docs-site
+        run: npm ci
+
+      - name: Content and type check (astro check)
+        working-directory: docs-site
+        run: npx astro check
+
+      # Only the public site is built here. Building the bundled copy would
+      # overwrite the committed one and make the freshness check below
+      # vacuous; that check does its own build into a temporary directory.
+      - name: Build the public site
+        run: node scripts/build-docs.mjs --public
+
+      # Fixtures first: prove the leak detection still rejects real token
+      # shapes and personal paths, and still allows documented placeholders,
+      # before trusting it against the real content.
+      - name: Public content check self-test
+        run: node scripts/check-docs-public-content.mjs --self-test
+
+      - name: Public content boundary
+        run: node scripts/check-docs-public-content.mjs
+
+      - name: Links and anchors (public site)
+        run: node scripts/check-docs-links.mjs docs-site/dist
+
+      - name: Links and anchors (bundled copy)
+        run: node scripts/check-docs-links.mjs frontend-next/public/help --base /help
+
+      - name: Search index (public site)
+        run: node scripts/check-docs-search.mjs docs-site/dist
+
+      - name: Search index (bundled copy)
+        run: node scripts/check-docs-search.mjs frontend-next/public/help --base /help
+
+      # Rebuilds the bundled copy into a temporary directory and fails if the
+      # committed bytes differ, then compares the two builds page by page.
+      - name: Bundled copy is current and matches the public site
+        run: node scripts/check-docs-bundle.mjs
+
   docker-build:
     name: Docker Build
     runs-on: ubuntu-latest

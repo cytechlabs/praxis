@@ -1,4 +1,7 @@
-# Praxis Fleet Lifecycle Architecture
+---
+title: Fleet lifecycle architecture
+description: The components of Praxis, how work flows between them, and why the control plane is the policy authority.
+---
 
 This document captures durable architecture and product boundaries:
 implementation facts, trust boundaries, and system shape.

@@ -1,0 +1,69 @@
+/*
+ * Praxis accent colours applied to Starlight's theme tokens. Only the accent
+ * ramp and a small number of layout affordances are overridden; the rest of
+ * the default theme is left alone so upstream accessibility work keeps
+ * applying.
+ */
+
+:root {
+  --sl-color-accent-low: #3a0c11;
+  --sl-color-accent: #ce1b2b;
+  --sl-color-accent-high: #f3b3ba;
+
+  --sl-color-white: #ffffff;
+  --sl-color-gray-1: #eceef2;
+  --sl-color-gray-2: #c0c2c7;
+  --sl-color-gray-3: #888b96;
+  --sl-color-gray-4: #545861;
+  --sl-color-gray-5: #353841;
+  --sl-color-gray-6: #24272f;
+  --sl-color-black: #17181c;
+}
+
+:root[data-theme='light'] {
+  --sl-color-accent-low: #f6ced3;
+  --sl-color-accent: #b5121f;
+  --sl-color-accent-high: #500a10;
+
+  --sl-color-white: #17181c;
+  --sl-color-gray-1: #24272f;
+  --sl-color-gray-2: #353841;
+  --sl-color-gray-3: #545861;
+  --sl-color-gray-4: #888b96;
+  --sl-color-gray-5: #c0c2c7;
+  --sl-color-gray-6: #eceef2;
+  --sl-color-gray-7: #f5f6f8;
+  --sl-color-black: #ffffff;
+}
+
+/*
+ * Wide reference tables (the support matrix, the capability matrix, the audit
+ * schema) must scroll inside the content column rather than widening the page
+ * and forcing the whole document to scroll sideways on a phone.
+ */
+.sl-markdown-content table {
+  display: block;
+  width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+}
+
+.sl-markdown-content table th,
+.sl-markdown-content table td {
+  white-space: normal;
+  min-width: 7rem;
+}
+
+/* Screenshots are captured at desktop width; never let one overflow. */
+.sl-markdown-content img {
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--sl-color-gray-5);
+  border-radius: 0.375rem;
+}
+
+/* Long command lines wrap instead of introducing a horizontal scrollbar on
+   narrow viewports. */
+.sl-markdown-content :not(pre) > code {
+  overflow-wrap: anywhere;
+}

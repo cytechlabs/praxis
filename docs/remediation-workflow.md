@@ -1,4 +1,7 @@
-# Praxis Compliance Remediation Workflow
+---
+title: Remediation workflow
+description: The governed request, approve, plan, acknowledge, and dispatch lifecycle that turns a failing check into a fix.
+---
 
 The compliance remediation workflow turns a failing compliance evidence row into a tracked, auditable plan of intent — without running anything on a host.
 

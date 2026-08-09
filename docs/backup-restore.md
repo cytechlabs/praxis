@@ -1,4 +1,7 @@
-# Backup & Restore (bundled deployment)
+---
+title: Backup and restore
+description: Take a consistent backup of a bundled deployment and restore it, including the secrets store.
+---
 
 This document covers the **1.0 encrypted full-app-state backup/restore** path for a
 **bundled** Praxis deployment — the single-node shape where Praxis runs its own

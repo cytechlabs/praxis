@@ -1,0 +1,422 @@
+<!DOCTYPE html><html lang="en" dir="ltr" data-theme="dark" data-has-toc data-has-sidebar class="astro-vdxcvpsm"> <head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>Capacity and scaling | Praxis</title><link rel="shortcut icon" href="/help/favicon.svg" type="image/svg+xml"/><meta name="generator" content="Astro v7.2.0"/><meta name="generator" content="Starlight v0.41.7"/><meta property="og:title" content="Capacity and scaling"/><meta property="og:type" content="article"/><meta property="og:locale" content="en"/><meta property="og:description" content="The validated single-worker envelope, where the limits are, and what to watch as a fleet grows."/><meta property="og:site_name" content="Praxis"/><meta name="twitter:card" content="summary_large_image"/><meta name="description" content="The validated single-worker envelope, where the limits are, and what to watch as a fleet grows."/> <script>
+	window.StarlightThemeProvider = (() => {
+		const storedTheme =
+			typeof localStorage !== 'undefined' && localStorage.getItem('starlight-theme');
+		const theme =
+			storedTheme ||
+			(window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+		document.documentElement.dataset.theme = theme === 'light' ? 'light' : 'dark';
+		return {
+			updatePickers(theme = storedTheme || 'auto') {
+				document.querySelectorAll('starlight-theme-select').forEach((picker) => {
+					const select = picker.querySelector('select');
+					if (select) select.value = theme;
+					/** @type {HTMLTemplateElement | null} */
+					const tmpl = document.querySelector(`#theme-icons`);
+					const newIcon = tmpl && tmpl.content.querySelector('.' + theme);
+					if (newIcon) {
+						const oldIcon = picker.querySelector('svg.label-icon');
+						if (oldIcon) {
+							oldIcon.replaceChildren(...newIcon.cloneNode(true).childNodes);
+						}
+					}
+				});
+			},
+		};
+	})();
+</script> <template id="theme-icons"> <svg aria-hidden="true" class="light astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M5 12a1 1 0 0 0-1-1H3a1 1 0 0 0 0 2h1a1 1 0 0 0 1-1Zm.64 5-.71.71a1 1 0 0 0 0 1.41 1 1 0 0 0 1.41 0l.71-.71A1 1 0 0 0 5.64 17ZM12 5a1 1 0 0 0 1-1V3a1 1 0 0 0-2 0v1a1 1 0 0 0 1 1Zm5.66 2.34a1 1 0 0 0 .7-.29l.71-.71a1 1 0 1 0-1.41-1.41l-.66.71a1 1 0 0 0 0 1.41 1 1 0 0 0 .66.29Zm-12-.29a1 1 0 0 0 1.41 0 1 1 0 0 0 0-1.41l-.71-.71a1.004 1.004 0 1 0-1.43 1.41l.73.71ZM21 11h-1a1 1 0 0 0 0 2h1a1 1 0 0 0 0-2Zm-2.64 6A1 1 0 0 0 17 18.36l.71.71a1 1 0 0 0 1.41 0 1 1 0 0 0 0-1.41l-.76-.66ZM12 6.5a5.5 5.5 0 1 0 5.5 5.5A5.51 5.51 0 0 0 12 6.5Zm0 9a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Zm0 3.5a1 1 0 0 0-1 1v1a1 1 0 0 0 2 0v-1a1 1 0 0 0-1-1Z"/></svg> <svg aria-hidden="true" class="dark astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21.64 13a1 1 0 0 0-1.05-.14 8.049 8.049 0 0 1-3.37.73 8.15 8.15 0 0 1-8.14-8.1 8.59 8.59 0 0 1 .25-2A1 1 0 0 0 8 2.36a10.14 10.14 0 1 0 14 11.69 1 1 0 0 0-.36-1.05Zm-9.5 6.69A8.14 8.14 0 0 1 7.08 5.22v.27a10.15 10.15 0 0 0 10.14 10.14 9.784 9.784 0 0 0 2.1-.22 8.11 8.11 0 0 1-7.18 4.32v-.04Z"/></svg> <svg aria-hidden="true" class="auto astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg> </template><link rel="stylesheet" href="/help/_astro/print.ehPL0gv-.css" media="print"><link rel="stylesheet" href="/help/_astro/common.fMBtDe11.css"><script type="module" src="/help/_astro/page.Dwipeu-R.js"></script></head> <body class="astro-vdxcvpsm"> <a class="sl-skip-link astro-vxeigawq" href="#_top">Skip to content</a> <div class="page sl-flex astro-gqpr5s5a"> <header class="header astro-gqpr5s5a"><div class="header astro-nczgtkxc"> <div class="title-wrapper sl-flex astro-nczgtkxc"> <a href="/help" class="site-title sl-flex astro-clw6ags5">  <img class="astro-clw6ags5" alt="Praxis" src="/help/_astro/praxis-mark._9LsDocr.svg" width="1000" height="1000">    <span class="astro-clw6ags5" translate="no"> Praxis </span> </a> </div> <div class="sl-flex print:hidden astro-nczgtkxc"> <site-search class="astro-nczgtkxc astro-r5ar4xm7" data-translations="{&quot;placeholder&quot;:&quot;Search&quot;}" data-strip-trailing-slash> <button data-open-modal disabled aria-label="Search" aria-keyshortcuts="Control+K" class="astro-r5ar4xm7"> <svg aria-hidden="true" class="astro-r5ar4xm7 astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21.71 20.29 18 16.61A9 9 0 1 0 16.61 18l3.68 3.68a.999.999 0 0 0 1.42 0 1 1 0 0 0 0-1.39ZM11 18a7 7 0 1 1 0-14 7 7 0 0 1 0 14Z"/></svg> <span class="sl-hidden md:sl-block astro-r5ar4xm7" aria-hidden="true">Search</span> <kbd class="sl-hidden md:sl-flex astro-r5ar4xm7" style="display: none;"> <kbd class="astro-r5ar4xm7">Ctrl</kbd><kbd class="astro-r5ar4xm7">K</kbd> </kbd> </button> <dialog style="padding:0" aria-label="Search" class="astro-r5ar4xm7"> <div class="dialog-frame sl-flex astro-r5ar4xm7">  <button data-close-modal class="sl-flex md:sl-hidden astro-r5ar4xm7"> Cancel </button> <div class="search-container astro-r5ar4xm7"> <div id="starlight__search" class="astro-r5ar4xm7"></div> </div> </div> </dialog> </site-search>  <script>
+	(() => {
+		const openBtn = document.querySelector('button[data-open-modal]');
+		const shortcut = openBtn?.querySelector('kbd');
+		if (!openBtn || !(shortcut instanceof HTMLElement)) return;
+		const platformKey = shortcut.querySelector('kbd');
+		if (platformKey && /(Mac|iPhone|iPod|iPad)/i.test(navigator.platform)) {
+			platformKey.textContent = '⌘';
+			openBtn.setAttribute('aria-keyshortcuts', 'Meta+K');
+		}
+		shortcut.style.display = '';
+	})();
+</script> <script type="module" src="/help/_astro/Search.astro_astro_type_script_index_0_lang.y9085PDE.js"></script> </div> <div class="sl-hidden md:sl-flex print:hidden right-group astro-nczgtkxc"> <div class="sl-flex social-icons astro-nczgtkxc">  </div> <starlight-theme-select>  <label style="--sl-select-width: 6.25em" class="astro-r2p65idu"> <span class="sr-only astro-r2p65idu">Select theme</span> <svg aria-hidden="true" class="icon label-icon astro-r2p65idu astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg> <select autocomplete="off" class="astro-r2p65idu"> <option value="dark" class="astro-r2p65idu">Dark</option><option value="light" class="astro-r2p65idu">Light</option><option value="auto" selected class="astro-r2p65idu">Auto</option> </select> <svg aria-hidden="true" class="icon caret astro-r2p65idu astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M17 9.17a1 1 0 0 0-1.41 0L12 12.71 8.46 9.17a1 1 0 1 0-1.41 1.42l4.24 4.24a1.002 1.002 0 0 0 1.42 0L17 10.59a1.002 1.002 0 0 0 0-1.42Z"/></svg> </label> </starlight-theme-select>  <script>
+	StarlightThemeProvider.updatePickers();
+</script> <script type="module">var e=`starlight-theme`,t=e=>e===`auto`||e===`dark`||e===`light`?e:`auto`,n=()=>t(typeof localStorage<`u`&&localStorage.getItem(e));function r(t){typeof localStorage<`u`&&localStorage.setItem(e,t===`light`||t===`dark`?t:``)}var i=()=>matchMedia(`(prefers-color-scheme: light)`).matches?`light`:`dark`;function a(e){StarlightThemeProvider.updatePickers(e),document.documentElement.dataset.theme=e===`auto`?i():e,r(e)}matchMedia(`(prefers-color-scheme: light)`).addEventListener(`change`,()=>{n()===`auto`&&a(`auto`)});var o=class extends HTMLElement{constructor(){super(),a(n()),this.querySelector(`select`)?.addEventListener(`change`,e=>{e.currentTarget instanceof HTMLSelectElement&&a(t(e.currentTarget.value))})}};customElements.define(`starlight-theme-select`,o);</script>  <script type="module">var e=class extends HTMLElement{constructor(){super();let e=this.querySelector(`select`);e&&(e.addEventListener(`change`,e=>{e.currentTarget instanceof HTMLSelectElement&&(window.location.pathname=e.currentTarget.value)}),window.addEventListener(`pageshow`,t=>{if(!t.persisted)return;let n=e.querySelector(`option[selected]`)?.index;n!==e.selectedIndex&&(e.selectedIndex=n??0)}))}};customElements.define(`starlight-lang-select`,e);</script> </div> </div></header> <nav class="sidebar print:hidden astro-gqpr5s5a" aria-label="Main"> <starlight-menu-button class="print:hidden astro-vvx7mffu"> <button aria-expanded="false" aria-label="Menu" aria-controls="starlight__sidebar" class="sl-flex md:sl-hidden astro-vvx7mffu"> <svg aria-hidden="true" class="open-menu astro-vvx7mffu astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M3 8h18a1 1 0 1 0 0-2H3a1 1 0 0 0 0 2Zm18 8H3a1 1 0 0 0 0 2h18a1 1 0 0 0 0-2Zm0-5H3a1 1 0 0 0 0 2h18a1 1 0 0 0 0-2Z"/></svg> <svg aria-hidden="true" class="close-menu astro-vvx7mffu astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="m13.41 12 6.3-6.29a1.004 1.004 0 1 0-1.42-1.42L12 10.59l-6.29-6.3a1.004 1.004 0 0 0-1.42 1.42l6.3 6.29-6.3 6.29a1 1 0 0 0 0 1.42.998.998 0 0 0 1.42 0l6.29-6.3 6.29 6.3a.999.999 0 0 0 1.42 0 1 1 0 0 0 0-1.42L13.41 12Z"/></svg> </button> </starlight-menu-button> <script type="module">var e=class extends HTMLElement{btn=this.querySelector(`button`);constructor(){super(),this.btn.addEventListener(`click`,()=>this.toggleExpanded());let e=this.closest(`nav`);e&&e.addEventListener(`keyup`,e=>this.closeOnEscape(e)),matchMedia(`(min-width: 50em)`).addEventListener(`change`,()=>this.setExpanded(!1))}setExpanded(e){this.setAttribute(`aria-expanded`,String(e)),document.body.toggleAttribute(`data-mobile-menu-expanded`,e),document.querySelectorAll(`.main-frame, .sl-skip-link`).forEach(t=>{t.toggleAttribute(`inert`,e)})}toggleExpanded(){this.setExpanded(this.getAttribute(`aria-expanded`)!==`true`)}closeOnEscape(e){e.code===`Escape`&&(this.setExpanded(!1),this.btn.focus())}};customElements.define(`starlight-menu-button`,e);</script> <div id="starlight__sidebar" class="sidebar-pane astro-gqpr5s5a"> <div class="sidebar-content sl-flex astro-gqpr5s5a"> <sl-sidebar-state-persist data-hash="0oj573e" class="astro-f5yvicm7"> <script aria-hidden="true">
+		(() => {
+			try {
+				if (!matchMedia('(min-width: 50em)').matches) return;
+				/** @type {HTMLElement | null} */
+				const target = document.querySelector('sl-sidebar-state-persist');
+				const state = JSON.parse(sessionStorage.getItem('sl-sidebar-state') || '0');
+				if (!target || !state || target.dataset.hash !== state.hash) return;
+				window._starlightScrollRestore = state.scroll;
+				customElements.define(
+					'sl-sidebar-restore',
+					class SidebarRestore extends HTMLElement {
+						connectedCallback() {
+							try {
+								const idx = parseInt(this.dataset.index || '');
+								const details = this.closest('details');
+								if (details && typeof state.open[idx] === 'boolean') details.open = state.open[idx];
+							} catch {}
+						}
+					}
+				);
+			} catch {}
+		})();
+	</script> <ul class="top-level astro-ojxuodky"> <li class="astro-ojxuodky"> <details open class="astro-ojxuodky"> <summary class="astro-ojxuodky"> <span class="group-label astro-ojxuodky"> <span class="large astro-ojxuodky">Get started</span>  </span> <svg aria-hidden="true" class="caret astro-ojxuodky astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </summary> <sl-sidebar-restore data-index="0"></sl-sidebar-restore> <ul class="astro-ojxuodky"> <li class="astro-ojxuodky"> <a href="/help/product-overview" class="astro-ojxuodky"> <span class="astro-ojxuodky">Product overview</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/requirements" class="astro-ojxuodky"> <span class="astro-ojxuodky">Requirements</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/install" class="astro-ojxuodky"> <span class="astro-ojxuodky">Install Praxis</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/first-run" class="astro-ojxuodky"> <span class="astro-ojxuodky">First run</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/enroll-hosts" class="astro-ojxuodky"> <span class="astro-ojxuodky">Enroll hosts</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/getting-started" class="astro-ojxuodky"> <span class="astro-ojxuodky">Getting started</span>  </a> </li> </ul> </details> </li><li class="astro-ojxuodky"> <details open class="astro-ojxuodky"> <summary class="astro-ojxuodky"> <span class="group-label astro-ojxuodky"> <span class="large astro-ojxuodky">Concepts</span>  </span> <svg aria-hidden="true" class="caret astro-ojxuodky astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </summary> <sl-sidebar-restore data-index="1"></sl-sidebar-restore> <ul class="astro-ojxuodky"> <li class="astro-ojxuodky"> <a href="/help/fleet-lifecycle-architecture" class="astro-ojxuodky"> <span class="astro-ojxuodky">Fleet lifecycle architecture</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/security-model" class="astro-ojxuodky"> <span class="astro-ojxuodky">Security model and trust boundaries</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/transports" class="astro-ojxuodky"> <span class="astro-ojxuodky">Transports</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/editions" class="astro-ojxuodky"> <span class="astro-ojxuodky">Editions and feature tiers</span>  </a> </li> </ul> </details> </li><li class="astro-ojxuodky"> <details open class="astro-ojxuodky"> <summary class="astro-ojxuodky"> <span class="group-label astro-ojxuodky"> <span class="large astro-ojxuodky">Using Praxis</span>  </span> <svg aria-hidden="true" class="caret astro-ojxuodky astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </summary> <sl-sidebar-restore data-index="2"></sl-sidebar-restore> <ul class="astro-ojxuodky"> <li class="astro-ojxuodky"> <a href="/help/fleet-and-hosts" class="astro-ojxuodky"> <span class="astro-ojxuodky">Fleet and hosts</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/packages" class="astro-ojxuodky"> <span class="astro-ojxuodky">Packages</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/patch-workflows" class="astro-ojxuodky"> <span class="astro-ojxuodky">Patch workflows</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/jobs-and-scheduling" class="astro-ojxuodky"> <span class="astro-ojxuodky">Jobs and scheduling</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/ssh-and-security" class="astro-ojxuodky"> <span class="astro-ojxuodky">SSH and security</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/credentials-and-vault" class="astro-ojxuodky"> <span class="astro-ojxuodky">Credentials and secrets</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/monitoring-and-alerts" class="astro-ojxuodky"> <span class="astro-ojxuodky">Monitoring and alerts</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/compliance-workflows" class="astro-ojxuodky"> <span class="astro-ojxuodky">Compliance workflows</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/mirrors-and-airgap" class="astro-ojxuodky"> <span class="astro-ojxuodky">Mirrors and content</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/reports-and-schedules" class="astro-ojxuodky"> <span class="astro-ojxuodky">Reports and schedules</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/settings" class="astro-ojxuodky"> <span class="astro-ojxuodky">Settings</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/admin" class="astro-ojxuodky"> <span class="astro-ojxuodky">Administration</span>  </a> </li> </ul> </details> </li><li class="astro-ojxuodky"> <details open class="astro-ojxuodky"> <summary class="astro-ojxuodky"> <span class="group-label astro-ojxuodky"> <span class="large astro-ojxuodky">How-to guides</span>  </span> <svg aria-hidden="true" class="caret astro-ojxuodky astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </summary> <sl-sidebar-restore data-index="3"></sl-sidebar-restore> <ul class="astro-ojxuodky"> <li class="astro-ojxuodky"> <a href="/help/guide-critical-updates" class="astro-ojxuodky"> <span class="astro-ojxuodky">Respond to a critical update</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/guide-patch-windows" class="astro-ojxuodky"> <span class="astro-ojxuodky">Run a patch window</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/guide-rollback" class="astro-ojxuodky"> <span class="astro-ojxuodky">Roll back a bad update</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/guide-onboarding-offboarding" class="astro-ojxuodky"> <span class="astro-ojxuodky">Onboard and offboard people</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/guide-temporary-access" class="astro-ojxuodky"> <span class="astro-ojxuodky">Grant temporary access</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/guide-access-review" class="astro-ojxuodky"> <span class="astro-ojxuodky">Run an access review</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/guide-evidence-export" class="astro-ojxuodky"> <span class="astro-ojxuodky">Export evidence for an audit</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/guide-safe-upgrade" class="astro-ojxuodky"> <span class="astro-ojxuodky">Upgrade safely</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/guide-license-rotation" class="astro-ojxuodky"> <span class="astro-ojxuodky">Rotate a licence</span>  </a> </li> </ul> </details> </li><li class="astro-ojxuodky"> <details open class="astro-ojxuodky"> <summary class="astro-ojxuodky"> <span class="group-label astro-ojxuodky"> <span class="large astro-ojxuodky">Operations</span>  </span> <svg aria-hidden="true" class="caret astro-ojxuodky astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </summary> <sl-sidebar-restore data-index="4"></sl-sidebar-restore> <ul class="astro-ojxuodky"> <li class="astro-ojxuodky"> <a href="/help/production-hardening" class="astro-ojxuodky"> <span class="astro-ojxuodky">Production hardening and operations</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/backup-restore" class="astro-ojxuodky"> <span class="astro-ojxuodky">Backup and restore</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/airgap" class="astro-ojxuodky"> <span class="astro-ojxuodky">Airgap export and import</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/oidc-setup" class="astro-ojxuodky"> <span class="astro-ojxuodky">Single sign-on setup</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/remediation-workflow" class="astro-ojxuodky"> <span class="astro-ojxuodky">Remediation workflow</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/scaling-assessment-500-hosts" aria-current="page" class="astro-ojxuodky"> <span class="astro-ojxuodky">Capacity and scaling</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/demo-walkthrough-operator" class="astro-ojxuodky"> <span class="astro-ojxuodky">Operator walkthrough</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/demo-walkthrough-auditor" class="astro-ojxuodky"> <span class="astro-ojxuodky">Auditor walkthrough</span>  </a> </li> </ul> </details> </li><li class="astro-ojxuodky"> <details open class="astro-ojxuodky"> <summary class="astro-ojxuodky"> <span class="group-label astro-ojxuodky"> <span class="large astro-ojxuodky">Security</span>  </span> <svg aria-hidden="true" class="caret astro-ojxuodky astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </summary> <sl-sidebar-restore data-index="5"></sl-sidebar-restore> <ul class="astro-ojxuodky"> <li class="astro-ojxuodky"> <a href="/help/access-revocation" class="astro-ojxuodky"> <span class="astro-ojxuodky">Access revocation</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/compliance-map" class="astro-ojxuodky"> <span class="astro-ojxuodky">Compliance evidence map</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/audit-schema" class="astro-ojxuodky"> <span class="astro-ojxuodky">Audit event schema</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/dependency-security-policy" class="astro-ojxuodky"> <span class="astro-ojxuodky">Dependency and container security policy</span>  </a> </li> </ul> </details> </li><li class="astro-ojxuodky"> <details open class="astro-ojxuodky"> <summary class="astro-ojxuodky"> <span class="group-label astro-ojxuodky"> <span class="large astro-ojxuodky">Release and upgrade</span>  </span> <svg aria-hidden="true" class="caret astro-ojxuodky astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </summary> <sl-sidebar-restore data-index="6"></sl-sidebar-restore> <ul class="astro-ojxuodky"> <li class="astro-ojxuodky"> <a href="/help/licensing" class="astro-ojxuodky"> <span class="astro-ojxuodky">Licensing and activation</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/verify-release-artifacts" class="astro-ojxuodky"> <span class="astro-ojxuodky">Verify release artifacts</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/upgrade" class="astro-ojxuodky"> <span class="astro-ojxuodky">Upgrade</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/upgrade-notes-1-0" class="astro-ojxuodky"> <span class="astro-ojxuodky">Upgrade notes for 1.0</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/uninstall" class="astro-ojxuodky"> <span class="astro-ojxuodky">Uninstall</span>  </a> </li> </ul> </details> </li><li class="astro-ojxuodky"> <details open class="astro-ojxuodky"> <summary class="astro-ojxuodky"> <span class="group-label astro-ojxuodky"> <span class="large astro-ojxuodky">Reference</span>  </span> <svg aria-hidden="true" class="caret astro-ojxuodky astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </summary> <sl-sidebar-restore data-index="7"></sl-sidebar-restore> <ul class="astro-ojxuodky"> <li class="astro-ojxuodky"> <a href="/help/support-matrix" class="astro-ojxuodky"> <span class="astro-ojxuodky">Linux support matrix</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/agent-capability-matrix" class="astro-ojxuodky"> <span class="astro-ojxuodky">Agent and SSH capability matrix</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/agent-protocol" class="astro-ojxuodky"> <span class="astro-ojxuodky">Agent protocol</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/reporting-contract" class="astro-ojxuodky"> <span class="astro-ojxuodky">Reporting contract</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/eol-data" class="astro-ojxuodky"> <span class="astro-ojxuodky">Distribution lifecycle data</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/browser-support" class="astro-ojxuodky"> <span class="astro-ojxuodky">Browser and viewport support</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/known-limitations" class="astro-ojxuodky"> <span class="astro-ojxuodky">Known limitations</span>  </a> </li> </ul> </details> </li><li class="astro-ojxuodky"> <details open class="astro-ojxuodky"> <summary class="astro-ojxuodky"> <span class="group-label astro-ojxuodky"> <span class="large astro-ojxuodky">Troubleshooting and support</span>  </span> <svg aria-hidden="true" class="caret astro-ojxuodky astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </summary> <sl-sidebar-restore data-index="8"></sl-sidebar-restore> <ul class="astro-ojxuodky"> <li class="astro-ojxuodky"> <a href="/help/troubleshooting" class="astro-ojxuodky"> <span class="astro-ojxuodky">Troubleshooting</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/support" class="astro-ojxuodky"> <span class="astro-ojxuodky">Support</span>  </a> </li> </ul> </details> </li> </ul>  <script aria-hidden="true">
+		(() => {
+			const scroller = document.getElementById('starlight__sidebar');
+			if (!window._starlightScrollRestore || !scroller) return;
+			scroller.scrollTop = window._starlightScrollRestore;
+			delete window._starlightScrollRestore;
+		})();
+	</script></sl-sidebar-state-persist> <div class="md:sl-hidden"> <div class="mobile-preferences sl-flex astro-b5gddk54"> <div class="social-icons astro-b5gddk54">  </div> <starlight-theme-select>  <label style="--sl-select-width: 6.25em" class="astro-r2p65idu"> <span class="sr-only astro-r2p65idu">Select theme</span> <svg aria-hidden="true" class="icon label-icon astro-r2p65idu astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21 14h-1V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v7H3a1 1 0 0 0-1 1v2a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-2a1 1 0 0 0-1-1ZM6 7a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v7H6V7Zm14 10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-1h16v1Z"/></svg> <select autocomplete="off" class="astro-r2p65idu"> <option value="dark" class="astro-r2p65idu">Dark</option><option value="light" class="astro-r2p65idu">Light</option><option value="auto" selected class="astro-r2p65idu">Auto</option> </select> <svg aria-hidden="true" class="icon caret astro-r2p65idu astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M17 9.17a1 1 0 0 0-1.41 0L12 12.71 8.46 9.17a1 1 0 1 0-1.41 1.42l4.24 4.24a1.002 1.002 0 0 0 1.42 0L17 10.59a1.002 1.002 0 0 0 0-1.42Z"/></svg> </label> </starlight-theme-select>  <script>
+	StarlightThemeProvider.updatePickers();
+</script>    </div> </div> </div> </div> </nav> <div class="main-frame astro-gqpr5s5a">  <script type="module">var e=document.getElementById(`starlight__sidebar`),t=e?.querySelector(`sl-sidebar-state-persist`),n=`sl-sidebar-state`,r=()=>{let r=[],i=t?.dataset.hash||``;try{let e=sessionStorage.getItem(n),t=JSON.parse(e||`{}`);Array.isArray(t.open)&&t.hash===i&&(r=t.open)}catch{}return{hash:i,open:r,scroll:e?.scrollTop||0}},i=e=>{try{sessionStorage.setItem(n,JSON.stringify(e))}catch{}},a=()=>i(r()),o=(e,t)=>{let n=r();n.open[t]=e,i(n)};t?.addEventListener(`click`,e=>{if(!(e.target instanceof Element))return;let t=e.target.closest(`summary`)?.closest(`details`);if(!t)return;let n=t.querySelector(`sl-sidebar-restore`),r=parseInt(n?.dataset.index||``);isNaN(r)||o(!t.open,r)}),addEventListener(`visibilitychange`,()=>{document.visibilityState===`hidden`&&a()});</script><div class="lg:sl-flex astro-abfeecmu"> <aside class="right-sidebar-container print:hidden astro-abfeecmu"> <div class="right-sidebar astro-abfeecmu">  <div class="lg:sl-hidden astro-q5mffni3"> <mobile-starlight-toc data-min-h="2" data-max-h="3" class="astro-5ulgm6bh"> <nav aria-labelledby="starlight__on-this-page--mobile" class="astro-5ulgm6bh"> <details id="starlight__mobile-toc" class="astro-5ulgm6bh"> <summary id="starlight__on-this-page--mobile" class="sl-flex astro-5ulgm6bh"> <span class="toggle sl-flex astro-5ulgm6bh"> On this page <svg aria-hidden="true" class="caret astro-5ulgm6bh astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </span> <span class="display-current astro-5ulgm6bh"></span> </summary> <div class="dropdown astro-5ulgm6bh"> <ul class="isMobile astro-cxyftcne" style="--depth: 0;"> <li style="--depth: 0;" class="astro-cxyftcne"> <a href="#_top" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Overview</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#1-current-supported-topology-what-is-single-process-and-why" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">1. Current supported topology (what is single-process and why)</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#2-the-load-harness-reproducible-no-500-vms" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">2. The load harness (reproducible, no 500 VMs)</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#3-measurements" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">3. Measurements</span> </a> <ul class="isMobile astro-cxyftcne" style="--depth: 1;"> <li style="--depth: 1;" class="astro-cxyftcne"> <a href="#fleet-reads-host-count-independent-aggregates" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Fleet reads (host-count-independent aggregates)</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#access-control-reconcile-sweep-the-periodic-full-fleet-job" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Access-control reconcile sweep (the periodic full-fleet job)</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#db-pool-under-concurrency-ceiling--30-connections" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">DB pool under concurrency (ceiling = 30 connections)</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#resource-footprint" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Resource footprint</span> </a>  </li> </ul> </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#4-per-workflow-verdict-interactive-correctness-vs-fleet-job-throughput" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">4. Per-workflow verdict (interactive correctness vs fleet-job throughput)</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#5-limits-what-is-not-promised-and-tuning" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">5. Limits, what is NOT promised, and tuning</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#6-answering-the-acceptance-questions" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">6. Answering the acceptance questions</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#follow-ups" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Follow-ups</span> </a>  </li> </ul> </div> </details> </nav> </mobile-starlight-toc> <script type="module" src="/help/_astro/MobileTableOfContents.astro_astro_type_script_index_0_lang.BcSo_yiZ.js"></script> </div> <div class="right-sidebar-panel sl-hidden lg:sl-block astro-q5mffni3"> <div class="sl-container astro-q5mffni3"> <starlight-toc data-min-h="2" data-max-h="3"> <nav aria-labelledby="starlight__on-this-page"> <h2 id="starlight__on-this-page">On this page</h2> <ul class="astro-cxyftcne" style="--depth: 0;"> <li style="--depth: 0;" class="astro-cxyftcne"> <a href="#_top" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Overview</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#1-current-supported-topology-what-is-single-process-and-why" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">1. Current supported topology (what is single-process and why)</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#2-the-load-harness-reproducible-no-500-vms" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">2. The load harness (reproducible, no 500 VMs)</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#3-measurements" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">3. Measurements</span> </a> <ul class="astro-cxyftcne" style="--depth: 1;"> <li style="--depth: 1;" class="astro-cxyftcne"> <a href="#fleet-reads-host-count-independent-aggregates" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Fleet reads (host-count-independent aggregates)</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#access-control-reconcile-sweep-the-periodic-full-fleet-job" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Access-control reconcile sweep (the periodic full-fleet job)</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#db-pool-under-concurrency-ceiling--30-connections" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">DB pool under concurrency (ceiling = 30 connections)</span> </a>  </li><li style="--depth: 1;" class="astro-cxyftcne"> <a href="#resource-footprint" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Resource footprint</span> </a>  </li> </ul> </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#4-per-workflow-verdict-interactive-correctness-vs-fleet-job-throughput" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">4. Per-workflow verdict (interactive correctness vs fleet-job throughput)</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#5-limits-what-is-not-promised-and-tuning" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">5. Limits, what is NOT promised, and tuning</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#6-answering-the-acceptance-questions" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">6. Answering the acceptance questions</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#follow-ups" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Follow-ups</span> </a>  </li> </ul> </nav> </starlight-toc> <script type="module" src="/help/_astro/TableOfContents.astro_astro_type_script_index_0_lang.Csloo1VZ.js"></script> </div> </div>  </div> </aside> <div class="main-pane astro-abfeecmu">  <main data-pagefind-body class="astro-vdxcvpsm" lang="en" dir="ltr">    <div class="content-panel astro-oil7k7jf"> <div class="sl-container astro-oil7k7jf"> <h1 id="_top" class="astro-2sm4b3ln">Capacity and scaling</h1> </div> </div> <div class="content-panel astro-oil7k7jf"> <div class="sl-container astro-oil7k7jf"> <div class="sl-markdown-content"> <p><strong>Question:</strong> can the intentionally single-worker Praxis 1.0 backend + single-broker
+topology support the paid <strong>Business cap of 500 managed hosts</strong>?</p>
+<p><strong>Verdict: YES — 500 managed hosts are supportable on the 1.0 single-worker topology.</strong>
+The fleet-job / request envelope that actually scales with host count is DB-bound and
+has large headroom: over 500 synthetic hosts on the production engine + connection
+pool, fleet dashboards render in <strong>≤ 9 ms p95</strong>, the full access-control reconcile
+sweep completes in <strong>~0.67 s</strong> (751 hosts/s) against scheduler intervals of <strong>≥ 30 s</strong>,
+and the DB pool absorbs <strong>2× oversubscription (60 concurrent ops) with zero failures</strong>.
+The measured envelope stays clean at <strong>1000 hosts</strong> (2× the promise). The limits that
+matter are NOT host count — they are <em>concurrent interactive sessions</em> (process-local)
+and <em>simultaneous command fan-out concurrency</em> (SSH/broker-bound); both are bounded and
+degrade gracefully, and neither is exceeded by having 500 hosts enrolled. See
+<a href="#5-limits-what-is-not-promised-and-tuning">Limits &#x26; tuning</a> and
+<a href="#follow-ups">Follow-ups</a>.</p>
+<blockquote>
+<p>Measurement caveat: absolute millisecond numbers below were captured in the dev
+Docker runtime (WSL2, shared host) against the <strong>production</strong> SQLAlchemy engine and
+pool config. Treat the <strong>ratios, linearity, and headroom</strong> as the signal, not as a
+production SLA. The harness is committed and re-runnable
+(<code>scripts/scaling/pra309_load_harness.py</code>) so numbers can be re-taken on real
+hardware.</p>
+</blockquote>
+<hr>
+<h2 id="1-current-supported-topology-what-is-single-process-and-why">1. Current supported topology (what is single-process and why)</h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Component</th><th>Count</th><th>Enforcement / evidence</th></tr></thead><tbody><tr><td>Backend Uvicorn workers</td><td><strong>1</strong></td><td><code>UVICORN_WORKERS=${UVICORN_WORKERS:-1}</code> (<code>docker-compose.prod.yml</code>); <code>scripts/assert_session_worker_safety.sh</code> fails boot if <code>>1</code> unless <code>ALLOW_UNSAFE_MULTIWORKER_SESSIONS=1</code></td></tr><tr><td>Agent broker processes</td><td><strong>1</strong></td><td><code>agent-broker</code> service, <code>python -m app.broker.main</code>; boot logs “run exactly one broker process (no replicas / HA in 1.0)”; no compose <code>replicas</code></td></tr><tr><td>Scheduler</td><td>1 APScheduler <code>BackgroundScheduler</code> in the backend process</td><td>default <code>ThreadPoolExecutor</code>, <code>max_instances=1</code>, <code>coalesce=True</code>, <code>misfire_grace_time=300</code>; cross-instance dedupe via DB advisory rows (<code>scheduler_job_locks</code>)</td></tr><tr><td>DB connection pool (per process)</td><td><code>pool_size=20 + max_overflow=10 = 30</code>, <code>pool_timeout=30 s</code></td><td><code>app/db/session.py</code> — hard-coded literals, <strong>no env override</strong></td></tr></tbody></table>
+<p><strong>Why single-worker is a correctness requirement, not laziness:</strong></p>
+<ul>
+<li><strong>Interactive session runtime is process-local.</strong> Live SSH/web-terminal sessions live
+in a module-level dict <code>session_runtime._registry: Dict[int, SessionRuntime]</code>, each
+owning a Paramiko transport/PTY + a background reader <strong>thread</strong> + recording writer.
+<code>POST /sessions</code> opens the runtime in one worker’s memory; <code>…/ws</code> attaches by looking
+it up in that <strong>same</strong> process. With >1 worker the REST open and the WS attach can
+land on different workers → “runtime missing”. This is the exact failure the boot
+guard blocks.</li>
+<li><strong>Broker tunnel + op state is in-memory and unshardable.</strong> <code>AgentRegistry._by_system: Dict[int, TunnelEntry]</code> holds each agent’s live yamux tunnel; <code>OperationManager._ops</code>
+routes an op to the tunnel via <code>registry.get(system_id)</code>. Two broker processes would
+split tunnels with no shared registry, so ops would miss their agent.</li>
+</ul>
+<p><strong>What is NOT process-local (so it scales with the DB, not with memory):</strong> command
+execution results and validation/approval, <strong>command fan-out results</strong>
+(<code>fleet_operations</code> / <code>fleet_operation_results</code>), jobs + history, host facts
+(<code>HostFacts</code>), patch plans/executions, drift/compliance evidence, audit, and the
+revocation/reconcile work outbox. Enrolling 500 hosts grows <strong>rows</strong>, not in-process
+memory.</p>
+<hr>
+<h2 id="2-the-load-harness-reproducible-no-500-vms">2. The load harness (reproducible, no 500 VMs)</h2>
+<p><code>scripts/scaling/pra309_load_harness.py</code> seeds N synthetic <code>System</code> rows (marked
+<code>pra309load-</code>, cleaned up on exit) and measures, against the <strong>real production engine +
+pool</strong>:</p>
+<ol>
+<li><strong>Fleet read aggregates</strong> — <code>HealthService.get_fleet_dashboard()</code> /
+<code>get_fleet_health()</code> (the GROUP-BY queries the admin UI and scheduler hit each cycle).</li>
+<li><strong>Reconcile sweep</strong> — the periodic access-control convergence, executed with the same
+shape as <code>fleet_reconciliation_service.reconcile_all</code> (8-worker <code>ThreadPoolExecutor</code>,
+one <code>Session</code> per worker) but <strong>only over the seeded ids</strong>, so it never SSHes a real
+host. Converged/no-grant hosts ⇒ DB-read-only per host = the steady-state cost that
+runs every cycle in normal operation.</li>
+<li><strong>DB pool saturation</strong> — C concurrent DB-bound ops at C = 1…60 (1×…2× the 30-conn
+ceiling), reporting latency growth and any <code>pool_timeout</code> failures.</li>
+</ol>
+<p>Run it:</p>
+<div class="expressive-code"><link rel="stylesheet" href="/help/_astro/ec.w36nc.css"><script type="module" src="/help/_astro/ec.0vx5m.js"></script><figure class="frame is-terminal not-content"><figcaption class="header"><span class="title"></span><span class="sr-only">Terminal window</span></figcaption><pre data-language="bash"><code><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">docker</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">compose</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">run</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--rm</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--no-deps</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#82AAFF;--1:#3B61B0">-e</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">DATABASE_URL=</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#984E4D">postgresql://${</span><span style="--0:#C5E478;--1:#3B61B0">POSTGRES_USER</span><span style="--0:#7FDBCA;--1:#096E72">:-</span><span style="--0:#C5E478;--1:#3B61B0">postgres</span><span style="--0:#ECC48D;--1:#984E4D">}:${</span><span style="--0:#C5E478;--1:#3B61B0">POSTGRES_PASSWORD</span><span style="--0:#ECC48D;--1:#984E4D">}@db:5432/praxis_test</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-e</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">TESTING=</span><span style="--0:#F78C6C;--1:#AA0982">1</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#82AAFF;--1:#3B61B0">-v</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#C5E478;--1:#3B61B0">$PWD</span><span style="--0:#D9F5DD;--1:#111111">"</span><span style="--0:#ECC48D;--1:#3B61B0">:/src</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">-w</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">/src/backend</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">backend</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">  </span><span style="--0:#ECC48D;--1:#3B61B0">python</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">/src/scripts/scaling/pra309_load_harness.py</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--hosts</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">500</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--json</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">/src/out.json</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="docker compose run --rm --no-deps \  -e DATABASE_URL=&#x22;postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@db:5432/praxis_test&#x22; -e TESTING=1 \  -v &#x22;$PWD&#x22;:/src -w /src/backend backend \  python /src/scripts/scaling/pra309_load_harness.py --hosts 500 --json /src/out.json"><div></div></button></div></figure></div>
+<p><strong>What the harness does not simulate:</strong> real agent tunnels and real interactive SSH
+sessions (those need the broker + real hosts). Those envelopes are assessed analytically
+in §4 and validated by the existing broker/session tests + the real-host smokes
+(<code>scripts/test-first-enrolled-host-smoke.sh</code>, <code>tests/broker/</code>). The harness proves the
+<strong>DB / fleet-job / request</strong> envelope — the part that genuinely grows with host count.</p>
+<hr>
+<h2 id="3-measurements">3. Measurements</h2>
+<p>Production engine/pool; medians over repeated iterations; <code>errors=0</code> throughout.</p>
+<h3 id="fleet-reads-host-count-independent-aggregates">Fleet reads (host-count-independent aggregates)</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Fleet size</th><th><code>get_fleet_dashboard</code> p95</th><th><code>get_fleet_health</code> p95</th></tr></thead><tbody><tr><td>50</td><td>8.6 ms</td><td>2.7 ms</td></tr><tr><td>500</td><td>9.1 ms</td><td>2.8 ms</td></tr><tr><td>1000</td><td>10.3 ms</td><td>3.1 ms</td></tr></tbody></table>
+<p>Aggregate GROUP-BY over an indexed <code>systems</code> table — essentially flat from 50 → 1000
+hosts. Dashboards do not degrade with fleet size.</p>
+<h3 id="access-control-reconcile-sweep-the-periodic-full-fleet-job">Access-control reconcile sweep (the periodic full-fleet job)</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Fleet size</th><th>Wall (8 workers)</th><th>Throughput</th><th>Per-host p50</th><th>Errors</th></tr></thead><tbody><tr><td>50</td><td>0.074 s</td><td>680 hosts/s</td><td>10.8 ms</td><td>0</td></tr><tr><td>500</td><td><strong>0.666 s</strong></td><td>751 hosts/s</td><td>10.4 ms</td><td>0</td></tr><tr><td>1000</td><td>1.356 s</td><td>738 hosts/s</td><td>10.4 ms</td><td>0</td></tr></tbody></table>
+<p>Per-host cost is stable (~10 ms), so the sweep is <strong>linear</strong> in host count. At 500 hosts
+the whole-fleet sweep is <strong>~0.67 s</strong>. The tightest fleet-relevant scheduler intervals
+are <strong>30 s</strong> (webhook/audit/revocation-drain) and the fleet sweeps themselves run every
+<strong>5–30 min</strong> — so the heaviest full-fleet convergence occupies the 8-thread pool for
+<strong>~0.67 s out of ≥30 s (~2% duty cycle)</strong>. Headroom to the promise is <strong>~45×</strong>; even at
+2× the promise (1000 hosts) it is ~22×.</p>
+<h3 id="db-pool-under-concurrency-ceiling--30-connections">DB pool under concurrency (ceiling = 30 connections)</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Concurrency</th><th>op p50</th><th>op p95</th><th>op max</th><th>pool timeouts</th></tr></thead><tbody><tr><td>1</td><td>2.1 ms</td><td>2.5 ms</td><td>—</td><td>0</td></tr><tr><td>10</td><td>6.0 ms</td><td>9.9 ms</td><td>—</td><td>0</td></tr><tr><td>20</td><td>12.2 ms</td><td>20.3 ms</td><td>—</td><td>0</td></tr><tr><td>30</td><td>17.4 ms</td><td>28.9 ms</td><td>41 ms</td><td>0</td></tr><tr><td>45</td><td>16.8 ms</td><td>32.2 ms</td><td>160 ms</td><td>0</td></tr><tr><td><strong>60</strong></td><td>19.4 ms</td><td><strong>40.5 ms</strong></td><td>224 ms</td><td><strong>0</strong></td></tr></tbody></table>
+<p>Past the 30-connection ceiling, callers <strong>queue</strong> for a free connection rather than
+fail. Because fleet ops are short (ms-scale), the queue drains fast: at 2×
+oversubscription p95 is still ~40 ms and <strong>no request hit the 30 s <code>pool_timeout</code></strong>.
+This is graceful degradation (latency, not errors).</p>
+<h3 id="resource-footprint">Resource footprint</h3>
+<p>Backend container idle RSS ≈ <strong>210 MiB</strong>; the reconcile sweep is a ~0.67 s / ≥30 s duty
+cycle on ≤8 threads (low average CPU). Broker memory is <strong>O(connected agents)</strong> — each
+<code>TunnelEntry</code> is a small object plus one socket; 500 persistent agent connections is a
+few MiB of Python objects plus per-socket kernel buffers, comfortably within a container.</p>
+<hr>
+<h2 id="4-per-workflow-verdict-interactive-correctness-vs-fleet-job-throughput">4. Per-workflow verdict (interactive correctness vs fleet-job throughput)</h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Workflow</th><th>Bound by</th><th>500-host verdict</th></tr></thead><tbody><tr><td>Agent heartbeat / tunnel health</td><td>Broker in-memory registry (O(agents)) + <code>agent_last_seen</code> DB writes</td><td>✅ bounded; health rollups are the aggregate queries measured above</td></tr><tr><td>Command execution <strong>fan-out</strong></td><td>SSH/broker <strong>concurrency</strong> + <code>fleet_operations</code> DB writes; results persisted per host</td><td>✅ throughput-bound, not latency-bound — a 500-host fan-out is paced by the SSH/op concurrency limit and drains as a DB-backed batch; it does not block the event loop</td></tr><tr><td>Package / <strong>facts</strong> scans</td><td>Scheduler sweep walking Active fleet + <code>HostFacts</code> writes</td><td>✅ DB-bound like reconcile; per-host skip-if-fresh keeps steady-state cheap</td></tr><tr><td>Patch plan generation &#x26; dispatch</td><td>DB (<code>PatchUpdatePlan*</code>) + dispatch concurrency</td><td>✅ DB-backed; dispatch is a bounded batch, not a single blocking call</td></tr><tr><td>Compliance evaluation / remediation dispatch</td><td>Scheduler sweep + DB evidence</td><td>✅ DB-bound sweep, same envelope class as reconcile</td></tr><tr><td>File transfer</td><td>Per-transfer SSH/SFTP, <strong>concurrency-bound</strong></td><td>✅ bounded by concurrent transfers, independent of fleet size</td></tr><tr><td>Access-control <strong>reconcile / revocation</strong></td><td>DB convergence (measured) + provisioning SSH only on drift</td><td>✅ <strong>measured: 0.67 s / 500 hosts</strong>; provisioning transients are SSH-concurrency-bound, separate from the steady sweep</td></tr><tr><td>Active <strong>interactive SSH sessions</strong></td><td><strong>Process-local</strong> runtime (thread + PTY + recording per session); CPU/mem/FD</td><td>⚠️ bounded by <strong>concurrent active sessions</strong>, NOT by host count — a 500-host fleet with, say, 10–20 concurrent live sessions is well within one process; this is the dimension to watch, and it does not grow just because more hosts are enrolled</td></tr></tbody></table>
+<p><strong>The key distinction the assessment turns on:</strong> enrolling 500 hosts grows <em>DB rows and
+periodic-sweep work</em> (measured, linear, tiny) — it does <strong>not</strong> grow the <em>process-local</em>
+session/broker state, which is driven by <em>concurrent activity</em> (active sessions, in-flight
+fan-outs), a separate and much smaller number.</p>
+<hr>
+<h2 id="5-limits-what-is-not-promised-and-tuning">5. Limits, what is NOT promised, and tuning</h2>
+<p><strong>Degrades gracefully (latency, not failure):</strong></p>
+<ul>
+<li>DB pool oversubscription → requests queue (measured: 2× → ~40 ms p95, 0 timeouts).</li>
+<li>Overlapping fleet sweeps → APScheduler <code>coalesce=True</code> + <code>max_instances=1</code> collapse
+stacked runs; a slow sweep delays the next tick, it does not pile up.</li>
+</ul>
+<p><strong>Not promised in 1.0 (documented non-goals):</strong></p>
+<ul>
+<li>Multiple Uvicorn workers / HA backend, multiple broker replicas (would break the
+process-local session + tunnel invariants — see §1).</li>
+<li>Unbounded <strong>concurrent interactive sessions</strong> — this is the real ceiling and is
+bounded by backend CPU/memory/FDs, not by enrolled-host count.</li>
+<li>A single synchronous fan-out blocking on hundreds of slow/dead hosts is paced by
+SSH/op concurrency; throughput, not per-host latency, is the lever.</li>
+</ul>
+<p><strong>Tuning knobs (adequate at 500; documented for headroom):</strong></p>
+<ul>
+<li><strong>DB pool</strong> (<code>pool_size=20</code>, <code>max_overflow=10</code>, <code>pool_timeout=30 s</code>) is currently a
+hard-coded literal in <code>app/db/session.py</code>. It was <strong>not</strong> exceeded at 2×
+oversubscription in testing, so no change is required for 500 hosts. If an operator
+runs many concurrent admins <em>and</em> heavy sweeps on constrained DB hardware, making these
+env-configurable is a cheap future safety valve (see follow-ups).</li>
+<li>Scheduler intervals (facts 30 min, health 30 min, drift/compliance 15 min) already
+leave ~45× headroom over the measured 500-host sweep cost.</li>
+</ul>
+<hr>
+<h2 id="6-answering-the-acceptance-questions">6. Answering the acceptance questions</h2>
+<ul>
+<li><strong>Are 500 hosts supportable on 1.0 single-worker?</strong> <strong>Yes.</strong> The host-count-scaling
+work (fleet reads + periodic sweeps + fan-out result persistence) is DB-bound with
+~45× headroom at 500 and still clean at 1000.</li>
+<li><strong>Interactive-session correctness vs non-interactive throughput distinguished?</strong> Yes —
+interactive sessions are process-local and concurrency-bound (the reason for the
+single-worker gate); non-interactive fleet jobs are DB-backed and were measured linear.</li>
+<li><strong>Latency, resource pressure, retry/failure captured?</strong> Yes — read/dispatch latency,
+reconcile throughput, DB pool saturation (latency + timeout counts), CPU duty cycle,
+and RSS baseline; <code>errors=0</code>/<code>pool_timeouts=0</code> throughout.</li>
+<li><strong>Config tuning required + committed?</strong> None required for 500 hosts; the DB-pool knob
+is documented as an optional headroom valve.</li>
+<li><strong>Is a follow-up blocker needed?</strong> <strong>No launch blocker.</strong> Single-worker passes the
+500-host envelope. Optional, non-blocking follow-ups below.</li>
+</ul>
+<h2 id="follow-ups">Follow-ups</h2>
+<ul>
+<li><strong>Optional, non-blocking:</strong> make the DB pool env-configurable
+(<code>PRAXIS_DB_POOL_SIZE</code> / <code>_MAX_OVERFLOW</code> / <code>_TIMEOUT</code>) so operators on constrained DB
+hardware have a valve. Not required for 500 hosts.</li>
+<li><strong>A DB-backed queue/worker is the right home</strong> for any future move to
+handling of non-interactive fleet jobs <em>if</em> the host cap is raised well beyond 500 or
+concurrent-admin load grows — it is <strong>not</strong> needed for the current 500-host promise.</li>
+<li>Re-run <code>scripts/scaling/pra309_load_harness.py</code> on target production DB hardware to
+convert these ratios into absolute production numbers before raising the cap.</li>
+</ul> </div> <div class="pagination-links print:hidden astro-jgq3vlii" dir="ltr"> <a href="/help/remediation-workflow" rel="prev" class="astro-jgq3vlii"> <svg aria-hidden="true" class="astro-jgq3vlii astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.5rem;"><path d="M17 11H9.41l3.3-3.29a1.004 1.004 0 1 0-1.42-1.42l-5 5a1 1 0 0 0-.21.33 1 1 0 0 0 0 .76 1 1 0 0 0 .21.33l5 5a1.002 1.002 0 0 0 1.639-.325 1 1 0 0 0-.219-1.095L9.41 13H17a1 1 0 0 0 0-2Z"/></svg> <span class="astro-jgq3vlii"> Previous <br class="astro-jgq3vlii"> <span class="link-title astro-jgq3vlii">Remediation workflow</span> </span> </a> <a href="/help/demo-walkthrough-operator" rel="next" class="astro-jgq3vlii"> <svg aria-hidden="true" class="astro-jgq3vlii astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.5rem;"><path d="M17.92 11.62a1.001 1.001 0 0 0-.21-.33l-5-5a1.003 1.003 0 1 0-1.42 1.42l3.3 3.29H7a1 1 0 0 0 0 2h7.59l-3.3 3.29a1.002 1.002 0 0 0 .325 1.639 1 1 0 0 0 1.095-.219l5-5a1 1 0 0 0 .21-.33 1 1 0 0 0 0-.76Z"/></svg> <span class="astro-jgq3vlii"> Next <br class="astro-jgq3vlii"> <span class="link-title astro-jgq3vlii">Operator walkthrough</span> </span> </a> </div> <footer class="praxis-docs-footer astro-jo6i4kqk"> <p class="astro-jo6i4kqk">
+Praxis documentation. This page is part of a single documentation set that
+    is published on the web and bundled with the application for offline use.
+</p> </footer> </div> </div>  </main> </div> </div> </div> </div> </body> </html>

@@ -1,4 +1,7 @@
-# Praxis Compliance Evidence Map
+---
+title: Compliance evidence map
+description: Which Praxis evidence supports SOC 2, PCI DSS, and HIPAA control discussions, and where the boundary is.
+---
 
 Maps the Praxis audit event vocabulary to common compliance control frameworks. **This is not a compliance attestation.** It is the evidence map your auditor needs when they ask *"show me how access is controlled and audited."*
 

@@ -1,4 +1,7 @@
-# Airgap export / import
+---
+title: Airgap export and import
+description: Export a signed content bundle on a connected control plane and verify and import it on a disconnected one.
+---
 
 End-to-end disconnected workflow. Praxis itself runs in airgapped
 environments by exporting a signed content bundle on a connected

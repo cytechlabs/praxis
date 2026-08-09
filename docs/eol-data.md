@@ -1,4 +1,7 @@
-# Distro lifecycle / EOL reference data
+---
+title: Distribution lifecycle data
+description: Where end-of-life dates come from, how they are refreshed, and how Praxis uses them.
+---
 
 Praxis ships a static end-of-life reference dataset for the
 distributions it supports. The data drives the per-host lifecycle

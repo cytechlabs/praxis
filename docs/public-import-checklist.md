@@ -79,7 +79,7 @@ readiness checker.
 | Doc | Disposition |
 |---|---|
 | `README.md` | Keep — product/operator tone. |
-| `CHANGELOG.md`, `docs/release-notes-template.md`, `docs/upgrade-notes-1.0.md` | Keep — release docs. |
+| `CHANGELOG.md`, `docs/release-notes-template.md`, `docs/upgrade-notes-1-0.md` | Keep — release docs. |
 | `docs/release-checklist.md`, `docs/public-import-checklist.md` | Keep — operator runbooks. |
 | `docs/agent-protocol.md`, `docs/airgap.md`, `docs/audit-schema.md` | Keep — scrubbed of issue/slice wording. |
 | `docs/compliance-map.md`, `docs/eol-data.md`, `docs/remediation-workflow.md` | Keep — scrubbed. |

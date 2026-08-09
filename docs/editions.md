@@ -1,4 +1,7 @@
-# Praxis editions
+---
+title: Editions and feature tiers
+description: What the free tier includes, what the paid tiers add, and how entitlements are enforced.
+---
 
 Praxis is **open core**. The free edition is a complete, self-hostable Linux
 fleet control plane — inventory, access, content, patching, and compliance — and

@@ -1,4 +1,7 @@
-# Security Model and Trust Boundaries
+---
+title: Security model and trust boundaries
+description: What each component is trusted to do, where the trust boundaries sit, and how content trust is chained.
+---
 
 This document describes how Praxis is structured for security: the tiers, where
 trust boundaries sit, what each component is allowed to do, and how host access
