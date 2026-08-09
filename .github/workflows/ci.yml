@@ -321,6 +321,12 @@ jobs:
       - name: Links and anchors (bundled copy)
         run: node scripts/check-docs-links.mjs frontend-next/public/help --base /help
 
+      # Pagefind encodes page ordinals into its index chunks, so indexing in
+      # filesystem order produces a bundle that cannot be reproduced on a
+      # different filesystem. This proves the ordering is normalised.
+      - name: Search index is independent of discovery order
+        run: node scripts/check-docs-search-order.mjs docs-site/dist
+
       - name: Search index (public site)
         run: node scripts/check-docs-search.mjs docs-site/dist
 

@@ -11,7 +11,7 @@
     "build": "node ../scripts/build-docs.mjs",
     "build:public": "node ../scripts/build-docs.mjs --public",
     "build:bundled": "node ../scripts/build-docs.mjs --bundled",
-    "verify": "npm run check && node ../scripts/check-docs-clean-build.mjs && npm run build && node ../scripts/check-docs-public-content.mjs --self-test && node ../scripts/check-docs-public-content.mjs && node ../scripts/check-docs-links.mjs dist && node ../scripts/check-docs-links.mjs ../frontend-next/public/help --base /help && node ../scripts/check-docs-search.mjs dist && node ../scripts/check-docs-search.mjs ../frontend-next/public/help --base /help && node ../scripts/check-docs-bundle.mjs"
+    "verify": "npm run check && node ../scripts/check-docs-clean-build.mjs && npm run build && node ../scripts/check-docs-public-content.mjs --self-test && node ../scripts/check-docs-public-content.mjs && node ../scripts/check-docs-links.mjs dist && node ../scripts/check-docs-links.mjs ../frontend-next/public/help --base /help && node ../scripts/check-docs-search-order.mjs dist && node ../scripts/check-docs-search.mjs dist && node ../scripts/check-docs-search.mjs ../frontend-next/public/help --base /help && node ../scripts/check-docs-bundle.mjs"
   },
   "dependencies": {
     "@astrojs/starlight": "0.41.7",

@@ -3,6 +3,7 @@ import { defineConfig, passthroughImageService } from 'astro/config';
 import { unified } from '@astrojs/markdown-remark';
 import starlight from '@astrojs/starlight';
 
+import { deterministicPagefind } from './src/integrations/deterministic-pagefind.mjs';
 import { rewriteDocLinks } from './src/plugins/rewrite-doc-links.mjs';
 import { sidebar } from './src/sidebar.mjs';
 
@@ -79,10 +80,13 @@ export default defineConfig({
         replacesTitle: false,
       },
       favicon: '/favicon.svg',
-      // Pagefind ships with Starlight and is indexed at build time. The index
-      // and the UI bundle are emitted under the configured base, so search
-      // works offline from the bundled copy with no network access.
-      pagefind: true,
+      // Starlight's own indexer adds pages in filesystem order, which is not
+      // stable across machines and makes the emitted index unreproducible.
+      // `praxis:deterministic-pagefind` below builds the same bundle in a
+      // sorted order instead. Turning Starlight's indexer off also hides its
+      // search UI unless the Search component is overridden, which is what
+      // `src/components/Search.astro` re-exports it for.
+      pagefind: false,
       credits: false,
       tableOfContents: {
         minHeadingLevel: 2,
@@ -90,6 +94,8 @@ export default defineConfig({
       },
       customCss: ['./src/styles/praxis.css'],
       components: {
+        // Keeps the search UI rendered while Starlight's indexer is off.
+        Search: './src/components/Search.astro',
         // Starlight's default footer links back to a source repository page
         // per document. The public site and the bundled copy have different
         // notions of "edit this page", so the footer is replaced with a
@@ -98,5 +104,6 @@ export default defineConfig({
       },
       sidebar,
     }),
+    deterministicPagefind(),
   ],
 });
