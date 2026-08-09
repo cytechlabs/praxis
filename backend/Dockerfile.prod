@@ -118,10 +118,12 @@ RUN chmod +x /app/scripts/start.prod.sh && chown -R praxis:praxis /app
 
 # Pre-create the persistent data volume mount points owned by praxis so Docker
 # preserves that ownership on first mount of each named volume. Without this the
-# mounts land root:root and the non-root backend cannot write the
-# praxis-mirror.json descriptor, any sync output, or local-file audit sink
-# records under the audit file sink root.
-RUN mkdir -p /data/praxis/mirrors /data/praxis/audit-sinks \
+# mounts land root:root and the non-root backend cannot write session recordings,
+# the praxis-mirror.json descriptor, any sync output, or local-file audit sink
+# records under the audit file sink root. Session recording is mandatory for
+# interactive sessions, so a root-owned recordings mount takes the whole
+# interactive-session feature down rather than degrading it.
+RUN mkdir -p /data/praxis/recordings /data/praxis/mirrors /data/praxis/audit-sinks \
  && chown -R praxis:praxis /data
 
 USER praxis

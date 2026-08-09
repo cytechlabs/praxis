@@ -79,8 +79,19 @@ class _Writer:
             "env": {"TERM": "xterm-256color", "SHELL": "/bin/bash"},
         }
         line = json.dumps(header, separators=(",", ":")) + "\n"
-        self._f.write(line)
-        self._f.flush()
+        # A header that cannot be written leaves an unusable file and a leaked
+        # descriptor, so close before propagating and let the caller discard the
+        # partial file.
+        try:
+            self._f.write(line)
+            self._f.flush()
+        except BaseException:  # pylint: disable=broad-except
+            self._closed = True
+            try:
+                self._f.close()
+            except Exception:  # pylint: disable=broad-except
+                pass
+            raise
         self._size += len(line)
 
     def write_output(self, data: bytes) -> None:
@@ -183,7 +194,12 @@ def start_recording(
     width: int = 120,
     height: int = 32,
 ) -> Recording:
-    """Attach a writer to ``runtime`` and persist a Recording row."""
+    """Attach a writer to ``runtime`` and persist a Recording row.
+
+    All-or-nothing: any failure discards the writer, the row, and any partial
+    cast file before raising, so a caller that treats recording as mandatory
+    never has to reason about half-started state.
+    """
     _ensure_storage_dir()
     session_id = runtime.session_id
     path = _file_path_for(session_id)
@@ -193,32 +209,93 @@ def start_recording(
     if session_row is None:
         raise RecordingError(f"session {session_id} not found")
 
-    writer = _Writer(
-        path,
-        width=width,
-        height=height,
-        started_at_epoch=time.time(),
-    )
-    with _writers_lock:
-        _writers[session_id] = writer
-    runtime.add_consumer(writer.write_output)
+    try:
+        writer = _Writer(
+            path,
+            width=width,
+            height=height,
+            started_at_epoch=time.time(),
+        )
+        with _writers_lock:
+            _writers[session_id] = writer
+        runtime.add_consumer(writer.write_output)
 
-    rec = Recording(
-        session_id=session_id,
-        user_id=session_row.user_id,
-        system_id=session_row.system_id,
-        file_path=path,
-        size_bytes=0,
-        frame_count=0,
-        started_at=datetime.utcnow(),
-        retention_expires_at=datetime.utcnow() + timedelta(days=retention_days),
-        status="active",
-    )
-    db.add(rec)
-    db.commit()
-    db.refresh(rec)
+        rec = Recording(
+            session_id=session_id,
+            user_id=session_row.user_id,
+            system_id=session_row.system_id,
+            file_path=path,
+            size_bytes=0,
+            frame_count=0,
+            started_at=datetime.utcnow(),
+            retention_expires_at=datetime.utcnow() + timedelta(days=retention_days),
+            status="active",
+        )
+        db.add(rec)
+        db.commit()
+        db.refresh(rec)
+    except Exception as exc:  # pylint: disable=broad-except
+        discard_recording(db, session_id, path=path)
+        raise RecordingError(
+            f"recording start failed for session {session_id}"
+        ) from exc
+
     logger.info("recording %d started for session %d", rec.id, session_id)
     return rec
+
+
+def discard_recording(
+    db: DbSession, session_id: int, *, path: Optional[str] = None
+) -> None:
+    """Erase every trace of a recording that must not exist.
+
+    Closes and unregisters any live writer, deletes the persisted row, and
+    unlinks the cast file. Used when a session is torn down because it could
+    not be recorded, so nothing is left that could be mistaken for a complete
+    audit record. Best-effort and idempotent: each step is independent, and it
+    is safe to call when no recording was ever started.
+    """
+    with _writers_lock:
+        writer = _writers.pop(session_id, None)
+    if writer is not None:
+        writer.close()
+
+    paths = {path} if path else set()
+    try:
+        # Clear any aborted transaction (and drop an uncommitted row) before
+        # querying, so cleanup still works after a failed commit.
+        db.rollback()
+        rec = db.query(Recording).filter(Recording.session_id == session_id).first()
+        if rec is not None:
+            if rec.file_path:
+                paths.add(rec.file_path)
+            db.delete(rec)
+            db.commit()
+    except Exception as exc:  # pylint: disable=broad-except
+        # Failure category only: this runs on the path that refuses a session,
+        # and exception text here can carry the recording file path.
+        logger.warning(
+            "recording row cleanup for session %d failed (%s)",
+            session_id,
+            type(exc).__name__,
+        )
+        try:
+            db.rollback()
+        except Exception:  # pylint: disable=broad-except
+            pass
+
+    paths.add(_file_path_for(session_id))
+    for candidate in paths:
+        try:
+            os.unlink(candidate)
+        except FileNotFoundError:
+            pass
+        except OSError as exc:
+            logger.warning(
+                "recording file cleanup for session %d failed (%s)",
+                session_id,
+                type(exc).__name__,
+            )
 
 
 def add_marker(session_id: int, label: str) -> None:

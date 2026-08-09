@@ -48,6 +48,11 @@ DEFAULT_TERM = "xterm-256color"
 DEFAULT_COLS = 120
 DEFAULT_ROWS = 32
 
+# Fixed ledger/close reason for a session refused because it could not be
+# recorded. A stable token keeps the stored value free of paths and raw
+# exception text while staying greppable in operations tooling.
+UNRECORDED_ABORT_REASON = "recording_unavailable"
+
 
 class SessionError(RuntimeError):
     """Generic session-open / close failure."""
@@ -116,6 +121,52 @@ def _diagnose_allowlist_denial(
     if remediation:
         msg = f"{msg} Remediation: {remediation}"
     return msg
+
+
+def _abort_unrecorded_session(
+    db: DbSession,
+    row: SessionRow,
+    runtime: SessionRuntime,
+    client: paramiko.SSHClient,
+) -> None:
+    """Tear down a session whose recording could not be started.
+
+    Guarantees that no usable runtime, transport, or partial recording survives
+    the failure, and that the ledger row reflects a refused session. Every step
+    is best-effort and independent so one failing teardown cannot skip the rest;
+    the stored reason is a fixed token, never raw exception text. Teardown
+    problems are logged by failure category for the same reason the start
+    failure is: exception text on this path can carry the recording path.
+    """
+    runtime_registry.drop(row.id)
+    try:
+        runtime.close(reason=UNRECORDED_ABORT_REASON)
+    except Exception as e:  # pylint: disable=broad-except
+        logger.warning(
+            "runtime teardown for session %d failed (%s)", row.id, type(e).__name__
+        )
+    try:
+        client.close()
+    except Exception as e:  # pylint: disable=broad-except
+        logger.warning(
+            "ssh client teardown for session %d failed (%s)", row.id, type(e).__name__
+        )
+
+    from .recording_service import discard_recording
+
+    discard_recording(db, row.id)
+
+    try:
+        row.status = "errored"
+        row.close_reason = UNRECORDED_ABORT_REASON
+        row.ended_at = datetime.utcnow()
+        db.commit()
+    except Exception as e:  # pylint: disable=broad-except
+        logger.error("session %d ledger update failed (%s)", row.id, type(e).__name__)
+        try:
+            db.rollback()
+        except Exception:  # pylint: disable=broad-except
+            pass
 
 
 def open_session(
@@ -327,21 +378,32 @@ def open_session(
         channel=channel,
         max_expires_at=max_expires,
     )
-    runtime.set_on_close(_on_runtime_close)
-    runtime_registry.register(runtime)
 
-    # PRA-141: attach a recording writer to the runtime. Idempotent failure —
-    # a broken writer must not block the user getting into their shell, but
-    # we log at ERROR (not WARNING) with exc_info so silent misconfigurations
-    # like a non-writable RECORDINGS_DIR actually surface in ops logs.
+    # Recording is mandatory. An unrecorded interactive shell is an audit
+    # bypass, not an availability fallback, so the writer must be attached
+    # before the runtime becomes reachable and before the session is marked
+    # active. A failure here tears the whole session down.
     try:
         from .recording_service import start_recording
 
         start_recording(db, runtime, width=DEFAULT_COLS, height=DEFAULT_ROWS)
     except Exception as e:  # pylint: disable=broad-except
+        # Log the session and the failure category only. Exception messages and
+        # tracebacks from this path embed the recording file path, and container
+        # logs are collected and retained far more widely than the ledger.
         logger.error(
-            "recording attach failed for session %d: %s", row.id, e, exc_info=True
+            "recording start failed for session %d (%s); refusing the session",
+            row.id,
+            type(e).__name__,
         )
+        _abort_unrecorded_session(db, row, runtime, client)
+        raise SessionError(
+            f"{UNRECORDED_ABORT_REASON}: session recording could not be started, "
+            "so the session was refused. Contact an administrator."
+        ) from e
+
+    runtime.set_on_close(_on_runtime_close)
+    runtime_registry.register(runtime)
 
     row.status = "active"
     row.last_activity_at = datetime.utcnow()
