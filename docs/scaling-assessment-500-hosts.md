@@ -77,7 +77,7 @@ Run it:
 
 ```bash
 docker compose run --rm --no-deps \
-  -e DATABASE_URL=postgresql://postgres:postgres@db:5432/praxis_test -e TESTING=1 \
+  -e DATABASE_URL="postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@db:5432/praxis_test" -e TESTING=1 \
   -v "$PWD":/src -w /src/backend backend \
   python /src/scripts/scaling/pra309_load_harness.py --hosts 500 --json /src/out.json
 ```

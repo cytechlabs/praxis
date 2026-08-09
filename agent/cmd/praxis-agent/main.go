@@ -17,6 +17,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -26,11 +27,64 @@ import (
 )
 
 // Version + Commit are overridden at build time via -ldflags; see
-// agent/Makefile.
+// agent/Makefile. The release value of Version comes from agent/VERSION,
+// which is the single source of truth for the agent's released version.
+// Commit is the full 40-character source commit SHA: a git short hash is
+// only as long as the local object database requires, so it is not a
+// stable identifier for the source a binary was built from.
 var (
 	Version = "dev"
 	Commit  = "unknown"
 )
+
+// commitDisplayLen is how much of the commit SHA the human-readable line
+// shows. The full value stays available in the JSON output.
+const commitDisplayLen = 12
+
+// shortCommit abbreviates a commit SHA for display. Values shorter than the
+// display length, such as the "unknown" placeholder in an unstamped build,
+// are returned unchanged.
+func shortCommit(commit string) string {
+	if len(commit) <= commitDisplayLen {
+		return commit
+	}
+	return commit[:commitDisplayLen]
+}
+
+// buildInfo is the inspectable release identity of this binary.
+//
+// Every field is determined by the build inputs alone: the released
+// version, the source commit, the Go toolchain, and the target platform.
+// No wall-clock build time is recorded, so rebuilding the same commit
+// with the same toolchain reproduces an identical binary. Reproducibility
+// is checked by comparing artifact checksums, not by reading a timestamp
+// out of the binary.
+//
+// Commit is reported in full so the binary can be traced back to an exact
+// source revision without depending on how a particular checkout
+// abbreviates hashes.
+type buildInfo struct {
+	Version   string `json:"version"`
+	Commit    string `json:"commit"`
+	GoVersion string `json:"go_version"`
+	OS        string `json:"os"`
+	Arch      string `json:"arch"`
+	// Stamped reports whether release metadata was injected at link
+	// time. A false value means this is a local build, not a published
+	// release artifact.
+	Stamped bool `json:"stamped"`
+}
+
+func currentBuildInfo() buildInfo {
+	return buildInfo{
+		Version:   Version,
+		Commit:    Commit,
+		GoVersion: runtime.Version(),
+		OS:        runtime.GOOS,
+		Arch:      runtime.GOARCH,
+		Stamped:   Version != "dev" && Commit != "unknown",
+	}
+}
 
 func main() {
 	// The connect subcommand stamps Version into the hello payload;
@@ -57,8 +111,7 @@ func run(args []string) int {
 	case "connect":
 		return cli.Connect(args[1:])
 	case "version", "--version", "-v":
-		printVersion()
-		return cli.ExitOK
+		return versionCmd(args[1:])
 	case "help", "--help", "-h":
 		printHelp()
 		return cli.ExitOK
@@ -69,9 +122,35 @@ func run(args []string) int {
 	}
 }
 
-func printVersion() {
+// versionCmd prints the binary's build identity. The default output is
+// a single human-readable line; --json emits the same fields in a stable
+// machine-readable shape so tooling can record exactly which artifact is
+// installed on a host.
+func versionCmd(args []string) int {
+	fs := flag.NewFlagSet("version", flag.ContinueOnError)
+	fs.SetOutput(os.Stderr)
+	asJSON := fs.Bool("json", false, "print build metadata as JSON")
+	if err := fs.Parse(args); err != nil {
+		return cli.ExitUsage
+	}
+	if fs.NArg() > 0 {
+		fmt.Fprintf(os.Stderr, "praxis-agent: version takes no positional arguments\n")
+		return cli.ExitUsage
+	}
+
+	info := currentBuildInfo()
+	if *asJSON {
+		encoder := json.NewEncoder(os.Stdout)
+		encoder.SetIndent("", "  ")
+		if err := encoder.Encode(info); err != nil {
+			fmt.Fprintf(os.Stderr, "praxis-agent: %v\n", err)
+			return cli.ExitRuntimeError
+		}
+		return cli.ExitOK
+	}
 	fmt.Printf("praxis-agent %s (commit %s, %s/%s, %s)\n",
-		Version, Commit, runtime.GOOS, runtime.GOARCH, runtime.Version())
+		info.Version, shortCommit(info.Commit), info.OS, info.Arch, info.GoVersion)
+	return cli.ExitOK
 }
 
 func printHelp() {
@@ -88,7 +167,8 @@ subcommands:
   connect        dial the broker (mTLS WSS), maintain hello/welcome +
                  heartbeat; reconnects forever until SIGINT/SIGTERM.
                  --exit-after-welcome runs a one-shot smoke check.
-  version        print version and exit
+  version        print build identity (--json for machine-readable
+                 version, commit, toolchain, and target platform)
   help           this message
 
 run "praxis-agent <subcommand> -h" for per-subcommand flags.

@@ -6,7 +6,7 @@ This document provides an overview of how to set up and manage database migratio
 
 1. **Alembic Configuration**: The Alembic configuration is located in `backend/alembic.ini`. It specifies the script location and logging configuration.
 
-2. **Environment Configuration**: The `env.py` file in the `backend/alembic` directory configures the database connection using environment variables. Ensure the following environment variables are set:
+2. **Environment Configuration**: The `env.py` file in the `backend/alembic` directory configures the database connection using environment variables. `DATABASE_URL` is used when set; otherwise the URL is assembled from the variables below and `POSTGRES_PASSWORD` must be present and non-empty, since no password default exists. Migrations abort with a named error when neither is supplied.
    - `POSTGRES_USER`
    - `POSTGRES_PASSWORD`
    - `POSTGRES_SERVER`

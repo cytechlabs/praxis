@@ -160,9 +160,17 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Read the pinned Go toolchain
+        id: go
+        run: echo "version=$(tr -d '[:space:]' < GO_VERSION)" >> "$GITHUB_OUTPUT"
+
       - uses: actions/setup-go@v7
         with:
-          go-version-file: agent/go.mod
+          # agent/GO_VERSION, not go.mod: this lane must build with the same
+          # exact patch release the release workflow publishes from, so a
+          # toolchain regression is caught on PRs rather than at release.
+          go-version: ${{ steps.go.outputs.version }}
+          check-latest: false
           # cache-dependency-path defaults to go.sum; setup-go skips
           # caching gracefully when it's missing (zero deps right now).
 
@@ -216,7 +224,7 @@ jobs:
 
       - name: Smoke (host arch)
         run: |
-          go build -trimpath -ldflags "-s -w -X main.Version=ci -X main.Commit=$(git rev-parse --short HEAD)" -o /tmp/praxis-agent ./cmd/praxis-agent
+          go build -trimpath -ldflags "-s -w -X main.Version=ci -X main.Commit=$(git rev-parse HEAD)" -o /tmp/praxis-agent ./cmd/praxis-agent
           /tmp/praxis-agent --version
 
   frontend-checks:

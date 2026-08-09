@@ -5,7 +5,6 @@ import os
 import time
 import uuid
 from datetime import datetime
-from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from dotenv import load_dotenv  # pylint: disable=wrong-import-order
 from fastapi import (  # pylint: disable=wrong-import-order
@@ -144,9 +143,14 @@ for var in required_env_vars:
 # user_count is known; calling validate_production_env without a
 # user_count here is intentional.
 from app.core.startup_validation import (  # noqa: E402  pylint: disable=wrong-import-position
+    validate_database_credentials,
     validate_production_env,
 )
 
+# The bundled database credential is checked in every mode: Compose renders an
+# empty-password URL when the deployment never set POSTGRES_PASSWORD, and the
+# backend must refuse it here rather than fail later inside a connection pool.
+validate_database_credentials()
 validate_production_env()
 
 # Now proceed with other imports
@@ -172,8 +176,19 @@ from app.core.log_buffer import install_log_buffer  # noqa: E402
 
 install_log_buffer()
 
+from app.core.access_log_redaction import (  # noqa: E402
+    install_access_log_redaction,
+    sanitize_url_for_log,
+)
+
 # PRA-255: sanitized-error request-id publisher (used by LoggingMiddleware).
 from app.core.api_errors import set_request_id  # noqa: E402
+
+# Redact secret query values on both logging paths: the request middleware below
+# calls the sanitizer directly, and this filter covers the server's own WebSocket
+# upgrade lines, which carry the session ticket in the query string and never
+# reach any middleware.
+install_access_log_redaction()
 
 logger = logging.getLogger(__name__)
 
@@ -230,42 +245,6 @@ def is_public_path(path: str) -> bool:
     if "/serve/" in path and path.startswith("/mirrors/"):
         return True
     return False
-
-
-# Query-parameter names whose values are secrets and must never reach request
-# logs. Some auth endpoints carry the token in the query string (logout and
-# refresh both take ``token_refresh``), so the request-logging middleware scrubs
-# these before writing the URL.
-_SENSITIVE_QUERY_KEYS = frozenset(
-    {
-        "token_refresh",
-        "token",
-        "access_token",
-        "refresh_token",
-        "password",
-        "secret",
-        "api_key",
-    }
-)
-
-
-def sanitize_url_for_log(url: str) -> str:
-    """Return *url* with sensitive query-parameter values redacted.
-
-    Keeps the path and any non-sensitive query params (useful for debugging) but
-    replaces the value of a known-sensitive key with ``REDACTED``, so a token
-    passed as a query param (e.g. ``/auth/logout?token_refresh=...``) never lands
-    in the request log. Redaction is by key name, so it holds regardless of the
-    token's format.
-    """
-    parts = urlsplit(url)
-    if not parts.query:
-        return url
-    redacted = [
-        (key, "REDACTED" if key.lower() in _SENSITIVE_QUERY_KEYS else value)
-        for key, value in parse_qsl(parts.query, keep_blank_values=True)
-    ]
-    return urlunsplit(parts._replace(query=urlencode(redacted)))
 
 
 class JWTAuthMiddleware(BaseHTTPMiddleware):  # pylint: disable=too-few-public-methods

@@ -57,7 +57,7 @@ def test_bootstrap_script_is_anonymous(client, monkeypatch):
 # Match the constants in agent_bootstrap.py — kept in sync by hand
 # rather than imported because changing the version pin should also
 # require touching the tests.
-_RELEASE_VERSION = "v0.0.0-rc1"
+_RELEASE_VERSION = "v1.0.0"
 
 
 def _real_tarball(arch: str) -> str:

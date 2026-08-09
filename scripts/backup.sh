@@ -13,9 +13,13 @@
 # cleaned up and never leaves a final-looking ``.dump`` behind.
 set -euo pipefail
 
-# Database credentials (from env or defaults)
+# Database credentials. POSTGRES_PASSWORD is required and non-empty: compose
+# passes the deployment's own credential through to this sidecar. Falling back
+# to a script-defined password would authenticate against a database that was
+# never provisioned with it, producing nightly auth failures instead of a clear
+# configuration error.
 DB_USER="${POSTGRES_USER:-postgres}"
-DB_PASSWORD="${POSTGRES_PASSWORD:-postgres}"
+DB_PASSWORD="${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required - the backup sidecar must receive the deployment database password}"
 DB_NAME="${POSTGRES_DB:-praxis}"
 DB_HOST="${DB_HOST:-db}"
 DB_PORT="${DB_PORT:-5432}"

@@ -19,7 +19,7 @@ The following environment variables can be used to configure the database connec
 ```
 POSTGRES_SERVER: Database server hostname (default: "db")
 POSTGRES_USER: Database username (default: "postgres")
-POSTGRES_PASSWORD: Database password (default: "postgres")
+POSTGRES_PASSWORD: Database password (no default; required unless DATABASE_URL is set)
 POSTGRES_DB: Database name (default: "praxis")
 POSTGRES_PORT: Database port (default: "5432")
 ```

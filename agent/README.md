@@ -21,8 +21,12 @@ session-governance semantics are wired for agent-backed shells. See
 agent/
 ├── cmd/praxis-agent/    process entrypoint
 ├── internal/            tunnel, identity, facts, exec, file, pty
+├── packaging/           install.sh, uninstall.sh, systemd unit, operator README
+├── scripts/             release build helpers (SBOM verification)
+├── VERSION              released agent version (source of truth)
+├── GO_VERSION           exact Go patch release used to build artifacts
 ├── go.mod               module: github.com/cytechlabs/praxis/agent
-├── Makefile             build / test / lint helpers
+├── Makefile             build / release / test / lint helpers
 ├── Dockerfile.dev       dev image with Go + golangci-lint pinned
 └── .golangci.yml        conservative linter set (gofmt, goimports,
                          errcheck, staticcheck, revive)
@@ -47,8 +51,42 @@ docker build -f agent/Dockerfile.dev -t praxis-agent-dev agent
 docker run --rm -v $(pwd)/agent:/agent praxis-agent-dev make lint test build-all
 ```
 
+## Versioning and releases
+
+`VERSION` holds a bare `X.Y.Z` and is the only place the released version is
+decided. Artifact names and the version compiled into the binary both derive
+from it, and the release workflow refuses an `agent-vX.Y.Z` tag that
+disagrees with it:
+
+```sh
+make verify-version TAG=agent-v1.0.0
+```
+
+`GO_VERSION` pins the exact Go patch release artifacts are built with. The
+Makefile enforces it through `GOTOOLCHAIN`, the dev image and both workflows
+consume the same file, and the release contract tests fail if they drift.
+
+`make release` produces both tarballs, a per-arch CycloneDX SBOM, and
+`checksums.txt` in `dist/`, then verifies each SBOM reports the release
+version. Release builds are reproducible: the same commit built with the same
+pinned toolchain yields identical checksums, which `make verify-repro`
+asserts by building twice and comparing. Reproducible packaging needs GNU tar,
+so run it from the dev container rather than a BusyBox shell.
+
+`praxis-agent version --json` reports the version, full commit SHA,
+toolchain, and target platform of an installed binary. No build timestamp is
+embedded.
+
+Maintainer procedure: [docs/agent-release.md](../docs/agent-release.md).
+Operator install, update, rollback, and uninstall steps:
+[packaging/README.md](packaging/README.md).
+
 ## CI
 
 The `agent-build` job in `.github/workflows/ci.yml` runs gofmt diff,
 go vet, golangci-lint, go test, and cross-compiles for both target
 architectures on every push and PR.
+
+`.github/workflows/agent-release.yml` builds and publishes releases. It runs
+on an `agent-v*` tag push, and on `workflow_dispatch` for a non-publishing
+dry run.

@@ -1,12 +1,41 @@
-name: Publish
-
-# PRA-121: On tag push matching v*.*.*, build prod images and push to
-# GHCR as separate packages (praxis-backend, praxis-frontend), generate
-# CycloneDX SBOMs, and attach both to the GitHub Release.
+# Whole-product release pipeline.
 #
-# Uses the default GITHUB_TOKEN for GHCR login — no PAT required.
-# Packages inherit the repo's visibility; flip each package to Public
-# once via GitHub → Your packages → Package settings → Change visibility.
+# Builds the production backend and frontend images once, gates them, then
+# promotes those exact image artifacts to GHCR as two packages, generates a
+# CycloneDX SBOM from each published digest, attests build provenance and the
+# SBOM with keyless GitHub OIDC, and attaches a generated release index to the
+# GitHub Release.
+#
+# Two entry points:
+#
+#   * push of a `vX.Y.Z` tag -> validate, build, gate, promote.
+#   * workflow_dispatch      -> validate only by default. Publishing requires
+#                               dry_run=false and a ref that is already a
+#                               `vX.Y.Z` tag; the workflow never creates tags.
+#
+# The images that reach the registry are the images that passed the
+# vulnerability gate. `build` produces them once, archives them, and holds a
+# read-only token; `publish` loads those archives and pushes them without
+# running a Dockerfile again. Rebuilding in the publish job would mean shipping
+# bytes that no gate ever saw, because base images and package repositories can
+# move between two builds of one commit.
+#
+# Only the publish job can write to the repository, write packages, or mint an
+# OIDC token, and it refuses to run outside `cytechlabs/praxis`, to publish from
+# a non-tag ref, or to overwrite an image version or release that already
+# exists. Every existence check fails closed: only an authoritative not-found
+# answer allows publication to continue.
+#
+# The agent is released first, by its own workflow under `agent-vX.Y.Z`. This
+# workflow requires that release to exist and consumes its published checksum
+# manifest, because the index it publishes is the whole-product release record.
+#
+# The package names `praxis-backend` and `praxis-frontend` are the public
+# contract. Renaming them breaks every deployment that pins them.
+#
+# Operator guide: docs/ghcr-release-operations.md.
+
+name: Publish
 
 on:
   push:
@@ -15,40 +44,56 @@ on:
       - 'v*.*.*-*'   # rc / beta tags
   workflow_dispatch:
     inputs:
-      tag:
-        description: 'Tag to publish (e.g. v1.0.0-rc.1). Must already exist.'
-        required: true
-      # PRA-134: opt-in paid-capable backend. Only settable on workflow_dispatch,
-      # so normal tag-push publishes stay OSS/free-capable and never touch the
-      # private artifact or its secret.
+      dry_run:
+        description: 'Build and verify without publishing'
+        type: boolean
+        default: true
       paid_backend:
-        description: 'Bundle the private praxis-ee wheel for a paid-capable backend image.'
+        description: 'Bundle the private paid capability wheel in the backend image.'
         type: boolean
         default: false
-        required: false
 
-permissions:
-  contents: write
-  packages: write
+# Least privilege by default: individual jobs opt in to what they need.
+permissions: {}
+
+# One release run at a time per ref. Never cancel in progress: a half-published
+# release is worse than a queued one.
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
 
 env:
   REGISTRY: ghcr.io
   OWNER: cytechlabs
+  BACKEND_PACKAGE: praxis-backend
+  FRONTEND_PACKAGE: praxis-frontend
+  # Pinning the scanner pins the SBOM generator. The spec version below is what
+  # this Trivy release emits; build_release_index.py asserts it, so a generator
+  # change fails the release instead of quietly altering what the release
+  # record claims about its own SBOMs.
+  TRIVY_VERSION: 'v0.70.0'
+  SBOM_SPEC_VERSION: '1.6'
 
 jobs:
-  # PRA-180 CI-01: gate the publish/release path on an in-repo CI result so a
-  # tag cut from an unverified commit cannot publish images. This re-runs the
-  # core blocking checks against the exact tagged ref before any image is
-  # built or pushed; `publish` below `needs: verify`. (The container CRITICAL
-  # Trivy gate + SBOM run in ci.yml on the source branches; branch protection
-  # requiring CI before merge to `main` is the complementary repository setting
-  # — see docs/release-checklist.md.)
+  # Gate the release on an in-repo result for the exact ref being released, so
+  # a tag cut from an unverified commit cannot publish. The container CRITICAL
+  # gate runs in the build job below; branch protection requiring CI before
+  # merge to `main` is the complementary repository setting, documented in
+  # docs/release-checklist.md.
   verify:
     name: Verify (gate)
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: backend
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+      base_version: ${{ steps.release.outputs.base_version }}
+      tag: ${{ steps.release.outputs.tag }}
+      commit: ${{ steps.release.outputs.commit }}
+      publish: ${{ steps.release.outputs.publish }}
+      is_stable: ${{ steps.release.outputs.is_stable }}
+      major_minor: ${{ steps.release.outputs.major_minor }}
+      praxis_ee: ${{ steps.release.outputs.praxis_ee }}
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/praxis
       SECRET_KEY: ci-test-secret-key
@@ -67,28 +112,109 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          ref: ${{ github.event.inputs.tag || github.ref }}
 
-      - uses: actions/setup-python@v7
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          python-version: '3.14'  # PRA-321: run backend CI on the shipped 3.14 runtime
+          persist-credentials: false
+
+      # Resolve what is being released before anything expensive runs, so a
+      # mismatched tag fails in seconds rather than after a full test suite.
+      - name: Resolve release inputs
+        id: release
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          PAID_BACKEND: ${{ inputs.paid_backend }}
+          REF_NAME: ${{ github.ref_name }}
+          REF_TYPE: ${{ github.ref_type }}
+        run: |
+          set -euo pipefail
+          # A tag push always publishes. A manual run publishes only when the
+          # operator explicitly cleared dry_run.
+          if [ "$EVENT_NAME" = "push" ]; then
+            publish=true
+          elif [ "$DRY_RUN" = "false" ]; then
+            publish=true
+          else
+            publish=false
+          fi
+
+          semver='^v(0|[1-9][0-9]*)(\.(0|[1-9][0-9]*)){2}(-[0-9A-Za-z.-]+)?$'
+          if [ "$REF_TYPE" = "tag" ] && printf '%s' "$REF_NAME" | grep -Eq "$semver"; then
+            tag="$REF_NAME"
+          elif [ "$publish" = "true" ]; then
+            echo "publishing requires a vX.Y.Z tag ref; got $REF_TYPE '$REF_NAME'" >&2
+            exit 1
+          else
+            # A validation run from a branch releases nothing, so it describes
+            # the version the working tree already declares.
+            tag="v$(python3 -c 'import json;print(json.load(open("package.json"))["version"])')"
+          fi
+
+          version="${tag#v}"
+          # Package metadata carries the base version; a prerelease tag such as
+          # v1.0.0-rc.1 is that same source at an earlier confidence level.
+          base_version="${version%%-*}"
+
+          if printf '%s' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            is_stable=true
+            major_minor="$(printf '%s' "$version" | cut -d. -f1,2)"
+          else
+            is_stable=false
+            major_minor=""
+          fi
+
+          # The backend variant is decided once, here, so the image that is
+          # built and scanned is the image that is promoted. Deciding it in the
+          # publish job instead would mean gating one variant and shipping
+          # another.
+          if [ "$PAID_BACKEND" = "true" ]; then
+            praxis_ee=1
+          else
+            praxis_ee=0
+          fi
+
+          commit="$(git rev-parse HEAD)"
+
+          {
+            echo "publish=$publish"
+            echo "tag=$tag"
+            echo "version=$version"
+            echo "base_version=$base_version"
+            echo "is_stable=$is_stable"
+            echo "major_minor=$major_minor"
+            echo "praxis_ee=$praxis_ee"
+            echo "commit=$commit"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "publish=$publish tag=$tag version=$version praxis_ee=$praxis_ee commit=$commit"
+
+      # Every artifact this release produces is named for `version`. If the
+      # tree's package metadata disagrees, the images would be built from one
+      # version and published as another.
+      - name: Release readiness
+        run: scripts/check-release-readiness.sh "${{ steps.release.outputs.base_version }}"
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: '3.14'
           cache: 'pip'
 
       - name: Install backend dependencies
+        working-directory: backend
         run: |
           pip install -r requirements.txt
           pip install -e .
           pip install pytest
 
       - name: Backend migrations + tests
+        working-directory: backend
         run: |
           alembic upgrade head
           pytest --tb=short
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: '22'
           cache: 'npm'
@@ -104,60 +230,55 @@ jobs:
           npx eslint src
           npx tsc --noEmit
 
-  publish:
-    name: Build + push + release
+  # The only job that runs a Dockerfile. It builds each image once, archives
+  # exactly those bytes, gates the archive, and describes it. The publish job
+  # promotes the archives unchanged, so nothing reaches the registry that this
+  # job did not scan.
+  build:
+    name: Build + gate (no publish)
     needs: verify
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          ref: ${{ github.event.inputs.tag || github.ref }}
+    permissions:
+      contents: read
 
-      - name: Resolve version
-        id: version
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ needs.verify.outputs.commit }}
+          persist-credentials: false
+
+      - name: Confirm the source commit
+        env:
+          EXPECTED: ${{ needs.verify.outputs.commit }}
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            TAG="${{ github.event.inputs.tag }}"
-          else
-            TAG="${GITHUB_REF#refs/tags/}"
-          fi
-          VERSION="${TAG#v}"
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          # Derive a major.minor for additional tagging on stable releases.
-          if [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            MAJOR_MINOR=$(echo "$VERSION" | cut -d. -f1,2)
-            echo "major_minor=$MAJOR_MINOR" >> "$GITHUB_OUTPUT"
-            echo "is_stable=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "is_stable=false" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          if [ "$actual" != "$EXPECTED" ]; then
+            echo "checked out $actual, expected the verified commit $EXPECTED" >&2
+            exit 1
           fi
 
       - name: Set up Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4
 
-      - name: Log in to GHCR
-        uses: docker/login-action@v4
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      # PRA-134: fetch the private praxis-ee wheel into the LOCAL build-context
-      # wheel dir for a paid-capable build. Runs only on an explicit
-      # workflow_dispatch with paid_backend=true, so tag-push / OSS publishes
-      # never reference the secret. The token is a narrowly-scoped read-only
-      # deploy token consumed only in this step's env — it is never passed as a
-      # Docker build arg, so it cannot leak into image metadata/provenance/logs.
-      # Fails closed: a missing secret or wheel aborts the paid build.
-      - name: Fetch praxis-ee wheel (paid-capable backend)
-        if: ${{ github.event.inputs.paid_backend == 'true' }}
+      # Fetch the private paid capability wheel into the local build context.
+      # Runs only when the operator explicitly asked for a paid-capable build,
+      # so tag pushes never reference the secret. The token is consumed only in
+      # this step's environment and is never passed as a build argument, so it
+      # cannot reach image metadata, provenance, or logs. A missing secret or
+      # wheel aborts the build rather than silently producing a
+      # free-capability image under a paid release.
+      #
+      # This runs here, in the read-only job, because the variant that is built
+      # has to be the variant that is scanned and promoted.
+      - name: Fetch paid capability wheel
+        if: ${{ needs.verify.outputs.praxis_ee == '1' }}
         env:
           GH_TOKEN: ${{ secrets.PRAXIS_EE_DEPLOY_TOKEN }}
         run: |
           set -euo pipefail
           if [ -z "${GH_TOKEN:-}" ]; then
-            echo "paid_backend=true but PRAXIS_EE_DEPLOY_TOKEN secret is not configured" >&2
+            echo "a paid-capable build was requested but its deploy token is not configured" >&2
             exit 1
           fi
           mkdir -p backend/ee-wheels
@@ -165,61 +286,407 @@ jobs:
             --pattern 'praxis_ee-*.whl' --dir backend/ee-wheels
           ls backend/ee-wheels/praxis_ee-*.whl
 
-      - name: Build + push backend
-        uses: docker/build-push-action@v7
+      - name: Build backend
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
         with:
           context: ./backend
           file: ./backend/Dockerfile.prod
-          push: true
+          push: false
+          load: true
           build-args: |
-            PRAXIS_EE=${{ github.event.inputs.paid_backend == 'true' && '1' || '0' }}
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.OWNER }}/praxis-backend:${{ steps.version.outputs.version }}
-            ${{ steps.version.outputs.is_stable == 'true' && format('{0}/{1}/praxis-backend:{2}', env.REGISTRY, env.OWNER, steps.version.outputs.major_minor) || '' }}
-            ${{ steps.version.outputs.is_stable == 'true' && format('{0}/{1}/praxis-backend:latest', env.REGISTRY, env.OWNER) || '' }}
+            PRAXIS_EE=${{ needs.verify.outputs.praxis_ee }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ needs.verify.outputs.commit }}
+            org.opencontainers.image.version=${{ needs.verify.outputs.version }}
+          tags: ${{ env.REGISTRY }}/${{ env.OWNER }}/${{ env.BACKEND_PACKAGE }}:${{ needs.verify.outputs.version }}
 
-      - name: Build + push frontend
-        uses: docker/build-push-action@v7
+      - name: Build frontend
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
         with:
           context: ./frontend-next
           file: ./frontend-next/Dockerfile.prod
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.OWNER }}/praxis-frontend:${{ steps.version.outputs.version }}
-            ${{ steps.version.outputs.is_stable == 'true' && format('{0}/{1}/praxis-frontend:{2}', env.REGISTRY, env.OWNER, steps.version.outputs.major_minor) || '' }}
-            ${{ steps.version.outputs.is_stable == 'true' && format('{0}/{1}/praxis-frontend:latest', env.REGISTRY, env.OWNER) || '' }}
+          push: false
+          load: true
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ needs.verify.outputs.commit }}
+            org.opencontainers.image.version=${{ needs.verify.outputs.version }}
+          tags: ${{ env.REGISTRY }}/${{ env.OWNER }}/${{ env.FRONTEND_PACKAGE }}:${{ needs.verify.outputs.version }}
 
-      # SBOMs against the just-pushed images — exact content that users pull.
-      - name: SBOM (backend)
-        uses: aquasecurity/trivy-action@v0.36.0
+      # Archive first, then gate the archive. The tar is what the publish job
+      # loads and pushes, so scanning it is the strongest available statement
+      # that the published bytes are the gated bytes.
+      - name: Archive the built images
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          set -euo pipefail
+          mkdir -p images
+          docker save --output images/backend.tar \
+            "${REGISTRY}/${OWNER}/${BACKEND_PACKAGE}:${VERSION}"
+          docker save --output images/frontend.tar \
+            "${REGISTRY}/${OWNER}/${FRONTEND_PACKAGE}:${VERSION}"
+          ls -la images
+
+      - name: Trivy gate (backend archive) - fail on CRITICAL
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.OWNER }}/praxis-backend:${{ steps.version.outputs.version }}
+          version: ${{ env.TRIVY_VERSION }}
+          input: images/backend.tar
+          format: table
+          severity: CRITICAL
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: os,library
+
+      - name: Trivy gate (frontend archive) - fail on CRITICAL
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: ${{ env.TRIVY_VERSION }}
+          input: images/frontend.tar
+          format: table
+          severity: CRITICAL
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: os,library
+
+      # Described by image reference rather than by archive path: an SBOM whose
+      # primary component is a runner path names nothing a consumer can check.
+      # The published SBOMs are regenerated from the digests after promotion.
+      - name: SBOM (backend)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: ${{ env.TRIVY_VERSION }}
+          image-ref: ${{ env.REGISTRY }}/${{ env.OWNER }}/${{ env.BACKEND_PACKAGE }}:${{ needs.verify.outputs.version }}
           format: cyclonedx
-          output: sbom-backend-${{ steps.version.outputs.version }}.cdx.json
+          output: sbom-backend-${{ needs.verify.outputs.version }}.cdx.json
 
       - name: SBOM (frontend)
-        uses: aquasecurity/trivy-action@v0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.OWNER }}/praxis-frontend:${{ steps.version.outputs.version }}
+          version: ${{ env.TRIVY_VERSION }}
+          image-ref: ${{ env.REGISTRY }}/${{ env.OWNER }}/${{ env.FRONTEND_PACKAGE }}:${{ needs.verify.outputs.version }}
           format: cyclonedx
-          output: sbom-frontend-${{ steps.version.outputs.version }}.cdx.json
+          output: sbom-frontend-${{ needs.verify.outputs.version }}.cdx.json
 
-      - name: Attach SBOMs to release
-        uses: softprops/action-gh-release@v3
+      - name: Assemble validation release index
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+          TAG: ${{ needs.verify.outputs.tag }}
+          COMMIT: ${{ needs.verify.outputs.commit }}
+          BASE_VERSION: ${{ needs.verify.outputs.base_version }}
+        run: |
+          set -euo pipefail
+          python3 scripts/build_release_index.py \
+            --mode validate \
+            --version "$VERSION" \
+            --tag "$TAG" \
+            --commit "$COMMIT" \
+            --repository "${{ github.repository }}" \
+            --registry "$REGISTRY" \
+            --owner "$OWNER" \
+            --sbom-spec-version "$SBOM_SPEC_VERSION" \
+            --workflow '.github/workflows/publish.yml' \
+            --run-id "${{ github.run_id }}" \
+            --image-ref "${BACKEND_PACKAGE}=${REGISTRY}/${OWNER}/${BACKEND_PACKAGE}:${VERSION}" \
+            --image-sbom "${BACKEND_PACKAGE}=sbom-backend-${VERSION}.cdx.json" \
+            --image-ref "${FRONTEND_PACKAGE}=${REGISTRY}/${OWNER}/${FRONTEND_PACKAGE}:${VERSION}" \
+            --image-sbom "${FRONTEND_PACKAGE}=sbom-frontend-${VERSION}.cdx.json" \
+            --agent-tag "agent-v${BASE_VERSION}" \
+            --agent-version "v${BASE_VERSION}" \
+            --gate 'source verification|passed|Backend migrations and tests plus frontend lint and type check ran against this commit.' \
+            --gate 'release readiness|passed|Package metadata across the repository matches the release version.' \
+            --gate 'container vulnerability scan|passed|Trivy found no unaccepted CRITICAL findings in the archived images.' \
+            --out-json release-index.json \
+            --out-markdown release-index.md
+          cat release-index.md
+
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
         with:
-          tag_name: ${{ steps.version.outputs.tag }}
-          files: |
-            sbom-backend-${{ steps.version.outputs.version }}.cdx.json
-            sbom-frontend-${{ steps.version.outputs.version }}.cdx.json
-          body: |
-            ## Container images
+          name: release-validation-${{ needs.verify.outputs.version }}
+          path: |
+            sbom-backend-${{ needs.verify.outputs.version }}.cdx.json
+            sbom-frontend-${{ needs.verify.outputs.version }}.cdx.json
+            release-index.json
+            release-index.md
+          if-no-files-found: error
+          retention-days: 30
 
-            ```
-            docker pull ${{ env.REGISTRY }}/${{ env.OWNER }}/praxis-backend:${{ steps.version.outputs.version }}
-            docker pull ${{ env.REGISTRY }}/${{ env.OWNER }}/praxis-frontend:${{ steps.version.outputs.version }}
-            ```
+      # The gated bytes themselves, carried to the publish job. Only uploaded
+      # for a run that will publish; a dry run has nothing to promote.
+      - name: Upload the gated images
+        if: ${{ needs.verify.outputs.publish == 'true' }}
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: release-images-${{ needs.verify.outputs.version }}
+          path: |
+            images/backend.tar
+            images/frontend.tar
+          if-no-files-found: error
+          retention-days: 1
 
-            ## SBOM
+  # Promotion only. This job never runs a Dockerfile: it loads the archives the
+  # gate accepted and pushes them unchanged.
+  publish:
+    name: Promote images + release
+    needs: [verify, build]
+    if: >-
+      needs.verify.outputs.publish == 'true' &&
+      github.repository == 'cytechlabs/praxis'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write       # create the GitHub Release + upload assets
+      packages: write       # push images and their attestations to GHCR
+      id-token: write       # mint the OIDC token attestations are issued against
+      attestations: write   # record provenance and SBOM attestations
 
-            CycloneDX 1.5 SBOMs for each image are attached to this release.
+    steps:
+      - name: Confirm ref is an application release tag
+        env:
+          REF_NAME: ${{ github.ref_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          TAG: ${{ needs.verify.outputs.tag }}
+        run: |
+          set -euo pipefail
+          # Defence in depth: verify already checked this, but the publish job
+          # is the one holding write tokens.
+          if [ "$REF_TYPE" != "tag" ]; then
+            echo "refusing to publish from non-tag ref '$REF_NAME'" >&2
+            exit 1
+          fi
+          if [ "$REF_NAME" != "$TAG" ]; then
+            echo "ref '$REF_NAME' does not match the verified tag '$TAG'" >&2
+            exit 1
+          fi
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ needs.verify.outputs.commit }}
+          persist-credentials: false
+
+      - name: Confirm the source commit
+        env:
+          EXPECTED: ${{ needs.verify.outputs.commit }}
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          if [ "$actual" != "$EXPECTED" ]; then
+            echo "checked out $actual, expected the verified commit $EXPECTED" >&2
+            exit 1
+          fi
+
+      # Buildx supplies `imagetools`, which the absence check below uses to ask
+      # the registry what exists. Install it before anything depends on it.
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Every check below fails closed: an authoritative not-found is the only
+      # answer that lets publication continue.
+      - name: Confirm nothing is being overwritten
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.verify.outputs.version }}
+          TAG: ${{ needs.verify.outputs.tag }}
+        run: |
+          set -euo pipefail
+          scripts/check-release-absence.sh release "${{ github.repository }}" "$TAG"
+          for package in "$BACKEND_PACKAGE" "$FRONTEND_PACKAGE"; do
+            scripts/check-release-absence.sh image "${REGISTRY}/${OWNER}/${package}:${VERSION}"
+          done
+
+      # The published index is the whole-product release record, so the agent
+      # release it describes has to exist first, and has to name the same source
+      # commit. Matching version numbers do not establish that: a stale or
+      # independently moved agent tag can carry the right version while pointing
+      # somewhere else entirely. Any failure here, including a missing tag or an
+      # unresolvable one, stops the application release rather than publishing a
+      # record that claims one whole-product commit it does not have.
+      - name: Require the matching agent release
+        id: agent
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          AGENT_TAG: agent-v${{ needs.verify.outputs.base_version }}
+          COMMIT: ${{ needs.verify.outputs.commit }}
+        run: |
+          set -euo pipefail
+          scripts/check-tag-commit.sh "${{ github.repository }}" "$AGENT_TAG" "$COMMIT"
+
+          if ! gh release view "$AGENT_TAG" >/dev/null 2>&1; then
+            echo "agent release $AGENT_TAG is not available" >&2
+            echo "publish and verify $AGENT_TAG from this commit before releasing the application" >&2
+            exit 1
+          fi
+          mkdir -p agent-manifest
+          gh release download "$AGENT_TAG" --pattern checksums.txt --dir agent-manifest
+          test -s agent-manifest/checksums.txt
+          echo "manifest=agent-manifest/checksums.txt" >> "$GITHUB_OUTPUT"
+          echo "consuming published agent release $AGENT_TAG"
+
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
+        with:
+          name: release-images-${{ needs.verify.outputs.version }}
+          path: images
+
+      - name: Load the gated images
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          set -euo pipefail
+          docker load --input images/backend.tar
+          docker load --input images/frontend.tar
+          # Refuse to continue unless the archives carried the exact references
+          # the gate accepted.
+          docker image inspect "${REGISTRY}/${OWNER}/${BACKEND_PACKAGE}:${VERSION}" >/dev/null
+          docker image inspect "${REGISTRY}/${OWNER}/${FRONTEND_PACKAGE}:${VERSION}" >/dev/null
+
+      # The promotion helper reserves its stdout for the validated digest and
+      # sends push progress to stderr, so the captured value cannot pick up the
+      # `digest: sha256:... size: ...` line docker prints when it finishes.
+      - name: Promote images to GHCR
+        id: promote
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+          IS_STABLE: ${{ needs.verify.outputs.is_stable }}
+          MAJOR_MINOR: ${{ needs.verify.outputs.major_minor }}
+        run: |
+          set -euo pipefail
+          backend_digest="$(scripts/promote-release-images.sh \
+            "${REGISTRY}/${OWNER}/${BACKEND_PACKAGE}" "$VERSION" "$IS_STABLE" "$MAJOR_MINOR")"
+          frontend_digest="$(scripts/promote-release-images.sh \
+            "${REGISTRY}/${OWNER}/${FRONTEND_PACKAGE}" "$VERSION" "$IS_STABLE" "$MAJOR_MINOR")"
+          {
+            echo "backend_digest=$backend_digest"
+            echo "frontend_digest=$frontend_digest"
+          } >> "$GITHUB_OUTPUT"
+          echo "backend=$backend_digest frontend=$frontend_digest"
+
+      # Generated from the digests that were just published, so each SBOM names
+      # exactly the bytes a consumer pulls. build_release_index.py rejects an
+      # SBOM whose primary component is any other image.
+      - name: SBOM (backend)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: ${{ env.TRIVY_VERSION }}
+          image-ref: ${{ env.REGISTRY }}/${{ env.OWNER }}/${{ env.BACKEND_PACKAGE }}@${{ steps.promote.outputs.backend_digest }}
+          format: cyclonedx
+          output: sbom-backend-${{ needs.verify.outputs.version }}.cdx.json
+
+      - name: SBOM (frontend)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: ${{ env.TRIVY_VERSION }}
+          image-ref: ${{ env.REGISTRY }}/${{ env.OWNER }}/${{ env.FRONTEND_PACKAGE }}@${{ steps.promote.outputs.frontend_digest }}
+          format: cyclonedx
+          output: sbom-frontend-${{ needs.verify.outputs.version }}.cdx.json
+
+      # Keyless attestations: the signing identity is this workflow, proven
+      # through GitHub OIDC and recorded in a public transparency log. There is
+      # no long lived key to store or rotate. Pushing them to the registry lets
+      # a consumer verify straight from the pulled image.
+      #
+      # One action covers both kinds. actions/attest selects its mode from the
+      # inputs: with no sbom-path or predicate it generates SLSA build
+      # provenance, and with sbom-path it attests the SBOM. It supersedes the
+      # attest-build-provenance and attest-sbom wrappers.
+      - name: Attest backend provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.OWNER }}/${{ env.BACKEND_PACKAGE }}
+          subject-digest: ${{ steps.promote.outputs.backend_digest }}
+          push-to-registry: true
+
+      - name: Attest frontend provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.OWNER }}/${{ env.FRONTEND_PACKAGE }}
+          subject-digest: ${{ steps.promote.outputs.frontend_digest }}
+          push-to-registry: true
+
+      - name: Attest backend SBOM
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.OWNER }}/${{ env.BACKEND_PACKAGE }}
+          subject-digest: ${{ steps.promote.outputs.backend_digest }}
+          sbom-path: sbom-backend-${{ needs.verify.outputs.version }}.cdx.json
+          push-to-registry: true
+
+      - name: Attest frontend SBOM
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.OWNER }}/${{ env.FRONTEND_PACKAGE }}
+          subject-digest: ${{ steps.promote.outputs.frontend_digest }}
+          sbom-path: sbom-frontend-${{ needs.verify.outputs.version }}.cdx.json
+          push-to-registry: true
+
+      - name: Assemble release index
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+          TAG: ${{ needs.verify.outputs.tag }}
+          COMMIT: ${{ needs.verify.outputs.commit }}
+          BASE_VERSION: ${{ needs.verify.outputs.base_version }}
+          BACKEND_DIGEST: ${{ steps.promote.outputs.backend_digest }}
+          FRONTEND_DIGEST: ${{ steps.promote.outputs.frontend_digest }}
+          IS_STABLE: ${{ needs.verify.outputs.is_stable }}
+          MAJOR_MINOR: ${{ needs.verify.outputs.major_minor }}
+          AGENT_MANIFEST: ${{ steps.agent.outputs.manifest }}
+        run: |
+          set -euo pipefail
+          if [ "$IS_STABLE" = "true" ]; then
+            tags="${VERSION},${MAJOR_MINOR},latest"
+          else
+            tags="${VERSION}"
+          fi
+
+          python3 scripts/build_release_index.py \
+            --mode publish \
+            --version "$VERSION" \
+            --tag "$TAG" \
+            --commit "$COMMIT" \
+            --repository "${{ github.repository }}" \
+            --registry "$REGISTRY" \
+            --owner "$OWNER" \
+            --sbom-spec-version "$SBOM_SPEC_VERSION" \
+            --workflow '.github/workflows/publish.yml' \
+            --run-id "${{ github.run_id }}" \
+            --attestations 'provenance,sbom' \
+            --image-ref "${BACKEND_PACKAGE}=${REGISTRY}/${OWNER}/${BACKEND_PACKAGE}@${BACKEND_DIGEST}" \
+            --image-digest "${BACKEND_PACKAGE}=${BACKEND_DIGEST}" \
+            --image-tags "${BACKEND_PACKAGE}=${tags}" \
+            --image-sbom "${BACKEND_PACKAGE}=sbom-backend-${VERSION}.cdx.json" \
+            --image-ref "${FRONTEND_PACKAGE}=${REGISTRY}/${OWNER}/${FRONTEND_PACKAGE}@${FRONTEND_DIGEST}" \
+            --image-digest "${FRONTEND_PACKAGE}=${FRONTEND_DIGEST}" \
+            --image-tags "${FRONTEND_PACKAGE}=${tags}" \
+            --image-sbom "${FRONTEND_PACKAGE}=sbom-frontend-${VERSION}.cdx.json" \
+            --agent-tag "agent-v${BASE_VERSION}" \
+            --agent-version "v${BASE_VERSION}" \
+            --agent-checksums "$AGENT_MANIFEST" \
+            --gate 'source verification|passed|Backend migrations and tests plus frontend lint and type check ran against this commit.' \
+            --gate 'release readiness|passed|Package metadata across the repository matches the release version.' \
+            --gate 'container vulnerability scan|passed|Trivy found no unaccepted CRITICAL findings in the archived images that were promoted.' \
+            --gate 'image sbom binding|passed|Each SBOM was generated from, and checked against, the published image digest.' \
+            --report "container scan and SBOM reports=https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --out-json release-index.json \
+            --out-markdown release-index.md
+          cat release-index.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3
+        with:
+          name: ${{ needs.verify.outputs.tag }}
+          tag_name: ${{ needs.verify.outputs.tag }}
+          body_path: release-index.md
           generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            sbom-backend-${{ needs.verify.outputs.version }}.cdx.json
+            sbom-frontend-${{ needs.verify.outputs.version }}.cdx.json
+            release-index.json

@@ -37,7 +37,15 @@ def get_url():
     if url:
         return url
     user = os.getenv("POSTGRES_USER", "postgres")
-    password = os.getenv("POSTGRES_PASSWORD", "postgres")
+    # No password default. Migrations run against real data, so an unset
+    # credential must surface as a configuration error rather than silently
+    # attempting a connection with a password this repository chose.
+    password = os.getenv("POSTGRES_PASSWORD", "")
+    if not password:
+        raise RuntimeError(
+            "No database credentials available for migrations. Set DATABASE_URL, "
+            "or set POSTGRES_PASSWORD to the deployment database password."
+        )
     server = os.getenv("POSTGRES_SERVER", "db")
     db = os.getenv("POSTGRES_DB", "praxis")
     return f"postgresql://{user}:{password}@{server}/{db}"

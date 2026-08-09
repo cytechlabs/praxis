@@ -241,11 +241,12 @@ def test_e2e_token_lifecycle(authed_client, client, db, target_system, monkeypat
 
 # ---------------------------------------------------------------- download proxy
 #
-# Mocked-only by design: the real release lives on a private repo, so
-# a real-network test would be brittle and environment-dependent. The
-# unit tests in test_agent_bootstrap_routes.py already cover the
-# closed-set arch / filename allow-list and the GitHub fallback path
-# via mocked urlopen — this slice doesn't repeat that surface.
+# Local-artifact-dir only by design: reaching the real release would
+# make this test depend on the network and on a published tag, so it
+# exercises the airgap-friendly path instead. The unit tests in
+# test_agent_bootstrap_routes.py already cover the closed-set arch /
+# filename allow-list and the GitHub fallback path via mocked urlopen —
+# this slice doesn't repeat that surface.
 
 
 def test_download_proxy_serves_canonical_local_artifacts(client, monkeypatch, tmp_path):
@@ -255,7 +256,7 @@ def test_download_proxy_serves_canonical_local_artifacts(client, monkeypatch, tm
     breaks the install never starts."""
     base = tmp_path / "agent-artifacts"
     base.mkdir()
-    real_name = "praxis-agent-v0.0.0-rc1-linux-amd64.tar.gz"
+    real_name = "praxis-agent-v1.0.0-linux-amd64.tar.gz"
     (base / real_name).write_bytes(b"E2E_TARBALL")
     (base / "checksums.txt").write_text(f"{'a' * 64}  {real_name}\n")
     monkeypatch.setenv("PRAXIS_AGENT_ARTIFACT_DIR", str(base))

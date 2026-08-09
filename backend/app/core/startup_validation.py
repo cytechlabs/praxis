@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import os
 from typing import Optional
+from urllib.parse import unquote
 
 # Closed set of accepted ``ENVIRONMENT`` values. Both ``test`` and
 # ``testing`` are included because pytest paths in this repo use
@@ -42,10 +43,10 @@ from typing import Optional
 # that would otherwise silently disable every production-only check.
 ALLOWED_ENVIRONMENTS = frozenset({"development", "production", "test", "testing"})
 
-# Default bundled-mode Postgres password from ``docker-compose.yml``
-# and ``.env.example``. If an operator leaves this in place when
-# ENVIRONMENT=production they ship the default credential to whatever
-# their bundled ``db`` container is reachable from.
+# Well-known Postgres password, retired as a default. Nothing in the repository
+# supplies it any more, so it can only reach a deployment by being set
+# deliberately, and it would ship a guessable credential to whatever the
+# bundled ``db`` container is reachable from. Rejected wherever it appears.
 DEFAULT_POSTGRES_PASSWORD = "postgres"
 
 # Bundled-mode VAULT_ADDR. The backend treats this as the signal that
@@ -67,6 +68,17 @@ def _is_bundled_vault(vault_addr: Optional[str]) -> bool:
     return vault_addr.strip() == BUNDLED_VAULT_ADDR
 
 
+def _authority(database_url: Optional[str]) -> str:
+    """The ``userinfo@host:port`` segment of a DSN, or ``''``.
+
+    Parsing is deliberately local and comparison-only: no part of a DSN is
+    logged or re-emitted by this module.
+    """
+    if not database_url or "://" not in database_url:
+        return ""
+    return database_url.split("://", 1)[1].split("/", 1)[0]
+
+
 def _is_bundled_postgres(database_url: Optional[str]) -> bool:
     """Bundled Postgres ⇔ ``DATABASE_URL`` is unset (compose builds
     the default), OR points at the in-stack ``db`` host (matches the
@@ -74,13 +86,68 @@ def _is_bundled_postgres(database_url: Optional[str]) -> bool:
     if not database_url:
         return True
     # The bundled DSN built by docker-compose.yml looks like:
-    #   postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-praxis}
-    # so any DSN whose host is exactly ``db`` is bundled.
-    return (
-        "@db:" in database_url
-        or database_url.endswith("@db")
-        or database_url.startswith("postgresql://postgres:postgres@db")
-    )
+    #   postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-}@db:5432/${POSTGRES_DB:-praxis}
+    # so any DSN whose host is exactly ``db`` is bundled, with or without a port.
+    hostport = _authority(database_url).rsplit("@", 1)[-1]
+    return hostport.split(":", 1)[0] == "db"
+
+
+def _dsn_password(database_url: Optional[str]) -> Optional[str]:
+    """Password embedded in a ``scheme://user:password@host`` DSN.
+
+    Returns ``None`` when the DSN carries no userinfo password at all,
+    which is distinct from an empty password (``user:@host``).
+    """
+    authority = _authority(database_url)
+    if "@" not in authority:
+        return None
+    userinfo = authority.rsplit("@", 1)[0]
+    if ":" not in userinfo:
+        return None
+    return unquote(userinfo.split(":", 1)[1])
+
+
+def validate_database_credentials(env: Optional[dict] = None) -> None:
+    """Reject a bundled database URL that carries no usable credential.
+
+    This runs in every mode, not only production. Compose builds the bundled
+    ``DATABASE_URL`` from ``POSTGRES_PASSWORD`` and supplies no password of its
+    own, so a deployment that never set one renders
+    ``postgresql://postgres:@db:5432/praxis``. Interpolation cannot reject that
+    without also forcing external-database deployments to define a variable
+    they never use, so the credential is enforced here instead: every process
+    that connects calls this before it does any work.
+
+    Scope is deliberately narrow. Only a URL whose host is the bundled ``db``
+    service is inspected; an external ``DATABASE_URL`` carries the operator's
+    own credentials and is left alone. An unset ``DATABASE_URL`` is also left
+    alone, because nothing has been assembled yet at that point and
+    ``DatabaseSettings.sync_database_url`` raises on its own.
+
+    :raises StartupValidationError: when the bundled URL has no password, or
+        carries the retired built-in value.
+    """
+    src = env if env is not None else os.environ
+    database_url = src.get("DATABASE_URL", "")
+    if not database_url or not _is_bundled_postgres(database_url):
+        return
+
+    password = _dsn_password(database_url)
+    if not password:
+        raise StartupValidationError(
+            "DATABASE_URL points at the bundled 'db' service but carries no "
+            "password. Set POSTGRES_PASSWORD to a strong value in your .env "
+            '(e.g. `python -c "import secrets; '
+            'print(secrets.token_urlsafe(32))"`) so the stack builds an '
+            "authenticated connection string."
+        )
+    if password == DEFAULT_POSTGRES_PASSWORD:
+        raise StartupValidationError(
+            "The bundled database password is the retired default "
+            f"'{DEFAULT_POSTGRES_PASSWORD}'. Generate a strong password and set "
+            "POSTGRES_PASSWORD in your .env. See docs/production-hardening.md "
+            "for rotating an existing deployment without losing the volume."
+        )
 
 
 def validate_production_env(
@@ -122,19 +189,33 @@ def validate_production_env(
 
     # ── Production-only checks ───────────────────────────────────────
 
-    # 1. POSTGRES_PASSWORD in bundled mode must not be the well-known
-    #    default. External-Postgres operators set DATABASE_URL with
-    #    their own credentials, so the gate is bundled-only.
+    # 1. The bundled-mode database credential. The URL the backend and broker
+    #    actually authenticate with is checked in every mode by
+    #    validate_database_credentials; calling it here keeps any other
+    #    production entry point (create_admin_user.py) covered too. Production
+    #    additionally rejects POSTGRES_PASSWORD itself, which is what a
+    #    deployment that assembles its own URL supplies. External-Postgres
+    #    operators set DATABASE_URL with their own credentials and are exempt.
+    validate_database_credentials(src)
+
     pg_password = src.get("POSTGRES_PASSWORD", "")
     database_url = src.get("DATABASE_URL", "")
-    if _is_bundled_postgres(database_url) and pg_password == DEFAULT_POSTGRES_PASSWORD:
-        raise StartupValidationError(
-            "POSTGRES_PASSWORD is set to the default 'postgres' value "
-            "in a bundled production deployment. Generate a strong "
-            'password (e.g. `python -c "import secrets; '
-            'print(secrets.token_urlsafe(32))"`) and set '
-            "POSTGRES_PASSWORD in your .env."
-        )
+    if _is_bundled_postgres(database_url):
+        if not database_url and not pg_password:
+            raise StartupValidationError(
+                "No bundled database password is configured: POSTGRES_PASSWORD "
+                "is empty and DATABASE_URL is unset. Set POSTGRES_PASSWORD to a "
+                "strong value in your .env so the stack builds an authenticated "
+                "connection string."
+            )
+        if pg_password == DEFAULT_POSTGRES_PASSWORD:
+            raise StartupValidationError(
+                "POSTGRES_PASSWORD is set to the default 'postgres' value "
+                "in a bundled production deployment. Generate a strong "
+                'password (e.g. `python -c "import secrets; '
+                'print(secrets.token_urlsafe(32))"`) and set '
+                "POSTGRES_PASSWORD in your .env."
+            )
 
     # 2. VAULT_TOKEN must be non-empty when running with external
     #    Vault. In bundled mode the backend reads the token from

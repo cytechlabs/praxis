@@ -3,9 +3,10 @@
 #
 # Verifies the local tree is ready to cut a release WITHOUT changing anything:
 #   1. package-version alignment (root package.json, frontend-next/package.json,
-#      frontend-next/package-lock.json, backend/setup.py) against a target
-#      version;
-#   2. presence of the required release docs;
+#      frontend-next/package-lock.json, backend/setup.py, agent/VERSION, and the
+#      control plane's pinned agent release) against a target version;
+#   2. presence of the required release docs, publication scripts, and agent
+#      packaging scripts;
 #   3. presence of the required release workflows;
 #   4. clean whitespace (`git diff --check`).
 #
@@ -61,6 +62,20 @@ check_version "frontend-next/package  " "$(pkg_version frontend-next/package.jso
 check_version "frontend-next/lock     " "$(pkg_version frontend-next/package-lock.json)"
 check_version "backend/setup.py       " "$(setup_version backend/setup.py)"
 
+# The agent releases under its own agent-vX.Y.Z tag but shares X.Y.Z with the
+# application. agent/VERSION is the source of truth for the agent; the backend
+# carries a mirror because its image does not ship the agent source tree.
+AGENT_VERSION="$(tr -d '[:space:]' < agent/VERSION 2>/dev/null || echo '')"
+check_version "agent/VERSION          " "${AGENT_VERSION}"
+
+BACKEND_PIN="$(sed -nE 's/^_DEFAULT_RELEASE_VERSION = "v([^"]+)".*/\1/p; t done; b; :done q' \
+    backend/app/api/routes/agent_bootstrap.py)"
+if [ -n "${AGENT_VERSION}" ] && [ "${BACKEND_PIN}" = "${AGENT_VERSION}" ]; then
+    green "control-plane agent pin = v${BACKEND_PIN}"
+else
+    red "control-plane agent pin = v${BACKEND_PIN} (expected v${AGENT_VERSION} from agent/VERSION)"
+fi
+
 # --- 2. Required release docs ----------------------------------------------
 printf '\nRelease docs\n'
 for doc in \
@@ -68,7 +83,17 @@ for doc in \
     docs/release-notes-template.md \
     docs/upgrade-notes-1.0.md \
     docs/release-checklist.md \
-    agent/packaging/README.md; do
+    docs/agent-release.md \
+    docs/ghcr-release-operations.md \
+    agent/packaging/README.md \
+    agent/packaging/install.sh \
+    agent/packaging/uninstall.sh \
+    agent/GO_VERSION \
+    agent/scripts/verify_sbom.py \
+    scripts/build_release_index.py \
+    scripts/check-release-absence.sh \
+    scripts/check-tag-commit.sh \
+    scripts/promote-release-images.sh; do
     if [ -f "${doc}" ]; then
         green "${doc}"
     else

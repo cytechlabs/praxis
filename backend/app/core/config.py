@@ -25,9 +25,10 @@ class Settings(BaseSettings):  # pylint: disable=too-few-public-methods
     access_token_expire_minutes: int = 30
     algorithm: str = "HS256"
 
-    # Database
+    # Database. No connection string carries a default credential; the
+    # deployment supplies its own.
     database_url: str
-    database_test_url: str = "postgresql://postgres:postgres@db:5432/praxis_test"
+    database_test_url: str = ""
 
     # CORS
     backend_cors_origins: List[str] = ["http://localhost:5173", "http://localhost:3000"]

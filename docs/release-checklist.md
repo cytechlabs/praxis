@@ -29,10 +29,14 @@ These run in CI and gate merges / publishes; keep them green.
   CRITICAL** gate + CycloneDX SBOM + SARIF artifacts on the prod images. Runs on
   PRs to `main` and `release/**` and on pushes to `main` and `release/**` (see
   [branching-model.md](branching-model.md)).
-- **Publish gate** (`.github/workflows/publish.yml`): the `publish` job
-  `needs: verify`; the `verify` job re-runs backend migrations + tests and
-  frontend lint/type-check against the exact tagged ref before any image is
-  built or pushed.
+- **Publish gate** (`.github/workflows/publish.yml`): three jobs, in order.
+  `verify` resolves the release inputs, runs `check-release-readiness.sh`, and
+  re-runs backend migrations + tests and frontend lint/type-check against the
+  exact tagged ref. `build` then builds both production images, runs the Trivy
+  CRITICAL gate against them, generates their SBOMs, and assembles a validation
+  release index. Both hold read-only tokens and cannot push. Only `publish`
+  holds write, package, OIDC, and attestation permissions, and it runs only for
+  a `vX.Y.Z` tag on `cytechlabs/praxis`.
 - **Runtime healthchecks**: backend and frontend prod images
   carry `HEALTHCHECK` instructions, and `docker-compose.prod.yml` declares
   matching healthchecks, so a hung app service is detected by `docker compose
@@ -47,6 +51,10 @@ settings before relying on the release line:
   check before merge; disallow direct pushes that bypass review.
 - **Tag protection**: restrict who can create `v*.*.*` and `agent-v*` tags so a
   release can only be cut from a verified commit.
+- **Package visibility and Actions access**: each GHCR package is configured
+  individually, once, in the GitHub UI after its first publish. Repository
+  visibility does not propagate to packages. See
+  [docs/ghcr-release-operations.md](ghcr-release-operations.md).
 
 ---
 
@@ -147,42 +155,85 @@ Package metadata versions must match the tag you are about to cut. For a
 - [ ] `frontend-next/package-lock.json` → `X.Y.Z`
 - [ ] `backend/setup.py` → `X.Y.Z`
 
-The agent binary derives its version from the `agent-vX.Y.Z` tag at build time
-(`-X main.Version=...`), so it needs no source edit — but the agent tag and the
-app tag must share the same `X.Y.Z`.
+- [ ] `agent/VERSION` → `X.Y.Z`
+- [ ] `_DEFAULT_RELEASE_VERSION` in
+      `backend/app/api/routes/agent_bootstrap.py` → `vX.Y.Z`
+
+`agent/VERSION` is the agent's source of truth: artifact names and the binary's
+embedded version both derive from it, and the release workflow refuses a tag
+that disagrees with it. The backend carries a mirror because its image does not
+ship the agent source tree. See [docs/agent-release.md](agent-release.md) for
+the full list of places a version bump touches.
 
 `scripts/check-release-readiness.sh` verifies this alignment; see step 8.
 
 ## 4. Tag plan
 
-Two tags per release, both cut from the same verified commit:
+Two tags per release, both cut from the same verified commit. **The agent tag
+goes first**, because the application's release index is the whole-product
+record and requires the agent release to already exist:
 
-- **App / container release:** `vX.Y.Z` (e.g. `v1.0.0`).
-  - Triggers `publish.yml`: builds and pushes the backend/frontend images and
-    attaches SBOMs to the GitHub Release.
-- **Agent release:** `agent-vX.Y.Z` (e.g. `agent-v1.0.0`).
-  - Triggers `agent-release.yml`: builds per-arch tarballs, checksums, and the
-    keyless cosign signature/certificate, and attaches them to the Release.
+1. **Agent release:** `agent-vX.Y.Z` (e.g. `agent-v1.0.0`).
+   - Triggers `agent-release.yml`: builds the per-arch tarballs reproducibly
+     with the Go toolchain pinned by `agent/GO_VERSION`, generates a per-arch
+     agent SBOM and checksums, signs `checksums.txt` with keyless cosign, and
+     attaches the seven assets to the Release.
+   - Verify it (step 8) before continuing.
+2. **App / container release:** `vX.Y.Z` (e.g. `v1.0.0`).
+   - Triggers `publish.yml`: builds and gates the backend/frontend images once,
+     promotes those exact images to GHCR, and attaches the SBOMs and release
+     index to the GitHub Release.
+   - It requires `agent-vX.Y.Z` to be published and fails deliberately if it is
+     not, rather than recording the agent as outstanding.
+   - It also resolves `agent-vX.Y.Z` to the commit it names (peeling annotated
+     tags) and refuses to publish unless that is the same commit as `vX.Y.Z`.
+     Cutting both tags from one commit is enforced, not just procedure.
 
 > Do not create these tags until every check above has passed. Tag protection
 > (step 0) should restrict who can push them.
 
+Before pushing either tag, run both release workflows once via
+`workflow_dispatch` with `dry_run` left checked:
+
+- **Publish** builds both production images, archives them, runs the
+  release-time Trivy CRITICAL gate against those archives, generates both SBOMs,
+  and assembles a validation release index, without pushing an image, creating a
+  release, or minting an attestation. The output is the
+  `release-validation-<X.Y.Z>` run artifact.
+- **Agent Release** builds and verifies the agent artifacts without publishing,
+  signing, or contacting Sigstore. See [docs/agent-release.md](agent-release.md).
+
+- [ ] Publish dry run passed; the validation index names the expected version
+      and commit.
+- [ ] Agent release dry run passed.
+
 ## 5. Publish workflow verification
 
-After pushing the `vX.Y.Z` tag:
+After pushing the `vX.Y.Z` tag (which follows the agent tag, per step 4):
 
 - [ ] `publish.yml` ran for the tag.
-- [ ] The `verify` job (migrations + backend tests + frontend lint/type-check
-      against the tagged ref) **passed** before `publish` started.
-- [ ] The `publish` job completed without error.
+- [ ] The `verify` job (release readiness + migrations + backend tests +
+      frontend lint/type-check against the tagged ref) **passed**.
+- [ ] The `build` job (single image build + archive + Trivy CRITICAL gate +
+      SBOMs + validation index) **passed** before `publish` started.
+- [ ] The `publish` job promoted the archived images without rebuilding, and
+      completed without error, including both provenance and both SBOM
+      attestations.
 
 After pushing the `agent-vX.Y.Z` tag:
 
 - [ ] `agent-release.yml` ran and completed for the tag.
+- [ ] The `build` job's reproducibility step passed (it builds the release
+      twice and compares checksums).
+- [ ] The `publish` job ran only after the tag/`agent/VERSION` match, the
+      upstream-repository check, and the no-existing-release check all passed.
 
 ## 6. GHCR image tag / digest verification
 
-Confirm the published images exist and record their digests:
+Full operator guide, including the one-time GitHub settings and every
+verification command: [docs/ghcr-release-operations.md](ghcr-release-operations.md).
+
+Confirm the published images exist and match the release record:
 
 ```sh
 docker pull ghcr.io/cytechlabs/praxis-backend:X.Y.Z
@@ -192,18 +243,37 @@ docker buildx imagetools inspect ghcr.io/cytechlabs/praxis-frontend:X.Y.Z
 ```
 
 - [ ] Both `X.Y.Z` image tags are present in GHCR.
+- [ ] The digests match the ones recorded in `release-index.json` on the Release.
 - [ ] For a stable release, the `X.Y` and `latest` tags also point at this
       release's digests.
-- [ ] Digests recorded in the release record for traceability.
 - [ ] Package visibility is **Public** (GitHub → Packages → package settings)
-      if the images are meant to be publicly pullable.
+      if the images are meant to be publicly pullable, and an anonymous
+      `docker pull` succeeds after `docker logout ghcr.io`.
 
-## 7. SBOM / SARIF / Trivy review
+## 7. Supply-chain artifact review
 
-- [ ] The CycloneDX SBOMs `sbom-backend-X.Y.Z.cdx.json` and
-      `sbom-frontend-X.Y.Z.cdx.json` are attached to the GitHub Release.
-- [ ] The Trivy CRITICAL gate passed in CI for this ref (no unaccepted
-      CRITICAL CVEs).
+The publish workflow attaches `release-index.json` (the machine-readable release
+record) and generates the release body from it. It names the source commit,
+every shipped component, both image digests, the SBOM files, the agent artifact
+checksums, and the security gates that ran.
+
+```sh
+gh release download vX.Y.Z --pattern release-index.json
+jq -r '.source.commit, (.components[] | "\(.name) \(.digest // "n/a")")' release-index.json
+
+gh attestation verify oci://ghcr.io/cytechlabs/praxis-backend@sha256:<digest> \
+    --repo cytechlabs/praxis
+```
+
+- [ ] `release-index.json` names the commit that was tagged and both image
+      digests from step 6.
+- [ ] The CycloneDX 1.6 SBOMs `sbom-backend-X.Y.Z.cdx.json` and
+      `sbom-frontend-X.Y.Z.cdx.json` are attached to the GitHub Release, and
+      each one's `metadata.component.name` is the digest reference it describes.
+- [ ] `gh attestation verify` succeeds for both image digests (build provenance
+      and SBOM attestation, keyless via GitHub OIDC).
+- [ ] The Trivy CRITICAL gate passed in the `build` job for this ref (no
+      unaccepted CRITICAL CVEs).
 - [ ] SARIF reports for HIGH-and-below were reviewed from the `security-reports`
       build artifact on the corresponding CI run; any accepted findings are
       noted in the release record.
@@ -225,10 +295,17 @@ sha256sum -c checksums.txt
 
 - [ ] `cosign verify-blob` succeeds and the certificate identity matches the
       `cytechlabs/praxis` agent-release workflow.
-- [ ] `sha256sum -c checksums.txt` reports OK for both the amd64 and arm64
-      tarballs.
-- [ ] The five artifacts (two tarballs, `checksums.txt`, `.sig`, `.pem`) are
-      attached to the Release.
+- [ ] `sha256sum -c checksums.txt` reports OK for both tarballs and both SBOMs.
+- [ ] The seven artifacts (two tarballs, two per-arch
+      `praxis-agent-vX.Y.Z-linux-<arch>-sbom.cdx.json`, `checksums.txt`,
+      `.sig`, `.pem`) are attached to the Release.
+- [ ] The downloaded binary reports the released version:
+      `praxis-agent version --json` shows `"version": "vX.Y.Z"`, the full
+      40-character `"commit"` of the tagged ref, and `"stamped": true`.
+- [ ] Install, update, rollback, and uninstall were exercised against a test
+      host per [agent/packaging/README.md](../agent/packaging/README.md).
+      `scripts/test-agent-release-smoke.sh` covers the same lifecycle in a
+      container and is the cheaper pre-tag gate.
 
 ### Optional pre-tag readiness helper
 

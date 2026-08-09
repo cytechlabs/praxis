@@ -337,6 +337,19 @@ def main() -> None:
         level=os.environ.get("PRAXIS_BROKER_LOG_LEVEL", "INFO"),
         format="%(asctime)s broker %(levelname)s %(name)s %(message)s",
     )
+    # Credential preflight before any listener is bound. The broker receives
+    # only DATABASE_URL, and a bundled deployment that never set
+    # POSTGRES_PASSWORD gets an empty-password URL that no connection can use.
+    from app.core.startup_validation import (  # pylint: disable=import-outside-toplevel
+        StartupValidationError,
+        validate_database_credentials,
+    )
+
+    try:
+        validate_database_credentials()
+    except StartupValidationError as exc:
+        raise SystemExit(f"broker: {exc}") from exc
+
     # PRA-339: retain a bounded ring of recent broker log records so the admin
     # support bundle can pull them over the authenticated internal API. Same
     # in-memory, single-worker, size-bounded handler the backend uses — the

@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 import threading
 import urllib.error
 import urllib.parse
@@ -89,11 +90,13 @@ def get_bootstrap_script() -> Response:
 # ---------------------------------------------------------------- download
 #
 # The agent release pipeline (.github/workflows/agent-release.yml)
-# uploads three assets per release:
+# uploads seven assets per release:
 #
 #     praxis-agent-<version>-linux-amd64.tar.gz
 #     praxis-agent-<version>-linux-arm64.tar.gz
-#     checksums.txt          (BSD-format, both tarballs)
+#     praxis-agent-<version>-linux-amd64-sbom.cdx.json
+#     praxis-agent-<version>-linux-arm64-sbom.cdx.json
+#     checksums.txt          (sha256sum format, tarballs + SBOMs)
 #     checksums.txt.sig      (cosign keyless signature)
 #     checksums.txt.pem      (cosign cert)
 #
@@ -106,14 +109,28 @@ def get_bootstrap_script() -> Response:
 # follow-up (verification would happen here, not on the host).
 #
 # Local artifact dir mirrors the release output exactly — operator
-# drops the three asset files into PRAXIS_AGENT_ARTIFACT_DIR and the
+# drops the release asset files into PRAXIS_AGENT_ARTIFACT_DIR and the
 # control plane serves them airgap-friendly, no per-arch subdirs.
 
 _ALLOWED_ARCHES = frozenset({"amd64", "arm64"})
 _ALLOWED_FILENAMES = frozenset({"agent.tar.gz", "agent.tar.gz.sha256"})
 
-_RELEASE_VERSION = "v0.0.0-rc1"
-_RELEASE_TAG = f"agent-{_RELEASE_VERSION}"
+# The agent release this control plane serves. ``agent/VERSION`` in the
+# repository is the source of truth for the agent's released version; this
+# constant is its mirror for the deployed backend, which does not ship the
+# agent source tree. ``scripts/check-release-readiness.sh`` fails the
+# release if the two drift apart.
+_DEFAULT_RELEASE_VERSION = "v1.0.0"
+
+# An operator may pin a different published agent release without
+# rebuilding the image. Only an exact immutable version is accepted:
+# moving references such as "latest" or a branch name would make the
+# served artifact change underneath hosts that already verified a
+# checksum, and a path fragment would escape the pinned release.
+_RELEASE_VERSION_RE = re.compile(
+    r"^v(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)"
+    r"(?:-[0-9A-Za-z.-]+)?$"
+)
 
 # The release download endpoint answers on the release origin and hands
 # back a redirect to a short-lived object URL on a GitHub asset host.
@@ -133,14 +150,39 @@ _RELEASE_ASSET_HOSTS = frozenset(
 _ALLOWED_HOP_HOSTS = frozenset({_RELEASE_ORIGIN_HOST}) | _RELEASE_ASSET_HOSTS
 _MAX_REDIRECT_HOPS = 4
 
-_GH_RELEASE_BASE = (
-    f"{_RELEASE_ORIGIN}/cytechlabs/praxis/releases/download/{_RELEASE_TAG}"
-)
+_RELEASE_REPO = "cytechlabs/praxis"
 _DEFAULT_ARTIFACT_DIR = "/opt/praxis/agent-artifacts"
 
 
+def _release_version() -> str:
+    """Return the pinned agent release version.
+
+    A misconfigured override fails the download routes rather than
+    silently serving a different release than the operator intended."""
+    configured = os.getenv("PRAXIS_AGENT_RELEASE_VERSION", "").strip()
+    if not configured:
+        return _DEFAULT_RELEASE_VERSION
+    if not _RELEASE_VERSION_RE.fullmatch(configured):
+        logger.error(
+            "PRAXIS_AGENT_RELEASE_VERSION is not an exact agent release "
+            "version (expected vX.Y.Z); agent downloads are disabled"
+        )
+        raise HTTPException(
+            status_code=500, detail="agent release version is misconfigured"
+        )
+    return configured
+
+
+def _release_tag() -> str:
+    return f"agent-{_release_version()}"
+
+
+def _gh_release_base() -> str:
+    return f"{_RELEASE_ORIGIN}/{_RELEASE_REPO}/releases/download/{_release_tag()}"
+
+
 def _real_tarball_name(arch: str) -> str:
-    return f"praxis-agent-{_RELEASE_VERSION}-linux-{arch}.tar.gz"
+    return f"praxis-agent-{_release_version()}-linux-{arch}.tar.gz"
 
 
 def _artifact_dir() -> Path:
@@ -276,7 +318,7 @@ def _open_release_asset(asset_name: str, timeout: int) -> Any:
     neither reaches urllib's redirect-following default behavior. The
     configured token travels only on the release origin, and once a hop
     leaves that origin it is dropped for the remainder of the chain."""
-    url = f"{_GH_RELEASE_BASE}/{asset_name}"
+    url = f"{_gh_release_base()}/{asset_name}"
     allow_credentials = True
     try:
         for _ in range(_MAX_REDIRECT_HOPS + 1):

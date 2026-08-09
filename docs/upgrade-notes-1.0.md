@@ -16,6 +16,9 @@ instead — you do not need this document.
   for the backup and restore procedure.
 - **Note your current versions.** Record the image tags (or the commit) you are
   upgrading from, so you can roll back by re-pinning `PRAXIS_VERSION`.
+- **Check the recordings volume ownership.** Interactive sessions now require a
+  working recording. See
+  [Breaking change: session recording is mandatory](#breaking-change-session-recording-is-mandatory).
 - **Read the known limitations** at the bottom of this document before
   committing to the upgrade.
 
@@ -105,6 +108,52 @@ never silently left live. Check what is still outstanding with
 `fleet_reconciliation_service.privilege_reconcile_status(db)`, which reports the
 count of hosts/accounts still pending drop-in removal. Interactive root on managed
 hosts is now **out-of-band** under your ops runbook, not a Praxis-issued grant.
+
+## Breaking change: session recording is mandatory
+
+An interactive browser SSH session is opened only once its recording is running.
+If the recording cannot start, the session is refused, and its row in the session
+ledger is marked `errored` with the reason `recording_unavailable`. Praxis no
+longer falls back to an unrecorded shell, because a shell with no recording is an
+audit gap rather than a degraded feature.
+
+The backend image now pre-creates `/data/praxis/recordings` owned by the backend
+user (UID/GID 1000), so Docker gives a newly initialized `recordings_data` volume
+the correct ownership. That applies only when Docker initializes the volume. If
+your `recordings_data` volume already holds recordings and is owned by `root`,
+the ownership survives the upgrade and every interactive session is then refused
+with `recording_unavailable`.
+
+Check the ownership before opening a session:
+
+```sh
+docker compose exec -T backend stat -c '%u:%g' /data/praxis/recordings
+#   -> 1000:1000 is correct
+#   -> 0:0 needs the repair below
+```
+
+If it reports `0:0`, repair the ownership in place:
+
+```sh
+docker compose exec -T --user root backend chown -R 1000:1000 /data/praxis/recordings
+```
+
+**Do not delete and recreate the volume.** It holds the recorded sessions for
+every host your operators have connected to, and those cast files are audit
+records. The `chown` above preserves them.
+
+Confirm the repair as the backend user, which is who actually writes recordings
+(`docker compose exec` runs as that user unless you override it):
+
+```sh
+docker compose exec -T backend sh -c \
+  'touch /data/praxis/recordings/.write-check \
+   && rm /data/praxis/recordings/.write-check \
+   && echo writable'
+#   -> writable
+```
+
+No restart is needed. The next session opens and records normally.
 
 ## Rolling back
 

@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cytechlabs/praxis/agent/internal/cli"
 	"github.com/cytechlabs/praxis/agent/internal/identity"
 )
 
@@ -464,6 +465,131 @@ func TestVersionSubcommand(t *testing.T) {
 	})
 	if !strings.Contains(out, "praxis-agent") {
 		t.Fatalf("missing praxis-agent in version output: %s", out)
+	}
+}
+
+// The human-readable line has to carry everything that identifies the
+// build, because it is what an operator pastes into a bug report.
+func TestVersionLineReportsBuildIdentity(t *testing.T) {
+	out := captureStdout(t, func() {
+		if rc := run([]string{"version"}); rc != 0 {
+			t.Fatalf("version exit=%d", rc)
+		}
+	})
+	info := currentBuildInfo()
+	for _, want := range []string{
+		info.Version,
+		shortCommit(info.Commit),
+		info.GoVersion,
+		info.OS + "/" + info.Arch,
+	} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("version output missing %q: %s", want, out)
+		}
+	}
+}
+
+// The commit must be stamped in full. A git short hash is only as long as
+// the local object database needs it to be, so it is not a stable way to
+// name the source a binary came from.
+func TestStampedCommitIsAFullSHA(t *testing.T) {
+	const stamped = "0123456789abcdef0123456789abcdef01234567"
+	original := Commit
+	t.Cleanup(func() { Commit = original })
+	Commit = stamped
+
+	out := captureStdout(t, func() {
+		if rc := run([]string{"version", "--json"}); rc != 0 {
+			t.Fatalf("version --json exit=%d", rc)
+		}
+	})
+	var got map[string]any
+	if err := json.Unmarshal([]byte(out), &got); err != nil {
+		t.Fatalf("invalid JSON: %v (%s)", err, out)
+	}
+	if got["commit"] != stamped {
+		t.Fatalf("json commit = %v, want the full 40-character SHA %s", got["commit"], stamped)
+	}
+
+	line := captureStdout(t, func() {
+		if rc := run([]string{"version"}); rc != 0 {
+			t.Fatalf("version exit=%d", rc)
+		}
+	})
+	if !strings.Contains(line, stamped[:commitDisplayLen]) {
+		t.Fatalf("human output missing the abbreviated commit: %s", line)
+	}
+	if strings.Contains(line, stamped) {
+		t.Fatalf("human output should abbreviate the commit, got: %s", line)
+	}
+}
+
+// shortCommit must not slice past the end of a value that is not a SHA.
+func TestShortCommitHandlesNonSHAValues(t *testing.T) {
+	for _, tc := range []struct{ in, want string }{
+		{"unknown", "unknown"},
+		{"", ""},
+		{"0123456789ab", "0123456789ab"},
+		{"0123456789abc", "0123456789ab"},
+	} {
+		if got := shortCommit(tc.in); got != tc.want {
+			t.Fatalf("shortCommit(%q) = %q, want %q", tc.in, got, tc.want)
+		}
+	}
+}
+
+// Tooling records which artifact is installed on a host by parsing this
+// output, so the field names are a contract.
+func TestVersionJSONReportsBuildIdentity(t *testing.T) {
+	for _, args := range [][]string{
+		{"version", "--json"},
+		{"--version", "--json"},
+	} {
+		out := captureStdout(t, func() {
+			if rc := run(args); rc != 0 {
+				t.Fatalf("%v exit=%d", args, rc)
+			}
+		})
+		var got map[string]any
+		if err := json.Unmarshal([]byte(out), &got); err != nil {
+			t.Fatalf("%v produced invalid JSON: %v (%s)", args, err, out)
+		}
+		info := currentBuildInfo()
+		want := map[string]any{
+			"version":    info.Version,
+			"commit":     info.Commit,
+			"go_version": info.GoVersion,
+			"os":         info.OS,
+			"arch":       info.Arch,
+			"stamped":    info.Stamped,
+		}
+		if len(got) != len(want) {
+			t.Fatalf("%v field set changed: got %v want %v", args, got, want)
+		}
+		for key, value := range want {
+			if got[key] != value {
+				t.Fatalf("%v field %q = %v, want %v", args, key, got[key], value)
+			}
+		}
+	}
+}
+
+// An unstamped binary must say so rather than looking like a release.
+func TestVersionReportsUnstampedLocalBuilds(t *testing.T) {
+	if currentBuildInfo().Stamped {
+		t.Fatalf("test binary is built without -ldflags, expected stamped=false")
+	}
+}
+
+// A typo must not silently print the default output and exit 0.
+func TestVersionRejectsUnknownArguments(t *testing.T) {
+	for _, args := range [][]string{
+		{"version", "--nope"},
+		{"version", "extra"},
+	} {
+		if rc := run(args); rc != cli.ExitUsage {
+			t.Fatalf("%v exit=%d want %d", args, rc, cli.ExitUsage)
+		}
 	}
 }
 
