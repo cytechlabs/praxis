@@ -61,13 +61,15 @@ class _SpyClient:
         self.closed = 0
 
     def set_missing_host_key_policy(self, policy):
-        pass
+        """Accept whatever host-key policy the service configures."""
 
-    def get_host_keys(self):
+    @staticmethod
+    def get_host_keys():
+        """Return an empty known-hosts store the policy check can query."""
         return MagicMock()
 
     def connect(self, **kw):
-        pass
+        """Succeed without opening a network connection."""
 
     def get_transport(self):
         return self.transport

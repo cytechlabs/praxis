@@ -135,13 +135,15 @@ class _SpyClient:
         self.closed = 0
 
     def set_missing_host_key_policy(self, policy):
-        pass
+        """Accept whatever host-key policy the service configures."""
 
-    def get_host_keys(self):
+    @staticmethod
+    def get_host_keys():
+        """Return an empty known-hosts store the policy check can query."""
         return MagicMock()
 
     def connect(self, **kw):
-        pass
+        """Succeed without opening a network connection."""
 
     def get_transport(self):
         return self.transport
@@ -341,9 +343,8 @@ def test_refusal_logs_a_safe_failure_without_path_message_or_traceback(
     _arrange_open(db, monkeypatch, admin_user, system, admin_user.username)
     _fail_recording(monkeypatch, PermissionError(13, SENTINEL_EXC_TEXT, SENTINEL_PATH))
 
-    with _capture_service_logs() as captured:
-        with pytest.raises(ss.SessionError):
-            ss.open_session(db, admin_user, system.id)
+    with _capture_service_logs() as captured, pytest.raises(ss.SessionError):
+        ss.open_session(db, admin_user, system.id)
 
     assert captured.records, "the recording failure was not logged at all"
     blob = captured.blob()
