@@ -280,6 +280,9 @@ def _run_uninstall(args):
         capture_output=True,
         text=True,
         timeout=60,
+        # These tests assert on both success and failure, so a non-zero exit is
+        # a result to inspect rather than an error to raise.
+        check=False,
     )
 
 
@@ -504,6 +507,9 @@ def _run_verify_sbom(document, tmp_path, version="v1.0.0", goarch="amd64"):
         capture_output=True,
         text=True,
         timeout=60,
+        # These tests assert on both success and failure, so a non-zero exit is
+        # a result to inspect rather than an error to raise.
+        check=False,
     )
 
 

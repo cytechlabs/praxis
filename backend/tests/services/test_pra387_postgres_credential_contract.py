@@ -171,6 +171,9 @@ def _compose_config(args, env_overrides=None, env_file=None):
             text=True,
             timeout=120,
             env=env,
+            # These tests assert on both success and failure, so a non-zero exit
+            # is a result to inspect rather than an error to raise.
+            check=False,
         )
     except (OSError, subprocess.TimeoutExpired):  # pragma: no cover
         pytest.skip("docker compose config not runnable here")

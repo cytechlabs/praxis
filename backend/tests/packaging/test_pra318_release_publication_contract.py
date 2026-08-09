@@ -186,7 +186,7 @@ def test_digests_sbom_and_attestations_derive_from_the_promotion():
     the promotion produced, not to a tag that could be repointed."""
     publish = _job_block("publish")
     for step in ("backend", "frontend"):
-        digest = "steps.promote.outputs.%s_digest" % step
+        digest = f"steps.promote.outputs.{step}_digest"
         # SBOM scanned by digest.
         assert (
             "image-ref: ${{ env.REGISTRY }}/${{ env.OWNER }}/${{ env.%s_PACKAGE }}@${{ %s }}"
@@ -503,6 +503,9 @@ def _run_index(tmp_path: Path, *args: str):
         capture_output=True,
         text=True,
         timeout=60,
+        # These tests assert on both success and failure, so a non-zero exit is
+        # a result to inspect rather than an error to raise.
+        check=False,
     )
 
 
@@ -768,7 +771,10 @@ def test_index_consumes_the_published_agent_manifest(tmp_path):
     assert result.returncode == 0, result.stderr
 
     index = json.loads((tmp_path / "release-index.json").read_text(encoding="utf-8"))
-    agent = next(c for c in index["components"] if c["kind"] == "release-archive")
+    agent = next(
+        (c for c in index["components"] if c["kind"] == "release-archive"), None
+    )
+    assert agent is not None, "the index records no agent component"
     assert agent["status"] == "published"
     assert agent["release_tag"] == "agent-v1.0.0"
     assert len(agent["artifacts"]) == 4
@@ -844,7 +850,10 @@ def test_validation_index_may_record_an_unpublished_agent_as_pending(tmp_path):
     assert result.returncode == 0, result.stderr
 
     index = json.loads((tmp_path / "release-index.json").read_text(encoding="utf-8"))
-    agent = next(c for c in index["components"] if c["kind"] == "release-archive")
+    agent = next(
+        (c for c in index["components"] if c["kind"] == "release-archive"), None
+    )
+    assert agent is not None, "the index records no agent component"
     assert agent["status"] == "pending"
     assert agent["artifacts"] == []
 
@@ -933,6 +942,9 @@ def _run_absence(stub_dir: Path, *args: str, isolated: bool = False):
         text=True,
         timeout=60,
         env=_shell_env(stub_dir, isolated),
+        # These tests assert on both success and failure, so a non-zero exit is
+        # a result to inspect rather than an error to raise.
+        check=False,
     )
 
 
@@ -1141,6 +1153,9 @@ def _run_promote(stub_dir: Path, *args: str, isolated: bool = False):
         text=True,
         timeout=60,
         env=_shell_env(stub_dir, isolated),
+        # These tests assert on both success and failure, so a non-zero exit is
+        # a result to inspect rather than an error to raise.
+        check=False,
     )
 
 
@@ -1288,6 +1303,9 @@ def _run_tag_check(
         text=True,
         timeout=60,
         env=_shell_env(stub_dir, isolated),
+        # These tests assert on both success and failure, so a non-zero exit is
+        # a result to inspect rather than an error to raise.
+        check=False,
     )
 
 
