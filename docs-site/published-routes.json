@@ -40,7 +40,6 @@
     "oidc-setup",
     "packages",
     "patch-workflows",
-    "product-overview",
     "production-hardening",
     "remediation-workflow",
     "reporting-contract",

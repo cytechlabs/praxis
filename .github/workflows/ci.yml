@@ -296,6 +296,13 @@ jobs:
       # Only the public site is built here. Building the bundled copy would
       # overwrite the committed one and make the freshness check below
       # vacuous; that check does its own build into a temporary directory.
+      # A cold-cache build, proving the route set comes from the repository
+      # rather than from a populated Astro cache or a file that exists only on
+      # one machine. This runs first so a discovery problem fails before the
+      # gates that depend on a build.
+      - name: Clean build produces the reviewed route set
+        run: node scripts/check-docs-clean-build.mjs
+
       - name: Build the public site
         run: node scripts/build-docs.mjs --public
 

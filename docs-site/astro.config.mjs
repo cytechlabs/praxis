@@ -40,6 +40,11 @@ export default defineConfig({
   base: rawBase,
   site,
   outDir: process.env.PRAXIS_DOCS_OUTDIR || './dist',
+  // The content collection is persisted in the cache directory between runs.
+  // PRAXIS_DOCS_CACHE_DIR redirects it so a build can be forced to rediscover
+  // every page from disk, which is what a fresh checkout does and what
+  // scripts/check-docs-clean-build.mjs reproduces.
+  cacheDir: process.env.PRAXIS_DOCS_CACHE_DIR || undefined,
   trailingSlash: 'never',
   build: {
     // Each route becomes "<route>/index.html" and every emitted link is

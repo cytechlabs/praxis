@@ -33,6 +33,10 @@ export const UNPUBLISHED = [
   'documentation-boundaries.md',
   'ui-foundation.md',
   'ui-primitives.md',
+  // A local working artifact that is not part of the repository. Naming it
+  // here keeps the routed set identical whether or not a given checkout has
+  // a copy on disk, so the site cannot build differently for two people.
+  'product-overview.md',
   // Maintainer release runbooks. The operator-facing half of the release
   // contract, the artifact names and the verification commands, is published
   // as `verify-release-artifacts.md`.

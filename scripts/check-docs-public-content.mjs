@@ -59,7 +59,6 @@ const LEGACY_NON_ASCII = new Set([
   'editions',
   'eol-data',
   'oidc-setup',
-  'product-overview',
   'production-hardening',
   'remediation-workflow',
   'reporting-contract',

@@ -39,7 +39,7 @@ export const BUNDLED_BASE = '/help';
 export const PUBLIC_SITE = 'https://docs.praxisfleet.com';
 
 /** Build one variant into `outDir`. Returns the absolute output path. */
-export function buildDocs({ base = '/', site, outDir, quiet = false } = {}) {
+export function buildDocs({ base = '/', site, outDir, cacheDir, quiet = false } = {}) {
   if (!outDir) throw new Error('buildDocs requires an outDir');
 
   // Astro empties its own output directory, but only the one it is told
@@ -57,6 +57,9 @@ export function buildDocs({ base = '/', site, outDir, quiet = false } = {}) {
       // shell cannot leak the public origin into the bundled build.
       PRAXIS_DOCS_SITE: site ?? '',
       PRAXIS_DOCS_OUTDIR: outDir,
+      // Empty means "use the default cache", which is what a normal build
+      // wants; the clean-build gate points this at a fresh directory.
+      PRAXIS_DOCS_CACHE_DIR: cacheDir ?? '',
       // Astro writes a build timestamp into its own telemetry, not into the
       // output, but disabling it keeps builds from touching the network.
       ASTRO_TELEMETRY_DISABLED: '1',

@@ -81,7 +81,7 @@ printf '\nRelease docs\n'
 for doc in \
     CHANGELOG.md \
     docs/release-notes-template.md \
-    docs/upgrade-notes-1.0.md \
+    docs/upgrade-notes-1-0.md \
     docs/release-checklist.md \
     docs/agent-release.md \
     docs/ghcr-release-operations.md \

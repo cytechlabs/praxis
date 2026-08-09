@@ -15,7 +15,6 @@ export const sidebar = [
   {
     label: 'Get started',
     items: [
-      { slug: 'product-overview' },
       { slug: 'requirements' },
       { slug: 'install' },
       { slug: 'first-run' },

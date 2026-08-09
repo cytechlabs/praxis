@@ -31,7 +31,7 @@ BACKEND = Path(__file__).resolve().parents[2]
 REPO = Path(__file__).resolve().parents[3]
 DOCKERFILE = BACKEND / "Dockerfile.prod"
 COMPOSE_FILES = (REPO / "docker-compose.yml", REPO / "docker-compose.prod.yml")
-UPGRADE_NOTES = REPO / "docs" / "upgrade-notes-1.0.md"
+UPGRADE_NOTES = REPO / "docs" / "upgrade-notes-1-0.md"
 
 # Ledger/close reason a refused session records. Pinned to
 # ``session_service.UNRECORDED_ABORT_REASON`` by the service tests; repeated here
