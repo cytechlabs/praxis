@@ -46,6 +46,11 @@ OTHER_DIGEST = "sha256:" + "b" * 64
 COMMIT = "45eff6954a3e471f241c1af51d901280fec29c86"
 SPEC_VERSION = "1.6"
 
+# Resolved once, and used as an absolute path, so a test that isolates PATH to
+# remove `docker` or `gh` does not have to keep `/usr/bin` on it just to start
+# the shell.
+BASH = shutil.which("bash")
+
 
 def _workflow_text() -> str:
     return PUBLISH_WORKFLOW.read_text(encoding="utf-8")
@@ -893,16 +898,41 @@ def _stub(directory: Path, name: str, body: str) -> None:
     path.chmod(0o755)
 
 
-def _run_absence(stub_dir: Path, *args: str):
+def _link_system_tools(stub_dir: Path, *names: str) -> None:
+    """Make real utilities reachable from an isolated PATH.
+
+    Isolation exists to remove one tool, not to strip the shell of `grep` and
+    friends. Linking the utilities a script legitimately uses keeps the removal
+    surgical."""
+    for name in names:
+        real = shutil.which(name)
+        assert real, f"{name} is required to run this test"
+        (stub_dir / name).symlink_to(real)
+
+
+def _shell_env(stub_dir: Path, isolated: bool) -> dict:
+    """Environment for a stubbed script run.
+
+    The default keeps the system directories, because most of these scripts use
+    `grep`, `sed`, `sort`, and `awk`.
+
+    ``isolated`` drops them, leaving only the stub directory. A test whose whole
+    premise is "this tool is not installed" cannot establish that while the
+    runner's real `docker` or `gh` is still two directories away on PATH: it
+    would silently exercise the real client instead, which is how these passed
+    locally and failed in CI. Bash is invoked by absolute path so isolation does
+    not have to retain `/usr/bin` merely to start the shell."""
+    path = str(stub_dir) if isolated else f"{stub_dir}:/usr/bin:/bin"
+    return {"PATH": path, "HOME": str(stub_dir)}
+
+
+def _run_absence(stub_dir: Path, *args: str, isolated: bool = False):
     return subprocess.run(
-        ["bash", str(ABSENCE), *args],
+        [BASH, str(ABSENCE), *args],
         capture_output=True,
         text=True,
         timeout=60,
-        env={
-            "PATH": f"{stub_dir}:/usr/bin:/bin",
-            "HOME": str(stub_dir),
-        },
+        env=_shell_env(stub_dir, isolated),
     )
 
 
@@ -1024,7 +1054,10 @@ def test_absence_check_fails_closed_when_the_registry_client_is_absent(tmp_path)
     no; it will fail, which is not the same answer."""
     _stub(tmp_path, "gh", NOT_FOUND_GH)
     result = _run_absence(
-        tmp_path, "image", f"{REGISTRY}/{OWNER}/{BACKEND_PACKAGE}:1.0.0"
+        tmp_path,
+        "image",
+        f"{REGISTRY}/{OWNER}/{BACKEND_PACKAGE}:1.0.0",
+        isolated=True,
     )
     assert result.returncode != 0
     assert "docker is not installed" in result.stderr
@@ -1039,8 +1072,14 @@ def test_absence_check_fails_closed_when_the_github_client_is_absent(tmp_path):
         "docker",
         'echo "ERROR: failed to authorize: 403 Forbidden" >&2; exit 1',
     )
+    # The script classifies the registry's answer with grep before it reaches
+    # the gh check, so grep stays reachable. Only gh is removed.
+    _link_system_tools(tmp_path, "grep")
     result = _run_absence(
-        tmp_path, "image", f"{REGISTRY}/{OWNER}/{BACKEND_PACKAGE}:1.0.0"
+        tmp_path,
+        "image",
+        f"{REGISTRY}/{OWNER}/{BACKEND_PACKAGE}:1.0.0",
+        isolated=True,
     )
     assert result.returncode != 0
     assert "gh is not installed" in result.stderr
@@ -1095,13 +1134,13 @@ exit 0
     return log
 
 
-def _run_promote(stub_dir: Path, *args: str):
+def _run_promote(stub_dir: Path, *args: str, isolated: bool = False):
     return subprocess.run(
-        ["bash", str(PROMOTE), *args],
+        [BASH, str(PROMOTE), *args],
         capture_output=True,
         text=True,
         timeout=60,
-        env={"PATH": f"{stub_dir}:/usr/bin:/bin", "HOME": str(stub_dir)},
+        env=_shell_env(stub_dir, isolated),
     )
 
 
@@ -1192,7 +1231,12 @@ def test_promotion_requires_a_major_minor_for_a_stable_release(tmp_path):
 @pytest.mark.skipif(shutil.which("bash") is None, reason="bash not available")
 def test_promotion_fails_closed_without_docker(tmp_path):
     result = _run_promote(
-        tmp_path, f"{REGISTRY}/{OWNER}/{BACKEND_PACKAGE}", "1.0.0", "false", ""
+        tmp_path,
+        f"{REGISTRY}/{OWNER}/{BACKEND_PACKAGE}",
+        "1.0.0",
+        "false",
+        "",
+        isolated=True,
     )
     assert result.returncode != 0
     assert "docker is not installed" in result.stderr
@@ -1232,13 +1276,18 @@ exit 1
     )
 
 
-def _run_tag_check(stub_dir: Path, tag: str = "agent-v1.0.0", expected: str = COMMIT):
+def _run_tag_check(
+    stub_dir: Path,
+    tag: str = "agent-v1.0.0",
+    expected: str = COMMIT,
+    isolated: bool = False,
+):
     return subprocess.run(
-        ["bash", str(TAG_COMMIT), "cytechlabs/praxis", tag, expected],
+        [BASH, str(TAG_COMMIT), "cytechlabs/praxis", tag, expected],
         capture_output=True,
         text=True,
         timeout=60,
-        env={"PATH": f"{stub_dir}:/usr/bin:/bin", "HOME": str(stub_dir)},
+        env=_shell_env(stub_dir, isolated),
     )
 
 
@@ -1327,7 +1376,7 @@ def test_tag_check_rejects_an_unsupported_object_type(tmp_path):
 
 @pytest.mark.skipif(shutil.which("bash") is None, reason="bash not available")
 def test_tag_check_fails_closed_without_the_github_client(tmp_path):
-    result = _run_tag_check(tmp_path)
+    result = _run_tag_check(tmp_path, isolated=True)
     assert result.returncode != 0
     assert "gh is not installed" in result.stderr
 
