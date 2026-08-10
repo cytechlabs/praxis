@@ -231,16 +231,14 @@ def buy_license_url(db: Session) -> str:
     return f"{base}{sep}instance_id={quote(instance_id, safe='')}"
 
 
-# Official Praxis builds ship the license verification PUBLIC key so a purchased
-# license applies with no env setup — exactly as the production key ships for 1.0.
-# This is the SANDBOX key for now; production cutover replaces it with the
-# production public key. The PRIVATE signing key is NEVER in this repo, and this
-# public key grants nothing on its own — only a valid CytechLabs-signed license
-# unlocks paid features. ``PRAXIS_LICENSE_PUBLIC_KEY`` overrides it (dev / custom
-# issuer testing).
+# Official Praxis builds ship the production license-verification PUBLIC key so
+# a purchased license applies with no environment setup. The PRIVATE signing key
+# is never in this repository, and this public key grants nothing on its own:
+# only a valid Cytech Labs-signed license unlocks paid features.
+# ``PRAXIS_LICENSE_PUBLIC_KEY`` overrides it for development or a custom issuer.
 DEFAULT_LICENSE_PUBLIC_KEY = (
     "-----BEGIN PUBLIC KEY-----\n"
-    "MCowBQYDK2VwAyEAkMuXHM1rRlLMGt3KxsnsetZkYEBQQ+No4lcK4Cgec9E=\n"
+    "MCowBQYDK2VwAyEA9YSFxHQ7Wec0t+hzZOe3YlLdMhWlKEXSRKi/MyVb26k=\n"
     "-----END PUBLIC KEY-----\n"
 )
 

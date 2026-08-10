@@ -1,8 +1,9 @@
-"""PRA-266 follow-up: official builds ship a built-in license verification PUBLIC
+"""Official builds ship a built-in license verification PUBLIC
 key so a purchased license applies with no env setup. PRAXIS_LICENSE_PUBLIC_KEY
 still overrides. The private signing key is never embedded.
 """
 
+import base64
 from datetime import datetime, timedelta, timezone
 
 import jwt
@@ -38,11 +39,14 @@ def test_env_public_key_overrides_builtin(monkeypatch):
 
 
 def test_builtin_key_is_a_valid_ed25519_public_key():
-    # Catches a paste/format error in the embedded key.
+    # Catches both a paste/format error and an accidental key substitution.
     key = serialization.load_pem_public_key(
         license_service.DEFAULT_LICENSE_PUBLIC_KEY.encode()
     )
     assert isinstance(key, Ed25519PublicKey)
+    raw = key.public_bytes(serialization.Encoding.Raw, serialization.PublicFormat.Raw)
+    encoded = base64.urlsafe_b64encode(raw).rstrip(b"=").decode()
+    assert encoded == "9YSFxHQ7Wec0t-hzZOe3YlLdMhWlKEXSRKi_MyVb26k"
 
 
 def test_no_verification_key_error_emitted_with_builtin(db, monkeypatch):
