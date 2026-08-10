@@ -82,8 +82,19 @@ describe('bundled documentation', () => {
 
   it('references only same-origin assets so it works offline', () => {
     const html = fs.readFileSync(path.join(HELP_DIR, 'index.html'), 'utf8');
-    const external = [...html.matchAll(/(?:href|src)="(https?:)?\/\/[^"]+"/g)];
-    expect(external.map((m) => m[0])).toEqual([]);
+    const externalAssets = [...html.matchAll(/src="(https?:)?\/\/[^"]+"/g)];
+    expect(externalAssets.map((m) => m[0])).toEqual([]);
+  });
+
+  it('limits optional outbound links to the reviewed public destinations', () => {
+    const html = fs.readFileSync(path.join(HELP_DIR, 'index.html'), 'utf8');
+    const externalLinks = [...html.matchAll(/href="(https?:\/\/[^"]+)"/g)].map(
+      (match) => match[1],
+    );
+
+    expect(new Set(externalLinks)).toEqual(
+      new Set(['https://praxisfleet.com', 'https://github.com/cytechlabs/praxis']),
+    );
   });
 
   it('rewrites the documentation root and slugs before the filesystem', async () => {
