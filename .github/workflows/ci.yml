@@ -434,7 +434,7 @@ jobs:
 
       - name: Upload SBOMs + SARIF as artifacts
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: security-reports
           path: |
@@ -487,7 +487,7 @@ jobs:
 
       - name: Upload filesystem scan SARIF as artifact
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: dependency-scan-reports
           path: trivy-fs.sarif

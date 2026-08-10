@@ -402,7 +402,7 @@ jobs:
             --out-markdown release-index.md
           cat release-index.md
 
-      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: release-validation-${{ needs.verify.outputs.version }}
           path: |
@@ -417,7 +417,7 @@ jobs:
       # for a run that will publish; a dry run has nothing to promote.
       - name: Upload the gated images
         if: ${{ needs.verify.outputs.publish == 'true' }}
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: release-images-${{ needs.verify.outputs.version }}
           path: |
@@ -531,7 +531,7 @@ jobs:
           echo "manifest=agent-manifest/checksums.txt" >> "$GITHUB_OUTPUT"
           echo "consuming published agent release $AGENT_TAG"
 
-      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: release-images-${{ needs.verify.outputs.version }}
           path: images
