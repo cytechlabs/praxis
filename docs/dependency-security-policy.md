@@ -1,4 +1,7 @@
-# Dependency & Container Security Policy
+---
+title: Dependency and container security policy
+description: How dependency and image vulnerabilities are gated, triaged, and updated.
+---
 
 The 1.0 baseline for keeping dependencies current and blocking vulnerable
 releases. Two mechanisms, with different jobs:
@@ -12,7 +15,7 @@ analysis (SAST) or SBOM/signing/GHCR publishing, which are tracked separately.
 
 ## Dependabot
 
-Config: [`.github/dependabot.yml`](../.github/dependabot.yml).
+Config: [`.github/dependabot.yml`](https://github.com/cytechlabs/praxis/blob/main/.github/dependabot.yml).
 
 ### Coverage
 
@@ -47,7 +50,7 @@ apply cleanly (a missing label is skipped with a warning, not a failure).
 
 ### DCO exemption
 
-The DCO gate ([`.github/workflows/dco.yml`](../.github/workflows/dco.yml))
+The DCO gate ([`.github/workflows/dco.yml`](https://github.com/cytechlabs/praxis/blob/main/.github/workflows/dco.yml))
 requires a `Signed-off-by` trailer on every non-merge commit. Dependabot commits
 are bot-authored and cannot carry one, so the DCO job **exempts the Dependabot
 GitHub App** only when the pull request author is `dependabot[bot]` and the
@@ -71,7 +74,7 @@ does not exempt bots in general, and does not trust a commit email by itself.
 ## Trivy vulnerability gates
 
 Config: the `security-scan` and `dependency-scan` jobs in
-[`.github/workflows/ci.yml`](../.github/workflows/ci.yml).
+[`.github/workflows/ci.yml`](https://github.com/cytechlabs/praxis/blob/main/.github/workflows/ci.yml).
 
 | Gate | Scans | Blocks on |
 | --- | --- | --- |

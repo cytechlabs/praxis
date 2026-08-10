@@ -1,4 +1,7 @@
-# Auditor demo walkthrough (1.0)
+---
+title: Auditor walkthrough
+description: "A guided read-only tour: verdicts, evidence, exports, and the audit trail behind them."
+---
 
 A one-page, **read-only** path for an auditor or reviewer to verify what Praxis
 records — without mutating fleet state. It uses the same synthetic demo fixture

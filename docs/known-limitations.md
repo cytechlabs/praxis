@@ -1,4 +1,7 @@
-# Known Limitations
+---
+title: Known limitations
+description: What Praxis deliberately does not do, so you can plan complementary controls.
+---
 
 Praxis is deliberately scoped. This page states, plainly, what Praxis does *not*
 do so operators can plan complementary controls. None of these are defects; they

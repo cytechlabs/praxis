@@ -1,0 +1,413 @@
+<!DOCTYPE html><html lang="en" dir="ltr" data-theme="dark" data-has-toc data-has-sidebar class="astro-vdxcvpsm"> <head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>Agent and SSH capability matrix | Praxis</title><link rel="shortcut icon" href="/help/favicon.svg" type="image/svg+xml"/><meta name="generator" content="Astro v7.2.0"/><meta name="generator" content="Starlight v0.41.7"/><meta property="og:title" content="Agent and SSH capability matrix"/><meta property="og:type" content="article"/><meta property="og:locale" content="en"/><meta property="og:description" content="Which operations each transport supports, so you can tell where the thin agent and SSH differ."/><meta property="og:site_name" content="Praxis"/><meta name="twitter:card" content="summary_large_image"/><meta name="description" content="Which operations each transport supports, so you can tell where the thin agent and SSH differ."/><script>
+  document.documentElement.dataset.theme = 'dark';
+  window.StarlightThemeProvider = { updatePickers() {} };
+</script><link rel="stylesheet" href="/help/_astro/print.ehPL0gv-.css" media="print"><link rel="stylesheet" href="/help/_astro/common.lyETGUzl.css"><script type="module" src="/help/_astro/page.Dwipeu-R.js"></script></head> <body class="astro-vdxcvpsm"> <a class="sl-skip-link astro-vxeigawq" href="#_top">Skip to content</a> <div class="page sl-flex astro-gqpr5s5a"> <header class="header astro-gqpr5s5a"><div class="header astro-nczgtkxc"> <div class="title-wrapper sl-flex astro-nczgtkxc"> <a href="/help" class="site-title sl-flex astro-clw6ags5">  <img class="astro-clw6ags5" alt="Praxis" src="/help/_astro/praxis-wordmark-dark.DS3fBLsP.svg" width="5378" height="1980">    <span class="sr-only astro-clw6ags5" translate="no"> Praxis </span> </a> </div> <div class="sl-flex print:hidden astro-nczgtkxc"> <site-search class=" astro-r5ar4xm7" data-translations="{&quot;placeholder&quot;:&quot;Search&quot;}" data-strip-trailing-slash> <button data-open-modal disabled aria-label="Search" aria-keyshortcuts="Control+K" class="astro-r5ar4xm7"> <svg aria-hidden="true" class="astro-r5ar4xm7 astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M21.71 20.29 18 16.61A9 9 0 1 0 16.61 18l3.68 3.68a.999.999 0 0 0 1.42 0 1 1 0 0 0 0-1.39ZM11 18a7 7 0 1 1 0-14 7 7 0 0 1 0 14Z"/></svg> <span class="sl-hidden md:sl-block astro-r5ar4xm7" aria-hidden="true">Search</span> <kbd class="sl-hidden md:sl-flex astro-r5ar4xm7" style="display: none;"> <kbd class="astro-r5ar4xm7">Ctrl</kbd><kbd class="astro-r5ar4xm7">K</kbd> </kbd> </button> <dialog style="padding:0" aria-label="Search" class="astro-r5ar4xm7"> <div class="dialog-frame sl-flex astro-r5ar4xm7">  <button data-close-modal class="sl-flex md:sl-hidden astro-r5ar4xm7"> Cancel </button> <div class="search-container astro-r5ar4xm7"> <div id="starlight__search" class="astro-r5ar4xm7"></div> </div> </div> </dialog> </site-search>  <script>
+	(() => {
+		const openBtn = document.querySelector('button[data-open-modal]');
+		const shortcut = openBtn?.querySelector('kbd');
+		if (!openBtn || !(shortcut instanceof HTMLElement)) return;
+		const platformKey = shortcut.querySelector('kbd');
+		if (platformKey && /(Mac|iPhone|iPod|iPad)/i.test(navigator.platform)) {
+			platformKey.textContent = '⌘';
+			openBtn.setAttribute('aria-keyshortcuts', 'Meta+K');
+		}
+		shortcut.style.display = '';
+	})();
+</script> <script type="module" src="/help/_astro/Search.astro_astro_type_script_index_0_lang.BAB0aXdr.js"></script> </div> <div class="sl-hidden md:sl-flex print:hidden right-group astro-nczgtkxc"> <div class="sl-flex social-icons astro-nczgtkxc">  <a href="https://praxisfleet.com" rel="me" class="sl-flex astro-cg55etiy"> <span class="sr-only astro-cg55etiy">praxisfleet.com</span> <svg aria-hidden="true" class="astro-cg55etiy astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M19.33 10.18a1 1 0 0 1-.77 0 1 1 0 0 1-.62-.93l.01-1.83-8.2 8.2a1 1 0 0 1-1.41-1.42l8.2-8.2H14.7a1 1 0 0 1 0-2h4.25a1 1 0 0 1 1 1v4.25a1 1 0 0 1-.62.93Z"/><path d="M11 4a1 1 0 1 1 0 2H7a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-4a1 1 0 1 1 2 0v4a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h4Z"/></svg> </a>  </div>   <script type="module">var e=class extends HTMLElement{constructor(){super();let e=this.querySelector(`select`);e&&(e.addEventListener(`change`,e=>{e.currentTarget instanceof HTMLSelectElement&&(window.location.pathname=e.currentTarget.value)}),window.addEventListener(`pageshow`,t=>{if(!t.persisted)return;let n=e.querySelector(`option[selected]`)?.index;n!==e.selectedIndex&&(e.selectedIndex=n??0)}))}};customElements.define(`starlight-lang-select`,e);</script> </div> </div></header> <nav class="sidebar print:hidden astro-gqpr5s5a" aria-label="Main"> <starlight-menu-button class="print:hidden astro-vvx7mffu"> <button aria-expanded="false" aria-label="Menu" aria-controls="starlight__sidebar" class="sl-flex md:sl-hidden astro-vvx7mffu"> <svg aria-hidden="true" class="open-menu astro-vvx7mffu astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M3 8h18a1 1 0 1 0 0-2H3a1 1 0 0 0 0 2Zm18 8H3a1 1 0 0 0 0 2h18a1 1 0 0 0 0-2Zm0-5H3a1 1 0 0 0 0 2h18a1 1 0 0 0 0-2Z"/></svg> <svg aria-hidden="true" class="close-menu astro-vvx7mffu astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="m13.41 12 6.3-6.29a1.004 1.004 0 1 0-1.42-1.42L12 10.59l-6.29-6.3a1.004 1.004 0 0 0-1.42 1.42l6.3 6.29-6.3 6.29a1 1 0 0 0 0 1.42.998.998 0 0 0 1.42 0l6.29-6.3 6.29 6.3a.999.999 0 0 0 1.42 0 1 1 0 0 0 0-1.42L13.41 12Z"/></svg> </button> </starlight-menu-button> <script type="module">var e=class extends HTMLElement{btn=this.querySelector(`button`);constructor(){super(),this.btn.addEventListener(`click`,()=>this.toggleExpanded());let e=this.closest(`nav`);e&&e.addEventListener(`keyup`,e=>this.closeOnEscape(e)),matchMedia(`(min-width: 50em)`).addEventListener(`change`,()=>this.setExpanded(!1))}setExpanded(e){this.setAttribute(`aria-expanded`,String(e)),document.body.toggleAttribute(`data-mobile-menu-expanded`,e),document.querySelectorAll(`.main-frame, .sl-skip-link`).forEach(t=>{t.toggleAttribute(`inert`,e)})}toggleExpanded(){this.setExpanded(this.getAttribute(`aria-expanded`)!==`true`)}closeOnEscape(e){e.code===`Escape`&&(this.setExpanded(!1),this.btn.focus())}};customElements.define(`starlight-menu-button`,e);</script> <div id="starlight__sidebar" class="sidebar-pane astro-gqpr5s5a"> <div class="sidebar-content sl-flex astro-gqpr5s5a"> <sl-sidebar-state-persist data-hash="0ze3ylm" class="astro-f5yvicm7"> <script aria-hidden="true">
+		(() => {
+			try {
+				if (!matchMedia('(min-width: 50em)').matches) return;
+				/** @type {HTMLElement | null} */
+				const target = document.querySelector('sl-sidebar-state-persist');
+				const state = JSON.parse(sessionStorage.getItem('sl-sidebar-state') || '0');
+				if (!target || !state || target.dataset.hash !== state.hash) return;
+				window._starlightScrollRestore = state.scroll;
+				customElements.define(
+					'sl-sidebar-restore',
+					class SidebarRestore extends HTMLElement {
+						connectedCallback() {
+							try {
+								const idx = parseInt(this.dataset.index || '');
+								const details = this.closest('details');
+								if (details && typeof state.open[idx] === 'boolean') details.open = state.open[idx];
+							} catch {}
+						}
+					}
+				);
+			} catch {}
+		})();
+	</script> <ul class="top-level astro-ojxuodky"> <li class="astro-ojxuodky"> <details open class="astro-ojxuodky"> <summary class="astro-ojxuodky"> <span class="group-label astro-ojxuodky"> <span class="large astro-ojxuodky">Get started</span>  </span> <svg aria-hidden="true" class="caret astro-ojxuodky astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </summary> <sl-sidebar-restore data-index="0"></sl-sidebar-restore> <ul class="astro-ojxuodky"> <li class="astro-ojxuodky"> <a href="/help/requirements" class="astro-ojxuodky"> <span class="astro-ojxuodky">Requirements</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/install" class="astro-ojxuodky"> <span class="astro-ojxuodky">Install Praxis</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/first-run" class="astro-ojxuodky"> <span class="astro-ojxuodky">First run</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/enroll-hosts" class="astro-ojxuodky"> <span class="astro-ojxuodky">Enroll hosts</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/getting-started" class="astro-ojxuodky"> <span class="astro-ojxuodky">Getting started</span>  </a> </li> </ul> </details> </li><li class="astro-ojxuodky"> <details open class="astro-ojxuodky"> <summary class="astro-ojxuodky"> <span class="group-label astro-ojxuodky"> <span class="large astro-ojxuodky">Concepts</span>  </span> <svg aria-hidden="true" class="caret astro-ojxuodky astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </summary> <sl-sidebar-restore data-index="1"></sl-sidebar-restore> <ul class="astro-ojxuodky"> <li class="astro-ojxuodky"> <a href="/help/fleet-lifecycle-architecture" class="astro-ojxuodky"> <span class="astro-ojxuodky">Fleet lifecycle architecture</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/security-model" class="astro-ojxuodky"> <span class="astro-ojxuodky">Security model and trust boundaries</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/transports" class="astro-ojxuodky"> <span class="astro-ojxuodky">Transports</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/editions" class="astro-ojxuodky"> <span class="astro-ojxuodky">Editions and feature tiers</span>  </a> </li> </ul> </details> </li><li class="astro-ojxuodky"> <details open class="astro-ojxuodky"> <summary class="astro-ojxuodky"> <span class="group-label astro-ojxuodky"> <span class="large astro-ojxuodky">Using Praxis</span>  </span> <svg aria-hidden="true" class="caret astro-ojxuodky astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </summary> <sl-sidebar-restore data-index="2"></sl-sidebar-restore> <ul class="astro-ojxuodky"> <li class="astro-ojxuodky"> <a href="/help/fleet-and-hosts" class="astro-ojxuodky"> <span class="astro-ojxuodky">Fleet and hosts</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/packages" class="astro-ojxuodky"> <span class="astro-ojxuodky">Packages</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/patch-workflows" class="astro-ojxuodky"> <span class="astro-ojxuodky">Patch workflows</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/jobs-and-scheduling" class="astro-ojxuodky"> <span class="astro-ojxuodky">Jobs and scheduling</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/ssh-and-security" class="astro-ojxuodky"> <span class="astro-ojxuodky">SSH and security</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/credentials-and-vault" class="astro-ojxuodky"> <span class="astro-ojxuodky">Credentials and secrets</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/monitoring-and-alerts" class="astro-ojxuodky"> <span class="astro-ojxuodky">Monitoring and alerts</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/compliance-workflows" class="astro-ojxuodky"> <span class="astro-ojxuodky">Compliance workflows</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/mirrors-and-airgap" class="astro-ojxuodky"> <span class="astro-ojxuodky">Mirrors and content</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/reports-and-schedules" class="astro-ojxuodky"> <span class="astro-ojxuodky">Reports and schedules</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/settings" class="astro-ojxuodky"> <span class="astro-ojxuodky">Settings</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/admin" class="astro-ojxuodky"> <span class="astro-ojxuodky">Administration</span>  </a> </li> </ul> </details> </li><li class="astro-ojxuodky"> <details open class="astro-ojxuodky"> <summary class="astro-ojxuodky"> <span class="group-label astro-ojxuodky"> <span class="large astro-ojxuodky">How-to guides</span>  </span> <svg aria-hidden="true" class="caret astro-ojxuodky astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </summary> <sl-sidebar-restore data-index="3"></sl-sidebar-restore> <ul class="astro-ojxuodky"> <li class="astro-ojxuodky"> <a href="/help/guide-critical-updates" class="astro-ojxuodky"> <span class="astro-ojxuodky">Respond to a critical update</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/guide-patch-windows" class="astro-ojxuodky"> <span class="astro-ojxuodky">Run a patch window</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/guide-rollback" class="astro-ojxuodky"> <span class="astro-ojxuodky">Roll back a bad update</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/guide-onboarding-offboarding" class="astro-ojxuodky"> <span class="astro-ojxuodky">Onboard and offboard people</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/guide-temporary-access" class="astro-ojxuodky"> <span class="astro-ojxuodky">Grant temporary access</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/guide-access-review" class="astro-ojxuodky"> <span class="astro-ojxuodky">Run an access review</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/guide-evidence-export" class="astro-ojxuodky"> <span class="astro-ojxuodky">Export evidence for an audit</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/guide-safe-upgrade" class="astro-ojxuodky"> <span class="astro-ojxuodky">Upgrade safely</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/guide-license-rotation" class="astro-ojxuodky"> <span class="astro-ojxuodky">Rotate a licence</span>  </a> </li> </ul> </details> </li><li class="astro-ojxuodky"> <details open class="astro-ojxuodky"> <summary class="astro-ojxuodky"> <span class="group-label astro-ojxuodky"> <span class="large astro-ojxuodky">Operations</span>  </span> <svg aria-hidden="true" class="caret astro-ojxuodky astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </summary> <sl-sidebar-restore data-index="4"></sl-sidebar-restore> <ul class="astro-ojxuodky"> <li class="astro-ojxuodky"> <a href="/help/production-hardening" class="astro-ojxuodky"> <span class="astro-ojxuodky">Production hardening and operations</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/backup-restore" class="astro-ojxuodky"> <span class="astro-ojxuodky">Backup and restore</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/airgap" class="astro-ojxuodky"> <span class="astro-ojxuodky">Airgap export and import</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/oidc-setup" class="astro-ojxuodky"> <span class="astro-ojxuodky">Single sign-on setup</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/remediation-workflow" class="astro-ojxuodky"> <span class="astro-ojxuodky">Remediation workflow</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/scaling-assessment-500-hosts" class="astro-ojxuodky"> <span class="astro-ojxuodky">Capacity and scaling</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/demo-walkthrough-operator" class="astro-ojxuodky"> <span class="astro-ojxuodky">Operator walkthrough</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/demo-walkthrough-auditor" class="astro-ojxuodky"> <span class="astro-ojxuodky">Auditor walkthrough</span>  </a> </li> </ul> </details> </li><li class="astro-ojxuodky"> <details open class="astro-ojxuodky"> <summary class="astro-ojxuodky"> <span class="group-label astro-ojxuodky"> <span class="large astro-ojxuodky">Security</span>  </span> <svg aria-hidden="true" class="caret astro-ojxuodky astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </summary> <sl-sidebar-restore data-index="5"></sl-sidebar-restore> <ul class="astro-ojxuodky"> <li class="astro-ojxuodky"> <a href="/help/access-revocation" class="astro-ojxuodky"> <span class="astro-ojxuodky">Access revocation</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/compliance-map" class="astro-ojxuodky"> <span class="astro-ojxuodky">Compliance evidence map</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/audit-schema" class="astro-ojxuodky"> <span class="astro-ojxuodky">Audit event schema</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/dependency-security-policy" class="astro-ojxuodky"> <span class="astro-ojxuodky">Dependency and container security policy</span>  </a> </li> </ul> </details> </li><li class="astro-ojxuodky"> <details open class="astro-ojxuodky"> <summary class="astro-ojxuodky"> <span class="group-label astro-ojxuodky"> <span class="large astro-ojxuodky">Release and upgrade</span>  </span> <svg aria-hidden="true" class="caret astro-ojxuodky astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </summary> <sl-sidebar-restore data-index="6"></sl-sidebar-restore> <ul class="astro-ojxuodky"> <li class="astro-ojxuodky"> <a href="/help/licensing" class="astro-ojxuodky"> <span class="astro-ojxuodky">Licensing and activation</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/verify-release-artifacts" class="astro-ojxuodky"> <span class="astro-ojxuodky">Verify release artifacts</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/upgrade" class="astro-ojxuodky"> <span class="astro-ojxuodky">Upgrade</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/upgrade-notes-1-0" class="astro-ojxuodky"> <span class="astro-ojxuodky">Upgrade notes for 1.0</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/uninstall" class="astro-ojxuodky"> <span class="astro-ojxuodky">Uninstall</span>  </a> </li> </ul> </details> </li><li class="astro-ojxuodky"> <details open class="astro-ojxuodky"> <summary class="astro-ojxuodky"> <span class="group-label astro-ojxuodky"> <span class="large astro-ojxuodky">Reference</span>  </span> <svg aria-hidden="true" class="caret astro-ojxuodky astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </summary> <sl-sidebar-restore data-index="7"></sl-sidebar-restore> <ul class="astro-ojxuodky"> <li class="astro-ojxuodky"> <a href="/help/support-matrix" class="astro-ojxuodky"> <span class="astro-ojxuodky">Linux support matrix</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/agent-capability-matrix" aria-current="page" class="astro-ojxuodky"> <span class="astro-ojxuodky">Agent and SSH capability matrix</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/agent-protocol" class="astro-ojxuodky"> <span class="astro-ojxuodky">Agent protocol</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/reporting-contract" class="astro-ojxuodky"> <span class="astro-ojxuodky">Reporting contract</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/eol-data" class="astro-ojxuodky"> <span class="astro-ojxuodky">Distribution lifecycle data</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/browser-support" class="astro-ojxuodky"> <span class="astro-ojxuodky">Browser and viewport support</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/known-limitations" class="astro-ojxuodky"> <span class="astro-ojxuodky">Known limitations</span>  </a> </li> </ul> </details> </li><li class="astro-ojxuodky"> <details open class="astro-ojxuodky"> <summary class="astro-ojxuodky"> <span class="group-label astro-ojxuodky"> <span class="large astro-ojxuodky">Troubleshooting and support</span>  </span> <svg aria-hidden="true" class="caret astro-ojxuodky astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </summary> <sl-sidebar-restore data-index="8"></sl-sidebar-restore> <ul class="astro-ojxuodky"> <li class="astro-ojxuodky"> <a href="/help/troubleshooting" class="astro-ojxuodky"> <span class="astro-ojxuodky">Troubleshooting</span>  </a> </li><li class="astro-ojxuodky"> <a href="/help/support" class="astro-ojxuodky"> <span class="astro-ojxuodky">Support</span>  </a> </li> </ul> </details> </li> </ul>  <script aria-hidden="true">
+		(() => {
+			const scroller = document.getElementById('starlight__sidebar');
+			if (!window._starlightScrollRestore || !scroller) return;
+			scroller.scrollTop = window._starlightScrollRestore;
+			delete window._starlightScrollRestore;
+		})();
+	</script></sl-sidebar-state-persist> <div class="md:sl-hidden"> <div class="mobile-preferences sl-flex astro-b5gddk54"> <div class="social-icons astro-b5gddk54">  <a href="https://praxisfleet.com" rel="me" class="sl-flex astro-cg55etiy"> <span class="sr-only astro-cg55etiy">praxisfleet.com</span> <svg aria-hidden="true" class="astro-cg55etiy astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;"><path d="M19.33 10.18a1 1 0 0 1-.77 0 1 1 0 0 1-.62-.93l.01-1.83-8.2 8.2a1 1 0 0 1-1.41-1.42l8.2-8.2H14.7a1 1 0 0 1 0-2h4.25a1 1 0 0 1 1 1v4.25a1 1 0 0 1-.62.93Z"/><path d="M11 4a1 1 0 1 1 0 2H7a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-4a1 1 0 1 1 2 0v4a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h4Z"/></svg> </a>  </div>    </div> </div> </div> </div> </nav> <div class="main-frame astro-gqpr5s5a">  <script type="module">var e=document.getElementById(`starlight__sidebar`),t=e?.querySelector(`sl-sidebar-state-persist`),n=`sl-sidebar-state`,r=()=>{let r=[],i=t?.dataset.hash||``;try{let e=sessionStorage.getItem(n),t=JSON.parse(e||`{}`);Array.isArray(t.open)&&t.hash===i&&(r=t.open)}catch{}return{hash:i,open:r,scroll:e?.scrollTop||0}},i=e=>{try{sessionStorage.setItem(n,JSON.stringify(e))}catch{}},a=()=>i(r()),o=(e,t)=>{let n=r();n.open[t]=e,i(n)};t?.addEventListener(`click`,e=>{if(!(e.target instanceof Element))return;let t=e.target.closest(`summary`)?.closest(`details`);if(!t)return;let n=t.querySelector(`sl-sidebar-restore`),r=parseInt(n?.dataset.index||``);isNaN(r)||o(!t.open,r)}),addEventListener(`visibilitychange`,()=>{document.visibilityState===`hidden`&&a()});</script><div class="lg:sl-flex astro-abfeecmu"> <aside class="right-sidebar-container print:hidden astro-abfeecmu"> <div class="right-sidebar astro-abfeecmu">  <div class="lg:sl-hidden astro-q5mffni3"> <mobile-starlight-toc data-min-h="2" data-max-h="3" class="astro-5ulgm6bh"> <nav aria-labelledby="starlight__on-this-page--mobile" class="astro-5ulgm6bh"> <details id="starlight__mobile-toc" class="astro-5ulgm6bh"> <summary id="starlight__on-this-page--mobile" class="sl-flex astro-5ulgm6bh"> <span class="toggle sl-flex astro-5ulgm6bh"> On this page <svg aria-hidden="true" class="caret astro-5ulgm6bh astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1rem;"><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg> </span> <span class="display-current astro-5ulgm6bh"></span> </summary> <div class="dropdown astro-5ulgm6bh"> <ul class="isMobile astro-cxyftcne" style="--depth: 0;"> <li style="--depth: 0;" class="astro-cxyftcne"> <a href="#_top" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Overview</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#transport-preference-semantics" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Transport-preference semantics</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#capability-matrix" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Capability matrix</span> </a> <ul class="isMobile astro-cxyftcne" style="--depth: 1;"> <li style="--depth: 1;" class="astro-cxyftcne"> <a href="#agent-op-ceiling-what-the-tunnel-can-actually-do" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Agent op ceiling (what the tunnel can actually do)</span> </a>  </li> </ul> </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#enrollment-identity--security-posture-verified-10-safe" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Enrollment, identity &amp; security posture (verified 1.0-safe)</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#agent-connection-states" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Agent connection states</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#clean-host-enrollment-smoke-manual" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Clean-host enrollment smoke (manual)</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#deferred--post-10-tracked-as-follow-up-pras" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Deferred / post-1.0 (tracked as follow-up PRAs)</span> </a>  </li> </ul> </div> </details> </nav> </mobile-starlight-toc> <script type="module" src="/help/_astro/MobileTableOfContents.astro_astro_type_script_index_0_lang.BcSo_yiZ.js"></script> </div> <div class="right-sidebar-panel sl-hidden lg:sl-block astro-q5mffni3"> <div class="sl-container astro-q5mffni3"> <starlight-toc data-min-h="2" data-max-h="3"> <nav aria-labelledby="starlight__on-this-page"> <h2 id="starlight__on-this-page">On this page</h2> <ul class="astro-cxyftcne" style="--depth: 0;"> <li style="--depth: 0;" class="astro-cxyftcne"> <a href="#_top" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Overview</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#transport-preference-semantics" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Transport-preference semantics</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#capability-matrix" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Capability matrix</span> </a> <ul class="astro-cxyftcne" style="--depth: 1;"> <li style="--depth: 1;" class="astro-cxyftcne"> <a href="#agent-op-ceiling-what-the-tunnel-can-actually-do" style="--depth: 1;" class="astro-cxyftcne"> <span style="--depth: 1;" class="astro-cxyftcne">Agent op ceiling (what the tunnel can actually do)</span> </a>  </li> </ul> </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#enrollment-identity--security-posture-verified-10-safe" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Enrollment, identity &amp; security posture (verified 1.0-safe)</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#agent-connection-states" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Agent connection states</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#clean-host-enrollment-smoke-manual" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Clean-host enrollment smoke (manual)</span> </a>  </li><li style="--depth: 0;" class="astro-cxyftcne"> <a href="#deferred--post-10-tracked-as-follow-up-pras" style="--depth: 0;" class="astro-cxyftcne"> <span style="--depth: 0;" class="astro-cxyftcne">Deferred / post-1.0 (tracked as follow-up PRAs)</span> </a>  </li> </ul> </nav> </starlight-toc> <script type="module" src="/help/_astro/TableOfContents.astro_astro_type_script_index_0_lang.Csloo1VZ.js"></script> </div> </div>  </div> </aside> <div class="main-pane astro-abfeecmu">  <main data-pagefind-body class="astro-vdxcvpsm" lang="en" dir="ltr">    <div class="content-panel astro-oil7k7jf"> <div class="sl-container astro-oil7k7jf"> <h1 id="_top" class="astro-2sm4b3ln">Agent and SSH capability matrix</h1> </div> </div> <div class="content-panel astro-oil7k7jf"> <div class="sl-container astro-oil7k7jf"> <div class="sl-markdown-content"> <p>Status: <strong>1.0 readiness reference</strong>. This document is derived from a
+code/test/smoke audit of the thin agent, the agent broker, and the backend
+transport layer — not from marketing intent. It exists so product, site, and
+KB copy state agent capabilities truthfully and separate 1.0-safe claims from
+deferred ones.</p>
+<p>Two transports move host work in Praxis:</p>
+<ul>
+<li><strong>SSH</strong> — the backend (or the SSH access broker) opens a paramiko session to
+the host. Always available for a reachable, credentialed host.</li>
+<li><strong>Agent</strong> — the host runs the <code>praxis-agent</code> binary, which holds a long-lived
+mTLS WebSocket to the agent broker; the backend dispatches ops over that
+tunnel via the broker’s internal API.</li>
+</ul>
+<p>The transport for a capability is chosen by <code>TransportFactory.get_transport</code>
+(<code>backend/app/services/transport/factory.py</code>) <strong>only for capabilities that go
+through the factory</strong>. Many capabilities call <code>SSHService</code> directly and are
+SSH-only regardless of whether a healthy agent tunnel exists — see the matrix.</p>
+<hr>
+<h2 id="transport-preference-semantics">Transport-preference semantics</h2>
+<p><code>System.transport_preference</code> ∈ <code>{auto, ssh, agent}</code> (default <code>auto</code>), consumed
+by the factory:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>preference</th><th>agent tunnel healthy</th><th>agent tunnel down</th></tr></thead><tbody><tr><td><code>ssh</code></td><td>SSH</td><td>SSH</td></tr><tr><td><code>auto</code></td><td>Agent</td><td>SSH (silent fallback)</td></tr><tr><td><code>agent</code></td><td>Agent</td><td><strong><code>TransportUnavailable</code> — no fallback</strong></td></tr></tbody></table>
+<p>Force-agent (<code>agent</code>) fails loudly rather than silently dropping to SSH; the
+factory raises and the op records an error. This preserves the operator’s
+intent (“I want agent or nothing”).</p>
+<blockquote>
+<p><strong>Important truth for docs:</strong> <code>transport_preference</code> only affects the
+<strong>factory-routed</strong> capabilities below. Capabilities marked <em>SSH-only
+(bypasses factory)</em> ignore the preference entirely — setting a host to
+<code>agent</code> does <strong>not</strong> make package scans, repo management, health checks,
+user provisioning, drift, or the web terminal run over the agent.</p>
+</blockquote>
+<hr>
+<h2 id="capability-matrix">Capability matrix</h2>
+<p>Legend: <strong>Either</strong> = factory-routed (honors preference) · <strong>SSH-only</strong> =
+hardcoded to <code>SSHService</code> · <strong>Agent-push</strong> = agent originates the data.
+“Priv?” = requires root/sudo on the host.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Capability</th><th>Transport</th><th>Priv?</th><th>Push/Pull</th><th>1.0 claim</th><th>Code path</th></tr></thead><tbody><tr><td>Command execution (<code>/execute</code>)</td><td><strong>Either</strong></td><td>No</td><td>Pull</td><td>✅ agent or SSH</td><td><code>command_execution_service.py</code> → <code>get_transport</code> → <code>run_command</code></td></tr><tr><td>File download / upload</td><td><strong>Either</strong></td><td>No</td><td>Pull</td><td>✅ agent or SSH</td><td><code>file_transfer_service.py</code> (<code>_resolve_file_transport</code>)</td></tr><tr><td>Directory browse (ls/stat/mkdir/unlink)</td><td><strong>SSH-only</strong></td><td>No</td><td>Pull</td><td>⚠️ SSH-only; force-agent → <code>transport_unsupported</code></td><td><code>file_transfer_service._open_sftp</code> (paramiko)</td></tr><tr><td>Facts refresh (on-demand)</td><td><strong>Either</strong></td><td>No</td><td>Pull</td><td>✅ agent or SSH (agent gated on <code>facts</code> capability)</td><td><code>routes/facts.py</code> (agent inline / SSH fallback)</td></tr><tr><td>Facts (autonomous push)</td><td>Agent-push</td><td>No</td><td><strong>Push</strong></td><td>🚫 deferred — backend-ready, agent does not emit <code>facts_report</code></td><td><code>broker/handlers.py:_route_facts_report</code> (no agent sender)</td></tr><tr><td>Facts (enroll-time)</td><td>Agent-push</td><td>No</td><td>Push</td><td>✅ optional at enroll</td><td><code>routes/agent_enroll.py</code> → <code>facts_service.ingest</code></td></tr><tr><td>Package scan / audit / update / hold</td><td><strong>SSH-only (bypasses factory)</strong></td><td>scan No; apply/hold <strong>Yes</strong></td><td>Pull</td><td>⚠️ SSH-only</td><td><code>package_service.py</code> <code>execute_command</code> / <code>execute_privileged_command</code></td></tr><tr><td>Health / connection test</td><td><strong>SSH-only</strong></td><td>No</td><td>Pull</td><td>⚠️ SSH-only (distinct from broker tunnel health)</td><td><code>health_service.py</code> → <code>ssh_service.test_connection</code></td></tr><tr><td>Web terminal / interactive PTY</td><td><strong>SSH-only</strong></td><td>No</td><td>Pull (interactive)</td><td>🚫 agent PTY deferred (see below)</td><td><code>session_service.py</code> <code>invoke_shell</code> (paramiko)</td></tr><tr><td>Session recording</td><td><strong>SSH-only</strong> (tied to PTY)</td><td>No</td><td>—</td><td>🚫 deferred with agent PTY</td><td><code>recording_service</code> over the SSH PTY</td></tr><tr><td>Patch apply / reboot / rollback</td><td><strong>Either</strong></td><td><strong>Yes (sudo)</strong></td><td>Pull</td><td>✅ agent or SSH; sudo via <code>wrap_argv_for_sudo</code></td><td><code>patch_execution_dispatch_service.py</code> <code>get_transport</code></td></tr><tr><td>Baselines / drift checks</td><td><strong>SSH-only</strong></td><td>No</td><td>Pull</td><td>⚠️ SSH-only</td><td><code>drift_service.py</code> <code>execute_command</code></td></tr><tr><td>Repo management (list/add/remove/sync)</td><td><strong>SSH-only (bypasses factory)</strong></td><td>add/remove/sync <strong>Yes</strong></td><td>Pull</td><td>⚠️ SSH-only</td><td><code>repo_service.py</code> <code>execute_privileged_command</code></td></tr><tr><td>Fleet access / user provisioning</td><td><strong>SSH-only</strong></td><td><strong>Yes (sudo)</strong></td><td>Pull</td><td>⚠️ SSH-only</td><td><code>host_user_provisioning_service.py</code></td></tr><tr><td>Content profile apply</td><td><strong>Either</strong></td><td>depends</td><td>Pull</td><td>✅ agent or SSH</td><td><code>routes/content_profile_apply.py</code> <code>get_transport</code></td></tr><tr><td>Mirror host trust</td><td><strong>Either</strong></td><td>Yes</td><td>Pull</td><td>✅ agent or SSH</td><td><code>routes/mirrors.py</code> <code>get_transport</code></td></tr></tbody></table>
+<h3 id="agent-op-ceiling-what-the-tunnel-can-actually-do">Agent op ceiling (what the tunnel can actually do)</h3>
+<p>The backend can dispatch exactly four ops over the tunnel:
+<code>exec</code>, <code>file_get</code>, <code>file_put</code>, <code>facts</code>
+(<code>broker/internal_api.py</code> + <code>broker_client.py</code>). The <code>AgentTransport</code>
+implements <code>run_command</code>, <code>open_file_get</code>, <code>open_file_put</code>; <code>open_pty</code> raises
+<code>TransportUnsupported</code> (<code>transport/agent.py</code>).</p>
+<p>The Go agent advertises more than the backend uses (<code>exec</code>, <code>file_get</code>,
+<code>file_put</code>, <code>pty</code>, <code>facts</code>). <strong>PTY and autonomous facts are the two agent
+capabilities the backend does not exercise</strong> — see Deferred.</p>
+<hr>
+<h2 id="enrollment-identity--security-posture-verified-10-safe">Enrollment, identity &#x26; security posture (verified 1.0-safe)</h2>
+<ul>
+<li><strong>Two enrollment paths</strong>, both terminating in the same Vault-signed cert:
+<ul>
+<li>Activation token — <code>POST /agent/enroll</code> with <code>X-Praxis-Activation-Token</code>;
+single-use, scoped, TTL-bounded, bcrypt-at-rest, host-fingerprint
+idempotent (<code>activation_token_service.py</code>).</li>
+<li>Admin SSH-once — <code>POST /agent/bootstrap/{system_id}</code>, admin-JWT-gated,
+proves the host via an SSH session (<code>routes/agent.py</code>).</li>
+</ul>
+</li>
+<li><strong>Identity is backend-controlled.</strong> The signing role discards the CSR’s CN
+and SANs; the real identity is the URI SAN <code>praxis://system/&#x3C;id></code> minted by
+Vault (<code>agent_identity_service.py</code>). A host cannot influence its identity via
+the CSR.</li>
+<li><strong>No cross-system impersonation.</strong> Tunnel admission requires the peer cert to
+chain to the agent CA <strong>and</strong> match the per-system <code>agent_cert_serial</code> +
+<code>agent_cert_fingerprint</code> with <code>agent_status == active</code>
+(<code>broker/handlers.py:make_db_validator</code>). Agent A’s cert carries A’s
+serial/fingerprint and cannot pass as system B.</li>
+<li><strong>Facts cannot be spoofed.</strong> The facts writer keys on the mTLS-validated
+<code>system_id</code> and ignores any <code>system_id</code> in the message body
+(<code>broker/handlers.py</code>).</li>
+<li><strong>No secrets in logs.</strong> Audited across the agent, broker, and support bundle:
+no private key, cert PEM, activation token, or Vault/OpenBao token is logged.
+The support bundle additionally redacts PEM keys, tokens, JWTs, and DSN creds
+(<code>core/redaction.py</code>).</li>
+<li><strong>OpenBao bootstrap.</strong> The bundled secrets runtime is OpenBao,
+reachable at the compose service name <code>vault:8200</code> (name kept for compat).
+<code>vault/scripts/init-vault.sh</code> idempotently provisions the <code>praxis-agent-ca</code>
+PKI mount used to sign agent CSRs. mTLS uses TLS 1.2+; <code>VERIFY_X509_STRICT</code>
+is cleared in the broker context (documented; required for Python 3.13/3.14
+asyncio mTLS).</li>
+<li><strong><code>(agent.key, agent.crt)</code> is a bearer credential.</strong> Copying both files to
+another host makes that host the same system — the agent binds nothing to
+hardware/TPM. Treat <code>agent.key</code> (mode 0600) as a secret; this is a documented
+1.0 posture, not a bug.</li>
+<li><strong>Agent runs as root</strong> with <code>file_put</code>/<code>exec</code>/<code>pty</code> primitives whose
+authorization is delegated to the broker. <code>praxis-agent.service</code> applies
+<code>NoNewPrivileges</code>/<code>PrivateTmp</code>/kernel protections but intentionally not
+<code>ProtectSystem=strict</code> (the agent must write anywhere by design).</li>
+</ul>
+<hr>
+<h2 id="agent-connection-states">Agent connection states</h2>
+<p>Two <strong>orthogonal</strong> axes plus one unrelated SSH concept — do not conflate them:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Axis</th><th>Field</th><th>Values</th><th>Source</th></tr></thead><tbody><tr><td>Enrollment lifecycle</td><td><code>agent_status</code></td><td><code>not_enrolled</code>, <code>active</code>, <code>disabled</code>, <code>revoked</code></td><td>DB (<code>System.agent_status</code>)</td></tr><tr><td>Live tunnel liveness</td><td><code>agent_liveness</code></td><td><code>online</code>, <code>stale</code>, <code>offline</code>, <code>unknown</code></td><td>broker registry via <code>GET /agent/status/{id}</code></td></tr><tr><td>SSH reachability</td><td><code>connection_status</code></td><td><code>auth_failed</code>, …</td><td><code>SystemMetadata</code> — <strong>SSH only, not the agent</strong></td></tr></tbody></table>
+<p><code>agent_liveness</code> is derived live from the broker’s in-memory registry, not from
+the <code>agent_last_seen_at</code> timestamp:</p>
+<ul>
+<li><code>online</code> — live tunnel + recent heartbeat (<code>≤ HEARTBEAT_DEAD_SECONDS</code>, 90s)</li>
+<li><code>stale</code> — tunnel registered but heartbeat past the dead window</li>
+<li><code>offline</code> — broker has no tunnel for this system</li>
+<li><code>unknown</code> — the broker itself was unreachable (we couldn’t tell — distinct
+from <code>offline</code> so we never imply the agent is gone when we simply couldn’t ask)</li>
+</ul>
+<p><code>agent_last_seen_at</code> and <code>agent_version</code> are now persisted on connect and via
+the throttled heartbeat writer (both were previously never written in
+production).</p>
+<blockquote>
+<p><strong>UI gap (deferred):</strong> these states are exposed by the API but there is no
+thin-agent status UI in 1.0. The only “enrolled” indicator on the system page
+today refers to the <strong>SSH access broker</strong> (CA-trust + principals hook), not
+the agent. See Deferred.</p>
+</blockquote>
+<hr>
+<h2 id="clean-host-enrollment-smoke-manual">Clean-host enrollment smoke (manual)</h2>
+<p>Automated smokes (<code>scripts/test-first-enrolled-host-smoke.sh</code>,
+<code>scripts/test-fresh-install-smoke.sh</code>) exercise <code>/agent/ca-bundle</code> +
+<code>/agent/enroll</code> redemption and the <code>/agent/bootstrap.sh</code> install script, but
+they stop <strong>before</strong> the real agent binary dials the broker. The end-to-end
+manual smoke below closes that gap.</p>
+<p>Prereqs: a running Praxis stack, an admin login, and a clean Linux host
+(systemd, amd64/arm64) with network reach to the backend + broker.</p>
+<ol>
+<li><strong>Pre-register the host</strong> in Praxis so it has a <code>system_id</code> (agent_status
+starts <code>not_enrolled</code>).</li>
+<li><strong>Mint an activation token</strong> — Settings → Activation Tokens → create, scoped
+to that system. Copy the one-time <code>praxis_…</code> token.</li>
+<li><strong>Install the agent</strong> on the host (from a release tarball):
+<div class="expressive-code"><link rel="stylesheet" href="/help/_astro/ec.w36nc.css"><script type="module" src="/help/_astro/ec.0vx5m.js"></script><figure class="frame is-terminal not-content"><figcaption class="header"><span class="title"></span><span class="sr-only">Terminal window</span></figcaption><pre data-language="sh"><code><div class="ec-line"><div class="code"><span style="--0:#82AAFF;--1:#3B61B0">sudo</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">./install.sh</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--broker-url</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">wss://&#x3C;broker>:8443</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">\</span></div></div><div class="ec-line"><div class="code"><span class="indent">                  </span><span style="--0:#82AAFF;--1:#3B61B0">--backend-url</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">https://&#x3C;backend></span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#82AAFF;--1:#3B61B0">--system-id</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#ECC48D;--1:#3B61B0">&#x3C;id></span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="sudo ./install.sh --broker-url wss://<broker>:8443 \                  --backend-url https://<backend> --system-id <id>"><div></div></button></div></figure></div>
+</li>
+<li><strong>Enroll</strong> following <code>agent/packaging/README.md</code> → <em>Path A</em>: <code>gen-keypair</code>,
+<code>gen-csr</code>, fetch <code>/agent/ca-bundle</code>, <code>POST /agent/enroll</code> with the token,
+<code>install-cert</code>.</li>
+<li><strong>Start the service:</strong> <code>sudo systemctl enable --now praxis-agent</code>.</li>
+<li><strong>Verify online:</strong> <code>GET /agent/status/&#x3C;id></code> →
+<code>agent_status: active</code>, <code>agent_liveness: online</code>, and a populated
+<code>agent_version</code> + <code>agent_last_seen_at</code>.</li>
+<li><strong>Verify reconnect:</strong> stop/start the broker (or <code>systemctl restart praxis-agent</code>); the agent redials with jittered backoff and returns to
+<code>online</code>. Disabling the host NIC drives <code>agent_liveness</code> to <code>stale</code> then
+<code>offline</code> without stalling unrelated API requests.</li>
+<li><strong>Verify identity rejection:</strong> copying another system’s cert/key does not
+grant this system’s identity — the broker rejects on serial/fingerprint
+mismatch (<code>agent_status</code> stays as-is; tunnel is refused).</li>
+</ol>
+<hr>
+<h2 id="deferred--post-10-tracked-as-follow-up-pras">Deferred / post-1.0 (tracked as follow-up PRAs)</h2>
+<p>These are <strong>not</strong> 1.0 agent claims. Advertise them as SSH-backed or deferred.</p>
+<ol>
+<li><strong>Interactive PTY / web terminal over the agent.</strong> The Go agent implements
+<code>pty</code> and the broker negotiates it, but the backend never dispatches it and
+<code>AgentTransport.open_pty</code> raises <code>TransportUnsupported</code>. Web terminals and
+session recording are SSH-only in 1.0 (pending effective-login/user-
+impersonation design).</li>
+<li><strong>Autonomous facts push.</strong> The backend can ingest agent-pushed
+<code>facts_report</code>, but the agent only emits <code>hello</code>/<code>heartbeat</code>/<code>op_complete</code>.
+Facts are pull-only (on-demand) or enroll-time in 1.0.</li>
+<li><strong>Revoke/disable does not drop a live tunnel.</strong> Identity is re-checked at
+handshake only; a revoked agent keeps its tunnel until the mTLS cert TTL
+(≤1h) expires or the process restarts. There is no backend→broker
+disconnect wiring (two processes). Bounded exposure; follow-up PRA.</li>
+<li><strong>No thin-agent status UI.</strong> <code>agent_status</code>/<code>agent_liveness</code>/<code>agent_version</code>
+and <code>transport_preference</code> are API-only; no operator screen surfaces them,
+and the system page’s “enrolled” label refers to the SSH access broker.
+Follow-up PRA.</li>
+<li><strong>Support bundle omits broker + agent logs.</strong> The bundle carries backend-
+process logs only; the broker is a separate container and the agent lives on
+the remote host. Follow-up PRA.</li>
+<li><strong>Distro/init scope.</strong> Linux only, systemd only (or <code>--no-systemd</code> +
+operator-managed supervision), amd64/arm64 only. See the <a href="/help/support-matrix">Linux support matrix</a>.</li>
+</ol> </div> <div class="pagination-links print:hidden astro-jgq3vlii" dir="ltr"> <a href="/help/support-matrix" rel="prev" class="astro-jgq3vlii"> <svg aria-hidden="true" class="astro-jgq3vlii astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.5rem;"><path d="M17 11H9.41l3.3-3.29a1.004 1.004 0 1 0-1.42-1.42l-5 5a1 1 0 0 0-.21.33 1 1 0 0 0 0 .76 1 1 0 0 0 .21.33l5 5a1.002 1.002 0 0 0 1.639-.325 1 1 0 0 0-.219-1.095L9.41 13H17a1 1 0 0 0 0-2Z"/></svg> <span class="astro-jgq3vlii"> Previous <br class="astro-jgq3vlii"> <span class="link-title astro-jgq3vlii">Linux support matrix</span> </span> </a> <a href="/help/agent-protocol" rel="next" class="astro-jgq3vlii"> <svg aria-hidden="true" class="astro-jgq3vlii astro-n5k4ipy7" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.5rem;"><path d="M17.92 11.62a1.001 1.001 0 0 0-.21-.33l-5-5a1.003 1.003 0 1 0-1.42 1.42l3.3 3.29H7a1 1 0 0 0 0 2h7.59l-3.3 3.29a1.002 1.002 0 0 0 .325 1.639 1 1 0 0 0 1.095-.219l5-5a1 1 0 0 0 .21-.33 1 1 0 0 0 0-.76Z"/></svg> <span class="astro-jgq3vlii"> Next <br class="astro-jgq3vlii"> <span class="link-title astro-jgq3vlii">Agent protocol</span> </span> </a> </div> <footer class="praxis-docs-footer astro-jo6i4kqk"> <p class="praxis-docs-footer-brand astro-jo6i4kqk"> <a href="https://praxisfleet.com" class="astro-jo6i4kqk">Praxis by Cytech Labs</a> </p> <nav class="praxis-docs-footer-links astro-jo6i4kqk" aria-label="Documentation footer"> <a href="/help/support" class="astro-jo6i4kqk">Support</a> <a href="https://github.com/cytechlabs/praxis" class="astro-jo6i4kqk">Source repository</a> </nav> <p class="praxis-docs-footer-note astro-jo6i4kqk">
+This page is part of a single documentation set that is published on the web
+    and bundled with the application for offline use. Links to praxisfleet.com
+    and GitHub need an internet connection.
+</p> </footer> </div> </div>  </main> </div> </div> </div> </div> </body> </html>

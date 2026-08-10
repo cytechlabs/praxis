@@ -1,4 +1,7 @@
-# Praxis 1.0 Browser & Viewport Support
+---
+title: Browser and viewport support
+description: Supported browsers, minimum viewport widths, and what degrades outside them.
+---
 
 This document defines the official **operator browser** support boundary for the
 Praxis 1.0 web console — the browser and viewport an admin uses to *view* Praxis.

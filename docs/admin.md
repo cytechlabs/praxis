@@ -1,0 +1,77 @@
+---
+title: Administration
+description: Users, roles, single sign-on, audit retention, and the bootstrap administrator.
+---
+
+Admin tabs live at the top-level of Settings and require the `admin` role to access. This covers identity, access control, and audit retention.
+
+## Users
+
+Every Praxis user is a row in the `user` table with a username, email, password hash (or OIDC subject), and a set of roles. Admins create local users from `Settings > Admin > Users > New User`. Provide username, email, initial password, and one or more roles.
+
+### Roles
+
+Praxis ships four roles with distinct permission envelopes:
+
+- **admin** - full access; can edit users, rotate the CA, approve commands, manage Vault, etc.
+- **maintainer** - can register systems, build jobs, edit whitelist entries, but not edit users or rotate the CA
+- **auditor** - read-only plus the ability to export audit logs; can't execute commands or mutate state
+- **viewer** - read-only; useful for local/manual accounts that should not inherit the broader auditor envelope
+
+A user can hold multiple roles - the effective permission is the union. Roles are edited via the Users tab; click a row, tick/untick roles, save.
+
+### Activation
+
+Users can be deactivated without deletion (`is_active=false`). Deactivation blocks login but preserves audit history - prefer deactivation over deletion for people who leave the team, so their past actions stay auditable.
+
+## OIDC / SSO
+
+Praxis supports OIDC Authorization Code flow against any provider that publishes a discovery document (`.well-known/openid-configuration`). Tested with Okta, Keycloak, Azure AD, Auth0, and Google Workspace.
+
+> For the full deployment runbook - redirect URI, `PUBLIC_BASE_URL` / `OIDC_REDIRECT_URI`, a Keycloak walkthrough, emitting roles into the ID token, and troubleshooting - see the [single sign-on setup guide](oidc-setup.md).
+
+### Configuring a provider
+
+`Settings > Admin > OIDC Providers > New Provider`. Fields:
+
+- **Name** - shown on the login button ("Sign in with Okta")
+- **Issuer URL** - the discovery document root (e.g. `https://dev-123.okta.com/oauth2/default`)
+- **Client ID + Secret** - from your OIDC application registration
+- **Redirect URI** - `https://<your-praxis>/auth/oidc/callback` (configure this at the provider too)
+- **Scopes** - usually `openid profile email`; add `groups` if you want group-based role mapping
+- **Group claim** - the claim holding the user's group membership (`groups`, `roles`, whatever your IdP emits)
+- **Group > role mappings** - list entries like `praxis-admins > admin`
+
+### Role claim mapping (dotted paths)
+
+Praxis reads the configured **role claim path** from the OIDC **ID token** and maps the values it finds there to a Praxis role - `admin`, `maintainer`, or `auditor`. The path is **dotted**, so a role claim nested inside an object is addressed by its full path rather than a top-level key.
+
+For example, Keycloak commonly emits realm roles at `realm_access.roles` and client roles at `resource_access.<client-id>.roles`. Point the role claim path at whichever your realm/client is configured to emit (e.g. `realm_access.roles`), then map the emitted values to Praxis roles. A value that maps to nothing leaves the user with the default `auditor` role.
+
+> **The claim path must match what your IdP actually puts in the ID token - not the userinfo endpoint.** If roles only appear in an access token or userinfo response, configure the provider to include them in the ID token (in Keycloak, add the roles/group mapper to the ID token), or SSO users will land as `auditor` every time.
+
+### Auto-provisioning
+
+On first SSO login Praxis creates a local user matching the OIDC `sub` + issuer. Role assignment comes from group-mappings when present; otherwise the user gets the `auditor` role. Admins can elevate manually from the Users tab afterwards.
+
+### Multi-IdP
+
+You can wire multiple OIDC providers at once - useful during migrations or when internal and contractor users sit on different IdPs. The login page shows a button per provider. Users are keyed by `(oidc_sub, oidc_issuer)` so the same email on two IdPs creates two separate accounts.
+
+### Removing a provider
+
+Disabling a provider blocks new logins but keeps provisioned accounts functional - they continue to authenticate against whichever provider originally issued their account. Delete a provider to cut off access entirely; users tied to that provider can no longer log in until an admin resets their auth method or assigns local credentials.
+
+## Audit log retention
+
+`Settings > Admin > Audit > Retention days` controls how long `audits`, `command_validation_log`, `ssh_security_logs`, and `alert_history` rows are kept. Default is 90 days. A scheduler sweep purges older rows nightly. Increase this for compliance regimes (SOC 2, HIPAA) that require longer trails; decrease to save disk on constrained deployments.
+
+Rotation and deletion events are themselves audited - the retention config change writes an audit row before the purge runs, so you always know when settings changed.
+
+## Sessions
+
+Active sessions are listed under `Settings > Admin > Sessions`. Each row is a refresh token with the user, issued timestamp, last use, and source IP. Revoke a session to force re-authentication; revoking all of a user's sessions is a quick way to lock an account out without deleting it while you investigate.
+
+## Bootstrap admin
+
+On first deploy Praxis seeds a single bootstrap admin user - username `praxisadmin` by default (override with `ADMIN_USERNAME`). The username defaults to `praxisadmin` rather than `admin` because per-user fleet access maps a Praxis username to the managed Linux login on each host, and `admin` commonly collides with an existing host user or group. The bootstrap password is logged to stdout once at first boot - **rotate it immediately** via `Settings > Account > Change Password` or by wiring OIDC and deactivating the bootstrap account. Leaving the default admin with the seeded password is the single most common misconfiguration in dev-promoted-to-prod deploys.

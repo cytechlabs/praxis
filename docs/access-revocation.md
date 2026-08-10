@@ -1,4 +1,7 @@
-# Access revocation (1.0 SLA)
+---
+title: Access revocation
+description: How quickly each kind of access stops working after it is revoked, and what to do when you need it gone now.
+---
 
 Praxis 1.0 routes every access-removal trigger through one common revocation
 orchestration path (`app/services/revocation_service.py`). This document

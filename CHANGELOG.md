@@ -84,7 +84,7 @@ the running summary of what 1.0 ships.
 
 ### Known limitations
 
-See [docs/upgrade-notes-1.0.md](docs/upgrade-notes-1.0.md) for the full list.
+See [docs/upgrade-notes-1-0.md](docs/upgrade-notes-1-0.md) for the full list.
 Highlights:
 
 - Single-instance backend is the supported topology; horizontal scale-out and

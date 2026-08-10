@@ -67,7 +67,7 @@ Confirm the commit you intend to tag is release-ready.
 - [ ] CI is **green** on that commit (the same ref you will tag).
 - [ ] `CHANGELOG.md` has an entry for this version, grouped by capability area,
       with the known-limitations list current.
-- [ ] `docs/upgrade-notes-1.0.md` (or the version-specific upgrade notes) is
+- [ ] `docs/upgrade-notes-1-0.md` (or the version-specific upgrade notes) is
       current for this release.
 - [ ] No unreviewed unrelated changes are in the working tree.
 
@@ -344,7 +344,7 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile bundle
 ## 10. Known limitations and upgrade notes review
 
 - [ ] `CHANGELOG.md` known-limitations section is accurate for what shipped.
-- [ ] `docs/upgrade-notes-1.0.md` matches the actual upgrade steps and rollback
+- [ ] `docs/upgrade-notes-1-0.md` matches the actual upgrade steps and rollback
       guidance.
 - [ ] The release notes (from `docs/release-notes-template.md`) link the upgrade
       notes and carry the known-limitations summary.

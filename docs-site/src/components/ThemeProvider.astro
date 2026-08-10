@@ -1,0 +1,17 @@
+---
+// Praxis documentation is dark-only, matching praxisfleet.com, which has no
+// light theme at all. Starlight's stock provider reads localStorage and then
+// falls back to prefers-color-scheme, so on a light-configured machine a
+// reader arriving from the marketing site would jump from #09090b to white.
+//
+// This pins the theme to dark instead. Inlined like upstream so the attribute
+// is set before first paint and there is no flash.
+//
+// `ThemeSelect` is overridden to render nothing, but Starlight components can
+// still call `updatePickers()`, so it stays defined and inert.
+---
+
+<script is:inline>
+  document.documentElement.dataset.theme = 'dark';
+  window.StarlightThemeProvider = { updatePickers() {} };
+</script>

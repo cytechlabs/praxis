@@ -113,3 +113,6 @@ backend/ee-wheels/*.tar.gz
 # PRA-311 upgrade-smoke scratch dir (created under repo because Docker only
 # bind-mounts repo paths in this env; cleaned by the script trap)
 .tmp-pra311-oldscripts-*
+
+# Astro's generated content types and type-store for the documentation site.
+docs-site/.astro/

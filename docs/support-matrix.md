@@ -1,4 +1,7 @@
-# Praxis 1.0 Linux Support Matrix
+---
+title: Linux support matrix
+description: Supported, best-effort, and unsupported distributions, package families, and architectures.
+---
 
 This document defines the official Linux **managed-host** support boundary for
 Praxis 1.0: which distributions, package-manager families, and architectures

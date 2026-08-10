@@ -1,4 +1,7 @@
-# Praxis reporting contract
+---
+title: Reporting contract
+description: The report kind catalog, formats, scope rules, and the guarantees an export makes.
+---
 
 Praxis has one contract for turning fleet data into a downloadable, auditable
 report. This document is the human-readable companion to the machine-readable

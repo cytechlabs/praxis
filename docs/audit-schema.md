@@ -1,4 +1,7 @@
-# Praxis Audit Event Schema
+---
+title: Audit event schema
+description: The audit event wire format and delivery contract an external SIEM consumes.
+---
 
 **Schema version: 1**
 

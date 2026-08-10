@@ -1,7 +1,18 @@
 # Praxis Documentation
 
-This directory holds public-safe project documentation: architecture notes,
-wire contracts, audit contracts, and operator-facing implementation facts.
+This directory is the source of the Praxis documentation site. Every top-level
+`*.md` file here is published, both on the public documentation site and as the
+offline copy bundled into the application at `/help`. A handful of top-level
+files stay unpublished as maintainer runbooks and contributor notes; the list
+lives in `docs-site/src/published.mjs`, and subdirectories are never routed.
+
+Pages are written as plain Markdown so they read correctly here and on the
+site. Link to a neighbouring page as `other-page.md`; the build rewrites it to
+the routed URL. See `docs-site/README.md` for how to build, add a page, and
+publish.
+
+The index below is a reading order for the repository. The site's own
+navigation is grouped differently, in `docs-site/src/sidebar.mjs`.
 
 Praxis is a self-hosted **Linux fleet lifecycle control plane**: it owns the
 lifecycle of a Linux fleet, from host enrollment and inventory through package
