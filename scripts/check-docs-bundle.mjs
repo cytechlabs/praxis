@@ -113,19 +113,13 @@ function textOf(html) {
     .trim();
 }
 
-function main() {
+/**
+ * Rebuilds the bundled documentation into a scratch directory and compares it
+ * with the committed copy, so a non-reproducible build or a stale commit both
+ * fail. The scratch directory is always removed.
+ */
+function checkDeterminism(committed) {
   const problems = [];
-
-  if (!fs.existsSync(BUNDLED_OUT)) {
-    console.error(
-      `No bundled documentation at ${path.relative(REPO, BUNDLED_OUT)}. ` +
-        'Run: node scripts/build-docs.mjs',
-    );
-    process.exit(1);
-  }
-
-  // --- determinism, and the committed bundle is current -------------------
-  const committed = walk(BUNDLED_OUT);
   const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'praxis-docs-'));
   const rebuiltDir = path.join(scratch, 'bundled');
 
@@ -159,7 +153,146 @@ function main() {
     fs.rmSync(scratch, { recursive: true, force: true });
   }
 
-  // --- parity with the public site ----------------------------------------
+  return problems;
+}
+
+/** Compares which assets each build emitted, collapsing content hashes. */
+function checkInventoryParity(publicFiles, bundledFiles) {
+  const problems = [];
+  const publicInventory = inventory(publicFiles);
+  const bundledInventory = inventory(bundledFiles);
+
+  for (const [key, count] of publicInventory) {
+    if (PUBLIC_ONLY_FILES.has(key)) continue;
+    const other = bundledInventory.get(key) ?? 0;
+    if (other !== count) {
+      problems.push(
+        `"${key}": public site has ${count}, the bundled copy has ${other}`,
+      );
+    }
+  }
+  for (const key of bundledInventory.keys()) {
+    if (!publicInventory.has(key)) {
+      problems.push(`bundled copy has "${key}"; the public site does not`);
+    }
+  }
+
+  return problems;
+}
+
+/** Compares the rendered text of every page both builds produced. */
+function checkRenderedText(publicFiles, bundledFiles) {
+  const problems = [];
+  let comparedPages = 0;
+
+  for (const [rel, file] of publicFiles) {
+    if (!rel.endsWith('.html') || !bundledFiles.has(rel)) continue;
+    comparedPages += 1;
+
+    const publicHtml = normalise(fs.readFileSync(file, 'utf8'), '');
+    const bundledHtml = normalise(fs.readFileSync(bundledFiles.get(rel), 'utf8'), BUNDLED_BASE);
+
+    if (textOf(publicHtml) !== textOf(bundledHtml)) {
+      problems.push(`rendered text differs between the two builds at "${rel}"`);
+    }
+  }
+
+  if (comparedPages === 0) {
+    problems.push('no pages were compared; the parity check is not doing anything');
+  }
+
+  return { problems, comparedPages };
+}
+
+/** Every public page must claim a canonical URL under the public origin. */
+function checkPublicCanonicals(publicFiles) {
+  const problems = [];
+  let canonicals = 0;
+
+  for (const [rel, file] of publicFiles) {
+    if (!rel.endsWith('.html') || rel === '404.html') continue;
+    const html = fs.readFileSync(file, 'utf8');
+    const canonical = /<link rel="canonical" href="([^"]+)"/.exec(html);
+
+    if (!canonical) {
+      problems.push(`public page "${rel}" has no canonical URL`);
+      continue;
+    }
+    if (!canonical[1].startsWith(`${PUBLIC_SITE}/`) && canonical[1] !== PUBLIC_SITE) {
+      problems.push(`public page "${rel}" has canonical "${canonical[1]}", not under ${PUBLIC_SITE}`);
+    }
+    canonicals += 1;
+  }
+
+  return { problems, canonicals };
+}
+
+/** The delivery metadata belongs to the public site and nowhere else. */
+function checkPublicOnlyFiles(publicFiles, bundledFiles) {
+  const problems = [];
+
+  for (const name of PUBLIC_ONLY_FILES) {
+    if (!publicFiles.has(name)) problems.push(`the public site is missing "${name}"`);
+    if (bundledFiles.has(name)) problems.push(`the bundled copy must not contain "${name}"`);
+  }
+
+  return problems;
+}
+
+/** The sitemap must list URLs, all of them under the public origin. */
+function checkSitemap(publicFiles) {
+  const problems = [];
+  const sitemap = publicFiles.has('sitemap-0.xml')
+    ? fs.readFileSync(publicFiles.get('sitemap-0.xml'), 'utf8')
+    : '';
+  const sitemapUrls = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1]);
+
+  if (sitemapUrls.length === 0) {
+    problems.push('the public sitemap lists no URLs');
+  }
+  for (const url of sitemapUrls) {
+    if (!url.startsWith(PUBLIC_SITE)) {
+      problems.push(`the public sitemap lists "${url}", which is not under ${PUBLIC_SITE}`);
+      break;
+    }
+  }
+
+  return { problems, sitemapUrls };
+}
+
+/**
+ * The bundled copy is served from an operator's own deployment, offline.
+ * Nothing in it may reference the public origin or claim a canonical.
+ */
+function checkBundledIsSelfContained(bundledFiles) {
+  const problems = [];
+
+  for (const [rel, file] of bundledFiles) {
+    if (!rel.endsWith('.html')) continue;
+    const html = fs.readFileSync(file, 'utf8');
+    if (/<link rel="canonical"/.test(html)) {
+      problems.push(`bundled page "${rel}" carries a canonical URL`);
+    }
+    if (html.includes(PUBLIC_SITE)) {
+      problems.push(`bundled page "${rel}" references the public origin ${PUBLIC_SITE}`);
+    }
+  }
+
+  return problems;
+}
+
+function main() {
+  if (!fs.existsSync(BUNDLED_OUT)) {
+    console.error(
+      `No bundled documentation at ${path.relative(REPO, BUNDLED_OUT)}. ` +
+        'Run: node scripts/build-docs.mjs',
+    );
+    process.exit(1);
+  }
+
+  const committed = walk(BUNDLED_OUT);
+  const problems = checkDeterminism(committed);
+
   if (!fs.existsSync(PUBLIC_OUT)) {
     problems.push(
       `No public build at ${path.relative(REPO, PUBLIC_OUT)}. Run: node scripts/build-docs.mjs --public`,
@@ -168,97 +301,26 @@ function main() {
     const publicFiles = walk(PUBLIC_OUT);
     const bundledFiles = walk(BUNDLED_OUT);
 
-    const publicInventory = inventory(publicFiles);
-    const bundledInventory = inventory(bundledFiles);
+    problems.push(...checkInventoryParity(publicFiles, bundledFiles));
 
-    for (const [key, count] of publicInventory) {
-      if (PUBLIC_ONLY_FILES.has(key)) continue;
-      const other = bundledInventory.get(key) ?? 0;
-      if (other !== count) {
-        problems.push(
-          `"${key}": public site has ${count}, the bundled copy has ${other}`,
-        );
-      }
-    }
-    for (const key of bundledInventory.keys()) {
-      if (!publicInventory.has(key)) {
-        problems.push(`bundled copy has "${key}"; the public site does not`);
-      }
-    }
+    const rendered = checkRenderedText(publicFiles, bundledFiles);
+    problems.push(...rendered.problems);
 
-    let comparedPages = 0;
-    for (const [rel, file] of publicFiles) {
-      if (!rel.endsWith('.html') || !bundledFiles.has(rel)) continue;
-      comparedPages += 1;
+    const canonical = checkPublicCanonicals(publicFiles);
+    problems.push(...canonical.problems);
 
-      const a = normalise(fs.readFileSync(file, 'utf8'), '');
-      const b = normalise(fs.readFileSync(bundledFiles.get(rel), 'utf8'), BUNDLED_BASE);
+    problems.push(...checkPublicOnlyFiles(publicFiles, bundledFiles));
 
-      if (textOf(a) !== textOf(b)) {
-        problems.push(`rendered text differs between the two builds at "${rel}"`);
-      }
-    }
+    const sitemap = checkSitemap(publicFiles);
+    problems.push(...sitemap.problems);
 
-    if (comparedPages === 0) {
-      problems.push('no pages were compared; the parity check is not doing anything');
-    }
-
-    // --- delivery metadata is public-only ---------------------------------
-    let canonicals = 0;
-
-    for (const [rel, file] of publicFiles) {
-      if (!rel.endsWith('.html') || rel === '404.html') continue;
-      const html = fs.readFileSync(file, 'utf8');
-      const canonical = /<link rel="canonical" href="([^"]+)"/.exec(html);
-
-      if (!canonical) {
-        problems.push(`public page "${rel}" has no canonical URL`);
-        continue;
-      }
-      if (!canonical[1].startsWith(`${PUBLIC_SITE}/`) && canonical[1] !== PUBLIC_SITE) {
-        problems.push(`public page "${rel}" has canonical "${canonical[1]}", not under ${PUBLIC_SITE}`);
-      }
-      canonicals += 1;
-    }
-
-    for (const name of PUBLIC_ONLY_FILES) {
-      if (!publicFiles.has(name)) problems.push(`the public site is missing "${name}"`);
-      if (bundledFiles.has(name)) problems.push(`the bundled copy must not contain "${name}"`);
-    }
-
-    const sitemap = publicFiles.has('sitemap-0.xml')
-      ? fs.readFileSync(publicFiles.get('sitemap-0.xml'), 'utf8')
-      : '';
-    const sitemapUrls = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
-
-    if (sitemapUrls.length === 0) {
-      problems.push('the public sitemap lists no URLs');
-    }
-    for (const url of sitemapUrls) {
-      if (!url.startsWith(PUBLIC_SITE)) {
-        problems.push(`the public sitemap lists "${url}", which is not under ${PUBLIC_SITE}`);
-        break;
-      }
-    }
-
-    // The bundled copy is served from an operator's own deployment, offline.
-    // Nothing in it may reference the public origin or claim a canonical.
-    for (const [rel, file] of bundledFiles) {
-      if (!rel.endsWith('.html')) continue;
-      const html = fs.readFileSync(file, 'utf8');
-      if (/<link rel="canonical"/.test(html)) {
-        problems.push(`bundled page "${rel}" carries a canonical URL`);
-      }
-      if (html.includes(PUBLIC_SITE)) {
-        problems.push(`bundled page "${rel}" references the public origin ${PUBLIC_SITE}`);
-      }
-    }
+    problems.push(...checkBundledIsSelfContained(bundledFiles));
 
     if (problems.length === 0) {
       console.log(
         `Bundled documentation OK: ${committed.size} files reproduce byte for byte, ` +
-          `${comparedPages} pages match the public site, ` +
-          `${canonicals} public canonicals and ${sitemapUrls.length} sitemap URLs use ${PUBLIC_SITE}, ` +
+          `${rendered.comparedPages} pages match the public site, ` +
+          `${canonical.canonicals} public canonicals and ${sitemap.sitemapUrls.length} sitemap URLs use ${PUBLIC_SITE}, ` +
           'and the bundled copy carries neither.',
       );
     }

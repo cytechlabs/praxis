@@ -80,7 +80,7 @@ function interleave(pages) {
  * repository root where this script lives, so it is loaded from there through
  * the entry point that package declares.
  */
-async function loadPagefind() {
+function loadPagefind() {
   const dir = path.join(REPO, 'docs-site', 'node_modules', 'pagefind');
   const manifest = JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf8'));
   const entry = manifest.exports?.['.']?.import ?? manifest.main;

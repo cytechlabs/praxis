@@ -49,9 +49,21 @@ function matches(source: string, url: string): boolean {
   return pathToRegexp(source).test(url);
 }
 
+/**
+ * The header rules the documentation mount point depends on. A missing hook is
+ * a configuration failure, not an empty rule set, so it fails loudly here.
+ */
+async function headerRules() {
+  const { headers } = nextConfig;
+  if (!headers) {
+    throw new Error('next.config.ts declares no headers');
+  }
+  return headers();
+}
+
 /** Every CSP a URL would be sent, in rule order. */
 async function policiesFor(url: string): Promise<string[]> {
-  const rules = await nextConfig.headers!();
+  const rules = await headerRules();
   return rules
     .filter((rule) => matches(rule.source, url))
     .flatMap((rule) =>
@@ -100,7 +112,7 @@ describe('documentation content security policy', () => {
   });
 
   it('keeps the shared security headers on both rules', async () => {
-    const rules = await nextConfig.headers!();
+    const rules = await headerRules();
     for (const rule of rules) {
       const keys = rule.headers.map((header) => header.key);
       expect(keys).toContain('X-Content-Type-Options');

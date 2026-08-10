@@ -41,12 +41,21 @@ const MIGRATED_SLUGS = [
   'reports-and-schedules',
 ];
 
+/**
+ * The rewrite rules the documentation mount point depends on. A missing hook
+ * is a configuration failure, not an empty rule set, so it fails loudly here.
+ */
 async function rewriteRules() {
-  const rewrites = await nextConfig.rewrites!();
-  if (Array.isArray(rewrites)) {
+  const { rewrites } = nextConfig;
+  if (!rewrites) {
+    throw new Error('next.config.ts declares no rewrites');
+  }
+
+  const rules = await rewrites();
+  if (Array.isArray(rules)) {
     throw new Error('expected the object form of rewrites');
   }
-  return rewrites;
+  return rules;
 }
 
 /**
@@ -124,7 +133,11 @@ describe('bundled documentation', () => {
 
   it('leaves the backend proxy rewrites in place', async () => {
     const { afterFiles } = await rewriteRules();
-    const sources = afterFiles!.map((rule) => rule.source);
+    if (!afterFiles) {
+      throw new Error('next.config.ts declares no afterFiles rewrites');
+    }
+
+    const sources = afterFiles.map((rule) => rule.source);
     expect(sources).toContain('/api/backend/:path*');
     expect(sources).toContain('/openapi.json');
   });

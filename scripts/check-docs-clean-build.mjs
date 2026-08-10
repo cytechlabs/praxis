@@ -65,7 +65,7 @@ function main() {
       for (const slug of missing) {
         console.error(
           `  "${slug}" is in the reviewed inventory but a clean build does not produce it. ` +
-            'If docs/' + slug + '.md exists only on this machine, it is not part of the site.',
+            `If docs/${slug}.md exists only on this machine, it is not part of the site.`,
         );
       }
       for (const slug of unexpected) {
