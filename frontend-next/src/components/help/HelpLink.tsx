@@ -11,7 +11,7 @@ interface HelpLinkProps {
 
 /**
  * (?) icon placed in page headers that deep-links to the relevant help
- * guide. Opens in the same tab by default. Use like:
+ * guide in a new tab. Use like:
  *
  *   <PageHeader title="Packages" action={<HelpLink slug="packages" />} />
  */
@@ -19,6 +19,8 @@ const HelpLink: React.FC<HelpLinkProps> = ({ slug, label = 'Help', className = '
   return (
     <Link
       href={`/help/${slug}`}
+      target="_blank"
+      rel="noopener noreferrer"
       aria-label={label}
       title={label}
       className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-content-subtle hover:text-red-400 hover:bg-red-500/10 transition-colors ${className}`}

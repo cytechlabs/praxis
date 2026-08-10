@@ -99,7 +99,12 @@ const StatusBar: React.FC<StatusBarProps> = ({ onOpenPalette }) => {
           <Settings size={11} />
           Settings
         </Link>
-        <Link href="/help" className="hover:text-content transition-colors flex items-center gap-1">
+        <Link
+          href="/help"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:text-content transition-colors flex items-center gap-1"
+        >
           <HelpCircle size={11} />
           Help
         </Link>
