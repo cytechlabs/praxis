@@ -3,8 +3,6 @@
   <img src="docs/assets/readme/wordmark-light.svg" alt="Praxis" width="260">
 </picture>
 
-# Praxis
-
 [![CI](https://github.com/cytechlabs/praxis/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/cytechlabs/praxis/actions/workflows/ci.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
