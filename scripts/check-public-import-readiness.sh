@@ -20,7 +20,7 @@
 #
 # Scope note: code, migrations, tests, and workflow YAML may retain issue-tracker
 # references (e.g. `PRA-`, `pra158` in filenames, "see design notes") as ordinary
-# engineering history — see docs/public-import-checklist.md for the full
+# engineering history — see docs/maintainers/public-import-checklist.md for the
 # classification. This checker gates the *narrative public docs* and the
 # hard private-leak markers, not every code comment.
 #
@@ -34,7 +34,7 @@ ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "${ROOT}"
 
 SELF="scripts/check-public-import-readiness.sh"
-CHECKLIST="docs/public-import-checklist.md"
+CHECKLIST="docs/maintainers/public-import-checklist.md"
 
 PASS=0
 FAIL=0
@@ -79,12 +79,15 @@ fi
 
 # --- 4. Internal-process markers must not leak -----------------------------
 printf '\nInternal-process markers\n'
-# .gitignore intentionally ignores claude-codex/; this script and the checklist
-# document the markers by name — allowlist all three. docs/dev-notes/ is a
-# tracked exclusion dropped from the exported snapshot, so its internal-history
-# tone is exempt (same carve-out as the narrative-docs check below).
+# .gitignore intentionally ignores claude-codex/; this script, the checklist,
+# and the documentation content checker all have to name the markers to screen
+# for them — allowlist those four and nothing else. docs/dev-notes/ is a tracked
+# exclusion dropped from the exported snapshot, so its internal-history tone is
+# exempt (same carve-out as the narrative-docs check below).
+CONTENT_CHECKER="scripts/check-docs-public-content.mjs"
 PROC_RE='claude-codex|ACTIVE_SLICE|READY_FOR_CODEX|READY_FOR_CLAUDE|CLAUDE_WORKING|\bCodex\b|\bClaude\b|slice handoff'
-proc="$(git grep -InE "${PROC_RE}" -- . ':!.gitignore' ':!docs/dev-notes' ":!${SELF}" ":!${CHECKLIST}" || true)"
+proc="$(git grep -InE "${PROC_RE}" -- . ':!.gitignore' ':!docs/dev-notes' ":!${SELF}" \
+    ":!${CHECKLIST}" ":!${CONTENT_CHECKER}" || true)"
 if [ -z "${proc}" ]; then
     green "no Codex/Claude/handoff-protocol markers in tracked files"
 else
@@ -99,12 +102,18 @@ printf '\nPublic narrative docs\n'
 mapfile -t NARRATIVE < <(git ls-files 'README.md' 'docs/*.md' 'agent/README.md' 'agent/packaging/README.md' \
     | grep -vE '^docs/dev-notes/' | grep -vF "${CHECKLIST}")
 doc_hits=""
+scanned=0
 for d in "${NARRATIVE[@]}"; do
+    # The index still lists a path whose file has been moved but not yet
+    # staged. There is no content there to judge, and grepping it would report
+    # a missing file rather than a policy problem.
+    [ -f "${d}" ] || continue
+    scanned=$((scanned + 1))
     h="$(grep -InE 'PRA-[0-9]|[Ss]lice' "${d}" || true)"
     [ -n "${h}" ] && doc_hits="${doc_hits}${d}:\n${h}\n"
 done
 if [ -z "${doc_hits}" ]; then
-    green "narrative docs clean of PRA-NNN / slice wording (${#NARRATIVE[@]} docs)"
+    green "narrative docs clean of PRA-NNN / slice wording (${scanned} docs)"
 else
     red "narrative docs still carry PRA-/slice wording:"
     printf '        %b' "${doc_hits}"

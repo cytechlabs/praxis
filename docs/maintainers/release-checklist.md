@@ -28,7 +28,7 @@ These run in CI and gate merges / publishes; keep them green.
   `golangci-lint`/`go test` + cross-compile, dev image builds, and the **Trivy
   CRITICAL** gate + CycloneDX SBOM + SARIF artifacts on the prod images. Runs on
   PRs to `main` and `release/**` and on pushes to `main` and `release/**` (see
-  [branching-model.md](branching-model.md)).
+  [branching-model.md](../contributors/branching-model.md)).
 - **Publish gate** (`.github/workflows/publish.yml`): three jobs, in order.
   `verify` resolves the release inputs, runs `check-release-readiness.sh`, and
   re-runs backend migrations + tests and frontend lint/type-check against the
@@ -54,7 +54,7 @@ settings before relying on the release line:
 - **Package visibility and Actions access**: each GHCR package is configured
   individually, once, in the GitHub UI after its first publish. Repository
   visibility does not propagate to packages. See
-  [docs/ghcr-release-operations.md](ghcr-release-operations.md).
+  [docs/maintainers/ghcr-release-operations.md](ghcr-release-operations.md).
 
 ---
 
@@ -141,8 +141,8 @@ they are verification only.
    `test-results/demo-walkthrough/` reflect the final UI — three supported demo
    hosts, an approved plan with a succeeded execution, a compliance finding, and
    a remediation request. See
-   [docs/demo-walkthrough-operator.md](demo-walkthrough-operator.md) and
-   [docs/demo-walkthrough-auditor.md](demo-walkthrough-auditor.md) for the full
+   [docs/demo-walkthrough-operator.md](../demo-walkthrough-operator.md) and
+   [docs/demo-walkthrough-auditor.md](../demo-walkthrough-auditor.md) for the full
    operator and auditor stories.
 
 ## 3. Version alignment
@@ -162,7 +162,7 @@ Package metadata versions must match the tag you are about to cut. For a
 `agent/VERSION` is the agent's source of truth: artifact names and the binary's
 embedded version both derive from it, and the release workflow refuses a tag
 that disagrees with it. The backend carries a mirror because its image does not
-ship the agent source tree. See [docs/agent-release.md](agent-release.md) for
+ship the agent source tree. See [docs/maintainers/agent-release.md](agent-release.md) for
 the full list of places a version bump touches.
 
 `scripts/check-release-readiness.sh` verifies this alignment; see step 8.
@@ -201,7 +201,7 @@ Before pushing either tag, run both release workflows once via
   release, or minting an attestation. The output is the
   `release-validation-<X.Y.Z>` run artifact.
 - **Agent Release** builds and verifies the agent artifacts without publishing,
-  signing, or contacting Sigstore. See [docs/agent-release.md](agent-release.md).
+  signing, or contacting Sigstore. See [docs/maintainers/agent-release.md](agent-release.md).
 
 - [ ] Publish dry run passed; the validation index names the expected version
       and commit.
@@ -231,7 +231,7 @@ After pushing the `agent-vX.Y.Z` tag:
 ## 6. GHCR image tag / digest verification
 
 Full operator guide, including the one-time GitHub settings and every
-verification command: [docs/ghcr-release-operations.md](ghcr-release-operations.md).
+verification command: [docs/maintainers/ghcr-release-operations.md](ghcr-release-operations.md).
 
 Confirm the published images exist and match the release record:
 
@@ -281,7 +281,7 @@ gh attestation verify oci://ghcr.io/cytechlabs/praxis-backend@sha256:<digest> \
 ## 8. Agent artifact checksum + cosign verification
 
 Download the agent artifacts from the Release and verify them exactly as an end
-user would (see [agent/packaging/README.md](../agent/packaging/README.md)):
+user would (see [agent/packaging/README.md](../../agent/packaging/README.md)):
 
 ```sh
 cosign verify-blob \
@@ -303,7 +303,7 @@ sha256sum -c checksums.txt
       `praxis-agent version --json` shows `"version": "vX.Y.Z"`, the full
       40-character `"commit"` of the tagged ref, and `"stamped": true`.
 - [ ] Install, update, rollback, and uninstall were exercised against a test
-      host per [agent/packaging/README.md](../agent/packaging/README.md).
+      host per [agent/packaging/README.md](../../agent/packaging/README.md).
       `scripts/test-agent-release-smoke.sh` covers the same lifecycle in a
       container and is the cheaper pre-tag gate.
 
@@ -346,7 +346,7 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile bundle
 - [ ] `CHANGELOG.md` known-limitations section is accurate for what shipped.
 - [ ] `docs/upgrade-notes-1-0.md` matches the actual upgrade steps and rollback
       guidance.
-- [ ] The release notes (from `docs/release-notes-template.md`) link the upgrade
+- [ ] The release notes (from `docs/maintainers/release-notes-template.md`) link the upgrade
       notes and carry the known-limitations summary.
 
 ---

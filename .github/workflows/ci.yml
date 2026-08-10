@@ -251,7 +251,7 @@ jobs:
 
       # PRA-268: block raw red-*/blue-*/#DC2626 in the foundation surfaces
       # (semantic tokens + shared primitives + shell). Feature pages are out of
-      # scope until the PRA-270+ sweeps. See docs/ui-foundation.md.
+      # scope until the PRA-270+ sweeps. See docs/design/ui-foundation.md.
       - name: Color-drift guardrail (foundation)
         run: npm run check:colors
 
@@ -289,6 +289,20 @@ jobs:
         working-directory: docs-site
         run: npm ci
 
+      # Rendering a Mermaid diagram needs a headless browser. Building the site
+      # does not: diagrams are rendered ahead of time and committed, so the
+      # public site can be built by a host that has no browser and no way to
+      # install one. This lane still renders them, to prove the committed files
+      # are what the current source produces.
+      - name: Install the diagram render browser
+        working-directory: docs-site
+        run: npx playwright install --with-deps chromium
+
+      # Geometry does not depend on the runner's fonts: rendering measures with
+      # a font from node_modules, which is what makes this comparison stable.
+      - name: Rendered diagrams match their source
+        run: node scripts/build-docs-diagrams.mjs --check
+
       - name: Content and type check (astro check)
         working-directory: docs-site
         run: npx astro check
@@ -320,6 +334,14 @@ jobs:
 
       - name: Links and anchors (bundled copy)
         run: node scripts/check-docs-links.mjs frontend-next/public/help --base /help
+
+      # A Mermaid fence that failed to render still builds a valid page; it
+      # just ships the diagram source as a code block. Nothing else notices.
+      - name: Diagrams rendered (public site)
+        run: node scripts/check-docs-diagrams.mjs docs-site/dist
+
+      - name: Diagrams rendered (bundled copy)
+        run: node scripts/check-docs-diagrams.mjs frontend-next/public/help --base /help
 
       # Pagefind encodes page ordinals into its index chunks, so indexing in
       # filesystem order produces a bundle that cannot be reproduced on a

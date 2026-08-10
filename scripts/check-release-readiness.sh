@@ -80,11 +80,11 @@ fi
 printf '\nRelease docs\n'
 for doc in \
     CHANGELOG.md \
-    docs/release-notes-template.md \
+    docs/maintainers/release-notes-template.md \
     docs/upgrade-notes-1-0.md \
-    docs/release-checklist.md \
-    docs/agent-release.md \
-    docs/ghcr-release-operations.md \
+    docs/maintainers/release-checklist.md \
+    docs/maintainers/agent-release.md \
+    docs/maintainers/ghcr-release-operations.md \
     agent/packaging/README.md \
     agent/packaging/install.sh \
     agent/packaging/uninstall.sh \

@@ -2,7 +2,7 @@
 
 The shared frontend primitives that page sweeps build on, so pages migrate
 consistently instead of inventing feature-local UI. All primitives consume the
-semantic tokens (see `docs/ui-foundation.md`) — never raw `red-*`/`blue-*`.
+semantic tokens (see `docs/design/ui-foundation.md`) — never raw `red-*`/`blue-*`.
 Import from `@/components/ui`.
 
 Live examples for every primitive, in **forced dark and forced light**, are at
@@ -92,4 +92,4 @@ Replaces hand-rolled `<table>`s. Props: `columns` (`{key, header, render?, align
 The color-drift guardrail (`npm run check:colors`) blocks raw `red-*`/`blue-*` in
 `ui/`, `layout/`, globals, and tailwind config. For an unavoidable functional
 case, append `// praxis-color-exception: <reason>` on the line (see
-`docs/ui-foundation.md`).
+`docs/design/ui-foundation.md`).

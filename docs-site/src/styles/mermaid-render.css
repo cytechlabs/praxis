@@ -1,0 +1,30 @@
+/*
+ * Fonts for the headless browser that renders Mermaid diagrams at build time.
+ *
+ * This stylesheet is never served to a reader. It is loaded into the render
+ * page only, and it exists so diagram geometry is reproducible.
+ *
+ * Mermaid sizes every node from the text it measures in that browser, and the
+ * measurement is baked into the emitted SVG. Left to the host, `arial` resolves
+ * to whatever sans-serif the machine happens to have, so the same source
+ * produced different bytes on different machines and the committed bundled copy
+ * could not be reproduced. Loading one font from a pinned package removes the
+ * host from the calculation.
+ *
+ * The same face is served to readers from `praxis.css`, out of the same package
+ * file, so a label is laid out at the width the diagram was built for. Labels
+ * live in `foreignObject` boxes that the reading browser re-flows, and a wider
+ * fallback face clips them.
+ *
+ * Only the regular weight is declared. Mermaid emits no bold text in these
+ * diagrams, and a face the two stylesheets disagree about would reintroduce the
+ * mismatch this file exists to remove.
+ */
+
+@font-face {
+  font-family: 'Arimo';
+  font-style: normal;
+  font-weight: 400;
+  src: url('../../node_modules/@fontsource/arimo/files/arimo-latin-400-normal.woff2')
+    format('woff2');
+}

@@ -4,7 +4,9 @@ import { unified } from '@astrojs/markdown-remark';
 import starlight from '@astrojs/starlight';
 
 import { deterministicPagefind } from './src/integrations/deterministic-pagefind.mjs';
+import { renderDiagrams } from './src/plugins/render-diagrams.mjs';
 import { rewriteDocLinks } from './src/plugins/rewrite-doc-links.mjs';
+import { wrapDiagrams } from './src/plugins/wrap-diagrams.mjs';
 import { sidebar } from './src/sidebar.mjs';
 
 /**
@@ -66,7 +68,13 @@ export default defineConfig({
   },
   markdown: {
     processor: unified({
-      rehypePlugins: [[rewriteDocLinks, { base: rawBase }]],
+      // Diagrams go first so a Mermaid fence becomes an SVG before the code
+      // block renderer would claim it and ship the source as highlighted text.
+      rehypePlugins: [
+        renderDiagrams,
+        wrapDiagrams,
+        [rewriteDocLinks, { base: rawBase }],
+      ],
     }),
   },
   integrations: [

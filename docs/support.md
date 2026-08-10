@@ -21,7 +21,7 @@ sessions always use SSH even on agent-enrolled hosts.
 discussion.**
 
 Use a private GitHub Security Advisory, through **Report a vulnerability** on
-the repository's Security tab, or email **security@cytechlabs.com**.
+the repository's Security tab, or email **security@praxisfleet.com**.
 
 Include the component affected, the version, how to reproduce it, and the
 impact including how an attacker might exploit it. Reports are acknowledged
@@ -88,5 +88,6 @@ fact in the report.
 ## Commercial support
 
 Enterprise arrangements above the self-serve tiers, including air-gapped
-deployments and service level commitments, are sales-assisted. See
-[editions and feature tiers](editions.md).
+deployments and service level commitments, are sales-assisted. Email
+**sales@praxisfleet.com**. See [editions and feature tiers](editions.md) for
+what each tier includes.

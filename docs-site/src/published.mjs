@@ -20,31 +20,24 @@ export const DOCS_DIR = path.resolve(
 /**
  * Top-level `docs/*.md` files that are deliberately not routed.
  *
- * Only top-level Markdown is considered at all, so subdirectories such as
- * `docs/assets/`, `docs/audits/`, and `docs/ui-review/` are excluded
- * structurally rather than by name.
+ * Only top-level Markdown is considered at all, so subdirectories are excluded
+ * structurally rather than by name. That is where documentation written for
+ * people working on the repository lives: `docs/maintainers/` for release and
+ * import runbooks, `docs/contributors/` for the branch model and the
+ * documentation boundary, and `docs/design/` for the interface reference.
+ * Anything readable by someone deploying Praxis belongs at the top level and
+ * publishes.
+ *
+ * Two top-level files are the exceptions, for reasons particular to each.
  */
 export const UNPUBLISHED = [
   // Directory index for people browsing the repository. `docs/index.md` is
   // the site's home page instead.
   'README.md',
-  // Contributor workflow and internal design reference.
-  'branching-model.md',
-  'documentation-boundaries.md',
-  'ui-foundation.md',
-  'ui-primitives.md',
   // A local working artifact that is not part of the repository. Naming it
   // here keeps the routed set identical whether or not a given checkout has
   // a copy on disk, so the site cannot build differently for two people.
   'product-overview.md',
-  // Maintainer release runbooks. The operator-facing half of the release
-  // contract, the artifact names and the verification commands, is published
-  // as `verify-release-artifacts.md`.
-  'agent-release.md',
-  'ghcr-release-operations.md',
-  'public-import-checklist.md',
-  'release-checklist.md',
-  'release-notes-template.md',
 ];
 
 /** Glob patterns for the content collection loader. */

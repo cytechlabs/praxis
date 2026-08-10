@@ -41,13 +41,35 @@
      Starlight's 3.5rem default to keep that space above and below. */
   --sl-nav-height: 4rem;
 
-  /* The same stacks praxisfleet.com uses. Both are system fonts, so there is
-     no webfont request, no layout shift as a face swaps in, and nothing the
-     offline /help copy would need to carry. */
+  /* The same stacks praxisfleet.com uses. Both are system fonts, so page text
+     costs no webfont request and shows no layout shift as a face swaps in. */
   --sl-font: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
     'Segoe UI', sans-serif;
   --sl-font-mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas,
     monospace;
+}
+
+/*
+ * The one face the site serves, and it is for diagrams only.
+ *
+ * Mermaid diagrams are rendered to SVG during the build, and every label sits
+ * in a box sized from the text as it measured then. The reading browser
+ * re-flows that text, so it has to have the same face or the labels overflow
+ * their boxes and clip. Serving the face the build measured with is what makes
+ * the diagram look the same everywhere.
+ *
+ * Vite emits the file next to the other assets and rewrites this URL for the
+ * mount point, so the offline copy at /help carries its own font and asks the
+ * network for nothing. Page text is unaffected: only the diagram stylesheet
+ * names this family.
+ */
+@font-face {
+  font-family: 'Arimo';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url('../../node_modules/@fontsource/arimo/files/arimo-latin-400-normal.woff2')
+    format('woff2');
 }
 
 .site-title img {
@@ -121,6 +143,46 @@
   height: auto;
   border: 1px solid var(--sl-color-gray-5);
   border-radius: 2px;
+}
+
+/*
+ * Rendered diagrams, wrapped by the documentation build.
+ *
+ * A diagram is as wide as it needs to be, which is wider than this column.
+ * Scaling one to fit takes its labels below a readable size, so it keeps its
+ * own size and scrolls inside the column, the same rule the wide tables above
+ * follow. The page never widens.
+ */
+.sl-markdown-content .diagram {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  margin-block: 1.5rem;
+  padding: 1rem;
+  /* The same frame screenshots get, so a diagram that continues past the edge
+     reads as a panel with more in it rather than as a broken image. The
+     scrollbar is pinned to a visible colour for the same reason. */
+  border: 1px solid var(--sl-color-gray-5);
+  border-radius: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--sl-color-gray-4) transparent;
+}
+
+.sl-markdown-content .diagram > svg {
+  display: block;
+  max-width: none;
+  height: auto;
+}
+
+/*
+ * On a phone the column is too narrow for scrolling to reveal a useful part of
+ * a diagram, so it is scaled to fit and the whole shape stays visible. It is
+ * still vector, so zooming in on it is sharp, and the prose restatement that
+ * follows every diagram is the better reading anyway at this width.
+ */
+@media (max-width: 50rem) {
+  .sl-markdown-content .diagram > svg {
+    width: 100%;
+  }
 }
 
 /* Long command lines wrap instead of introducing a horizontal scrollbar on

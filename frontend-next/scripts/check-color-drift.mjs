@@ -74,7 +74,7 @@ if (violations.length > 0) {
   console.error(
     '\n✗ PRA-268 color-drift guardrail: raw red-/blue-/#DC2626 found in foundation surfaces.\n' +
       '  Use semantic tokens instead: brand/danger (Signal Red), action (neutral primary),\n' +
-      '  link (neutral, red hover), info (neutral), success/warning. See docs/ui-foundation.md.\n' +
+      '  link (neutral, red hover), info (neutral), success/warning. See docs/design/ui-foundation.md.\n' +
       `  Add "// ${EXCEPTION}: <reason>" on the line only for an unavoidable functional case.\n`,
   );
   for (const v of violations) {

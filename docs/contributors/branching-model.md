@@ -21,7 +21,7 @@ There is **no long-lived integration branch** other than `main`.
 ## Day-to-day workflow
 
 1. Branch off `main`: `git switch -c bug/short-title main`.
-2. Commit with DCO sign-off (`git commit -s`; see [CONTRIBUTING.md](../CONTRIBUTING.md)).
+2. Commit with DCO sign-off (`git commit -s`; see [CONTRIBUTING.md](../../CONTRIBUTING.md)).
 3. Open a pull request **to `main`**. CI (`.github/workflows/ci.yml`) and DCO
    (`.github/workflows/dco.yml`) run on the PR.
 4. Merge once CI is green. `main` stays releasable at all times.
@@ -40,11 +40,11 @@ tag from it. Tags — not branches — drive the publish/agent-release workflows
 git switch main && git pull
 git switch -c release/1.0 main
 git push -u origin release/1.0
-# then tag the release commit per docs/release-checklist.md (vX.Y.Z, agent-vX.Y.Z)
+# then tag the release commit per docs/maintainers/release-checklist.md (vX.Y.Z, agent-vX.Y.Z)
 ```
 
-See [release-checklist.md](release-checklist.md) for the full release runbook and
-[public-import-checklist.md](public-import-checklist.md) for the public-repo import
+See [release-checklist.md](../maintainers/release-checklist.md) for the full release runbook and
+[public-import-checklist.md](../maintainers/public-import-checklist.md) for the public-repo import
 (import from the tagged release commit on `main` / the `release/X.Y` branch).
 
 ## Patch releases & backports

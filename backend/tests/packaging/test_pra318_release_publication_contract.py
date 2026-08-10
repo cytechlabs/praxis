@@ -34,7 +34,7 @@ ABSENCE = REPO_ROOT / "scripts" / "check-release-absence.sh"
 TAG_COMMIT = REPO_ROOT / "scripts" / "check-tag-commit.sh"
 PROMOTE = REPO_ROOT / "scripts" / "promote-release-images.sh"
 READINESS = REPO_ROOT / "scripts" / "check-release-readiness.sh"
-GHCR_RUNBOOK = REPO_ROOT / "docs" / "ghcr-release-operations.md"
+GHCR_RUNBOOK = REPO_ROOT / "docs" / "maintainers" / "ghcr-release-operations.md"
 
 REGISTRY = "ghcr.io"
 OWNER = "cytechlabs"
@@ -431,7 +431,7 @@ def test_readiness_check_requires_the_release_publication_surface():
     """The readiness gate runs before a tag is cut; it has to know about the
     files the publish path depends on."""
     text = READINESS.read_text(encoding="utf-8")
-    assert "docs/ghcr-release-operations.md" in text
+    assert "docs/maintainers/ghcr-release-operations.md" in text
     assert "scripts/build_release_index.py" in text
     assert "scripts/check-release-absence.sh" in text
     assert "scripts/check-tag-commit.sh" in text

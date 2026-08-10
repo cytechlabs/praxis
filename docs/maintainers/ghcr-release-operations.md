@@ -9,7 +9,7 @@ to both to be misleading, so the differences are called out where they matter
 rather than left to be discovered during a release.
 
 The full release runbook, including the application gates and the agent, is
-[docs/release-checklist.md](release-checklist.md).
+[docs/maintainers/release-checklist.md](release-checklist.md).
 
 ---
 
@@ -52,7 +52,7 @@ plan, not as a cleanup.
 
 The fleet agent is **not** a container. It ships as signed tarballs on a GitHub
 Release under the `agent-vX.Y.Z` tag and never appears in GHCR. See
-[docs/agent-release.md](agent-release.md).
+[docs/maintainers/agent-release.md](agent-release.md).
 
 ### Where the packages appear in GitHub
 
@@ -218,7 +218,7 @@ and the one that is promoted.
 The release index is the whole-product record, so the application release
 requires the matching agent release to exist already:
 
-1. Cut and verify `agent-v<X.Y.Z>` (see [docs/agent-release.md](agent-release.md)).
+1. Cut and verify `agent-v<X.Y.Z>` (see [docs/maintainers/agent-release.md](agent-release.md)).
 2. Then cut `v<X.Y.Z>` from the same commit.
 
 Publishing the application first fails deliberately, with a message telling you

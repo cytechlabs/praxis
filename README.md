@@ -1,3 +1,8 @@
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/wordmark-dark.svg">
+  <img src="docs/assets/readme/wordmark-light.svg" alt="Praxis" width="260">
+</picture>
+
 # Praxis
 
 [![CI](https://github.com/cytechlabs/praxis/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/cytechlabs/praxis/actions/workflows/ci.yml)
@@ -113,8 +118,9 @@ without it the stack is deliberately unreachable from a browser. Omit it only
 when you front the stack with your own reverse proxy.
 
 Continue with [install](docs/install.md), then [first run](docs/first-run.md) and
-[enroll hosts](docs/enroll-hosts.md). To build from source instead of pulling,
-add `--build`; that is the contributor path rather than the evaluator one.
+[enroll hosts](docs/enroll-hosts.md). [Install](docs/install.md) also covers
+building the same stack from source with `--build`, which is the development
+path rather than the deployment one.
 
 ### Verify what you are about to run
 

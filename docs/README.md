@@ -2,9 +2,19 @@
 
 This directory is the source of the Praxis documentation site. Every top-level
 `*.md` file here is published, both on the public documentation site and as the
-offline copy bundled into the application at `/help`. A handful of top-level
-files stay unpublished as maintainer runbooks and contributor notes; the list
-lives in `docs-site/src/published.mjs`, and subdirectories are never routed.
+offline copy bundled into the application at `/help`. It is written for people
+deploying and operating Praxis.
+
+Documentation for people working on the repository lives in subdirectories,
+which are never routed:
+
+- `maintainers/` - cutting a release, publishing images, importing the public
+  repository.
+- `contributors/` - the branch model, and what belongs in a public document.
+- `design/` - interface tokens and primitives.
+
+`docs-site/src/published.mjs` names the two top-level files that also stay
+unpublished.
 
 Pages are written as plain Markdown so they read correctly here and on the
 site. Link to a neighbouring page as `other-page.md`; the build rewrites it to

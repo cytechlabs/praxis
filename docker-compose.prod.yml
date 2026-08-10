@@ -20,7 +20,7 @@
 #       --profile bundled --profile proxy up -d
 #   PRAXIS_VERSION drives every released image tag below. It defaults to :latest
 #   only as a convenience for local iteration; release deploys MUST pin an exact
-#   version (see docs/release-checklist.md) — never deploy an unpinned :latest.
+#   version (see docs/maintainers/release-checklist.md) — never deploy an unpinned :latest.
 #
 # Browser ingress requires --profile proxy: it starts Caddy (the SOLE public
 # ingress). Without it, backend/frontend publish no host ports and the

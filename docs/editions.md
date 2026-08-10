@@ -51,8 +51,9 @@ Everything needed to operate a fleet, including:
 
 The paid edition is about **scale plus governance**. The 1.0 self-serve tiers are
 Pro (50 hosts), Team (200 hosts), and Business (500 hosts). Enterprise is
-sales-assisted for fleets above 500 hosts, air-gapped deployments, or SLA needs;
-Enterprise licenses still carry an explicit negotiated host cap.
+sales-assisted for fleets above 500 hosts, air-gapped deployments, or SLA needs
+(sales@praxisfleet.com); Enterprise licenses still carry an explicit negotiated
+host cap.
 
 | Capability | Entitlement key |
 |---|---|
