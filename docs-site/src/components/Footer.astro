@@ -1,13 +1,37 @@
 ---
 import Pagination from '@astrojs/starlight/components/Pagination.astro';
+
+// Starlight's default footer links back to a source repository page per
+// document. The public site and the bundled copy have different notions of
+// "edit this page", so the footer is replaced with a static, mount-independent
+// one.
+//
+// The support link has to resolve from both mount points, so it is built from
+// the configured base the same way Starlight's own pathWithBase does: strip any
+// trailing slash, then join. That yields "/support" on the public site and
+// "/help/support" in the bundled copy. It is inlined rather than imported
+// because starlight does not export its utils/ directory.
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const supportHref = `${base}/support`;
+
+const PRODUCT_SITE = 'https://praxisfleet.com';
+const REPOSITORY = 'https://github.com/cytechlabs/praxis';
 ---
 
 <Pagination />
 
 <footer class="praxis-docs-footer">
-  <p>
-    Praxis documentation. This page is part of a single documentation set that
-    is published on the web and bundled with the application for offline use.
+  <p class="praxis-docs-footer-brand">
+    <a href={PRODUCT_SITE}>Praxis by Cytech Labs</a>
+  </p>
+  <nav class="praxis-docs-footer-links" aria-label="Documentation footer">
+    <a href={supportHref}>Support</a>
+    <a href={REPOSITORY}>Source repository</a>
+  </nav>
+  <p class="praxis-docs-footer-note">
+    This page is part of a single documentation set that is published on the web
+    and bundled with the application for offline use. Links to praxisfleet.com
+    and GitHub need an internet connection.
   </p>
 </footer>
 
@@ -22,5 +46,35 @@ import Pagination from '@astrojs/starlight/components/Pagination.astro';
 
   .praxis-docs-footer p {
     margin: 0;
+  }
+
+  .praxis-docs-footer-brand a {
+    color: var(--sl-color-white);
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .praxis-docs-footer-brand a:hover {
+    color: var(--sl-color-accent-high);
+  }
+
+  .praxis-docs-footer-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem 1rem;
+    margin-top: 0.375rem;
+  }
+
+  .praxis-docs-footer-links a {
+    color: var(--sl-color-accent-high);
+  }
+
+  .praxis-docs-footer-note {
+    margin-top: 0.625rem;
+    /* Offline readers need to know which of the above leave the machine, and
+       one note is quieter than decorating every link with an icon. It stays on
+       gray-3, the palette's dimmest WCAG-AA-safe value on this background;
+       gray-4 would drop it to roughly 2:1. */
+    max-width: 42rem;
   }
 </style>

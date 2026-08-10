@@ -14,15 +14,9 @@ unless you set `ADMIN_USERNAME`. It is not `admin`, because per-user fleet
 access maps a Praxis username onto a managed Linux login and `admin` commonly
 collides with an existing account or group on a host.
 
-If you did not set `ADMIN_PASSWORD`, the generated password is written to the
-backend log once at first boot:
-
-```sh
-docker compose -f docker-compose.yml -f docker-compose.prod.yml \
-    logs backend | grep -i 'bootstrap'
-```
-
-Sign in at your `PUBLIC_BASE_URL`.
+Sign in at your `PUBLIC_BASE_URL` with the `ADMIN_PASSWORD` you configured
+before first boot. A fresh production deployment fails closed when that value
+is empty; Praxis does not generate the password or write it to the backend log.
 
 ## Rotate the bootstrap password immediately
 

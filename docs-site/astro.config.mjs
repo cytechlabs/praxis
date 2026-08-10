@@ -74,11 +74,26 @@ export default defineConfig({
       title: 'Praxis',
       description:
         'Operator documentation for Praxis, a self-hosted Linux fleet lifecycle control plane.',
+      // The full wordmark, matching the praxisfleet.com header. The asset kit's
+      // icon form is the fallback for places the wordmark will not fit; the
+      // header has room at every width down to 390px, so it carries the
+      // wordmark and drops the adjacent title text that would duplicate it.
       logo: {
-        src: './src/assets/praxis-mark.svg',
+        src: './src/assets/praxis-wordmark-dark.svg',
         alt: 'Praxis',
-        replacesTitle: false,
+        replacesTitle: true,
       },
+      // Route back to the product site. Rendered as the usual header icon link
+      // rather than a text nav item, which keeps the 390px header uncrowded.
+      // The repository link lives in the footer instead, so the header carries
+      // exactly one outbound destination.
+      social: [
+        {
+          icon: 'external',
+          label: 'praxisfleet.com',
+          href: 'https://praxisfleet.com',
+        },
+      ],
       favicon: '/favicon.svg',
       // Starlight's own indexer adds pages in filesystem order, which is not
       // stable across machines and makes the emitted index unreproducible.
@@ -101,6 +116,10 @@ export default defineConfig({
         // notions of "edit this page", so the footer is replaced with a
         // static, mount-independent one.
         Footer: './src/components/Footer.astro',
+        // praxisfleet.com is dark-only, so the docs are too: these two pin the
+        // theme to dark and remove the light/dark picker. See praxis.css.
+        ThemeProvider: './src/components/ThemeProvider.astro',
+        ThemeSelect: './src/components/ThemeSelect.astro',
       },
       sidebar,
     }),
