@@ -7,4 +7,4 @@
  * the product version from anywhere else (the frontend `package.json` version is
  * a separate, unrelated package version).
  */
-export const PRODUCT_VERSION = '0.9.1';
+export const PRODUCT_VERSION = '0.9.9';
