@@ -127,6 +127,21 @@ services:
     # recovery material stays Vault-container-only.
     volumes: !override
       - vault_data:/vault/data:ro
+    # The broker shares the backend image, whose image-level healthcheck probes
+    # the backend app on port 8000. Override it here: the broker serves its
+    # private internal API on 8444, and accepting a TCP connection proves that
+    # its event loop and internal listener are ready without requiring a
+    # registered agent or exposing an unauthenticated health endpoint.
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import socket; s = socket.create_connection(('127.0.0.1', 8444), 4); s.close()"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
     restart: unless-stopped
     <<: *prod-logging
 
