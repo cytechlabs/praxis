@@ -14,17 +14,20 @@ const ADMIN_PASS = process.env.E2E_PASSWORD ?? "admin";
 
 // ── Helpers ─────────────────────────────────────────────────────────────
 
-/**
- * Open a top-nav dropdown group by its button label, then click an item.
- * Post-PRA-122 the sidebar accordion was replaced with a top-nav dropdown.
- */
-async function navigateViaDropdown(
+/** Open a workspace drawer and select one of its destinations. */
+async function navigateViaWorkspace(
   page: import("@playwright/test").Page,
-  groupLabel: string,
+  workspaceLabel: string,
   itemLabel: string,
 ) {
-  await page.getByRole("button", { name: groupLabel, exact: true }).click();
-  await page.getByRole("link", { name: itemLabel, exact: true }).click();
+  await page
+    .getByRole("navigation", { name: "Workspaces" })
+    .getByRole("button", { name: workspaceLabel, exact: true })
+    .click();
+  await page
+    .getByRole("group", { name: `${workspaceLabel} navigation` })
+    .getByRole("link", { name: itemLabel, exact: true })
+    .click();
 }
 
 // ── Auth (no storageState — tests against unauthenticated browser) ──────
@@ -42,9 +45,9 @@ test.describe("Authentication", () => {
     await page.fill("#username", ADMIN_USER);
     await page.fill("#password", "wrongpassword");
     await page.click('button[type="submit"]');
-    await expect(page.locator(".error, [role='alert']")).toBeVisible({
-      timeout: 5_000,
-    });
+    await expect(
+      page.getByText(/incorrect|invalid|login failed|credentials/i).first(),
+    ).toBeVisible({ timeout: 5_000 });
     await expect(page).toHaveURL(/\/login/);
   });
 
@@ -53,7 +56,12 @@ test.describe("Authentication", () => {
     await page.fill("#username", ADMIN_USER);
     await page.fill("#password", ADMIN_PASS);
     await page.click('button[type="submit"]');
-    await expect(page.locator("h1")).toContainText("Dashboard", {
+    await expect(
+      page.getByRole("heading", {
+        name: "Fleet Operations Dashboard",
+        exact: true,
+      }),
+    ).toBeVisible({
       timeout: 10_000,
     });
   });
@@ -61,17 +69,17 @@ test.describe("Authentication", () => {
 
 // ── Navigation (pre-authenticated via storageState) ─────────────────────
 
-test.describe("Sidebar navigation", () => {
+test.describe("Workspace navigation", () => {
   test("navigate to Fleet Dashboard", async ({ page }) => {
     await page.goto("/");
-    await navigateViaDropdown(page, "Fleet", "Dashboard");
+    await navigateViaWorkspace(page, "Operate", "Dashboard");
     await page.waitForURL("**/fleet-dashboard", { timeout: 10_000 });
     await expect(page.locator("#__next")).toBeVisible();
   });
 
   test("navigate to All Systems", async ({ page }) => {
     await page.goto("/");
-    await navigateViaDropdown(page, "Fleet", "All Systems");
+    await navigateViaWorkspace(page, "Operate", "All Systems");
     await page.waitForURL("**/system-management/all-systems", {
       timeout: 10_000,
     });
@@ -80,23 +88,23 @@ test.describe("Sidebar navigation", () => {
 
   test("navigate to All Credentials", async ({ page }) => {
     await page.goto("/");
-    await navigateViaDropdown(page, "Security", "All Credentials");
+    await navigateViaWorkspace(page, "Secure", "All Credentials");
     await page.waitForURL("**/credentials/all", { timeout: 10_000 });
     await expect(page.locator("#__next")).toBeVisible();
   });
 
   test("navigate to Scheduled Jobs", async ({ page }) => {
     await page.goto("/");
-    await navigateViaDropdown(page, "Jobs", "Scheduled Jobs");
+    await navigateViaWorkspace(page, "Automate", "Scheduled Jobs");
     await page.waitForURL("**/job-scheduling/scheduled-jobs", {
       timeout: 10_000,
     });
     await expect(page.locator("#__next")).toBeVisible();
   });
 
-  test("navigate to Audit Logs", async ({ page }) => {
+  test("navigate to Config Audit", async ({ page }) => {
     await page.goto("/");
-    await navigateViaDropdown(page, "Monitoring", "Audit Logs");
+    await navigateViaWorkspace(page, "Report", "Config Audit");
     await page.waitForURL("**/monitoring-reporting/audit-logs", {
       timeout: 10_000,
     });
@@ -165,10 +173,20 @@ test.describe("System pages", () => {
     await expect(page.locator('select[name="credentials_id"]')).toBeVisible();
   });
 
-  test("all-systems page lists existing systems", async ({ page }) => {
+  test("all-systems page renders its inventory state", async ({ page }) => {
     await page.goto("/system-management/all-systems");
     await page.waitForLoadState("networkidle");
-    await expect(page.locator("table, [class*='system']")).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "All Systems", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.locator("table").or(
+        page.getByRole("heading", {
+          name: "No systems registered yet",
+          exact: true,
+        }),
+      ),
+    ).toBeVisible();
   });
 });
 
