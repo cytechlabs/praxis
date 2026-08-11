@@ -13,7 +13,6 @@ def seed_data():
     if not db.query(Group).filter(Group.name == "All Systems").first():
         db.add(
             Group(
-                id=1,
                 name="All Systems",
                 description="Default group containing all systems",
             )
