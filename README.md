@@ -40,6 +40,10 @@ it does not do, so you can plan complementary controls.
 
 ## What it looks like
 
+[![Watch the Praxis fleet operations product tour](docs/assets/praxis-demo.webp)](docs/assets/praxis-demo.mp4)
+
+[Watch the product tour (MP4, 4.6 MB)](docs/assets/praxis-demo.mp4)
+
 ![Fleet operations dashboard showing three healthy hosts, patch compliance, and distribution lifecycle buckets](docs/assets/readme/fleet-dashboard.png)
 
 ![Host inventory listing three demonstration hosts with distribution, group, transport, and registration date](docs/assets/readme/all-systems.png)
