@@ -53,7 +53,7 @@ function matches(source: string, url: string): boolean {
  * The header rules the documentation mount point depends on. A missing hook is
  * a configuration failure, not an empty rule set, so it fails loudly here.
  */
-async function headerRules() {
+function headerRules() {
   const { headers } = nextConfig;
   if (!headers) {
     throw new Error('next.config.ts declares no headers');

@@ -46,8 +46,12 @@ npm run dev              # local preview at /
 npm run build            # both outputs
 npm run build:public     # public site only
 npm run build:bundled    # regenerate the committed bundled copy
+npm run diagrams         # re-render the committed diagrams
 npm run verify           # everything CI runs
 ```
+
+`npm run verify` re-renders the diagrams to check them, so it needs the browser
+described under [Diagrams](#diagrams). Nothing else here does.
 
 After changing anything in `docs/`, regenerate and commit the bundled copy:
 
@@ -72,9 +76,54 @@ Pages live flat in `docs/` on purpose, so a documentation URL never changes
 because a page was regrouped. Slugs must not contain a dot; the application's
 `/help` rewrite treats a dot as an asset.
 
-Only top-level `docs/*.md` is published. Subdirectories are never routed, and
-`src/published.mjs` names the top-level files that stay unpublished, which is
-where maintainer runbooks live.
+## What publishes
+
+Only top-level `docs/*.md` is published. Subdirectories are never routed, so
+that is where documentation for people working on the repository goes:
+
+| Directory | Reader |
+|---|---|
+| `docs/` | anyone deploying or operating Praxis |
+| `docs/maintainers/` | whoever cuts a release or imports the public repository |
+| `docs/contributors/` | whoever works on the source |
+| `docs/design/` | whoever works on the interface |
+
+A page cannot link across that line: the build fails on a link from a published
+page to one that does not publish, rather than emitting a dead URL.
+
+`src/published.mjs` names the two top-level files that stay unpublished, and
+`scripts/check-docs-public-content.mjs` re-checks the resulting route set
+against `published-routes.json`.
+
+## Diagrams
+
+A ` ```mermaid ` fence becomes an inline SVG, so the site and the offline copy
+both show a diagram with no client-side script and no network request. The
+source stays plain Mermaid in `docs/`, which is what GitHub renders.
+
+**Rendering is not part of building the site.** Mermaid can only be rendered by
+a headless browser, and the site is published from a host that offers no browser
+and no way to install the libraries one needs. So diagrams are rendered ahead of
+time into `diagrams/`, which is committed, and a build only reads them. Building
+the site needs nothing but Node.
+
+Each file there is named for the hash of the diagram source it came from, so an
+edited diagram cannot keep its old picture: the name stops matching and the
+build fails until the directory is regenerated.
+
+Rendering, and the freshness gate CI runs, both need the browser:
+
+```sh
+cd docs-site
+npx playwright install chromium          # once per checkout
+
+npm run diagrams                         # after editing a diagram
+node ../scripts/build-docs-diagrams.mjs --check   # what CI asserts
+```
+
+Diagram geometry is measured in that browser, so rendering pins the font it
+measures with and the site serves readers the same face. `src/mermaid.mjs` and
+`src/styles/mermaid-render.css` cover why.
 
 ## Publishing to Cloudflare Pages
 
@@ -94,7 +143,10 @@ Create a Pages project connected to this repository, with:
 | Node version | `22`, via a `NODE_VERSION` environment variable |
 
 The build needs no secrets and makes no network calls beyond installing
-dependencies.
+dependencies. It also needs no browser, which is why diagrams are rendered ahead
+of time: the Pages build image ships no Chromium, no headless-browser libraries,
+and no way to install system packages, so a build that had to launch one could
+not be relied on to publish. The build command above is the whole prerequisite.
 
 ### Custom domain
 

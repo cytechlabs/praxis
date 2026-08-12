@@ -1,24 +1,47 @@
 ---
 title: Install Praxis
-description: Deploy the Praxis control plane with Docker Compose, from pulling images to a running stack.
+description: Deploy the Praxis control plane with Docker Compose, either from the published images or from source.
 ---
 
 This installs the control plane. It does not enroll any hosts; that is
 [enroll hosts](enroll-hosts.md), after [first run](first-run.md).
 
-Check [requirements](requirements.md) first.
+Check [requirements](requirements.md) first. Most failed installs are a missing
+prerequisite rather than a bad configuration.
+
+## Two ways to install
+
+| Path | Choose it when | What it runs |
+|---|---|---|
+| **Published images** (recommended) | You are deploying Praxis to use it. | The exact images the project built and signed for a release tag. |
+| **From source** | You are developing Praxis or reviewing a change. | The same images, built from your working tree. |
+
+Both paths use the same prerequisites, the same `.env`, the same Compose files,
+the same startup checks, and the same health checks. They differ in one command,
+under [start the stack](#start-the-stack). Only the published-image path can be
+verified against the project's attestations, which is why it is the one to
+deploy.
 
 ## Get the deployment files
 
 The container images are published to a registry, but the Compose files and the
-environment template live in the source repository. Clone it at the release tag
-you intend to run so the compose files match the images:
+environment template live in the source repository, so both paths start with a
+clone:
 
 ```sh
 git clone https://github.com/cytechlabs/praxis.git
 cd praxis
+```
+
+On the published-image path, check out the release you intend to run. The
+Compose files change between releases, so a checkout that does not match the
+images can start a stack the release was never tested as:
+
+```sh
 git checkout v1.0.0
 ```
+
+On the source path, stay on the branch you are working on.
 
 ## Configure the environment
 
@@ -38,7 +61,7 @@ At minimum, set:
 | `PUBLIC_BASE_URL` | The external URL browsers use, for example `https://praxis.example.com`. Redirect flows and single sign-on depend on it. |
 | `PRAXIS_DOMAIN` | The hostname Caddy answers on. |
 | `PRAXIS_TLS_MODE` | `internal`, `acme`, or `byo`. See TLS below. |
-| `PRAXIS_VERSION` | The release to run, for example `1.0.0`. Pin it; do not run `latest` in production. |
+| `PRAXIS_VERSION` | The release to run, for example `1.0.0`. Pin it; do not run `latest` in production. A source build overrides the image, so this only labels what you built. |
 
 Keep `.env` out of version control and readable only by the account that runs
 the stack. `ENVIRONMENT=production` enables the startup hardening checks; do not
@@ -68,6 +91,14 @@ Both shapes, and the constraints on each, are covered in
 
 ## Start the stack
 
+`--profile bundled` runs the database and the secrets service inside the stack.
+`--profile proxy` starts Caddy, which is the only public ingress: without it the
+backend and frontend publish no host ports and the stack is deliberately
+unreachable from a browser. Omit `proxy` only when you are fronting the stack
+with your own reverse proxy on the Docker network.
+
+### Published images
+
 Pull the pinned images, then bring the stack up:
 
 ```sh
@@ -78,13 +109,22 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml \
     --profile bundled --profile proxy up -d
 ```
 
-`--profile proxy` starts Caddy, which is the only public ingress. Without it the
-backend and frontend publish no host ports and the stack is deliberately
-unreachable from a browser. Omit it only when you are fronting the stack with
-your own reverse proxy on the Docker network.
+### From source
 
-To build locally instead of pulling, add `--build`. Disconnected sites should
-follow [airgap export and import](airgap.md) rather than building on the
+`--build` replaces the pull. It rebuilds the production images from the working
+tree using the same Dockerfiles, entrypoints, topology, volumes, health checks,
+and environment validation the published images use, so what you get is the
+release shape rather than a development mode:
+
+```sh
+docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+    --profile bundled --profile proxy up -d --build
+```
+
+Every toolchain the build needs is inside the Dockerfiles, so the host needs
+nothing beyond Docker. It does need build-time network access to fetch
+dependencies, and it takes noticeably longer than a pull. A disconnected site
+should follow [airgap export and import](airgap.md) rather than build on the
 isolated host.
 
 ## Confirm it came up
@@ -106,9 +146,13 @@ credentials cannot be read while it is sealed. See
 
 ## Verify what you deployed
 
-Before you put a deployment into service, confirm the images you are running
-are the ones the project published, by digest and by attestation. See
+Before you put a deployment into service, confirm the images you are running are
+the ones the project published, by digest and by attestation. See
 [verify release artifacts](verify-release-artifacts.md).
+
+There is nothing to verify against on the source path, because the images are
+yours rather than the project's. That is the reason it is a development path
+rather than a deployment one.
 
 ## Next
 

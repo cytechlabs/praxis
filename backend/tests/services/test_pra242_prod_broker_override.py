@@ -119,6 +119,13 @@ def test_prod_broker_shares_the_backend_production_image():
     ), "prod broker should reuse the backend production image artifact"
 
 
+def test_prod_broker_overrides_the_backend_healthcheck():
+    block = _service_code(COMPOSE_PROD.read_text(), "agent-broker")
+    assert "healthcheck:" in block
+    assert "127.0.0.1', 8444" in block
+    assert "127.0.0.1:8000/health" not in block
+
+
 # --------------------------------------------------- rendered config (bonus)
 
 
@@ -161,3 +168,7 @@ def test_rendered_prod_config_has_no_dev_broker():
     ), "rendered prod config must not reference Dockerfile.dev"
     # The broker is present and points at the production image.
     assert "ghcr.io/cytechlabs/praxis-backend" in rendered
+    broker = _service_code(rendered, "agent-broker")
+    assert "healthcheck:" in broker
+    assert "127.0.0.1', 8444" in broker
+    assert "127.0.0.1:8000/health" not in broker

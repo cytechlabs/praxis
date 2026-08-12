@@ -5,9 +5,9 @@ static Go binary distributed as a signed tarball, not a container. This is
 the maintainer procedure for building, verifying, and publishing one.
 
 Operator-facing install, update, rollback, and uninstall steps live in
-[agent/packaging/README.md](../agent/packaging/README.md). The whole-release
+[agent/packaging/README.md](../../agent/packaging/README.md). The whole-release
 runbook, including the application images, is
-[docs/release-checklist.md](release-checklist.md).
+[docs/maintainers/release-checklist.md](release-checklist.md).
 
 ## The version source of truth
 
@@ -150,7 +150,7 @@ not run.
 ## Publishing
 
 1. Confirm the application release gates in
-   [docs/release-checklist.md](release-checklist.md) have passed. The agent
+   [docs/maintainers/release-checklist.md](release-checklist.md) have passed. The agent
    tag is cut from the same verified commit as the application tag.
 2. Confirm `agent/VERSION` is the version you intend to publish and that
    `scripts/check-release-readiness.sh` passes.
@@ -178,7 +178,7 @@ first.
 ## After publishing
 
 Verify the published artifacts exactly as an operator would, using the
-commands in [agent/packaging/README.md](../agent/packaging/README.md). The
+commands in [agent/packaging/README.md](../../agent/packaging/README.md). The
 workflow runs `cosign verify-blob` against its own output before creating
 the release, but that proves the signature was well-formed at build time,
 not that the right bytes reached the Release page.

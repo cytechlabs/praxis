@@ -2,9 +2,10 @@
 # PRA-185: read-only release-readiness check.
 #
 # Verifies the local tree is ready to cut a release WITHOUT changing anything:
-#   1. package-version alignment (root package.json, frontend-next/package.json,
-#      frontend-next/package-lock.json, backend/setup.py, agent/VERSION, and the
-#      control plane's pinned agent release) against a target version;
+#   1. product/package-version alignment (the displayed frontend product version,
+#      root package.json, frontend-next/package.json, frontend-next/package-lock.json,
+#      backend/setup.py, agent/VERSION, and the control plane's pinned agent
+#      release) against a target version;
 #   2. presence of the required release docs, publication scripts, and agent
 #      packaging scripts;
 #   3. presence of the required release workflows;
@@ -42,6 +43,11 @@ setup_version() {
     sed -nE 's/.*version[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p; t done; b; :done q' "$1"
 }
 
+# Extract PRODUCT_VERSION='X.Y.Z' from the frontend build-identity source.
+product_version() {
+    sed -nE "s/.*PRODUCT_VERSION[[:space:]]*=[[:space:]]*'([^']+)'.*/\1/p; t done; b; :done q" "$1"
+}
+
 ROOT_VERSION="$(pkg_version package.json)"
 TARGET="${1:-${ROOT_VERSION}}"
 
@@ -58,6 +64,7 @@ check_version() {
     fi
 }
 check_version "root package.json      " "${ROOT_VERSION}"
+check_version "displayed product      " "$(product_version frontend-next/src/config/version.ts)"
 check_version "frontend-next/package  " "$(pkg_version frontend-next/package.json)"
 check_version "frontend-next/lock     " "$(pkg_version frontend-next/package-lock.json)"
 check_version "backend/setup.py       " "$(setup_version backend/setup.py)"
@@ -80,11 +87,11 @@ fi
 printf '\nRelease docs\n'
 for doc in \
     CHANGELOG.md \
-    docs/release-notes-template.md \
+    docs/maintainers/release-notes-template.md \
     docs/upgrade-notes-1-0.md \
-    docs/release-checklist.md \
-    docs/agent-release.md \
-    docs/ghcr-release-operations.md \
+    docs/maintainers/release-checklist.md \
+    docs/maintainers/agent-release.md \
+    docs/maintainers/ghcr-release-operations.md \
     agent/packaging/README.md \
     agent/packaging/install.sh \
     agent/packaging/uninstall.sh \

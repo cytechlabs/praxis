@@ -33,7 +33,7 @@
 # The package names `praxis-backend` and `praxis-frontend` are the public
 # contract. Renaming them breaks every deployment that pins them.
 #
-# Operator guide: docs/ghcr-release-operations.md.
+# Operator guide: docs/maintainers/ghcr-release-operations.md.
 
 name: Publish
 
@@ -79,7 +79,7 @@ jobs:
   # a tag cut from an unverified commit cannot publish. The container CRITICAL
   # gate runs in the build job below; branch protection requiring CI before
   # merge to `main` is the complementary repository setting, documented in
-  # docs/release-checklist.md.
+  # docs/maintainers/release-checklist.md.
   verify:
     name: Verify (gate)
     runs-on: ubuntu-latest

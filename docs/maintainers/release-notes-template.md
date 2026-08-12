@@ -35,7 +35,7 @@ PRAXIS_VERSION=<X.Y.Z>
 
 Stable releases also publish `:<X.Y>` and `:latest` tags. Those move; the
 digests in the release index below do not. See
-[docs/ghcr-release-operations.md](ghcr-release-operations.md).
+[docs/maintainers/ghcr-release-operations.md](ghcr-release-operations.md).
 
 ### Fleet agent
 
@@ -51,7 +51,7 @@ The tarballs are built reproducibly with a pinned Go toolchain: rebuilding
 the release tag produces artifacts with the same checksums.
 
 Verify before installing (see
-[agent/packaging/README.md](../agent/packaging/README.md)):
+[agent/packaging/README.md](../../agent/packaging/README.md)):
 
 ```sh
 cosign verify-blob \
@@ -95,7 +95,7 @@ and call out any migration or configuration steps.>`
 ### Verification checklist
 
 Confirm before publishing (full runbook:
-[docs/release-checklist.md](release-checklist.md)):
+[docs/maintainers/release-checklist.md](release-checklist.md)):
 
 - [ ] Package versions aligned to `<X.Y.Z>` (root, frontend, backend).
 - [ ] CI green on the tagged ref; publish `verify` and `build` gates passed.

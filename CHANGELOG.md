@@ -7,7 +7,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Container images and the agent binary share the application version. The app is
 released under the `vX.Y.Z` tag (images `ghcr.io/cytechlabs/praxis-backend` and
 `praxis-frontend` at `X.Y.Z`); the fleet agent ships under the matching
-`agent-vX.Y.Z` tag. See [docs/release-checklist.md](docs/release-checklist.md)
+`agent-vX.Y.Z` tag. See [docs/maintainers/release-checklist.md](docs/maintainers/release-checklist.md)
 for the release runbook.
 
 ## 1.0.0 — first stable release

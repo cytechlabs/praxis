@@ -35,7 +35,7 @@ a restart does not bounce a host in the middle of the day.
 Rings are cohorts, patched in order. A workable default:
 
 1. **canary**, a handful of hosts you can afford to lose for an hour.
-2. **early**, a representative slice including at least one of each host role.
+2. **early**, a representative subset including at least one of each host role.
 3. **broad**, everything else.
 
 Later waves proceed only when earlier ones are healthy, so an ordering that puts

@@ -20,7 +20,7 @@
 #       --profile bundled --profile proxy up -d
 #   PRAXIS_VERSION drives every released image tag below. It defaults to :latest
 #   only as a convenience for local iteration; release deploys MUST pin an exact
-#   version (see docs/release-checklist.md) — never deploy an unpinned :latest.
+#   version (see docs/maintainers/release-checklist.md) — never deploy an unpinned :latest.
 #
 # Browser ingress requires --profile proxy: it starts Caddy (the SOLE public
 # ingress). Without it, backend/frontend publish no host ports and the
@@ -127,6 +127,21 @@ services:
     # recovery material stays Vault-container-only.
     volumes: !override
       - vault_data:/vault/data:ro
+    # The broker shares the backend image, whose image-level healthcheck probes
+    # the backend app on port 8000. Override it here: the broker serves its
+    # private internal API on 8444, and accepting a TCP connection proves that
+    # its event loop and internal listener are ready without requiring a
+    # registered agent or exposing an unauthenticated health endpoint.
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import socket; s = socket.create_connection(('127.0.0.1', 8444), 4); s.close()"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
     restart: unless-stopped
     <<: *prod-logging
 

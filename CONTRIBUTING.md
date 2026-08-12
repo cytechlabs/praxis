@@ -56,7 +56,10 @@ contribution. Contributions are accepted under the project's
 - Frozen **`release/X.Y`** branches are cut from `main` at ship time and only
   receive cherry-picked backport fixes; those backports also open PRs against the
   relevant `release/**` branch (CI runs there too).
-- See [docs/branching-model.md](docs/branching-model.md) for the full model.
+- See [docs/contributors/branching-model.md](docs/contributors/branching-model.md) for the full model.
+- Maintainers preparing a patch release should follow the dedicated
+  [patch release runbook](docs/maintainers/patch-release.md); fixes land on
+  `main` first, then move through a reviewed backport PR to `release/X.Y`.
 - Keep pull requests focused. Smaller, single-purpose changes are easier to
   review and land faster.
 - Write a clear description of what changed and why. Reference any related issue.

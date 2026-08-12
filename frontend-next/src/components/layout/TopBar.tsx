@@ -218,6 +218,8 @@ const TopBar: React.FC<TopBarProps> = ({ onOpenPalette }) => {
           {/* Help */}
           <Link
             href="/help"
+            target="_blank"
+            rel="noopener noreferrer"
             title="Help"
             aria-label="Help"
             className="p-2 text-content-subtle hover:text-content transition-colors"

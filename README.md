@@ -1,4 +1,7 @@
-# Praxis
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/wordmark-dark.svg">
+  <img src="docs/assets/readme/wordmark-light.svg" alt="Praxis" width="260">
+</picture>
 
 [![CI](https://github.com/cytechlabs/praxis/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/cytechlabs/praxis/actions/workflows/ci.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
@@ -36,6 +39,10 @@ deliberately scoped. [Known limitations](docs/known-limitations.md) states what
 it does not do, so you can plan complementary controls.
 
 ## What it looks like
+
+[![Watch the Praxis fleet operations product tour](docs/assets/praxis-demo.webp)](docs/assets/praxis-demo.mp4)
+
+[Watch the product tour (MP4, 4.6 MB)](docs/assets/praxis-demo.mp4)
 
 ![Fleet operations dashboard showing three healthy hosts, patch compliance, and distribution lifecycle buckets](docs/assets/readme/fleet-dashboard.png)
 
@@ -113,8 +120,9 @@ without it the stack is deliberately unreachable from a browser. Omit it only
 when you front the stack with your own reverse proxy.
 
 Continue with [install](docs/install.md), then [first run](docs/first-run.md) and
-[enroll hosts](docs/enroll-hosts.md). To build from source instead of pulling,
-add `--build`; that is the contributor path rather than the evaluator one.
+[enroll hosts](docs/enroll-hosts.md). [Install](docs/install.md) also covers
+building the same stack from source with `--build`, which is the development
+path rather than the deployment one.
 
 ### Verify what you are about to run
 

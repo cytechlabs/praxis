@@ -17,7 +17,7 @@ machine-checkable parts of this document.
 - Import from the tagged release commit on `main` (or the corresponding
   `release/X.Y` branch) — the same commit that is tagged for the release (see
   [release-checklist.md](release-checklist.md) and
-  [branching-model.md](branching-model.md)).
+  [branching-model.md](../contributors/branching-model.md)).
 - The public repository starts with a **fresh history**: the import is a clean
   snapshot, not a mirror of the internal Git history.
 
@@ -79,15 +79,15 @@ readiness checker.
 | Doc | Disposition |
 |---|---|
 | `README.md` | Keep — product/operator tone. |
-| `CHANGELOG.md`, `docs/release-notes-template.md`, `docs/upgrade-notes-1-0.md` | Keep — release docs. |
-| `docs/release-checklist.md`, `docs/public-import-checklist.md` | Keep — operator runbooks. |
+| `CHANGELOG.md`, `docs/upgrade-notes-1-0.md` | Keep — release docs. |
+| `docs/maintainers/*` | Keep — release and repository runbooks. |
 | `docs/agent-protocol.md`, `docs/airgap.md`, `docs/audit-schema.md` | Keep — scrubbed of issue/slice wording. |
 | `docs/compliance-map.md`, `docs/eol-data.md`, `docs/remediation-workflow.md` | Keep — scrubbed. |
 | `docs/production-hardening.md`, `docs/support-matrix.md`, `docs/oidc-setup.md` | Keep — scrubbed / already clean. |
 | `docs/demo-walkthrough-operator.md`, `docs/demo-walkthrough-auditor.md` | Keep — demo path. |
 | `agent/README.md`, `agent/packaging/README.md` | Keep — scrubbed / already clean. |
 | `backend/docs/*`, `frontend-next/docs/*` | Keep — developer reference; verified free of process wording. |
-| `docs/ui-foundation.md`, `docs/ui-primitives.md` | Keep — design-system developer reference; scrubbed. |
+| `docs/design/*` | Keep — design-system developer reference; scrubbed. |
 | `docs/dev-notes/*` | **Exclude** — developer working notes + internal engineering references (test inventory, real-host regression matrix, fleet-scope inventory). |
 
 ## Namespace normalization

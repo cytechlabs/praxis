@@ -22,7 +22,7 @@ Instead, use one of the following private channels:
 
 - Preferred: open a private advisory via GitHub Security Advisories
   ("Report a vulnerability" under the repository's **Security** tab).
-- Or email **security@cytechlabs.com**.
+- Or email **security@praxisfleet.com**.
 
 To help us triage quickly, please include as much of the following as you can:
 

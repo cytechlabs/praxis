@@ -77,7 +77,7 @@ so run it from the dev container rather than a BusyBox shell.
 toolchain, and target platform of an installed binary. No build timestamp is
 embedded.
 
-Maintainer procedure: [docs/agent-release.md](../docs/agent-release.md).
+Maintainer procedure: [docs/maintainers/agent-release.md](../docs/maintainers/agent-release.md).
 Operator install, update, rollback, and uninstall steps:
 [packaging/README.md](packaging/README.md).
 

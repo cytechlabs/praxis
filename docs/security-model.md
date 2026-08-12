@@ -13,6 +13,17 @@ and content stay verifiable. It is a companion to
 
 ```mermaid
 flowchart TB
+  accTitle: Praxis trust boundaries
+  accDescr {
+    The operator browser reaches the frontend over HTTPS, and the frontend
+    proxies to the backend. Only the backend reaches PostgreSQL, Vault, the
+    agent broker, and the mirrors. The backend opens SSH sessions to managed
+    hosts with a Vault-signed short-lived certificate, and an optional thin
+    agent dials out to the broker over mutually authenticated TLS. Mirrors
+    serve signed packages to hosts and export a signed bundle that an
+    air-gapped instance verifies and imports.
+  }
+
   browser["Operator browser"]
 
   subgraph control["Praxis control plane"]
