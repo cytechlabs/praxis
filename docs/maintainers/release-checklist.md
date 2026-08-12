@@ -17,6 +17,11 @@ matching `agent-vX.Y.Z` tag. For 1.0 that is app tag **`v1.0.0`** and agent tag
 The runbook is ordered. Do not skip ahead — later steps assume earlier gates
 passed.
 
+For a patch in an existing supported minor line, first follow the
+[patch release runbook](patch-release.md). It defines the `main`-first fix,
+backport branch, release-line PR, and version-bump workflow. Return here for the
+pre-tag gates, tag order, publication, and post-publish verification.
+
 ---
 
 ## 0. What runs automatically (context, no action)
@@ -49,6 +54,8 @@ settings before relying on the release line:
 
 - **Branch protection on `main`**: require a pull request and a passing CI
   check before merge; disallow direct pushes that bypass review.
+- **Branch protection on each `release/X.Y` line**: mirror `main`'s PR, CI,
+  conversation-resolution, linear-history, force-push, and deletion policy.
 - **Tag protection**: restrict who can create `v*.*.*` and `agent-v*` tags so a
   release can only be cut from a verified commit.
 - **Package visibility and Actions access**: each GHCR package is configured
@@ -62,8 +69,9 @@ settings before relying on the release line:
 
 Confirm the commit you intend to tag is release-ready.
 
-- [ ] You are on the exact commit you intend to release (usually `main` at the
-      merge of the release branch), and `git status` is clean.
+- [ ] You are on the exact commit you intend to release: the newly frozen
+      `release/X.Y` commit for a minor/major release, or the merged patch commit
+      on the existing `release/X.Y` line. `git status` is clean.
 - [ ] CI is **green** on that commit (the same ref you will tag).
 - [ ] `CHANGELOG.md` has an entry for this version, grouped by capability area,
       with the known-limitations list current.
@@ -110,6 +118,9 @@ they are verification only.
 4. **Upgrade path** — start from the previous release images, then
    `alembic upgrade head` on the new backend image; confirm migrations apply
    cleanly and the app boots. (`scripts/test-upgrade-smoke.sh`.)
+   For a patch, test the immediately preceding supported patch (for example,
+   `1.0.0 -> 1.0.1`). For a minor, test the newest supported patch in the prior
+   minor line (for example, `1.0.latest -> 1.1.0`).
 5. **Backup / restore** — exercise `scripts/backup.sh` and the documented
    restore procedure (see `backend/docs/database-backup-restore.md`); confirm a
    restored database boots the app. (`scripts/test-backup-restore-smoke.sh`.)
@@ -166,6 +177,12 @@ ship the agent source tree. See [docs/maintainers/agent-release.md](agent-releas
 the full list of places a version bump touches.
 
 `scripts/check-release-readiness.sh` verifies this alignment; see step 8.
+
+For a minor or major release, align these values in a focused release-preparation
+PR to `main`, then create `release/X.Y` from that verified merge commit. For a
+patch, keep the original fix PR version-neutral and align them in the backport
+PR to the existing `release/X.Y` branch, as described in
+[patch-release.md](patch-release.md).
 
 ## 4. Tag plan
 

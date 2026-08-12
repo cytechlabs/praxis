@@ -30,10 +30,14 @@ There is **no long-lived integration branch** other than `main`.
 > gets CI by opening a pull request to `main` (or to the relevant `release/**`
 > branch for a backport). Pushing to an arbitrary branch does **not** trigger CI.
 
-## Cutting a release
+## Cutting a minor or major release
 
-At ship time, cut a frozen release branch from the verified `main` commit, then
-tag from it. Tags — not branches — drive the publish/agent-release workflows
+Features and other release scope land on `main` through normal PRs. When the
+minor or major release is ready, merge a focused release-preparation PR into
+`main` that aligns versions and updates the changelog, upgrade notes, and
+release documentation. At ship time, cut a frozen release branch from that
+verified `main` commit, protect it, then tag from it. Tags — not branches —
+drive the publish/agent-release workflows
 (`publish.yml`, `agent-release.yml`), so those are unaffected by this model.
 
 ```bash
@@ -43,25 +47,38 @@ git push -u origin release/1.0
 # then tag the release commit per docs/maintainers/release-checklist.md (vX.Y.Z, agent-vX.Y.Z)
 ```
 
+The branch is named for the minor line, not the individual release. A later
+`1.0.1` patch still ships from `release/1.0`; a new `1.1.0` release creates
+`release/1.1` from its verified `main` commit.
+
 See [release-checklist.md](../maintainers/release-checklist.md) for the full release runbook and
 [public-import-checklist.md](../maintainers/public-import-checklist.md) for the public-repo import
 (import from the tagged release commit on `main` / the `release/X.Y` branch).
 
-## Patch releases & backports
+## Patch releases and backports
 
 A fix for a shipped `X.Y` series is developed on `main` first (so `main` never
-regresses), then **cherry-picked onto `release/X.Y`**:
+regresses), then **cherry-picked onto a short-lived backport branch based on
+`release/X.Y`**. Release-version changes stay out of the original `main` fix and
+are added in the backport PR:
 
 ```bash
-# fix merged to main as <sha>, then:
 git switch release/1.0
-git cherry-pick -x <sha>      # -x records the source commit
-git push                       # opens/goes through CI on release/**
-# tag the patch (v1.0.1) from release/1.0 per the release checklist
+git pull --ff-only
+git switch -c backport/1.0-short-title
+git cherry-pick -x <main-fix-commit>
+# align versions/changelog to 1.0.1, then open a PR to release/1.0
 ```
+
+Never merge the moving `main` branch into a frozen release line. After the
+backport PR passes and merges, cut `agent-v1.0.1` and then `v1.0.1` from the
+same verified `release/1.0` commit.
 
 If a fix is made directly on a `release/**` branch first (hotfix), cherry-pick it
 **back to `main`** when it is still relevant so the next release keeps it.
+
+See the [patch release runbook](../maintainers/patch-release.md) for the complete
+fix, backport, versioning, publication, and verification procedure.
 
 ---
 
