@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability privately
+    url: https://github.com/cytechlabs/praxis/security/advisories/new
+    about: Do not disclose vulnerabilities in public issues. Use GitHub private vulnerability reporting.
+  - name: Praxis documentation
+    url: https://docs.praxisfleet.com/
+    about: Review installation, operations, troubleshooting, support, and known limitations.

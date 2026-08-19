@@ -1,0 +1,94 @@
+name: Bug report
+description: Report reproducible incorrect behavior in a current Praxis release.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for helping improve Praxis. Submit one problem per issue and search existing issues before continuing.
+
+        **Do not report security vulnerabilities here.** Use the private reporting link in the issue chooser. This issue and every attachment are public. Remove passwords, private keys, tokens, licence keys, `.env` contents, private hostnames, addresses, and user identities.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and did not find this problem.
+          required: true
+        - label: I reviewed the troubleshooting guide, known limitations, and support matrix.
+          required: true
+        - label: This report does not disclose a security vulnerability or sensitive data.
+          required: true
+        - label: I reviewed the complete report and attachments and removed sensitive information.
+          required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Praxis version
+      description: Provide `PRAXIS_VERSION`, or the exact commit for a source build.
+      placeholder: 1.0.0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: Deployment shape
+      options:
+        - Bundled services with Caddy proxy
+        - Bundled services with an external proxy
+        - External PostgreSQL and secrets service
+        - Source or development build
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Include control-plane OS/architecture, browser, and sanitized `praxis-agent version --json` output when relevant.
+      placeholder: Ubuntu 24.04 amd64; Docker 27; Firefox 143; agent v1.0.0, stamped true
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Start from a known state and include the smallest reliable sequence.
+      placeholder: |
+        1. Start Praxis with ...
+        2. Enroll a host using ...
+        3. Open ...
+        4. Observe ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Expected and actual behavior
+      description: State what you expected, what happened instead, and the exact sanitized error rather than a paraphrase.
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope and regression
+      description: State whether this affects one or all hosts, which transports are involved, and whether it began after an upgrade.
+      placeholder: Affects all SSH-managed hosts; began after upgrading from 1.0.0 to 1.0.1.
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Sanitized logs or additional context
+      description: Paste only the minimal relevant excerpt. Redact secrets and consistently replace private identities and addresses.
+      render: shell
