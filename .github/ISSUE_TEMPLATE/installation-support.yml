@@ -1,0 +1,100 @@
+name: Installation or support question
+description: Get help with installation, upgrades, configuration, or operating Praxis.
+title: "[Support]: "
+labels:
+  - question
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for a specific technical question that is not yet a confirmed bug. Review the [installation guide](https://docs.praxisfleet.com/install/), [troubleshooting guide](https://docs.praxisfleet.com/troubleshooting/), [known limitations](https://docs.praxisfleet.com/known-limitations/), and [support matrix](https://docs.praxisfleet.com/support-matrix/) first.
+
+        This issue is public. Do not paste `.env` files, credentials, tokens, licence keys, private keys, private hostnames, addresses, or user identities. Security vulnerabilities must use private reporting.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and reviewed the linked documentation.
+          required: true
+        - label: This request does not disclose a security vulnerability or sensitive data.
+          required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Praxis version
+      placeholder: 1.0.0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: topic
+    attributes:
+      label: Topic
+      options:
+        - Fresh installation
+        - Upgrade or rollback
+        - TLS or reverse proxy
+        - PostgreSQL or secrets service
+        - Host enrollment or transport
+        - Agent installation or operation
+        - Authentication or licensing
+        - Backup or restore
+        - Other operation
+    validations:
+      required: true
+
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: Deployment shape
+      options:
+        - Bundled services with Caddy proxy
+        - Bundled services with an external proxy
+        - External PostgreSQL and secrets service
+        - Source or development build
+        - Not running yet
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: goal
+    attributes:
+      label: What are you trying to accomplish?
+    validations:
+      required: true
+
+  - type: textarea
+    id: attempted
+    attributes:
+      label: What have you tried?
+      description: Include the documentation steps followed and what you already ruled out.
+    validations:
+      required: true
+
+  - type: textarea
+    id: result
+    attributes:
+      label: Current result
+      description: Include exact, sanitized error text and relevant service health state.
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Sanitized environment details
+      description: Include OS, architecture, Docker/Compose versions, TLS mode, and proxy profile state as applicable.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: public-data
+    attributes:
+      label: Public-data confirmation
+      options:
+        - label: I reviewed the complete report and attachments and removed sensitive information.
+          required: true

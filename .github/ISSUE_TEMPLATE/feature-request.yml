@@ -1,0 +1,72 @@
+name: Feature request
+description: Propose a focused capability or workflow improvement.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe the operational problem before prescribing an implementation. Search existing issues and review the documentation so the request accounts for current behavior and stated limitations.
+
+        Do not include confidential architecture, credentials, private host information, or security vulnerabilities.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and did not find this request.
+          required: true
+        - label: I reviewed the relevant documentation and known limitations.
+          required: true
+        - label: This request contains no security vulnerability or sensitive data.
+          required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Operational problem
+      description: Who has this problem, what workflow is blocked, and how is it handled today?
+    validations:
+      required: true
+
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+      description: Describe observable behavior and success criteria without requiring a specific design.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Include existing Praxis workflows, external tools, or operational workarounds you evaluated.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Primary area
+      options:
+        - Fleet inventory and lifecycle
+        - Patching and packages
+        - Access, SSH, and sessions
+        - Agent and transports
+        - Jobs and automation
+        - Compliance, audit, and reporting
+        - Credentials and secrets
+        - Installation and operations
+        - User interface and documentation
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Add sanitized examples, constraints, or links that clarify the request.

@@ -1,0 +1,67 @@
+name: Documentation problem
+description: Report missing, incorrect, unclear, or broken Praxis documentation.
+title: "[Docs]: "
+labels:
+  - documentation
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Documentation issues cover the public site, bundled in-app help, README, and contributor or maintainer guidance. Do not include secrets, private infrastructure details, or security vulnerabilities.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and did not find this documentation problem.
+          required: true
+        - label: This report contains no security vulnerability or sensitive data.
+          required: true
+
+  - type: input
+    id: location
+    attributes:
+      label: Documentation location
+      description: Paste the public URL or repository path.
+      placeholder: https://docs.praxisfleet.com/install/
+    validations:
+      required: true
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Problem type
+      options:
+        - Incorrect or outdated information
+        - Missing information
+        - Unclear instructions
+        - Broken link, image, diagram, or formatting
+        - Public site and bundled help differ
+        - Typographical or grammatical error
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What is wrong?
+      description: Quote only the minimum necessary text and explain why it is incorrect or unclear.
+    validations:
+      required: true
+
+  - type: textarea
+    id: correction
+    attributes:
+      label: Suggested correction
+      description: Describe the information or outcome the page should provide.
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Praxis version
+      description: Include this when the documentation depends on a specific release.
+      placeholder: 1.0.0
