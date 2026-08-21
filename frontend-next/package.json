@@ -9,6 +9,7 @@
     "lint": "eslint src",
     "check:colors": "node scripts/check-color-drift.mjs",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:visual": "playwright test --config tests/visual/playwright.config.ts"
   },
   "dependencies": {
@@ -33,6 +34,7 @@
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^6.0.5",
+    "@vitest/coverage-v8": "^4.1.10",
     "eslint": "^9",
     "eslint-config-next": "16.3.0",
     "jsdom": "^25.0.1",
