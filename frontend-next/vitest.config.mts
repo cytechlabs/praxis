@@ -20,5 +20,17 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text-summary', 'lcovonly'],
+      reportsDirectory: 'coverage',
+      // LCOV records the paths exactly as they appear here, relative to this
+      // workspace; CI rewrites them to repository-relative form before upload.
+      // Every shipped module under src/ is measured, not only the modules a
+      // test happens to import, so the reported percentage describes the app
+      // rather than the tested subset.
+      include: ['src/**/*.ts', 'src/**/*.tsx'],
+      exclude: ['src/**/*.test.ts', 'src/**/*.test.tsx', 'src/**/*.d.ts', 'src/__tests__/**'],
+    },
   },
 });
