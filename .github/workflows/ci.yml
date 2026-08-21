@@ -131,19 +131,40 @@ jobs:
           cache: 'pip'
 
       - name: Install dependencies
+        # coverage is pinned: each lane writes a data file that a later job
+        # combines, and combining requires the same data format everywhere.
         run: |
           pip install -r requirements.txt
           pip install -e .
-          pip install pytest
+          pip install pytest pytest-cov "coverage==7.15.4"
 
       - name: Run tests (${{ matrix.lane }})
         # --tb=short is also in pytest.ini addopts; kept here so the CI command is
         # self-documenting. Slow (subprocess) + integration tests stay in-gate:
         # slow lives under tests/services and integration under `rest` (it
         # self-skips unless PRAXIS_E2E=1).
+        #
+        # A bare --cov takes its source and path mapping from
+        # backend/.coveragerc, so every lane measures the whole app package
+        # rather than only the modules that lane imports. No report is written
+        # here: the lanes are partial by design and only the combined data of
+        # all three describes the suite.
+        env:
+          COVERAGE_FILE: .coverage.${{ matrix.lane }}
         run: |
           alembic upgrade head
-          pytest --tb=short ${{ matrix.paths }}
+          pytest --tb=short --cov --cov-report= ${{ matrix.paths }}
+
+      - name: Upload coverage data (${{ matrix.lane }})
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: coverage-python-${{ matrix.lane }}
+          path: backend/.coverage.${{ matrix.lane }}
+          # The data file name starts with a dot, which the upload action
+          # skips unless told otherwise.
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
 
   agent-build:
     # PRA-152 task #1: Go toolchain lane. Runs gofmt diff, go vet,
@@ -208,7 +229,18 @@ jobs:
           args: --timeout 5m
 
       - name: Test
-        run: go test ./...
+        # -coverpkg widens measurement to every package in the module, so a
+        # package with no tests of its own is reported at zero instead of being
+        # left out of the profile entirely.
+        run: go test -covermode=atomic -coverpkg=./... -coverprofile=coverage.out ./...
+
+      - name: Upload coverage profile
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: coverage-go
+          path: agent/coverage.out
+          if-no-files-found: error
+          retention-days: 1
 
       - name: Cross-compile (linux/amd64)
         env:
@@ -258,10 +290,192 @@ jobs:
       - name: Type check (TypeScript)
         run: npx tsc --noEmit
 
-      # PRA-256: pure-logic unit tests (Vitest). Establishes the first frontend
-      # test lane; currently covers the out-of-order-response request guard.
+      # The frontend unit-test lane. It runs with coverage on, and measures
+      # every module under src/ rather than only the ones a test imports, so
+      # the reported number describes the shipped app instead of the tested
+      # subset.
       - name: Unit tests (Vitest)
-        run: npm test
+        run: npm run test:coverage
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: coverage-javascript
+          path: frontend-next/coverage/lcov.info
+          if-no-files-found: error
+          retention-days: 1
+
+  # The test lanes above each measure one language and hand their raw report
+  # on; this job turns them into one report per language for the commit that
+  # was tested, and refuses reports that do not describe that commit. It holds
+  # no upload credential: it runs repository code, including code a pull
+  # request is free to change, so it is kept unprivileged and its only output
+  # is data.
+  coverage-report:
+    name: Coverage Report
+    runs-on: ubuntu-latest
+    needs: [backend-test, agent-build, frontend-checks]
+    permissions:
+      contents: read
+    env:
+      PYTHON_REPORT: coverage-python.xml
+      JAVASCRIPT_REPORT: coverage-artifacts/coverage-javascript/lcov.info
+      GO_REPORT: coverage-artifacts/coverage-go/coverage.out
+      # A Go profile addresses code by import path. Stripping this prefix is
+      # what turns those into repository paths, and it is the same root the
+      # hosted Go analyzer is configured with.
+      GO_IMPORT_ROOT: github.com/cytechlabs/praxis
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.14'
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: Install coverage
+        # Pinned to the version the backend lanes measured with; combining data
+        # files across versions is not supported.
+        run: pip install "coverage==7.15.4"
+
+      - name: Download the lane reports
+        uses: actions/download-artifact@v7.0.0
+        with:
+          pattern: coverage-*
+          path: coverage-artifacts
+
+      - name: Combine the backend lanes
+        # The lane set is asserted rather than globbed blindly: adding a lane to
+        # the backend matrix without adding it here would otherwise publish a
+        # measurement smaller than the suite actually produced, and it would
+        # look like a coverage regression rather than a wiring mistake.
+        run: |
+          set -euo pipefail
+          expected="api rest services"
+          found=$(ls -d coverage-artifacts/coverage-python-*/ \
+            | sed 's|.*/coverage-python-||; s|/$||' | sort | tr '\n' ' ' | sed 's| $||')
+          if [ "$found" != "$expected" ]; then
+            echo "backend coverage lanes changed: expected '$expected', found '$found'"
+            exit 1
+          fi
+          coverage combine --rcfile=backend/.coveragerc --data-file=coverage-python.data \
+            coverage-artifacts/coverage-python-*/.coverage.*
+          coverage xml --rcfile=backend/.coveragerc --data-file=coverage-python.data -o "$PYTHON_REPORT"
+          echo "backend line coverage: $(coverage report --rcfile=backend/.coveragerc \
+            --data-file=coverage-python.data --format=total)%"
+
+      - name: Check the reports describe this checkout
+        # Every reported path has to resolve to a file in this commit. A report
+        # whose paths are relative to a workspace directory, or that measured
+        # nothing at all, uploads cleanly and then reads as real coverage, so it
+        # is rejected here instead.
+        run: |
+          set -euo pipefail
+          node scripts/normalize-coverage-paths.mjs --self-test
+          node scripts/normalize-coverage-paths.mjs --format cobertura "$PYTHON_REPORT"
+          node scripts/normalize-coverage-paths.mjs --format lcov --prefix frontend-next "$JAVASCRIPT_REPORT"
+          node scripts/normalize-coverage-paths.mjs --format go --import-root "$GO_IMPORT_ROOT" "$GO_REPORT"
+
+      - name: Stage the validated reports
+        # One artifact, three files, fixed names. This is the whole interface to
+        # the publishing job, which reads these as data and runs none of the
+        # code that produced them.
+        run: |
+          set -euo pipefail
+          mkdir -p coverage-reports
+          cp "$PYTHON_REPORT" coverage-reports/python.xml
+          cp "$JAVASCRIPT_REPORT" coverage-reports/javascript.lcov
+          cp "$GO_REPORT" coverage-reports/go.out
+
+      - name: Upload the validated reports
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: coverage-reports
+          path: coverage-reports/
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Note that this run does not publish
+        if: github.event_name != 'push'
+        run: |
+          echo "Reports were rebuilt and checked but not published: a pull request"
+          echo "run measures GitHub's merge checkout, which is not the commit that"
+          echo "gets analysed. Coverage for this branch is published by its own"
+          echo "push run, if the branch name matches this workflow's push filter."
+
+  # Publishing is split out because it is the only part that holds a
+  # credential. It runs on pushes alone, checks out nothing, and runs no
+  # repository code: it downloads the validated reports as data and hands them
+  # to the uploader. That keeps the OIDC token away from code a pull request
+  # can change.
+  coverage-publish:
+    name: Publish Coverage
+    runs-on: ubuntu-latest
+    needs: coverage-report
+    # Reporting contract, and its limits:
+    #   - main publishes the authoritative merged measurement;
+    #   - the branch families in this workflow's push filter publish coverage
+    #     for their own push SHA, which is the SHA a pull request from them is
+    #     analysed at;
+    #   - pull request runs validate the reports and publish nothing, because
+    #     their checkout is GitHub's merge commit rather than the analysed
+    #     commit;
+    #   - branches outside the push filter, including Dependabot branches and
+    #     any other unmatched name, publish nothing at all, and neither do
+    #     forks, whose tokens cannot be granted id-token: write.
+    # The gap for unmatched branches and forks is deliberate: closing it would
+    # mean granting the upload credential to untrusted pull request events. It
+    # is a known reporting limitation for as long as coverage gates stay off.
+    if: github.event_name == 'push'
+    permissions:
+      contents: read
+      # The uploader trades this token for a short-lived credential, so no
+      # coverage secret is stored on the repository.
+      id-token: write
+
+    steps:
+      - name: Download the validated reports
+        uses: actions/download-artifact@v7.0.0
+        with:
+          name: coverage-reports
+          path: coverage-reports
+
+      - name: Install the coverage uploader
+        # Downloaded first and run second, so a connection that drops mid
+        # transfer cannot leave a half-read script executing. The installer
+        # verifies the checksum of the binary it fetches.
+        run: |
+          set -euo pipefail
+          curl -fsSL https://cli.deepsource.com/install -o "$RUNNER_TEMP/install-uploader.sh"
+          BINDIR="$RUNNER_TEMP/deepsource" sh "$RUNNER_TEMP/install-uploader.sh"
+
+      - name: Publish coverage
+        # --commit is what makes this safe to run without a checkout: the
+        # uploader skips git detection entirely and files the reports against
+        # the pushed commit, which is exactly the tree they were measured from.
+        run: |
+          set -euo pipefail
+          for report in python.xml javascript.lcov go.out; do
+            if [ ! -s "coverage-reports/$report" ]; then
+              echo "coverage-reports/$report is missing or empty"
+              exit 1
+            fi
+          done
+          publish() {
+            "$RUNNER_TEMP/deepsource/deepsource" report \
+              --analyzer test-coverage \
+              --use-oidc \
+              --commit "$GITHUB_SHA" \
+              --key "$1" \
+              --value-file "$2"
+          }
+          publish python coverage-reports/python.xml
+          publish javascript coverage-reports/javascript.lcov
+          publish go coverage-reports/go.out
 
   # The documentation site is built from docs/ and shipped two ways: published
   # on the public docs domain, and committed under frontend-next/public/help/

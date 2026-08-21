@@ -83,6 +83,8 @@ logs/
 
 # Testing
 .coverage
+.coverage.*
+coverage.xml
 coverage/
 .nyc_output/
 

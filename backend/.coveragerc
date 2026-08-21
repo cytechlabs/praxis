@@ -1,0 +1,14 @@
+# Backend coverage is measured one CI lane at a time and combined at the
+# repository root. The lanes run inside backend/, so paths are stored relative
+# to that directory and remapped below to the location a report consumer
+# resolves them from, which is the repository root.
+
+[run]
+relative_files = true
+branch = true
+source = app
+
+[paths]
+source =
+    backend/app
+    app
