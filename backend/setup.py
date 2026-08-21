@@ -4,6 +4,14 @@ setup(
     name="app",
     version="1.0.0",
     packages=find_packages(),
+    # Runtime shell assets executed by the backend. They are declared here
+    # so the wheel and the source distribution carry the same files an
+    # editable checkout exposes; the readers resolve them through the
+    # package resource API.
+    package_data={
+        "app.api.routes": ["_assets/*.sh"],
+        "app.services": ["_assets/*.sh"],
+    },
     install_requires=[
         "fastapi==0.109.0",
         "uvicorn==0.27.0",

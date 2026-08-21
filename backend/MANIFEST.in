@@ -1,0 +1,4 @@
+# Runtime shell assets the backend loads through the package resource
+# API. Listed here so the source distribution matches the wheel.
+recursive-include app/api/routes/_assets *.sh
+recursive-include app/services/_assets *.sh

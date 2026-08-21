@@ -22,7 +22,7 @@ import base64
 import binascii
 import json
 import logging
-import os
+from importlib import resources
 from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy.orm import Session
@@ -40,9 +40,11 @@ logger = logging.getLogger(__name__)
 # FACTS_HARD_CAP_SECONDS shape.
 DEFAULT_SSH_TIMEOUT_SECONDS = 30
 
-# Path to the script relative to this module. The same shipping
-# pattern PRA-154 uses for ``bootstrap.sh``.
-_SCRIPT_PATH = os.path.join(os.path.dirname(__file__), "_assets", "collect-facts.sh")
+# The collector ships inside the package. It is resolved through the
+# package resource API rather than a source-tree path so an installed
+# distribution runs the same bytes without the checkout on disk.
+_SCRIPT_PACKAGE = "app.services"
+_SCRIPT_NAME = "collect-facts.sh"
 
 
 class SshFactsCollectionError(Exception):
@@ -78,6 +80,24 @@ def collect_and_ingest(db: Session, *, system_id: int) -> facts_service.IngestRe
     )
 
 
+def _read_script() -> str:
+    """Return the bundled collector script text.
+
+    Raises ``SshFactsCollectionError`` with a stable, sanitized message
+    when the script is missing from the installed distribution, so a
+    packaging defect surfaces as a transport-shaped failure instead of a
+    raw filesystem error.
+    """
+    try:
+        resource = resources.files(_SCRIPT_PACKAGE) / "_assets" / _SCRIPT_NAME
+        return resource.read_text(encoding="utf-8")
+    except (OSError, ModuleNotFoundError) as exc:
+        logger.error("bundled collector script is unavailable: %s", exc)
+        raise SshFactsCollectionError(
+            "bundled collector script is unavailable"
+        ) from exc
+
+
 def _run_script(db: Session, system_id: int) -> str:
     """Read the bundled script, pipe it to the host, return stdout.
 
@@ -87,11 +107,7 @@ def _run_script(db: Session, system_id: int) -> str:
     every ``how does Praxis put a file there`` question that the
     file_put op would otherwise have to answer.
     """
-    try:
-        with open(_SCRIPT_PATH, "r", encoding="utf-8") as f:
-            script = f.read()
-    except OSError as exc:  # pragma: no cover — packaging bug
-        raise SshFactsCollectionError(f"collector script unreadable: {exc}") from exc
+    script = _read_script()
 
     # SSHService.execute_command runs a single command line; we shell
     # in via ``sh -c '<heredoc>'`` so the script body crosses the wire
