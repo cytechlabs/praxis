@@ -34,6 +34,7 @@ import threading
 import urllib.error
 import urllib.parse
 import urllib.request
+from importlib import resources
 from pathlib import Path
 from typing import Any, Iterator, Optional, Tuple
 
@@ -49,7 +50,11 @@ router = APIRouter(redirect_slashes=False)
 # ---------------------------------------------------------------- bootstrap.sh
 
 _SENTINEL = "__PRAXIS_DEFAULT_URL__"
-_SCRIPT_PATH = Path(__file__).resolve().parent / "_assets" / "bootstrap.sh"
+# The script ships inside the package and is resolved through the package
+# resource API, so an installed distribution serves the same bytes without
+# the source checkout on disk.
+_SCRIPT_PACKAGE = "app.api.routes"
+_SCRIPT_NAME = "bootstrap.sh"
 _script_cache: Optional[str] = None
 _script_lock = threading.Lock()
 
@@ -57,12 +62,26 @@ _script_lock = threading.Lock()
 def _load_script() -> str:
     """Read the committed bootstrap script once and cache. Reading on
     each request is fine but pointless — the file does not change at
-    runtime."""
+    runtime.
+
+    Fails closed with a stable, sanitized 500 when the script is missing
+    from the installation rather than surfacing a filesystem error.
+    """
     global _script_cache
     if _script_cache is None:
         with _script_lock:
             if _script_cache is None:
-                _script_cache = _SCRIPT_PATH.read_text(encoding="utf-8")
+                try:
+                    resource = (
+                        resources.files(_SCRIPT_PACKAGE) / "_assets" / _SCRIPT_NAME
+                    )
+                    _script_cache = resource.read_text(encoding="utf-8")
+                except (OSError, ModuleNotFoundError) as exc:
+                    logger.error("bootstrap script is unavailable: %s", exc)
+                    raise HTTPException(
+                        status_code=500,
+                        detail="bootstrap script is unavailable",
+                    ) from exc
     return _script_cache
 
 
