@@ -13,6 +13,7 @@ import {
   ConfirmModal,
   EmptyState,
   Modal,
+  nativeSelectClass,
 } from '@/components/ui';
 import {
   SessionLock,
@@ -229,7 +230,7 @@ const SessionLocksPage = () => {
                 <select
                   value={subjectUserId}
                   onChange={(e) => setSubjectUserId(e.target.value)}
-                  className="w-full bg-surface-sunken border border-border rounded-md px-2 py-2 text-sm text-content"
+                  className={`w-full border border-border rounded-md px-2 py-2 text-sm ${nativeSelectClass}`}
                 >
                   <option value="">Pick a user…</option>
                   {users.map((u) => <option key={u.id} value={u.id}>{u.username} (#{u.id})</option>)}
@@ -249,7 +250,7 @@ const SessionLocksPage = () => {
               <select
                 value={subjectRoleName}
                 onChange={(e) => setSubjectRoleName(e.target.value)}
-                className="w-full bg-surface-sunken border border-border rounded-md px-2 py-2 text-sm text-content"
+                className={`w-full border border-border rounded-md px-2 py-2 text-sm ${nativeSelectClass}`}
               >
                 <option value="">Pick a role…</option>
                 {(roles || []).map((r) => <option key={r} value={r}>{r}</option>)}

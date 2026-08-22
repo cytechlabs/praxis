@@ -3,7 +3,7 @@ import Head from 'next/head';
 import { toast } from 'sonner';
 import { ClipboardCheck, Plus, Pencil, Trash2, Play, X, Package as PackageIcon, Cog } from 'lucide-react';
 import MainLayout from '@/components/MainLayout';
-import { PageHeader, Button, EmptyState, LoadingState } from '@/components/ui';
+import { PageHeader, Button, EmptyState, LoadingState, nativeSelectClass } from '@/components/ui';
 import HelpLink from '@/components/help/HelpLink';
 import { apiFetch, formatApiError } from '@/utils/api';
 import { useFormatTimestamp } from '@/context/TimestampPreferencesContext';
@@ -217,7 +217,7 @@ const BaselinesPage: React.FC = () => {
                 <select
                   value={form.scope_smart_group_id ?? ''}
                   onChange={e => setForm(f => ({ ...f, scope_smart_group_id: e.target.value ? Number(e.target.value) : null }))}
-                  className="w-full px-3 py-2 bg-surface-sunken border border-border rounded text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
+                  className={`w-full px-3 py-2 border border-border rounded ${nativeSelectClass}`}
                 >
                   <option value="">Entire fleet</option>
                   {smartGroups.map(g => <option key={g.id} value={g.id}>{g.name} ({g.member_count} members)</option>)}
@@ -259,7 +259,7 @@ const BaselinesPage: React.FC = () => {
                     <input value={r.name} onChange={e => setPkg(i, { name: e.target.value })} placeholder="package name (e.g. openssh-server)"
                       className="flex-1 bg-surface-sunken border border-border rounded text-xs text-content px-2 py-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong" />
                     <select value={r.check} onChange={e => setPkg(i, { check: e.target.value as PkgCheck })}
-                      className="bg-surface-sunken border border-border rounded text-xs text-content px-2 py-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong">
+                      className={`border border-border rounded text-xs px-2 py-1 ${nativeSelectClass}`}>
                       <option value="required">required</option>
                       <option value="forbidden">forbidden</option>
                       <option value="version_pin">version_pin</option>
@@ -289,7 +289,7 @@ const BaselinesPage: React.FC = () => {
                     <input value={r.name} onChange={e => setSvc(i, { name: e.target.value })} placeholder="service unit (e.g. sshd, nginx)"
                       className="flex-1 bg-surface-sunken border border-border rounded text-xs text-content px-2 py-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong" />
                     <select value={r.check} onChange={e => setSvc(i, { check: e.target.value as SvcCheck })}
-                      className="bg-surface-sunken border border-border rounded text-xs text-content px-2 py-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong">
+                      className={`border border-border rounded text-xs px-2 py-1 ${nativeSelectClass}`}>
                       <option value="running">running</option>
                       <option value="stopped">stopped</option>
                       <option value="enabled">enabled</option>

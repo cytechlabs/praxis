@@ -27,7 +27,7 @@ import {
 } from '@/services/commandExecutionService';
 import Head from 'next/head';
 import { useFormatTimestamp } from '@/context/TimestampPreferencesContext';
-import { PageHeader, Button, Card, CardBody, ConfirmModal } from '@/components/ui';
+import { PageHeader, Button, Card, CardBody, ConfirmModal, nativeSelectClass } from '@/components/ui';
 import HelpLink from '@/components/help/HelpLink';
 
 const statusBadgeClass = (statusRaw: string | null | undefined): string => {
@@ -369,7 +369,7 @@ const CommandExecutionPage: React.FC = () => {
                   onChange={(e) =>
                     setSelectedSystemId(e.target.value ? parseInt(e.target.value, 10) : null)
                   }
-                  className="w-full bg-white/[0.02] border border-border-strong text-content rounded px-3 py-2"
+                  className={`w-full border border-border-strong rounded px-3 py-2 ${nativeSelectClass}`}
                 >
                   <option value="">-- select a system --</option>
                   {systems.map((s) => (

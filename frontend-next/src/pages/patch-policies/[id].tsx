@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import MainLayout from '@/components/MainLayout';
-import { Badge, ErrorState, LoadingState, PageHeader } from '@/components/ui';
+import { Badge, ErrorState, LoadingState, nativeSelectClass, PageHeader } from '@/components/ui';
 import {
   bindPatchPolicyGroup,
   bindPatchPolicyHost,
@@ -457,7 +457,7 @@ const PatchPolicyDetailPage: React.FC = () => {
             <label className="text-xs text-content-muted">
               Scope
               <select
-                className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-content"
+                className={`mt-1 w-full rounded px-2 py-1 text-sm ${nativeSelectClass}`}
                 value={merged.scope_kind}
                 onChange={(e) =>
                   setEdit({ ...edit, scope_kind: e.target.value as ScopeKind })
@@ -473,7 +473,7 @@ const PatchPolicyDetailPage: React.FC = () => {
             <label className="text-xs text-content-muted">
               Reboot policy
               <select
-                className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-content"
+                className={`mt-1 w-full rounded px-2 py-1 text-sm ${nativeSelectClass}`}
                 value={merged.reboot_policy}
                 onChange={(e) =>
                   setEdit({
@@ -572,7 +572,7 @@ const PatchPolicyDetailPage: React.FC = () => {
             <label className="text-xs text-content-muted">
               Rollout cadence
               <select
-                className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-content"
+                className={`mt-1 w-full rounded px-2 py-1 text-sm ${nativeSelectClass}`}
                 value={merged.rollout_cadence}
                 onChange={(e) =>
                   setEdit({
@@ -596,7 +596,7 @@ const PatchPolicyDetailPage: React.FC = () => {
             <label className="text-xs text-content-muted">
               Failure policy
               <select
-                className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-content"
+                className={`mt-1 w-full rounded px-2 py-1 text-sm ${nativeSelectClass}`}
                 value={merged.failure_policy}
                 onChange={(e) =>
                   setEdit({
@@ -658,7 +658,7 @@ const PatchPolicyDetailPage: React.FC = () => {
               </span>
               <div className="flex items-center gap-2">
                 <select
-                  className="rounded bg-black/40 px-2 py-1 text-xs text-content"
+                  className={`rounded px-2 py-1 text-xs ${nativeSelectClass}`}
                   value={addHostId}
                   onChange={(e) => setAddHostId(e.target.value)}
                 >
@@ -716,7 +716,7 @@ const PatchPolicyDetailPage: React.FC = () => {
               </span>
               <div className="flex items-center gap-2">
                 <select
-                  className="rounded bg-black/40 px-2 py-1 text-xs text-content"
+                  className={`rounded px-2 py-1 text-xs ${nativeSelectClass}`}
                   value={addGroupId}
                   onChange={(e) => setAddGroupId(e.target.value)}
                 >
@@ -774,7 +774,7 @@ const PatchPolicyDetailPage: React.FC = () => {
               </span>
               <div className="flex items-center gap-2">
                 <select
-                  className="rounded bg-black/40 px-2 py-1 text-xs text-content"
+                  className={`rounded px-2 py-1 text-xs ${nativeSelectClass}`}
                   value={addSmartGroupId}
                   onChange={(e) => setAddSmartGroupId(e.target.value)}
                 >

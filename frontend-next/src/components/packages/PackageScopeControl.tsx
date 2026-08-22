@@ -1,4 +1,5 @@
 import React from 'react';
+import { nativeSelectClass } from '@/components/ui';
 import {
   PackageScope,
   PackageScopeType,
@@ -31,9 +32,7 @@ export interface ScopeSmartGroupOption {
  * - the option lists, selection state, and URL sync are owned by `usePackageScope`
  * - so it is easy to unit test and reuse.
  */
-const selectCls =
-  'bg-surface-sunken border border-border rounded-md px-3 py-2 text-sm text-content ' +
-  'focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong';
+const selectCls = `border border-border rounded-md px-3 py-2 text-sm ${nativeSelectClass}`;
 
 const labelCls = 'block text-xs font-medium text-content-muted mb-1';
 

@@ -31,6 +31,7 @@ import {
   ConfirmModal,
   EmptyState,
   ErrorState,
+  nativeSelectClass,
   PageHeader,
   SkeletonTable,
   Tabs,
@@ -353,7 +354,7 @@ const OverviewTab: React.FC<{
           </Field>
           <Field label="Severity">
             <select
-              className="w-full bg-surface-sunken border border-border rounded px-3 py-1.5 text-sm text-content"
+              className={`w-full border border-border rounded px-3 py-1.5 text-sm ${nativeSelectClass}`}
               value={form.severity}
               onChange={(e) =>
                 setForm((f) => ({ ...f, severity: e.target.value as ComplianceSeverity }))
@@ -695,7 +696,7 @@ const CheckForm: React.FC<{
         <Field label="Kind">
           <select
             aria-label="Kind"
-            className="w-full bg-surface-sunken border border-border rounded px-3 py-1.5 text-sm text-content"
+            className={`w-full border border-border rounded px-3 py-1.5 text-sm ${nativeSelectClass}`}
             value={def.kind}
             onChange={(e) => setDef({ kind: e.target.value as ComplianceCheckKind })}
           >
@@ -898,7 +899,7 @@ const EvidenceTab: React.FC<{
               </label>
               <select
                 aria-label="Verdict"
-                className="bg-surface-sunken border border-border rounded px-3 py-1.5 text-sm text-content"
+                className={`border border-border rounded px-3 py-1.5 text-sm ${nativeSelectClass}`}
                 value={verdict}
                 onChange={(e) => {
                   setVerdict(e.target.value as Verdict | '');

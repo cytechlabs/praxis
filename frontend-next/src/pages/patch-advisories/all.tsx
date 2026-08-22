@@ -15,7 +15,7 @@ import { Eye, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import MainLayout from '@/components/MainLayout';
 import { useAuth } from '@/context/AuthContext';
-import { Badge, LoadingState, PageHeader } from '@/components/ui';
+import { Badge, LoadingState, nativeSelectClass, PageHeader } from '@/components/ui';
 import {
   ADVISORY_CLASS_LABELS,
   ADVISORY_CLASS_VALUES,
@@ -239,7 +239,7 @@ const PatchAdvisoriesListPage: React.FC = () => {
               <label className="text-xs text-content-muted md:w-56">
                 Source
                 <select
-                  className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-content"
+                  className={`mt-1 w-full rounded px-2 py-1 text-sm ${nativeSelectClass}`}
                   value={importSource}
                   onChange={(e) =>
                     setImportSource(e.target.value as AdvisorySourceKind)
@@ -297,7 +297,7 @@ const PatchAdvisoriesListPage: React.FC = () => {
           <label className="text-xs text-content-muted">
             Source
             <select
-              className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-content"
+              className={`mt-1 w-full rounded px-2 py-1 text-sm ${nativeSelectClass}`}
               value={filters.source_kind}
               onChange={(e) =>
                 setFilter({ source_kind: e.target.value as AdvisorySourceKind | '' })
@@ -314,7 +314,7 @@ const PatchAdvisoriesListPage: React.FC = () => {
           <label className="text-xs text-content-muted">
             Class
             <select
-              className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-content"
+              className={`mt-1 w-full rounded px-2 py-1 text-sm ${nativeSelectClass}`}
               value={filters.advisory_class}
               onChange={(e) =>
                 setFilter({ advisory_class: e.target.value as AdvisoryClass | '' })
@@ -331,7 +331,7 @@ const PatchAdvisoriesListPage: React.FC = () => {
           <label className="text-xs text-content-muted">
             Severity
             <select
-              className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-content"
+              className={`mt-1 w-full rounded px-2 py-1 text-sm ${nativeSelectClass}`}
               value={filters.severity}
               onChange={(e) =>
                 setFilter({ severity: e.target.value as AdvisorySeverity | '' })
@@ -348,7 +348,7 @@ const PatchAdvisoriesListPage: React.FC = () => {
           <label className="text-xs text-content-muted">
             Distro family
             <select
-              className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-content"
+              className={`mt-1 w-full rounded px-2 py-1 text-sm ${nativeSelectClass}`}
               value={filters.distro_family}
               onChange={(e) =>
                 setFilter({ distro_family: e.target.value as AdvisoryDistroFamily | '' })

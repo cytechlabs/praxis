@@ -5,7 +5,7 @@ import { useRouter } from 'next/router';
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import MainLayout from '@/components/MainLayout';
-import { Badge, ErrorState, LoadingState, PageHeader } from '@/components/ui';
+import { Badge, ErrorState, LoadingState, nativeSelectClass, PageHeader } from '@/components/ui';
 import {
   addChannelRepo,
   getChannel,
@@ -160,7 +160,7 @@ const ContentChannelDetailPage: React.FC = () => {
                   <label className="text-xs text-content-muted">
                     Mirror ({channel.package_family} only)
                     <select
-                      className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-content"
+                      className={`mt-1 w-full rounded px-2 py-1 text-sm ${nativeSelectClass}`}
                       value={form.mirror_id ?? ''}
                       onChange={(e) =>
                         setForm({

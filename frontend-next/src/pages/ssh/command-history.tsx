@@ -10,7 +10,7 @@ import {
 } from '@/services/commandExecutionService';
 import Head from 'next/head';
 import { useFormatTimestamp } from '@/context/TimestampPreferencesContext';
-import { PageHeader, Card, CardBody, Button, EmptyState } from '@/components/ui';
+import { PageHeader, Card, CardBody, Button, EmptyState, nativeSelectClass } from '@/components/ui';
 import HelpLink from '@/components/help/HelpLink';
 
 const statusBadgeClass = (statusRaw: string | null | undefined): string => {
@@ -177,7 +177,7 @@ const CommandHistoryPage: React.FC = () => {
                     setSystemFilter(e.target.value);
                     setOffset(0);
                   }}
-                  className="w-full bg-white/[0.02] border border-border-strong text-content rounded px-2 py-1 text-sm"
+                  className={`w-full border border-border-strong rounded px-2 py-1 text-sm ${nativeSelectClass}`}
                 >
                   <option value="">All</option>
                   {systems.map((s) => (
@@ -192,7 +192,7 @@ const CommandHistoryPage: React.FC = () => {
                 <select
                   value={userFilter}
                   onChange={(e) => setUserFilter(e.target.value)}
-                  className="w-full bg-white/[0.02] border border-border-strong text-content rounded px-2 py-1 text-sm"
+                  className={`w-full border border-border-strong rounded px-2 py-1 text-sm ${nativeSelectClass}`}
                 >
                   <option value="">All</option>
                   {userOptions.map((u) => (
@@ -207,7 +207,7 @@ const CommandHistoryPage: React.FC = () => {
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="w-full bg-white/[0.02] border border-border-strong text-content rounded px-2 py-1 text-sm"
+                  className={`w-full border border-border-strong rounded px-2 py-1 text-sm ${nativeSelectClass}`}
                 >
                   <option value="">All</option>
                   <option value="completed">Completed</option>
@@ -222,7 +222,7 @@ const CommandHistoryPage: React.FC = () => {
                 <select
                   value={riskFilter}
                   onChange={(e) => setRiskFilter(e.target.value)}
-                  className="w-full bg-white/[0.02] border border-border-strong text-content rounded px-2 py-1 text-sm"
+                  className={`w-full border border-border-strong rounded px-2 py-1 text-sm ${nativeSelectClass}`}
                 >
                   <option value="">All</option>
                   <option value="low">Low</option>

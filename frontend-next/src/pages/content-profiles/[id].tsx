@@ -5,7 +5,7 @@ import { useRouter } from 'next/router';
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import MainLayout from '@/components/MainLayout';
-import { Badge, ErrorState, LoadingState, PageHeader } from '@/components/ui';
+import { Badge, ErrorState, LoadingState, nativeSelectClass, PageHeader } from '@/components/ui';
 import { useAuth } from '@/context/AuthContext';
 import {
   addGroupSubscription,
@@ -265,7 +265,7 @@ const ContentProfileDetailPage: React.FC = () => {
                 <label className="text-xs text-content-muted">
                   Channel ({profile.package_family} only)
                   <select
-                    className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-content"
+                    className={`mt-1 w-full rounded px-2 py-1 text-sm ${nativeSelectClass}`}
                     value={linkChannelId ?? ''}
                     onChange={(e) =>
                       setLinkChannelId(e.target.value ? Number(e.target.value) : null)
@@ -362,7 +362,7 @@ const ContentProfileDetailPage: React.FC = () => {
                   <label className="text-xs text-content-muted">
                     Scope
                     <select
-                      className="mt-1 block rounded bg-black/40 px-2 py-1 text-sm text-content"
+                      className={`mt-1 block rounded px-2 py-1 text-sm ${nativeSelectClass}`}
                       value={subScope}
                       onChange={(e) => setScope(e.target.value as ScopeKind)}
                     >
@@ -374,7 +374,7 @@ const ContentProfileDetailPage: React.FC = () => {
                   <label className="flex-1 text-xs text-content-muted">
                     Target
                     <select
-                      className="mt-1 block w-full rounded bg-black/40 px-2 py-1 text-sm text-content"
+                      className={`mt-1 block w-full rounded px-2 py-1 text-sm ${nativeSelectClass}`}
                       value={subTargetId ?? ''}
                       onChange={(e) =>
                         setSubTargetId(e.target.value ? Number(e.target.value) : null)

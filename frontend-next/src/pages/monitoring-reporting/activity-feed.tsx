@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import MainLayout from '@/components/MainLayout';
-import { PageHeader, Button, Card, CardBody } from '@/components/ui';
+import { PageHeader, Button, Card, CardBody, nativeSelectClass } from '@/components/ui';
 import HelpLink from '@/components/help/HelpLink';
 import { RefreshCw, Filter, Activity, Server, Layers, Briefcase, Package, Bell } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -147,7 +147,7 @@ const ActivityFeed: React.FC = () => {
                 <select
                   value={sourceFilter}
                   onChange={(e) => { setSourceFilter(e.target.value); setPage(1); }}
-                  className="bg-surface-sunken border border-border rounded px-2 py-1 text-content text-sm"
+                  className={`border border-border rounded px-2 py-1 text-sm ${nativeSelectClass}`}
                 >
                   <option value="">All</option>
                   {sources.map((s) => (

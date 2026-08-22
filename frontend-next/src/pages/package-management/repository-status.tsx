@@ -15,7 +15,7 @@ import {
 } from '@/services/repoService';
 import Head from 'next/head';
 import { Trash2 } from 'lucide-react';
-import { PageHeader, Button, Card, CardBody, StatCard, Badge, ConfirmModal } from '@/components/ui';
+import { PageHeader, Button, Card, CardBody, StatCard, Badge, ConfirmModal, nativeSelectClass } from '@/components/ui';
 import HelpLink from '@/components/help/HelpLink';
 
 interface SystemOption {
@@ -179,7 +179,7 @@ const RepositoryStatus = () => {
             <div className="flex justify-between items-center">
               <div className="flex items-center space-x-3">
                 <select
-                  className="px-4 py-2 bg-surface-sunken border border-border rounded-md text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring"
+                  className={`px-4 py-2 border border-border rounded-md ${nativeSelectClass}`}
                   value={selectedSystem ?? ''}
                   onChange={(e) => setSelectedSystem(Number(e.target.value))}
                 >

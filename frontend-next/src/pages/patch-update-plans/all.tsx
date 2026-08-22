@@ -14,7 +14,7 @@ import { toast } from 'sonner';
 import MainLayout from '@/components/MainLayout';
 import Badge from '@/components/ui/Badge';
 import PageHeader from '@/components/ui/PageHeader';
-import { Button, LoadingState, ConfirmModal, Modal } from '@/components/ui';
+import { Button, LoadingState, ConfirmModal, Modal, nativeSelectClass } from '@/components/ui';
 import ExportButton from '@/components/ExportButton';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -245,7 +245,7 @@ const PatchUpdatePlansListPage: React.FC = () => {
                   onChange={(e) =>
                     setForm((f) => ({ ...f, policy_id: e.target.value }))
                   }
-                  className="mt-1 block w-full rounded border border-praxis-border bg-praxis-bg p-1.5 text-sm"
+                  className={`mt-1 block w-full rounded border border-border p-1.5 text-sm ${nativeSelectClass}`}
                 >
                   <option value="">Select a policy…</option>
                   {policies.map((p) => (
@@ -306,7 +306,7 @@ const PatchUpdatePlansListPage: React.FC = () => {
               onChange={(e) =>
                 setStateFilter(e.target.value as '' | PlanState)
               }
-              className="mt-1 block rounded border border-praxis-border bg-praxis-bg p-1.5 text-sm"
+              className={`mt-1 block rounded border border-border p-1.5 text-sm ${nativeSelectClass}`}
             >
               <option value="">All states</option>
               {PLAN_STATE_VALUES.map((s) => (
@@ -321,7 +321,7 @@ const PatchUpdatePlansListPage: React.FC = () => {
             <select
               value={policyFilter}
               onChange={(e) => setPolicyFilter(e.target.value)}
-              className="mt-1 block rounded border border-praxis-border bg-praxis-bg p-1.5 text-sm"
+              className={`mt-1 block rounded border border-border p-1.5 text-sm ${nativeSelectClass}`}
             >
               <option value="">All policies</option>
               {policies.map((p) => (
