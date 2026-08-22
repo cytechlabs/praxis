@@ -9,14 +9,21 @@ every SSH consumer reaches through ``SSHService._create_connection``.
 
 from __future__ import annotations
 
+import binascii
+import hashlib
+import io
 import logging
+import os
+import textwrap
 import uuid
+from base64 import b64encode
 from unittest.mock import MagicMock
 
 import paramiko
 import pytest
-from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives import padding, serialization
 from cryptography.hazmat.primitives.asymmetric import dsa, ec, ed25519, rsa
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 from app.db.models import Credential, Group, System
 from app.db.ssh_security_models import SSHSecurityPolicy
@@ -55,6 +62,42 @@ def _pkcs8(private_key) -> str:
     return _serialize(private_key, serialization.PrivateFormat.PKCS8)
 
 
+def _encrypted_traditional_pem(private_key, passphrase: str, tag: str = "RSA") -> str:
+    """A traditional PEM encrypted the way ``openssl rsa -aes256`` writes one.
+
+    Written by hand rather than through ``BestAvailableEncryption`` because the
+    cipher that picks varies by cryptography release, and the behavior under
+    test is how the loader handles this envelope, not which cipher today's
+    installed version happens to prefer. The key derivation is OpenSSL's
+    EVP_BytesToKey with MD5, seeded from the first eight bytes of the IV, which
+    is what the ``DEK-Info`` header describes.
+    """
+    der = private_key.private_bytes(
+        encoding=serialization.Encoding.DER,
+        format=serialization.PrivateFormat.TraditionalOpenSSL,
+        encryption_algorithm=serialization.NoEncryption(),
+    )
+    iv = os.urandom(16)
+    secret = passphrase.encode()
+    derived = b""
+    block = b""
+    while len(derived) < 32:
+        block = hashlib.md5(block + secret + iv[:8]).digest()
+        derived += block
+    padder = padding.PKCS7(algorithms.AES.block_size).padder()
+    encryptor = Cipher(algorithms.AES(derived[:32]), modes.CBC(iv)).encryptor()
+    body = encryptor.update(padder.update(der) + padder.finalize())
+    body += encryptor.finalize()
+    return (
+        f"-----BEGIN {tag} PRIVATE KEY-----\n"
+        "Proc-Type: 4,ENCRYPTED\n"
+        f"DEK-Info: AES-256-CBC,{binascii.hexlify(iv).decode().upper()}\n"
+        "\n"
+        + textwrap.fill(b64encode(body).decode(), 64)
+        + f"\n-----END {tag} PRIVATE KEY-----\n"
+    )
+
+
 @pytest.fixture(scope="module")
 def ed25519_key() -> str:
     return _openssh(ed25519.Ed25519PrivateKey.generate())
@@ -68,6 +111,12 @@ def ecdsa_key() -> str:
 @pytest.fixture(scope="module")
 def rsa_key() -> str:
     return _openssh(rsa.generate_private_key(public_exponent=65537, key_size=2048))
+
+
+@pytest.fixture(scope="module")
+def rsa_key_object():
+    """A key object, for tests that serialize the envelope themselves."""
+    return rsa.generate_private_key(public_exponent=65537, key_size=2048)
 
 
 @pytest.fixture(scope="module")
@@ -182,6 +231,7 @@ def test_encrypted_key_loads_with_the_stored_passphrase():
 
 
 def test_encrypted_pem_key_loads_with_the_stored_passphrase():
+    """Whatever cipher the installed cryptography picks for this envelope."""
     key_text = _serialize(
         rsa.generate_private_key(public_exponent=65537, key_size=2048),
         serialization.PrivateFormat.TraditionalOpenSSL,
@@ -189,6 +239,128 @@ def test_encrypted_pem_key_loads_with_the_stored_passphrase():
     )
     key = load_credential_private_key(key_text, passphrase=PASSPHRASE)
     assert key.get_name() == "ssh-rsa"
+
+
+def test_encrypted_traditional_rsa_pem_loads(rsa_key_object):
+    """The envelope that fails on a strict DER parser, at the AES-256 default.
+
+    Paramiko decrypts a ``Proc-Type: 4,ENCRYPTED`` body but leaves its block
+    padding attached, so whether it can read this key at all depends on how
+    strict the installed DER parser is. The loader must produce the key either
+    way.
+    """
+    key_text = _encrypted_traditional_pem(rsa_key_object, PASSPHRASE)
+    key = load_credential_private_key(key_text, passphrase=PASSPHRASE)
+    assert key.get_name() == "ssh-rsa"
+
+
+def _reject_encrypted_pem(monkeypatch):
+    """Make Paramiko fail on an encrypted PEM the way a strict DER parser does.
+
+    Paramiko decrypts a ``Proc-Type: 4,ENCRYPTED`` body and hands the result on
+    with its block padding still attached. A lenient DER parser ignores those
+    trailing bytes and a strict one rejects them, so whether the shipped
+    Paramiko can read this envelope at all depends on the installed
+    cryptography. Forcing the rejection pins the loader's behavior on the side
+    of that line the release runs on, from any development environment.
+    Unencrypted reads are left alone, which is what the fallback re-reads.
+    """
+    original = paramiko.pkey.PKey._read_private_key_pem
+
+    def _reject(self, lines, end, password):
+        if password is not None:
+            raise paramiko.SSHException("Could not deserialize key data")
+        return original(self, lines, end, password)
+
+    monkeypatch.setattr(paramiko.pkey.PKey, "_read_private_key_pem", _reject)
+
+
+def test_compatibility_path_loads_what_paramiko_rejects(monkeypatch, rsa_key_object):
+    """Proof the fallback carries the load, on any dependency set."""
+    key_text = _encrypted_traditional_pem(rsa_key_object, PASSPHRASE)
+    _reject_encrypted_pem(monkeypatch)
+
+    with pytest.raises(paramiko.SSHException):
+        paramiko.RSAKey.from_private_key(io.StringIO(key_text), password=PASSPHRASE)
+
+    key = load_credential_private_key(key_text, passphrase=PASSPHRASE)
+    assert key.get_name() == "ssh-rsa"
+
+
+def test_unwrapped_pem_carries_no_encryption_envelope(rsa_key_object):
+    """The text handed back to Paramiko is the same key without the envelope."""
+    key_text = _encrypted_traditional_pem(rsa_key_object, PASSPHRASE)
+    unwrapped = ssh_service._unwrap_traditional_pem(key_text, PASSPHRASE)
+
+    assert unwrapped is not None
+    assert "Proc-Type" not in unwrapped
+    assert "DEK-Info" not in unwrapped
+    expected = rsa_key_object.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.TraditionalOpenSSL,
+        encryption_algorithm=serialization.NoEncryption(),
+    ).decode()
+    assert unwrapped == expected
+
+
+def test_unwrapping_returns_nothing_for_a_wrong_passphrase(rsa_key_object):
+    key_text = _encrypted_traditional_pem(rsa_key_object, PASSPHRASE)
+    assert ssh_service._unwrap_traditional_pem(key_text, "wrong-passphrase") is None
+
+
+def test_encrypted_traditional_ec_pem_loads_through_the_compatibility_path(monkeypatch):
+    _reject_encrypted_pem(monkeypatch)
+    key_text = _encrypted_traditional_pem(
+        ec.generate_private_key(ec.SECP256R1()), PASSPHRASE, tag="EC"
+    )
+    key = load_credential_private_key(key_text, passphrase=PASSPHRASE)
+    assert key.get_name() == "ecdsa-sha2-nistp256"
+
+
+def test_compatibility_path_still_enforces_the_rsa_floor(monkeypatch):
+    """Unwrapping the envelope must not bypass the strength rule."""
+    _reject_encrypted_pem(monkeypatch)
+    weak = rsa.generate_private_key(public_exponent=65537, key_size=1024)
+    with pytest.raises(SSHKeyError) as excinfo:
+        load_credential_private_key(
+            _encrypted_traditional_pem(weak, PASSPHRASE), passphrase=PASSPHRASE
+        )
+    assert "1024 bits" in str(excinfo.value)
+
+
+def test_compatibility_path_rejects_a_wrong_passphrase(monkeypatch, rsa_key_object):
+    _reject_encrypted_pem(monkeypatch)
+    key_text = _encrypted_traditional_pem(rsa_key_object, PASSPHRASE)
+    with pytest.raises(SSHKeyError) as excinfo:
+        load_credential_private_key(key_text, passphrase="wrong-passphrase")
+    message = str(excinfo.value)
+    assert "could not be decrypted" in message
+    assert PASSPHRASE not in message
+    assert "wrong-passphrase" not in message
+
+
+def test_compatibility_path_does_not_admit_an_encrypted_pkcs8_key(monkeypatch):
+    """PKCS#8 stays rejected by name; the unwrap path must not smuggle it in."""
+    _reject_encrypted_pem(monkeypatch)
+    key_text = _serialize(
+        ed25519.Ed25519PrivateKey.generate(),
+        serialization.PrivateFormat.PKCS8,
+        PASSPHRASE,
+    )
+    with pytest.raises(SSHKeyError) as excinfo:
+        load_credential_private_key(key_text, passphrase=PASSPHRASE)
+    assert "PKCS#8 format" in str(excinfo.value)
+
+
+def test_compatibility_path_does_not_admit_an_encrypted_dsa_key(monkeypatch):
+    """DSA stays rejected by name even with a usable passphrase."""
+    _reject_encrypted_pem(monkeypatch)
+    key_text = _encrypted_traditional_pem(
+        dsa.generate_private_key(key_size=1024), PASSPHRASE, tag="DSA"
+    )
+    with pytest.raises(SSHKeyError) as excinfo:
+        load_credential_private_key(key_text, passphrase=PASSPHRASE)
+    assert "DSA format" in str(excinfo.value)
 
 
 def test_wrong_passphrase_is_reported_as_a_decryption_failure():
