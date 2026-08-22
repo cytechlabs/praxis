@@ -104,6 +104,89 @@ DISTRO_PKG_MANAGER = {
     "oracle": "yum",
 }
 
+# ``dnf|yum updateinfo list security`` is advisory-oriented and shares no shape
+# with ``check-update``. DNF4 and YUM print the advisory id, a combined
+# severity and type, and the NEVRA of the fixed package:
+#
+#     RLSA-2024:7106 Important/Sec.  openssl-1:3.0.7-27.el9.x86_64
+#
+# DNF5 prints a wider table, splitting type and severity apart and appending the
+# date the advisory was issued:
+#
+#     Name           Type     Severity  Package                        Issued
+#     RLSA-2024:7106 security Important openssl-1:3.0.7-27.el9.x86_64  2024-11-05 08:00:00
+#
+# The package column anchors both layouts: the advisory id opens the row, the
+# NEVRA is the first token that parses as one, and the columns between the two
+# carry the type and severity. Anything after the package, such as the issued
+# date, is not part of the update. Both tools also interleave plugin chatter,
+# metadata banners, mirror lists, headers, and trailer lines with the rows, so a
+# line is read as an advisory only when the advisory id sits in its expected
+# column and a NEVRA follows it.
+_RPM_ADVISORY_ID_RE = re.compile(
+    r"^[A-Za-z][A-Za-z0-9]*(?:[-_][A-Za-z0-9][A-Za-z0-9.:+_-]*)+$"
+)
+
+# An RPM version or release never contains a hyphen, so the last two
+# hyphen-separated fields of a NEVRA are always version and release, however
+# many hyphens the package name itself carries.
+_RPM_NEVRA_RE = re.compile(
+    r"^(?P<name>[A-Za-z0-9._+][A-Za-z0-9._+-]*?)"
+    r"-(?:(?P<epoch>\d+):)?"
+    r"(?P<version>[A-Za-z0-9._+~^]+)"
+    r"-(?P<release>[A-Za-z0-9._+~^]+)"
+    r"\.(?P<arch>[A-Za-z0-9_]+)$"
+)
+
+
+def _is_rpm_advisory_id(token: str) -> bool:
+    """True for advisory ids such as ``RHSA-2024:1234`` or ``ELSA-2024-1234``."""
+    return bool(_RPM_ADVISORY_ID_RE.match(token)) and any(
+        char.isdigit() for char in token
+    )
+
+
+def _split_rpm_advisory_columns(columns: List[str]) -> Tuple[str, str]:
+    """Return ``(advisory_type, severity)`` from the columns before the NEVRA.
+
+    Three layouts reach here, all of them without a severity of their own when
+    the advisory carries none:
+
+    * ``Important/Sec.`` - the combined column DNF4 and YUM print;
+    * ``security Important`` - the separate ``Type`` and ``Severity`` columns of
+      the DNF5 table;
+    * ``Sec.`` - a bare type.
+
+    Only the two columns closest to the package are read, so a wider table does
+    not shift the fields.
+    """
+    if not columns:
+        return "", ""
+    if "/" in columns[-1]:
+        severity, _, advisory_type = columns[-1].rpartition("/")
+        return advisory_type, severity
+    if len(columns) >= 2:
+        return columns[-2], columns[-1]
+    return columns[-1], ""
+
+
+def _parse_rpm_nevra(token: str) -> Optional[Dict[str, str]]:
+    """Split ``name-[epoch:]version-release.arch`` into its fields.
+
+    Returns ``None`` when the token is not a NEVRA, which is what separates an
+    advisory row from the surrounding package-manager chatter.
+    """
+    match = _RPM_NEVRA_RE.match(token)
+    if not match:
+        return None
+    return {
+        "name": match.group("name"),
+        "epoch": match.group("epoch") or "",
+        "version": match.group("version"),
+        "release": match.group("release"),
+        "arch": match.group("arch"),
+    }
+
 
 class PackageService:
     """Service for managing packages on remote systems via SSH."""
@@ -401,6 +484,67 @@ class PackageService:
 
         return updates
 
+    @staticmethod
+    def _parse_rpm_security_updates(output: str) -> Tuple[List[Dict[str, str]], int]:
+        """Parse ``dnf|yum updateinfo list security`` output into update rows.
+
+        Returns the parsed advisory rows plus the number of advisory rows that
+        could not be read. A caller must not report an authoritative zero while
+        that second value is non-zero: the host did list advisories, they were
+        simply not understood here.
+
+        ``available_version`` is the epoch-free ``version-release``, matching
+        both the installed-package inventory and the ``check-update`` parser so
+        the two sources stay comparable. ``advisory_type`` and ``severity`` are
+        kept as the host reported them, which is why they carry both the DNF4
+        spelling ("Sec.", "Important") and the DNF5 one ("security",
+        "Important").
+        """
+        updates: List[Dict[str, str]] = []
+        unreadable = 0
+
+        for raw_line in output.splitlines():
+            parts = raw_line.split()
+            if not parts:
+                continue
+
+            # ``yum updateinfo list`` can prefix a row with a one-character
+            # installed-state flag; every other variant starts with the advisory.
+            advisory_index = 1 if len(parts[0]) == 1 and len(parts) > 3 else 0
+            advisory = parts[advisory_index]
+            if not _is_rpm_advisory_id(advisory):
+                # Banner, mirror list, plugin chatter, or trailer line.
+                continue
+
+            nevra = None
+            columns: List[str] = []
+            for index in range(advisory_index + 1, len(parts)):
+                nevra = _parse_rpm_nevra(parts[index])
+                if nevra:
+                    columns = parts[advisory_index + 1 : index]
+                    break
+
+            if not nevra:
+                unreadable += 1
+                continue
+
+            advisory_type, severity = _split_rpm_advisory_columns(columns)
+            updates.append(
+                {
+                    "name": nevra["name"],
+                    "available_version": f"{nevra['version']}-{nevra['release']}",
+                    "current_version": "",
+                    "type": "security",
+                    "advisory": advisory,
+                    "advisory_type": advisory_type,
+                    "severity": severity,
+                    "epoch": nevra["epoch"],
+                    "arch": nevra["arch"],
+                }
+            )
+
+        return updates, unreadable
+
     def _upsert_packages(
         self,
         system_id: int,
@@ -524,11 +668,78 @@ class PackageService:
                 "updates_available": 0,
             }
 
-        updates = self._parse_available_updates(result["stdout"], pkg_manager)
-        for upd in updates:
-            upd["type"] = "security"
+        if pkg_manager in ("yum", "dnf"):
+            updates, unreadable_rows = self._parse_rpm_security_updates(
+                result["stdout"]
+            )
+            if unreadable_rows and not updates:
+                # The host did list advisories. Recording zero would read as "no
+                # security updates", so report the scan as failed instead.
+                logger.error(
+                    "Security scan for system %s returned %d advisory row(s) that "
+                    "could not be read",
+                    system_id,
+                    unreadable_rows,
+                )
+                return {
+                    "system_id": system_id,
+                    "hostname": system.hostname,
+                    "status": "error",
+                    "message": (
+                        f"Security scan could not read any of the {unreadable_rows} "
+                        "advisory line(s) returned by the package manager; no "
+                        "security updates were recorded."
+                    ),
+                    "packages_found": 0,
+                    "packages_added": 0,
+                    "packages_updated": 0,
+                    "updates_available": 0,
+                }
+            if unreadable_rows:
+                logger.warning(
+                    "Security scan for system %s skipped %d unreadable advisory row(s)",
+                    system_id,
+                    unreadable_rows,
+                )
+        else:
+            updates = self._parse_available_updates(result["stdout"], pkg_manager)
+            for upd in updates:
+                upd["type"] = "security"
 
-        updates_found = self._upsert_security_updates(system_id, updates, pkg_manager)
+        updates_found, unmatched = self._upsert_security_updates(
+            system_id, updates, pkg_manager
+        )
+        if updates and not updates_found:
+            # Every reported package is absent from this host's inventory, so
+            # nothing could be stored; a zero here is indistinguishable from a
+            # host with no security updates.
+            logger.error(
+                "Security scan for system %s reported %d update(s) for packages "
+                "missing from the inventory",
+                system_id,
+                len(unmatched),
+            )
+            return {
+                "system_id": system_id,
+                "hostname": system.hostname,
+                "status": "error",
+                "message": (
+                    f"Security scan found {len(unmatched)} update(s) for packages "
+                    f"that are not in this host's package inventory "
+                    f"({', '.join(unmatched[:5])}); run a package scan first."
+                ),
+                "packages_found": 0,
+                "packages_added": 0,
+                "packages_updated": 0,
+                "updates_available": 0,
+            }
+        if unmatched:
+            logger.warning(
+                "Security scan for system %s skipped %d package(s) missing from the "
+                "inventory",
+                system_id,
+                len(unmatched),
+            )
 
         # Notification: security updates available (PRA-99)
         if updates_found > 0:
@@ -555,15 +766,33 @@ class PackageService:
 
     def _upsert_security_updates(
         self, system_id: int, updates: List[Dict[str, str]], pkg_manager: str
-    ) -> int:
+    ) -> Tuple[int, List[str]]:
+        """Store security updates.
+
+        Returns the number of stored updates and the sorted names of reported
+        packages that this host's inventory has never seen. Those cannot be
+        linked to a package row, so the caller reports them rather than letting
+        them disappear into a zero count.
+
+        A package can be reported once per advisory and once per architecture
+        while the inventory holds a single row per package name, so the last
+        reported version for a name wins and the count stays equal to the number
+        of stored rows.
+        """
         count = 0
+        unmatched: Set[str] = set()
+        by_package: Dict[str, Dict[str, str]] = {}
         for upd in updates:
+            by_package[upd["name"]] = upd
+
+        for upd in by_package.values():
             pkg = (
                 self.db.query(Package)
                 .filter(Package.system_id == system_id, Package.name == upd["name"])
                 .first()
             )
             if not pkg:
+                unmatched.add(upd["name"])
                 continue
 
             existing = (
@@ -590,7 +819,7 @@ class PackageService:
             count += 1
 
         self.db.commit()
-        return count
+        return count, sorted(unmatched)
 
     def get_security_updates(
         self,
