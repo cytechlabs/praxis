@@ -29,6 +29,8 @@ Admins and maintainers populate advisories with **Import advisories**: pick a so
 
 On a plan's detail page you see the per-wave, per-host package changes *before* anything runs. Building a plan flips metadata only - it never touches a host.
 
+**A plan with nothing to install will not start.** If no host in the plan has selected package work that can actually be dispatched, starting the execution is **refused with `no_selected_packages`** rather than recorded as a run. Praxis does not create a successful execution that installed nothing, so a green execution always means real package work was attempted. Mixed plans are unaffected: hosts with no applicable work are skipped individually, and the hosts that do have work still patch. The refusal says which case it is - the plan selected nothing at all, the selected work has no dispatchable host left (for example its target system was removed), an earlier run already applied the work, or an earlier attempt failed or only partly succeeded, in which case it reports how many package results succeeded out of the total.
+
 ## Approvals
 
 When the policy requires approval, dispatching a plan (or a rollback) is gated: an approver reviews the frozen plan and approves, rejects, or the request is cancelled. Approvals can be multi-level. The approval snapshots ("freezes") the plan so what gets dispatched is exactly what was approved, even if the live inventory shifts afterward.
