@@ -1,11 +1,20 @@
 """
-Script to populate the command whitelist with common Linux package management commands.
-This script adds basic whitelist entries and validation rules for package management operations.
+Initialize the shipped command policy baseline: whitelist entries, validation
+rules, and the distro mappings that belong to them.
+
+This runs on every boot and is a first-install operation, not a repair. Each
+baseline item is applied at most once and recorded in ``command_policy_baseline``.
+An item that already has a record is never recreated, so a whitelist entry or
+validation rule an administrator deleted stays deleted across restarts instead of
+silently returning as active policy. Items that are still present are left exactly
+as they are, so disabled and edited rows keep their values and operator-authored
+rows are never touched.
 """
 
 import os
 import sys
 from datetime import datetime
+from typing import Set
 
 # Add the parent directory to the path so we can import from app
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -14,12 +23,47 @@ from sqlalchemy.orm import Session
 
 from app.db.models import (
     CommandDistroMapping,
+    CommandPolicyBaseline,
     CommandValidationRule,
     CommandWhitelist,
     Distro,
     User,
 )
 from app.db.session import SessionLocal
+
+# Baseline item types recorded in ``command_policy_baseline``.
+ITEM_TYPE_WHITELIST_ENTRY = "whitelist_entry"
+ITEM_TYPE_VALIDATION_RULE = "validation_rule"
+ITEM_TYPE_DISTRO_MAPPING = "distro_mapping"
+
+
+def distro_key(name: str, version: str) -> str:
+    """Build the lookup key a baseline mapping uses to name a distro."""
+    return f"{name}-{version}"
+
+
+def mapping_key(command_name: str, distro_lookup_key: str) -> str:
+    """Build the baseline record key for one command-to-distro mapping."""
+    return f"{command_name}::{distro_lookup_key}"
+
+
+def applied_baseline_keys(db: Session, item_type: str) -> Set[str]:
+    """Return the keys of every baseline item of this type already applied."""
+    rows = (
+        db.query(CommandPolicyBaseline.item_key)
+        .filter(CommandPolicyBaseline.item_type == item_type)
+        .all()
+    )
+    return {row[0] for row in rows}
+
+
+def record_baseline_applied(db: Session, item_type: str, item_key: str) -> None:
+    """Record that a baseline item has been applied.
+
+    Adds to the session only; the caller commits alongside the item itself so
+    the item and its record land together.
+    """
+    db.add(CommandPolicyBaseline(item_type=item_type, item_key=item_key))
 
 
 def get_admin_user(db: Session) -> User:
@@ -119,12 +163,10 @@ def create_distros(db: Session):
             db.add(distro)
             db.commit()
             db.refresh(distro)
-            created_distros[f"{distro_data['name']}-{distro_data['version']}"] = distro
+            created_distros[distro_key(distro.name, distro.version)] = distro
             print(f"Created distro: {distro.name} {distro.version}")
         else:
-            created_distros[f"{distro_data['name']}-{distro_data['version']}"] = (
-                existing
-            )
+            created_distros[distro_key(existing.name, existing.version)] = existing
 
     return created_distros
 
@@ -440,36 +482,50 @@ def create_whitelist_entries(db: Session, admin_user: User):
         },
     ]
 
-    created_entries = []
+    applied = applied_baseline_keys(db, ITEM_TYPE_WHITELIST_ENTRY)
+
+    present_entries = []
     for entry_data in whitelist_entries:
-        # Check if entry already exists
+        name = entry_data["name"]
         existing = (
-            db.query(CommandWhitelist)
-            .filter(CommandWhitelist.name == entry_data["name"])
-            .first()
+            db.query(CommandWhitelist).filter(CommandWhitelist.name == name).first()
         )
 
-        if not existing:
-            entry = CommandWhitelist(
-                name=entry_data["name"],
-                description=entry_data["description"],
-                command_pattern=entry_data["command_pattern"],
-                is_regex=entry_data["is_regex"],
-                risk_level=entry_data["risk_level"],
-                category=entry_data["category"],
-                requires_sudo=entry_data["requires_sudo"],
-                timeout_seconds=entry_data["timeout_seconds"],
-                created_by=admin_user.id,
-            )
-            db.add(entry)
-            db.commit()
-            db.refresh(entry)
-            created_entries.append(entry)
-            print(f"Created whitelist entry: {entry.name}")
-        else:
-            created_entries.append(existing)
+        if name in applied:
+            # Already applied once. An absent row was deliberately deleted and
+            # must stay deleted; a present row keeps whatever state it now has.
+            if existing:
+                present_entries.append(existing)
+            continue
 
-    return created_entries
+        if existing:
+            # An entry with this name predates baseline tracking, or an operator
+            # authored it. Adopt it as applied so it is never duplicated, and
+            # leave its values untouched.
+            record_baseline_applied(db, ITEM_TYPE_WHITELIST_ENTRY, name)
+            db.commit()
+            present_entries.append(existing)
+            continue
+
+        entry = CommandWhitelist(
+            name=name,
+            description=entry_data["description"],
+            command_pattern=entry_data["command_pattern"],
+            is_regex=entry_data["is_regex"],
+            risk_level=entry_data["risk_level"],
+            category=entry_data["category"],
+            requires_sudo=entry_data["requires_sudo"],
+            timeout_seconds=entry_data["timeout_seconds"],
+            created_by=admin_user.id,
+        )
+        db.add(entry)
+        record_baseline_applied(db, ITEM_TYPE_WHITELIST_ENTRY, name)
+        db.commit()
+        db.refresh(entry)
+        present_entries.append(entry)
+        print(f"Created whitelist entry: {entry.name}")
+
+    return present_entries
 
 
 def create_distro_mappings(db: Session, whitelist_entries, distros):
@@ -523,18 +579,26 @@ def create_distro_mappings(db: Session, whitelist_entries, distros):
 
     # Create a lookup for whitelist entries by name
     entry_lookup = {entry.name: entry for entry in whitelist_entries}
+    applied = applied_baseline_keys(db, ITEM_TYPE_DISTRO_MAPPING)
 
     for mapping_data in mappings:
-        command_entry = entry_lookup.get(mapping_data["command_name"])
-        if not command_entry:
-            continue
+        command_name = mapping_data["command_name"]
 
-        for distro_key in mapping_data["distros"]:
-            distro = distros.get(distro_key)
-            if not distro:
+        for distro_lookup_key in mapping_data["distros"]:
+            key = mapping_key(command_name, distro_lookup_key)
+            if key in applied:
+                # Already applied once. A mapping removed with its command, or
+                # removed on its own, is not restored.
                 continue
 
-            # Check if mapping already exists
+            command_entry = entry_lookup.get(command_name)
+            distro = distros.get(distro_lookup_key)
+            if not command_entry or not distro:
+                # The mapping has no owning command or no distro to attach to.
+                # Leave it unrecorded so it can follow its command if that
+                # command is applied on a later run.
+                continue
+
             existing = (
                 db.query(CommandDistroMapping)
                 .filter(
@@ -543,18 +607,21 @@ def create_distro_mappings(db: Session, whitelist_entries, distros):
                 )
                 .first()
             )
+            if existing:
+                record_baseline_applied(db, ITEM_TYPE_DISTRO_MAPPING, key)
+                continue
 
-            if not existing:
-                mapping = CommandDistroMapping(
-                    command_id=command_entry.id,
-                    distro_id=distro.id,
-                    is_supported=True,
-                    notes=f"Default mapping for {distro.name} {distro.version}",
-                )
-                db.add(mapping)
-                print(
-                    f"Created distro mapping: {command_entry.name} -> {distro.name} {distro.version}"
-                )
+            mapping = CommandDistroMapping(
+                command_id=command_entry.id,
+                distro_id=distro.id,
+                is_supported=True,
+                notes=f"Default mapping for {distro.name} {distro.version}",
+            )
+            db.add(mapping)
+            record_baseline_applied(db, ITEM_TYPE_DISTRO_MAPPING, key)
+            print(
+                f"Created distro mapping: {command_entry.name} -> {distro.name} {distro.version}"
+            )
 
     db.commit()
 
@@ -666,27 +733,39 @@ def create_validation_rules(db: Session, admin_user: User):
         },
     ]
 
+    applied = applied_baseline_keys(db, ITEM_TYPE_VALIDATION_RULE)
+
     for rule_data in validation_rules:
-        # Check if rule already exists
+        name = rule_data["name"]
+        if name in applied:
+            # Already applied once. A deleted rule stays deleted; a disabled or
+            # edited rule keeps the administrator's values.
+            continue
+
         existing = (
             db.query(CommandValidationRule)
-            .filter(CommandValidationRule.name == rule_data["name"])
+            .filter(CommandValidationRule.name == name)
             .first()
         )
+        if existing:
+            # Predates baseline tracking or was authored by an operator. Adopt it
+            # so it is never duplicated, without changing it.
+            record_baseline_applied(db, ITEM_TYPE_VALIDATION_RULE, name)
+            continue
 
-        if not existing:
-            rule = CommandValidationRule(
-                name=rule_data["name"],
-                description=rule_data["description"],
-                validation_type=rule_data["validation_type"],
-                pattern=rule_data["pattern"],
-                is_regex=rule_data["is_regex"],
-                severity=rule_data["severity"],
-                error_message=rule_data["error_message"],
-                created_by=admin_user.id,
-            )
-            db.add(rule)
-            print(f"Created validation rule: {rule.name}")
+        rule = CommandValidationRule(
+            name=name,
+            description=rule_data["description"],
+            validation_type=rule_data["validation_type"],
+            pattern=rule_data["pattern"],
+            is_regex=rule_data["is_regex"],
+            severity=rule_data["severity"],
+            error_message=rule_data["error_message"],
+            created_by=admin_user.id,
+        )
+        db.add(rule)
+        record_baseline_applied(db, ITEM_TYPE_VALIDATION_RULE, name)
+        print(f"Created validation rule: {rule.name}")
 
     db.commit()
 
@@ -705,23 +784,21 @@ def main():
         print("\nCreating Linux distributions...")
         distros = create_distros(db)
 
-        # Create whitelist entries
-        print("\nCreating whitelist entries...")
+        # Apply any whitelist entries not applied before
+        print("\nApplying whitelist entries...")
         whitelist_entries = create_whitelist_entries(db, admin_user)
 
-        # Create distribution mappings
-        print("\nCreating distribution mappings...")
+        # Apply distribution mappings for those entries
+        print("\nApplying distribution mappings...")
         create_distro_mappings(db, whitelist_entries, distros)
 
-        # Create validation rules
-        print("\nCreating validation rules...")
+        # Apply any validation rules not applied before
+        print("\nApplying validation rules...")
         create_validation_rules(db, admin_user)
 
-        print(f"\nCompleted! Created:")
-        print(f"- {len(distros)} distributions")
-        print(f"- {len(whitelist_entries)} whitelist entries")
-        print(f"- Distribution mappings")
-        print(f"- Validation rules")
+        print("\nCompleted.")
+        print(f"- {len(distros)} distributions available")
+        print(f"- {len(whitelist_entries)} baseline whitelist entries present")
 
     except Exception as e:
         print(f"Error: {e}")
