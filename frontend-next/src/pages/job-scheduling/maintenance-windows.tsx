@@ -6,7 +6,7 @@ import { apiFetch, formatApiError } from '@/utils/api';
 import { fetchAllSystems, fetchGroups } from '@/services/systemService';
 import Head from 'next/head';
 import { useFormatTimestamp } from '@/context/TimestampPreferencesContext';
-import { PageHeader, Button, StatCard, Card, CardHeader, Badge, EmptyState, ConfirmModal } from '@/components/ui';
+import { PageHeader, Button, StatCard, Card, CardHeader, Badge, EmptyState, ConfirmModal, nativeSelectClass } from '@/components/ui';
 import HelpLink from '@/components/help/HelpLink';
 
 interface ScheduleDef {
@@ -280,7 +280,7 @@ const MaintenanceWindows = () => {
                     <select
                       value={formTargetType}
                       onChange={(e) => { setFormTargetType(e.target.value); setFormTargetId(null); }}
-                      className="bg-surface-sunken border border-border rounded-lg px-3 py-2 text-content w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
+                      className={`border border-border rounded-lg px-3 py-2 w-full ${nativeSelectClass}`}
                     >
                       <option value="all">All Systems</option>
                       <option value="system">Specific System</option>
@@ -295,7 +295,7 @@ const MaintenanceWindows = () => {
                     <select
                       value={formTargetId || ''}
                       onChange={(e) => setFormTargetId(Number(e.target.value) || null)}
-                      className="bg-surface-sunken border border-border rounded-lg px-3 py-2 text-content w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
+                      className={`border border-border rounded-lg px-3 py-2 w-full ${nativeSelectClass}`}
                     >
                       <option value="">Select system...</option>
                       {systems.map(s => <option key={s.id} value={s.id}>{s.hostname}</option>)}
@@ -309,7 +309,7 @@ const MaintenanceWindows = () => {
                     <select
                       value={formTargetId || ''}
                       onChange={(e) => setFormTargetId(Number(e.target.value) || null)}
-                      className="bg-surface-sunken border border-border rounded-lg px-3 py-2 text-content w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
+                      className={`border border-border rounded-lg px-3 py-2 w-full ${nativeSelectClass}`}
                     >
                       <option value="">Select group...</option>
                       {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
@@ -363,7 +363,7 @@ const MaintenanceWindows = () => {
                     <select
                       value={formSchedule.timezone}
                       onChange={(e) => setFormSchedule({ ...formSchedule, timezone: e.target.value })}
-                      className="bg-surface-sunken border border-border rounded-lg px-3 py-2 text-content w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
+                      className={`border border-border rounded-lg px-3 py-2 w-full ${nativeSelectClass}`}
                     >
                       <option value="UTC">UTC</option>
                       <option value="America/New_York">Eastern (US)</option>

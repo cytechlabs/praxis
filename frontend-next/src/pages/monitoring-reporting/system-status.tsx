@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/router';
 import MainLayout from '@/components/MainLayout';
-import { PageHeader, Button, Card, CardBody, StatCard, Badge, statusToBadgeVariant } from '@/components/ui';
+import { PageHeader, Button, Card, CardBody, StatCard, Badge, statusToBadgeVariant, nativeSelectClass } from '@/components/ui';
 import HelpLink from '@/components/help/HelpLink';
 import { RefreshCw, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 import { apiFetch } from '@/utils/api';
@@ -312,7 +312,7 @@ const SystemStatus: React.FC = () => {
                 <select
                   value={statusFilter}
                   onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-                  className="bg-surface-sunken border border-border rounded px-2 py-1 text-content text-sm"
+                  className={`border border-border rounded px-2 py-1 text-sm ${nativeSelectClass}`}
                 >
                   <option value="">All</option>
                   <option value="Active">Active</option>
@@ -327,7 +327,7 @@ const SystemStatus: React.FC = () => {
                 <select
                   value={connFilter}
                   onChange={(e) => { setConnFilter(e.target.value); setPage(1); }}
-                  className="bg-surface-sunken border border-border rounded px-2 py-1 text-content text-sm"
+                  className={`border border-border rounded px-2 py-1 text-sm ${nativeSelectClass}`}
                 >
                   <option value="">All</option>
                   <option value="connected">Connected</option>
@@ -341,7 +341,7 @@ const SystemStatus: React.FC = () => {
                 <select
                   value={groupFilter}
                   onChange={(e) => { setGroupFilter(e.target.value); setPage(1); }}
-                  className="bg-surface-sunken border border-border rounded px-2 py-1 text-content text-sm"
+                  className={`border border-border rounded px-2 py-1 text-sm ${nativeSelectClass}`}
                 >
                   <option value="">All</option>
                   {groups.map((g) => (

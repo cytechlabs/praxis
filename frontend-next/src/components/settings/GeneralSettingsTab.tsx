@@ -4,7 +4,7 @@ import { Save, RotateCcw, Globe, Calendar, Clock, Type } from 'lucide-react';
 import { fetchAppSettings, updateAppSettings } from '@/services/appSettingsService';
 import { useTimestampPreferences } from '@/context/TimestampPreferencesContext';
 import { normalizeTimezone } from '@/utils/formatTimestamp';
-import { Button } from '@/components/ui';
+import { Button, nativeSelectClass } from '@/components/ui';
 
 const TIMEZONE_OPTIONS = [
   { value: 'UTC', label: 'UTC' },
@@ -173,7 +173,7 @@ const GeneralSettingsTab: React.FC = () => {
             id="general-timezone"
             value={form.timezone}
             onChange={(e) => setForm({ ...form, timezone: e.target.value })}
-            className="w-full bg-surface-sunken border border-border-strong/60 rounded px-3 py-2 text-sm text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
+            className={`w-full border border-border-strong/60 rounded px-3 py-2 text-sm ${nativeSelectClass}`}
           >
             {timezoneOptions.map((tz) => (
               <option key={tz.value} value={tz.value}>
@@ -193,7 +193,7 @@ const GeneralSettingsTab: React.FC = () => {
           <select
             value={form.date_format}
             onChange={(e) => setForm({ ...form, date_format: e.target.value })}
-            className="w-full bg-surface-sunken border border-border-strong/60 rounded px-3 py-2 text-sm text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
+            className={`w-full border border-border-strong/60 rounded px-3 py-2 text-sm ${nativeSelectClass}`}
           >
             {DATE_FORMAT_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>

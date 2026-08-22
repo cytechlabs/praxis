@@ -5,7 +5,7 @@ import MainLayout from '@/components/MainLayout';
 import { fetchGroups, createGroup, updateGroup, deleteGroup, fetchGroupSystems, assignSystemsToGroup, fetchAllSystems } from '@/services/systemService';
 import { useAuth } from '@/context/AuthContext';
 import Head from 'next/head';
-import { PageHeader, Button, Card, CardBody, StatusBadge, EmptyState, SkeletonCards, ActionMenu } from '@/components/ui';
+import { PageHeader, Button, Card, CardBody, StatusBadge, EmptyState, SkeletonCards, ActionMenu, nativeSelectClass } from '@/components/ui';
 import type { ActionMenuItem } from '@/components/ui';
 import HelpLink from '@/components/help/HelpLink';
 
@@ -475,7 +475,7 @@ const SystemGroups = () => {
                   name="parent_id"
                   value={formData.parent_id || ''}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 bg-surface-sunken border border-border/60 rounded-md text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring"
+                  className={`w-full px-3 py-2 border border-border/60 rounded-md ${nativeSelectClass}`}
                 >
                   <option value="">None</option>
                   {groups.map(group => (
@@ -549,7 +549,7 @@ const SystemGroups = () => {
                   name="parent_id"
                   value={formData.parent_id || ''}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 bg-surface-sunken border border-border/60 rounded-md text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring"
+                  className={`w-full px-3 py-2 border border-border/60 rounded-md ${nativeSelectClass}`}
                 >
                   <option value="">None</option>
                   {groups

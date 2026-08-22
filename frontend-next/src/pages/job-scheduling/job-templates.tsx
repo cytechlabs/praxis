@@ -7,7 +7,7 @@ import { fetchAllSystems, fetchGroups } from '@/services/systemService';
 import { fetchTags, Tag as TagType } from '@/services/tagService';
 import Head from 'next/head';
 import { useFormatTimestamp } from '@/context/TimestampPreferencesContext';
-import { PageHeader, Button, Badge, statusToBadgeVariant, Card, EmptyState, ConfirmModal } from '@/components/ui';
+import { PageHeader, Button, Badge, statusToBadgeVariant, Card, EmptyState, ConfirmModal, nativeSelectClass } from '@/components/ui';
 import HelpLink from '@/components/help/HelpLink';
 
 // --- Types ---
@@ -456,7 +456,7 @@ const JobTemplates = () => {
                 <select
                   value={formData.job_type}
                   onChange={e => setFormData(prev => ({ ...prev, job_type: e.target.value }))}
-                  className="bg-surface-sunken border border-border rounded-lg px-3 py-2 text-content w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
+                  className={`border border-border rounded-lg px-3 py-2 w-full ${nativeSelectClass}`}
                 >
                   <option value="update">Update</option>
                   <option value="security_update">Security Update</option>
@@ -492,7 +492,7 @@ const JobTemplates = () => {
                     <select
                       value={scheduleConfig.frequency}
                       onChange={(e) => setScheduleConfig({ ...scheduleConfig, frequency: e.target.value })}
-                      className="bg-surface-sunken border border-border rounded-lg px-3 py-2 text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
+                      className={`border border-border rounded-lg px-3 py-2 ${nativeSelectClass}`}
                     >
                       <option value="daily">Every day</option>
                       <option value="weekly">Every week on</option>
@@ -502,7 +502,7 @@ const JobTemplates = () => {
                       <select
                         value={scheduleConfig.dayOfWeek}
                         onChange={(e) => setScheduleConfig({ ...scheduleConfig, dayOfWeek: e.target.value })}
-                        className="bg-surface-sunken border border-border rounded-lg px-3 py-2 text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
+                        className={`border border-border rounded-lg px-3 py-2 ${nativeSelectClass}`}
                       >
                         <option value="0">Sunday</option>
                         <option value="1">Monday</option>
@@ -517,7 +517,7 @@ const JobTemplates = () => {
                       <select
                         value={scheduleConfig.dayOfMonth}
                         onChange={(e) => setScheduleConfig({ ...scheduleConfig, dayOfMonth: e.target.value })}
-                        className="bg-surface-sunken border border-border rounded-lg px-3 py-2 text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
+                        className={`border border-border rounded-lg px-3 py-2 ${nativeSelectClass}`}
                       >
                         {Array.from({ length: 28 }, (_, i) => (
                           <option key={i + 1} value={String(i + 1)}>{ordinal(i + 1)}</option>
@@ -541,7 +541,7 @@ const JobTemplates = () => {
                 <select
                   value={formData.target_type}
                   onChange={e => setFormData(prev => ({ ...prev, target_type: e.target.value, target_ids: [] }))}
-                  className="bg-surface-sunken border border-border rounded-lg px-3 py-2 text-content w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
+                  className={`border border-border rounded-lg px-3 py-2 w-full ${nativeSelectClass}`}
                 >
                   <option value="all">All Systems</option>
                   <option value="system">Specific Systems</option>

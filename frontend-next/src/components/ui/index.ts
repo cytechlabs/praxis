@@ -1,7 +1,7 @@
 export { default as Button } from './Button';
 export { default as Badge, statusToBadgeVariant, StatusBadge } from './Badge';
 export { Card, CardHeader, CardBody, StatCard } from './Card';
-export { default as Input, SearchInput, Select } from './Input';
+export { default as Input, SearchInput, Select, nativeSelectClass } from './Input';
 export { FormField, FormActions } from './FormField';
 export { default as Modal } from './Modal';
 export { default as ConfirmModal } from './ConfirmModal';

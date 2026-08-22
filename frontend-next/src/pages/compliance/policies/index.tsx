@@ -24,6 +24,7 @@ import {
   CardBody,
   ConfirmModal,
   EmptyState,
+  nativeSelectClass,
   PageHeader,
   SkeletonTable,
 } from '@/components/ui';
@@ -181,7 +182,7 @@ const CompliancePoliciesPage: React.FC = () => {
                 </Field>
                 <Field label="Severity">
                   <select
-                    className="w-full bg-surface-sunken border border-border rounded px-3 py-1.5 text-sm text-content"
+                    className={`w-full border border-border rounded px-3 py-1.5 text-sm ${nativeSelectClass}`}
                     value={form.severity}
                     onChange={(e) =>
                       setForm((f) => ({
@@ -257,7 +258,7 @@ const CompliancePoliciesPage: React.FC = () => {
                   Origin
                 </label>
                 <select
-                  className="bg-surface-sunken border border-border rounded px-3 py-1.5 text-sm text-content"
+                  className={`border border-border rounded px-3 py-1.5 text-sm ${nativeSelectClass}`}
                   value={builtInFilter}
                   onChange={(e) =>
                     setBuiltInFilter(e.target.value as BuiltInFilter)

@@ -3,7 +3,7 @@ import Head from 'next/head';
 import { toast } from 'sonner';
 import { Filter, Plus, Pencil, Trash2, RefreshCw, Users as UsersIcon, X, ChevronRight } from 'lucide-react';
 import MainLayout from '@/components/MainLayout';
-import { PageHeader, Button, StatusBadge } from '@/components/ui';
+import { PageHeader, Button, StatusBadge, nativeSelectClass } from '@/components/ui';
 import HelpLink from '@/components/help/HelpLink';
 import { apiFetch, formatApiError } from '@/utils/api';
 
@@ -240,14 +240,14 @@ const SmartGroupsPage: React.FC = () => {
             const nf = catalogByField.get(e.target.value)!;
             update({ field: nf.field, op: nf.ops[0], value: defaultValueForType(nf.type) });
           }}
-          className="bg-surface-sunken border border-border rounded text-xs text-content px-2 py-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
+          className={`border border-border rounded text-xs px-2 py-1 ${nativeSelectClass}`}
         >
           {catalog.map(f => <option key={f.field} value={f.field}>{f.field}</option>)}
         </select>
         <select
           value={c.op}
           onChange={e => update({ op: e.target.value })}
-          className="bg-surface-sunken border border-border rounded text-xs text-content px-2 py-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
+          className={`border border-border rounded text-xs px-2 py-1 ${nativeSelectClass}`}
         >
           {(spec?.ops || []).map(o => <option key={o} value={o}>{o}</option>)}
         </select>
@@ -275,7 +275,7 @@ const SmartGroupsPage: React.FC = () => {
           <select
             value={String(Boolean(c.value))}
             onChange={e => update({ value: e.target.value === 'true' })}
-            className="bg-surface-sunken border border-border rounded text-xs text-content px-2 py-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
+            className={`border border-border rounded text-xs px-2 py-1 ${nativeSelectClass}`}
           >
             <option value="true">true</option>
             <option value="false">false</option>
@@ -304,7 +304,7 @@ const SmartGroupsPage: React.FC = () => {
           <select
             value={g.op}
             onChange={e => updateAtPath(path, node => ({ ...(node as GroupNode), op: e.target.value as Op }))}
-            className="bg-surface-sunken border border-red-900/40 rounded text-xs font-bold text-red-300 uppercase px-2 py-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
+            className={`border border-border rounded text-xs font-bold uppercase px-2 py-1 ${nativeSelectClass}`}
           >
             <option value="and">AND</option>
             <option value="or">OR</option>

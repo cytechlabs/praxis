@@ -13,6 +13,7 @@ import {
   CardHeader,
   ConfirmModal,
   EmptyState,
+  nativeSelectClass,
   SearchInput,
 } from '@/components/ui';
 import {
@@ -158,7 +159,7 @@ const ActiveSessionsPage = () => {
               <select
                 value={sortKey}
                 onChange={(e) => setSortKey(e.target.value as SortKey)}
-                className="bg-surface-sunken border border-border rounded-md px-2 py-1.5 text-xs text-content"
+                className={`border border-border rounded-md px-2 py-1.5 text-xs ${nativeSelectClass}`}
               >
                 <option value="duration">Longest running</option>
                 <option value="started">Newest first</option>

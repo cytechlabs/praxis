@@ -29,7 +29,7 @@ import {
   ChevronLeft,
 } from 'lucide-react';
 import VaultSettingsTab from '@/components/settings/VaultSettingsTab';
-import { Modal, ConfirmModal, Input, Button } from '@/components/ui';
+import { Modal, ConfirmModal, Input, Button, nativeSelectClass } from '@/components/ui';
 import Head from 'next/head';
 import { useFormatTimestamp } from '@/context/TimestampPreferencesContext';
 
@@ -586,7 +586,7 @@ const VaultManagementPage: React.FC = () => {
                         <select
                           value={selectedVersion}
                           onChange={(e) => setSelectedVersion(Number(e.target.value))}
-                          className="bg-surface-sunken/50 text-content px-2 py-1 rounded-md border border-border-strong text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
+                          className={`px-2 py-1 rounded-md border border-border-strong text-xs ${nativeSelectClass}`}
                         >
                           {secretVersions.map((version) => (
                             <option key={version} value={version}>

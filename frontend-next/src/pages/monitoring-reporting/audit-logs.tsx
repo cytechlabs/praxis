@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import MainLayout from '@/components/MainLayout';
-import { PageHeader, Button, Card, CardBody, EmptyState } from '@/components/ui';
+import { PageHeader, Button, Card, CardBody, EmptyState, nativeSelectClass } from '@/components/ui';
 import HelpLink from '@/components/help/HelpLink';
 import { RefreshCw, Filter, ChevronDown, ChevronRight } from 'lucide-react';
 import { apiFetch } from '@/utils/api';
@@ -158,7 +158,7 @@ const AuditLogs: React.FC = () => {
                 <select
                   value={systemFilter}
                   onChange={(e) => { setSystemFilter(e.target.value); setPage(1); }}
-                  className="bg-surface-sunken border border-border rounded px-2 py-1 text-content text-sm"
+                  className={`border border-border rounded px-2 py-1 text-sm ${nativeSelectClass}`}
                 >
                   <option value="">All</option>
                   {options?.systems.map((s) => (
@@ -171,7 +171,7 @@ const AuditLogs: React.FC = () => {
                 <select
                   value={userFilter}
                   onChange={(e) => { setUserFilter(e.target.value); setPage(1); }}
-                  className="bg-surface-sunken border border-border rounded px-2 py-1 text-content text-sm"
+                  className={`border border-border rounded px-2 py-1 text-sm ${nativeSelectClass}`}
                 >
                   <option value="">All</option>
                   {options?.users.map((u) => (
@@ -184,7 +184,7 @@ const AuditLogs: React.FC = () => {
                 <select
                   value={operationFilter}
                   onChange={(e) => { setOperationFilter(e.target.value); setPage(1); }}
-                  className="bg-surface-sunken border border-border rounded px-2 py-1 text-content text-sm"
+                  className={`border border-border rounded px-2 py-1 text-sm ${nativeSelectClass}`}
                 >
                   <option value="">All</option>
                   {options?.operations.map((o) => (
@@ -197,7 +197,7 @@ const AuditLogs: React.FC = () => {
                 <select
                   value={auditTypeFilter}
                   onChange={(e) => { setAuditTypeFilter(e.target.value); setPage(1); }}
-                  className="bg-surface-sunken border border-border rounded px-2 py-1 text-content text-sm"
+                  className={`border border-border rounded px-2 py-1 text-sm ${nativeSelectClass}`}
                 >
                   <option value="">All</option>
                   {options?.audit_types.map((t) => (

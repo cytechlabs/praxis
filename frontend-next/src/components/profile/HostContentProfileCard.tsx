@@ -10,7 +10,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { Badge, Button, Card, CardBody, CardHeader, EmptyState } from '@/components/ui';
+import { Badge, Button, Card, CardBody, CardHeader, EmptyState, nativeSelectClass } from '@/components/ui';
 import { humanizeLabel, humanizeStatus } from '@/utils/humanize';
 import {
   addHostSubscription,
@@ -228,7 +228,7 @@ const HostContentProfileCard: React.FC<Props> = ({ systemId, canWrite }) => {
             <label className="flex-1 text-xs text-content-subtle">
               {binding ? 'Assign a different profile (direct)' : 'Assign a profile'}
               <select
-                className="mt-1 w-full rounded border border-border-strong bg-black/30 px-2 py-1.5 text-sm text-content"
+                className={`mt-1 w-full rounded border border-border-strong px-2 py-1.5 text-sm ${nativeSelectClass}`}
                 value={assignId ?? ''}
                 onChange={(e) =>
                   setAssignId(e.target.value ? Number(e.target.value) : null)

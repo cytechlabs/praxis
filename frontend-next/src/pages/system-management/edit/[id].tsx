@@ -5,7 +5,7 @@ import MainLayout from '../../../components/MainLayout';
 import { fetchSystemDetails, updateSystem, fetchGroups, fetchDistros, fetchCredentials } from '../../../services/systemService';
 import { fetchSSHSecurityPolicies } from '../../../services/sshSecurityService';
 import Head from 'next/head';
-import { PageHeader, Card, CardBody, Button } from '@/components/ui';
+import { PageHeader, Card, CardBody, Button, nativeSelectClass } from '@/components/ui';
 
 interface Group {
   id: number;
@@ -287,7 +287,7 @@ const EditSystem = () => {
                     }));
                   }}
                   required
-                  className="w-full px-3 py-2 bg-surface-sunken border border-border rounded-md text-sm text-content placeholder:text-content-subtle focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
+                  className={`w-full px-3 py-2 border border-border rounded-md text-sm ${nativeSelectClass}`}
                 >
                   <option value="">Select Distribution</option>
                   {distros.map(distro => (
@@ -310,7 +310,7 @@ const EditSystem = () => {
                   value={formData.status}
                   onChange={handleChange}
                   required
-                  className="w-full px-3 py-2 bg-surface-sunken border border-border rounded-md text-sm text-content placeholder:text-content-subtle focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
+                  className={`w-full px-3 py-2 border border-border rounded-md text-sm ${nativeSelectClass}`}
                 >
                   <option value="Active">Active</option>
                   <option value="Inactive">Inactive</option>
@@ -327,7 +327,7 @@ const EditSystem = () => {
                   name="environment"
                   value={formData.environment}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 bg-surface-sunken border border-border rounded-md text-sm text-content placeholder:text-content-subtle focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
+                  className={`w-full px-3 py-2 border border-border rounded-md text-sm ${nativeSelectClass}`}
                 >
                   <option value="Production">Production</option>
                   <option value="Staging">Staging</option>
@@ -350,7 +350,7 @@ const EditSystem = () => {
                   value={formData.group_id}
                   onChange={handleChange}
                   required
-                  className="w-full px-3 py-2 bg-surface-sunken border border-border rounded-md text-sm text-content placeholder:text-content-subtle focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
+                  className={`w-full px-3 py-2 border border-border rounded-md text-sm ${nativeSelectClass}`}
                 >
                   <option value="">Select Group</option>
                   {groups.map(group => (
@@ -370,7 +370,7 @@ const EditSystem = () => {
                   value={formData.credentials_id}
                   onChange={handleChange}
                   required
-                  className="w-full px-3 py-2 bg-surface-sunken border border-border rounded-md text-sm text-content placeholder:text-content-subtle focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
+                  className={`w-full px-3 py-2 border border-border rounded-md text-sm ${nativeSelectClass}`}
                 >
                   <option value="">Select Credentials</option>
                   {credentials.map(cred => (
@@ -394,7 +394,7 @@ const EditSystem = () => {
                   name="ssh_security_policy_id"
                   value={formData.ssh_security_policy_id}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 bg-surface-sunken border border-border rounded-md text-sm text-content placeholder:text-content-subtle focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
+                  className={`w-full px-3 py-2 border border-border rounded-md text-sm ${nativeSelectClass}`}
                 >
                   <option value="">No SSH Security Policy</option>
                   {sshPolicies.map(policy => (

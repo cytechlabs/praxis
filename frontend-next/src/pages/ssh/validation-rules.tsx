@@ -4,7 +4,7 @@ import MainLayout from '../../components/MainLayout';
 import { apiFetch, formatApiError } from '@/utils/api';
 import { Plus, Pencil, Trash2, Search, ToggleLeft, ToggleRight } from 'lucide-react';
 import Head from 'next/head';
-import { PageHeader, Button, Card, CardBody, ConfirmModal, EmptyState, SkeletonTable } from '@/components/ui';
+import { PageHeader, Button, Card, CardBody, ConfirmModal, EmptyState, SkeletonTable, nativeSelectClass } from '@/components/ui';
 import HelpLink from '@/components/help/HelpLink';
 import { humanizeLabel } from '@/utils/humanize';
 
@@ -210,17 +210,17 @@ const ValidationRulesPage: React.FC = () => {
         {/* Filters */}
         <div className="flex gap-4 mb-4">
           <select value={filterSeverity} onChange={(e) => setFilterSeverity(e.target.value)}
-            className="bg-white/[0.02] border border-border-strong rounded px-3 py-1.5 text-sm text-content">
+            className={`border border-border-strong rounded px-3 py-1.5 text-sm ${nativeSelectClass}`}>
             <option value="">All Severities</option>
             {SEVERITIES.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
           <select value={filterType} onChange={(e) => setFilterType(e.target.value)}
-            className="bg-white/[0.02] border border-border-strong rounded px-3 py-1.5 text-sm text-content">
+            className={`border border-border-strong rounded px-3 py-1.5 text-sm ${nativeSelectClass}`}>
             <option value="">All Types</option>
             {VALIDATION_TYPES.map(t => <option key={t} value={t}>{humanizeLabel(t)}</option>)}
           </select>
           <select value={filterActive} onChange={(e) => setFilterActive(e.target.value)}
-            className="bg-white/[0.02] border border-border-strong rounded px-3 py-1.5 text-sm text-content">
+            className={`border border-border-strong rounded px-3 py-1.5 text-sm ${nativeSelectClass}`}>
             <option value="">All Status</option>
             <option value="true">Active</option>
             <option value="false">Inactive</option>
@@ -297,7 +297,7 @@ const ValidationRulesPage: React.FC = () => {
                 <div>
                   <label className="block text-xs text-content-muted mb-1">Type</label>
                   <select value={formValidationType} onChange={(e) => setFormValidationType(e.target.value)}
-                    className="w-full bg-white/[0.02] border border-border-strong rounded px-3 py-2 text-sm text-content">
+                    className={`w-full border border-border-strong rounded px-3 py-2 text-sm ${nativeSelectClass}`}>
                     {VALIDATION_TYPES.map(t => <option key={t} value={t}>{humanizeLabel(t)}</option>)}
                   </select>
                 </div>
@@ -320,7 +320,7 @@ const ValidationRulesPage: React.FC = () => {
                 <div>
                   <label className="block text-xs text-content-muted mb-1">Severity</label>
                   <select value={formSeverity} onChange={(e) => setFormSeverity(e.target.value)}
-                    className="w-full bg-white/[0.02] border border-border-strong rounded px-3 py-2 text-sm text-content">
+                    className={`w-full border border-border-strong rounded px-3 py-2 text-sm ${nativeSelectClass}`}>
                     {SEVERITIES.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
