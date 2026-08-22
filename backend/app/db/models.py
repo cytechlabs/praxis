@@ -760,6 +760,41 @@ class CommandValidationLog(Base):  # pylint: disable=too-few-public-methods
     user = relationship("User")
 
 
+class CommandPolicyBaseline(Base):  # pylint: disable=too-few-public-methods
+    """Record of shipped command-policy items that initialization has applied.
+
+    Startup initialization installs a baseline of command whitelist entries,
+    validation rules, and distro mappings. Without a durable record of what has
+    already been installed, initialization cannot tell an item an administrator
+    deliberately deleted from an item that was never created, so every restart
+    would restore deleted policy outside any request context.
+
+    A row here means the named baseline item has been applied once. Initialization
+    never creates that item again, so an administrator deletion is permanent until
+    an explicit, audited restoration. The row is deliberately independent of the
+    policy row it describes: deleting the policy row must not delete the record
+    that it was already installed.
+
+    ``item_key`` is the stable identity initialization matches on: the entry or
+    rule name, and ``"<command name>::<distro name>-<distro version>"`` for a
+    distro mapping.
+    """
+
+    __tablename__ = "command_policy_baseline"
+    __table_args__ = (
+        UniqueConstraint(
+            "item_type", "item_key", name="uq_command_policy_baseline_item"
+        ),
+    )
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    # whitelist_entry, validation_rule, or distro_mapping
+    item_type = Column(String(50), nullable=False, index=True)
+    item_key = Column(String(500), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 class CommandApproval(Base):  # pylint: disable=too-few-public-methods
     """Approval request for commands that require admin sign-off (PRA-80)."""
 
