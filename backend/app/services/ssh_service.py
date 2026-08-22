@@ -17,6 +17,7 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
 import paramiko
+from cryptography.hazmat.primitives import serialization
 from sqlalchemy.orm import Session
 
 from ..db.command_execution_models import CommandExecutionResult
@@ -434,13 +435,15 @@ def _openssh_container(body: str) -> Optional[Tuple[str, bool]]:
         return None
 
 
-def _describe_private_key(key_text: str) -> Tuple[Optional[str], bool]:
-    """``(unusable format name, encrypted)`` read from the key's own envelope.
+def _describe_private_key(key_text: str) -> Tuple[Optional[str], bool, bool]:
+    """``(unusable format name, encrypted, traditional PEM)`` from the envelope.
 
     The format name is ``None`` for anything worth handing to the parsers,
     either because it is supported or because only a parser can tell that it is
     broken. Knowing up front that a key is encrypted is what lets a wrong
-    passphrase be reported as such instead of as an unreadable key.
+    passphrase be reported as such instead of as an unreadable key, and the
+    traditional-PEM flag is what keeps the compatibility path in
+    :func:`load_credential_private_key` to the one envelope that needs it.
     """
     lines = key_text.splitlines()
     for index, line in enumerate(lines):
@@ -455,7 +458,8 @@ def _describe_private_key(key_text: str) -> Tuple[Optional[str], bool]:
                 header.strip().startswith("Proc-Type:") and "ENCRYPTED" in header
                 for header in lines[index + 1 : index + 3]
             )
-            return _UNUSABLE_PEM_TAGS.get(tag), encrypted
+            unusable = _UNUSABLE_PEM_TAGS.get(tag)
+            return unusable, encrypted, unusable is None
         body = []
         for following in lines[index + 1 :]:
             if _PEM_END.match(following.strip()):
@@ -463,12 +467,12 @@ def _describe_private_key(key_text: str) -> Tuple[Optional[str], bool]:
             body.append(following.strip())
         container = _openssh_container("".join(body))
         if container is None:
-            return None, False
+            return None, False, False
         algorithm, encrypted = container
-        return ("DSA" if algorithm == "ssh-dss" else None), encrypted
+        return ("DSA" if algorithm == "ssh-dss" else None), encrypted, False
     if key_text.lstrip().startswith("PuTTY-User-Key-File"):
-        return "PuTTY PPK", False
-    return None, False
+        return "PuTTY PPK", False, False
+    return None, False, False
 
 
 def _enforce_key_strength(key: paramiko.PKey, minimum_rsa_bits: Optional[int]) -> None:
@@ -493,6 +497,62 @@ def _enforce_key_strength(key: paramiko.PKey, minimum_rsa_bits: Optional[int]) -
         )
 
 
+def _parse_private_key(
+    key_text: str, passphrase: Optional[str]
+) -> Tuple[Optional[paramiko.PKey], bool]:
+    """``(key, encrypted)`` from the first supported parser that accepts the key.
+
+    ``key`` is ``None`` when none of them did; ``encrypted`` reports whether a
+    parser refused because the key needs a passphrase it was not given.
+    """
+    encrypted = False
+    for key_class in _CREDENTIAL_KEY_CLASSES:
+        try:
+            return (
+                key_class.from_private_key(
+                    io.StringIO(key_text), password=passphrase or None
+                ),
+                encrypted,
+            )
+        except paramiko.PasswordRequiredException:
+            encrypted = True
+        except Exception:  # pylint: disable=broad-except
+            # Each parser rejects the algorithms it does not own, and a
+            # malformed key can surface as almost any exception type from the
+            # crypto library underneath. Neither is fatal until all have tried.
+            continue
+    return None, encrypted
+
+
+def _unwrap_traditional_pem(key_text: str, passphrase: str) -> Optional[str]:
+    """Re-encode an encrypted traditional PEM with its envelope removed.
+
+    Paramiko decrypts a ``Proc-Type: 4,ENCRYPTED`` body but hands the result on
+    with its block padding still attached, which a strict DER parser rejects.
+    The passphrase is correct in that case and only the envelope handling is
+    at fault, so the key is decrypted here instead and Paramiko is given the
+    same key with no envelope encryption. Returns ``None`` when the passphrase
+    does not open it or the body is not a key.
+
+    The plaintext lives only as long as the load. It is never logged,
+    persisted, or placed in an error, and the caller holds the parsed key
+    rather than this text.
+    """
+    try:
+        unwrapped = serialization.load_pem_private_key(
+            key_text.encode(), password=passphrase.encode()
+        )
+        return unwrapped.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.TraditionalOpenSSL,
+            encryption_algorithm=serialization.NoEncryption(),
+        ).decode()
+    except Exception:  # pylint: disable=broad-except
+        # A wrong passphrase, an unsupported algorithm and a corrupt body all
+        # end here, and all of them mean the caller reports its own failure.
+        return None
+
+
 def load_credential_private_key(
     key_text: Optional[str],
     *,
@@ -508,28 +568,24 @@ def load_credential_private_key(
     if not key_text or not key_text.strip():
         raise SSHKeyError("No SSH private key is stored for this credential.")
 
-    unusable, encrypted = _describe_private_key(key_text)
+    unusable, encrypted, traditional_pem = _describe_private_key(key_text)
     if unusable:
         raise SSHKeyError(
             f"The stored SSH private key is in {unusable} format, which is not "
             f"supported. Use {_SUPPORTED_KEY_SUMMARY}."
         )
 
-    for key_class in _CREDENTIAL_KEY_CLASSES:
-        try:
-            key = key_class.from_private_key(
-                io.StringIO(key_text), password=passphrase or None
-            )
-        except paramiko.PasswordRequiredException:
-            encrypted = True
-        except Exception:  # pylint: disable=broad-except
-            # Each parser rejects the algorithms it does not own, and a
-            # malformed key can surface as almost any exception type from the
-            # crypto library underneath. Neither is fatal until all have tried.
-            continue
-        else:
-            _enforce_key_strength(key, minimum_rsa_bits)
-            return key
+    key, needs_passphrase = _parse_private_key(key_text, passphrase)
+    encrypted = encrypted or needs_passphrase
+
+    if key is None and encrypted and passphrase and traditional_pem:
+        unwrapped = _unwrap_traditional_pem(key_text, passphrase)
+        if unwrapped is not None:
+            key, _ = _parse_private_key(unwrapped, None)
+
+    if key is not None:
+        _enforce_key_strength(key, minimum_rsa_bits)
+        return key
 
     if encrypted and passphrase:
         raise SSHKeyError(
