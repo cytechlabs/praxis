@@ -3,11 +3,14 @@ SSH service for managing SSH connections to remote systems.
 """
 
 import base64
+import binascii
 import hashlib
 import io
 import logging
+import re
 import select
 import socket
+import struct
 import threading
 import time
 from datetime import datetime, timedelta
@@ -341,6 +344,208 @@ def configure_host_key_policy(
         client.set_missing_host_key_policy(HostKeyPromptPolicy(db, system))
 
 
+# --------------------------------------------------------------------------- #
+# Stored credential private keys                                              #
+#                                                                             #
+# One loader for every path that authenticates with a credential's stored     #
+# private key, so command execution, browser sessions, SFTP and lifecycle     #
+# work accept the same formats and fail the same way. Modern OpenSSH installs #
+# default to Ed25519, so an RSA-only reader rejects the key most operators    #
+# generate.                                                                   #
+#                                                                             #
+# Failures carry fixed, sanitized text. Neither the key body, the passphrase, #
+# nor the underlying parser message is propagated or logged: a parser message #
+# can quote the bytes it failed on, and these strings reach audit rows and    #
+# operator-facing errors.                                                     #
+# --------------------------------------------------------------------------- #
+
+# Tried in order. Ed25519 and ECDSA reject a key of the wrong algorithm and RSA
+# is last, so the first parser that succeeds owns the key. DSA is deliberately
+# absent: it is obsolete, OpenSSH refuses it by default, and paramiko's DSSKey
+# accepts an RSA key without checking the embedded algorithm name, so including
+# it would let it claim keys it does not own.
+_CREDENTIAL_KEY_CLASSES = (
+    paramiko.Ed25519Key,
+    paramiko.ECDSAKey,
+    paramiko.RSAKey,
+)
+
+_SUPPORTED_KEY_SUMMARY = "an Ed25519, ECDSA (nistp256/384/521) or RSA private key"
+
+# Algorithm-appropriate strength floors. RSA security scales with modulus size,
+# so it carries a bit floor. An ECDSA curve and Ed25519 carry their strength in
+# the algorithm itself and must not be measured against the RSA rule.
+_MIN_RSA_KEY_BITS = 2048
+_MIN_ECDSA_KEY_BITS = 256
+
+_OPENSSH_KEY_MAGIC = b"openssh-key-v1\x00"
+
+_PEM_BEGIN = re.compile(r"^-{5}BEGIN ?(?P<tag>[A-Z0-9 ]*?) ?PRIVATE KEY-{5}$")
+_PEM_END = re.compile(r"^-{5}END ?[A-Z0-9 ]*? ?PRIVATE KEY-{5}$")
+
+# PEM envelopes that cannot carry a usable key, mapped to the name to report.
+# An empty tag is a bare PKCS#8 container, which paramiko cannot read.
+_UNUSABLE_PEM_TAGS = {"DSA": "DSA", "": "PKCS#8", "ENCRYPTED": "PKCS#8"}
+
+
+class SSHKeyError(SSHConnectionError):
+    """A stored credential private key cannot be used.
+
+    Subclasses :class:`SSHConnectionError` so existing callers keep working,
+    while callers that care can tell an unusable key from a transport problem.
+    """
+
+
+def _read_ssh_string(blob: bytes, offset: int) -> Tuple[bytes, int]:
+    """Read one length-prefixed field of an OpenSSH key blob."""
+    if offset + 4 > len(blob):
+        raise ValueError("truncated field")
+    (length,) = struct.unpack(">I", blob[offset : offset + 4])
+    end = offset + 4 + length
+    if end > len(blob):
+        raise ValueError("truncated field")
+    return blob[offset + 4 : end], end
+
+
+def _openssh_container(body: str) -> Optional[Tuple[str, bool]]:
+    """``(algorithm name, encrypted)`` from an ``OPENSSH PRIVATE KEY`` body.
+
+    The container's header and first public key are never encrypted, so both
+    facts are readable even when the private half is not. Returns ``None`` when
+    the container cannot be parsed; the caller then treats the key as
+    unreadable rather than guessing.
+    """
+    try:
+        blob = base64.b64decode("".join(body.split()), validate=True)
+    except (ValueError, binascii.Error):
+        return None
+    if not blob.startswith(_OPENSSH_KEY_MAGIC):
+        return None
+    try:
+        cipher, offset = _read_ssh_string(blob, len(_OPENSSH_KEY_MAGIC))
+        for _ in range(2):  # kdfname, kdfoptions
+            _, offset = _read_ssh_string(blob, offset)
+        # Skip the 4-byte key count; the first public key follows it, and its
+        # own first field is the algorithm name.
+        public_key, _ = _read_ssh_string(blob, offset + 4)
+        algorithm, _ = _read_ssh_string(public_key, 0)
+        return algorithm.decode("ascii"), cipher != b"none"
+    except (ValueError, struct.error, UnicodeDecodeError):
+        return None
+
+
+def _describe_private_key(key_text: str) -> Tuple[Optional[str], bool]:
+    """``(unusable format name, encrypted)`` read from the key's own envelope.
+
+    The format name is ``None`` for anything worth handing to the parsers,
+    either because it is supported or because only a parser can tell that it is
+    broken. Knowing up front that a key is encrypted is what lets a wrong
+    passphrase be reported as such instead of as an unreadable key.
+    """
+    lines = key_text.splitlines()
+    for index, line in enumerate(lines):
+        match = _PEM_BEGIN.match(line.strip())
+        if not match:
+            continue
+        tag = match.group("tag").strip()
+        if tag != "OPENSSH":
+            # A classic PEM body declares its encryption in the header line
+            # directly after the BEGIN marker.
+            encrypted = tag == "ENCRYPTED" or any(
+                header.strip().startswith("Proc-Type:") and "ENCRYPTED" in header
+                for header in lines[index + 1 : index + 3]
+            )
+            return _UNUSABLE_PEM_TAGS.get(tag), encrypted
+        body = []
+        for following in lines[index + 1 :]:
+            if _PEM_END.match(following.strip()):
+                break
+            body.append(following.strip())
+        container = _openssh_container("".join(body))
+        if container is None:
+            return None, False
+        algorithm, encrypted = container
+        return ("DSA" if algorithm == "ssh-dss" else None), encrypted
+    if key_text.lstrip().startswith("PuTTY-User-Key-File"):
+        return "PuTTY PPK", False
+    return None, False
+
+
+def _enforce_key_strength(key: paramiko.PKey, minimum_rsa_bits: Optional[int]) -> None:
+    """Apply the strength rule that belongs to this key's algorithm.
+
+    ``minimum_rsa_bits`` is the operator-configured floor. It can only raise the
+    built-in RSA floor; a configured value below it is not an opt-out.
+    """
+    name = key.get_name()
+    bits = key.get_bits()
+    if name.startswith(("ssh-rsa", "rsa-sha2")):
+        floor = max(minimum_rsa_bits or 0, _MIN_RSA_KEY_BITS)
+        if bits < floor:
+            raise SSHKeyError(
+                f"The stored RSA private key is {bits} bits, below the "
+                f"required minimum of {floor} bits."
+            )
+    elif name.startswith("ecdsa-") and bits < _MIN_ECDSA_KEY_BITS:
+        raise SSHKeyError(
+            f"The stored ECDSA private key uses a {bits}-bit curve, below the "
+            f"required minimum of {_MIN_ECDSA_KEY_BITS} bits."
+        )
+
+
+def load_credential_private_key(
+    key_text: Optional[str],
+    *,
+    passphrase: Optional[str] = None,
+    minimum_rsa_bits: Optional[int] = None,
+) -> paramiko.PKey:
+    """Load a stored credential private key, or raise :class:`SSHKeyError`.
+
+    Accepts the Ed25519, ECDSA and RSA private keys OpenSSH writes, in both the
+    ``OPENSSH PRIVATE KEY`` container and the older PEM envelopes. An encrypted
+    key loads only when ``passphrase`` unlocks it.
+    """
+    if not key_text or not key_text.strip():
+        raise SSHKeyError("No SSH private key is stored for this credential.")
+
+    unusable, encrypted = _describe_private_key(key_text)
+    if unusable:
+        raise SSHKeyError(
+            f"The stored SSH private key is in {unusable} format, which is not "
+            f"supported. Use {_SUPPORTED_KEY_SUMMARY}."
+        )
+
+    for key_class in _CREDENTIAL_KEY_CLASSES:
+        try:
+            key = key_class.from_private_key(
+                io.StringIO(key_text), password=passphrase or None
+            )
+        except paramiko.PasswordRequiredException:
+            encrypted = True
+        except Exception:  # pylint: disable=broad-except
+            # Each parser rejects the algorithms it does not own, and a
+            # malformed key can surface as almost any exception type from the
+            # crypto library underneath. Neither is fatal until all have tried.
+            continue
+        else:
+            _enforce_key_strength(key, minimum_rsa_bits)
+            return key
+
+    if encrypted and passphrase:
+        raise SSHKeyError(
+            "The stored SSH private key could not be decrypted with the stored "
+            "passphrase."
+        )
+    if encrypted:
+        raise SSHKeyError(
+            "The stored SSH private key is encrypted. Store its passphrase "
+            "alongside the key as 'ssh_passphrase' in the secrets service."
+        )
+    raise SSHKeyError(
+        f"The stored SSH private key could not be read. Use {_SUPPORTED_KEY_SUMMARY}."
+    )
+
+
 class SSHService:  # pylint: disable=too-many-instance-attributes
     """Service for managing SSH connections to remote systems."""
 
@@ -500,25 +705,18 @@ class SSHService:  # pylint: disable=too-many-instance-attributes
         self._on_connected(system, client, principal)
         return True
 
-    def validate_ssh_key(self, ssh_key: str) -> bool:
-        """Validate an SSH key for proper format and strength."""
+    def validate_ssh_key(self, ssh_key: str, passphrase: Optional[str] = None) -> bool:
+        """True when ``ssh_key`` is a usable credential private key.
+
+        Applies the same format and algorithm-appropriate strength rules as the
+        connection path, at the built-in floors.
+        """
         try:
-            # Try to parse the key to ensure it's valid
-            key_file = io.StringIO(ssh_key)
-            key = paramiko.RSAKey.from_private_key(key_file)
-
-            # Check key size (minimum 2048 bits recommended)
-            if key.size < 2048:
-                logger.warning(
-                    "SSH key size %s is below recommended minimum of 2048 bits",
-                    key.size,
-                )
-                return False
-
-            # Additional validation can be added here
+            load_credential_private_key(ssh_key, passphrase=passphrase)
             return True
-        except Exception as e:
-            logger.error("Invalid SSH key: %s", str(e))
+        except SSHConnectionError as exc:
+            # The message is already sanitized; it carries no key material.
+            logger.warning("Rejected stored SSH private key: %s", exc)
             return False
 
     def _get_known_hosts_for_system(self, system_id: int) -> Optional[SSHHostKey]:
@@ -893,14 +1091,18 @@ class SSHService:  # pylint: disable=too-many-instance-attributes
                 if not ssh_key_data:
                     raise SSHConnectionError("SSH key not found in Vault secret")
 
-                if (
-                    system.ssh_security_policy
-                    and system.ssh_security_policy.minimum_key_size
-                ):
-                    if not self.validate_ssh_key(ssh_key_data):
-                        raise SSHConnectionError("SSH key validation failed")
-
-                pkey = paramiko.RSAKey.from_private_key(io.StringIO(ssh_key_data))
+                # A configured policy raises the RSA floor; without one the
+                # loader still applies its own built-in minimum.
+                minimum_rsa_bits = (
+                    system.ssh_security_policy.minimum_key_size
+                    if system.ssh_security_policy
+                    else None
+                )
+                pkey = load_credential_private_key(
+                    ssh_key_data,
+                    passphrase=secret_data.get("ssh_passphrase"),
+                    minimum_rsa_bits=minimum_rsa_bits,
+                )
                 connect_kwargs: Dict[str, Any] = {
                     "hostname": system.ip_address,
                     "port": ssh_port,
