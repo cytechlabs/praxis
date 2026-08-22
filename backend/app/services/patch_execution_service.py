@@ -10,7 +10,8 @@ later slices.
 Slice 1 responsibilities:
 
 * enforce the start gate (plan exists, plan state, approval context,
-  block reasons, materializable hosts, scheduled-start-at conservatism)
+  block reasons, materializable hosts, at least one host with selected
+  package work, scheduled-start-at conservatism)
 * materialize ``patch_update_executions`` + ``patch_update_execution_hosts``
   rows from the existing PRA-164 plan artifact (no target invention)
 * expose metadata-only controls (start / pause / resume / cancel)
@@ -41,6 +42,7 @@ import logging
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
+from sqlalchemy import case, func
 from sqlalchemy.orm import Session
 
 from ..db.models import (
@@ -173,6 +175,27 @@ START_REFUSAL_APPROVAL_REQUIRED = "approval_required_not_satisfied"
 START_REFUSAL_NO_HOSTS = "no_materializable_hosts"
 START_REFUSAL_FUTURE_SCHEDULE = "scheduled_start_at_in_future"
 START_REFUSAL_ACTIVE_EXECUTION_EXISTS = "active_execution_exists"
+# Deliberately the same token as the per-host skip reason above: both mean
+# "there is no selected package work here". The per-host code annotates one
+# skipped host inside a mixed run; this one refuses a run whose every host
+# would be skipped, so no zero-work execution is ever recorded as started.
+START_REFUSAL_NO_SELECTED_PACKAGES = "no_selected_packages"
+
+# Sub-reasons carried in the ``no_selected_packages`` refusal details, so the
+# operator copy says which of several very different situations produced a
+# plan with nothing to dispatch. Keeping them apart matters: reporting a run
+# that failed to install anything as work already applied, or a plan whose
+# selected packages merely lost their hosts as a plan that selected nothing,
+# would both be untrue.
+NO_WORK_REASON_NEVER_SELECTED = "never_selected"
+NO_WORK_REASON_NO_DISPATCHABLE_HOSTS = "no_dispatchable_hosts"
+NO_WORK_REASON_ALREADY_COMPLETED = "already_completed"
+NO_WORK_REASON_PRIOR_ATTEMPT_FAILED = "prior_attempt_failed"
+
+# Internal marker for "no terminal execution ever reached a package manager
+# for this plan". Never surfaced: the gate resolves it to one of the two
+# structural reasons above once it knows whether anything was selected.
+NO_WORK_REASON_NO_PRIOR_ATTEMPT = "no_prior_attempt"
 
 
 # ---------------------------------------------------------------------------
@@ -294,6 +317,67 @@ def _selected_package_counts(db: Session, plan_host_ids: List[int]) -> Dict[int,
     return counts
 
 
+def _format_start_refusal(refusal: Dict[str, Any]) -> str:
+    """Render a start-gate refusal as the error message the route layer
+    turns into an HTTP 422 detail.
+
+    The ``code`` is always the second colon-delimited field, so callers
+    can match on a stable token. A refusal may supply ``message`` for
+    operator-readable copy; otherwise the raw details mapping is
+    rendered, which is the long-standing shape for this family.
+    """
+    tail = refusal.get("message") or refusal["details"]
+    return f"cannot start execution: {refusal['code']}: {tail}"
+
+
+def _plan_host_disposition(
+    plan_host: PatchUpdatePlanHost, selected_count: int
+) -> Tuple[str, List[Dict[str, Any]]]:
+    """Decide the initial execution-host state for one plan host.
+
+    Returns ``(state, skip_reasons)``. A host reaches
+    ``pending`` only when it will really dispatch: the plan host is not
+    blocked, its system is still attached, and selection picked at least
+    one package. Everything else is a ``skipped`` row carrying the reason.
+
+    The start gate and the materializer both call this, so the gate's
+    answer to "would anything run?" cannot drift from the rows that
+    materialization actually writes.
+    """
+    if plan_host.state == PLAN_HOST_STATE_BLOCKED:
+        return EXECUTION_HOST_STATE_SKIPPED, [
+            {
+                "code": SKIP_REASON_PLAN_HOST_BLOCKED,
+                "details": {
+                    "plan_host_block_reasons": list(plan_host.block_reasons or []),
+                },
+            }
+        ]
+    if plan_host.system_id is None:
+        return EXECUTION_HOST_STATE_SKIPPED, [
+            {
+                "code": SKIP_REASON_PLAN_HOST_TARGETLESS,
+                "details": {
+                    "system_hostname_snapshot": plan_host.system_hostname_snapshot,
+                },
+            }
+        ]
+    if selected_count == 0:
+        return EXECUTION_HOST_STATE_SKIPPED, [
+            {
+                "code": SKIP_REASON_NO_SELECTED_PACKAGES,
+                "details": {
+                    "selection_summary": (
+                        dict(plan_host.selection_summary)
+                        if plan_host.selection_summary
+                        else None
+                    ),
+                },
+            }
+        ]
+    return EXECUTION_HOST_STATE_PENDING, []
+
+
 def _has_active_execution(db: Session, plan_id: int) -> Optional[PatchUpdateExecution]:
     return (
         db.query(PatchUpdateExecution)
@@ -369,6 +453,205 @@ def _evaluate_schedule_gate(
     }
 
 
+def _prior_package_attempts(db: Session, plan_id: int) -> List[Dict[str, Any]]:
+    """Summarize each terminal execution of ``plan_id`` that attempted
+    package work, newest first.
+
+    Per-package result rows prove an attempt reached a package manager,
+    not that it worked: the dispatcher writes them with outcome
+    ``failed`` for an unsupported package family, a missing system, a
+    transport error, and a non-zero package-manager exit. So each row
+    here carries the succeeded count alongside the total, and callers
+    decide what the outcome means rather than treating the rows'
+    existence as success.
+    """
+    from ..db.models import PatchUpdateExecutionHostPackage
+    from .patch_execution_dispatch_service import PACKAGE_OUTCOME_SUCCEEDED
+
+    rows = (
+        db.query(
+            PatchUpdateExecution.id,
+            PatchUpdateExecution.state,
+            func.count(PatchUpdateExecutionHostPackage.id),
+            func.count(
+                case(
+                    (
+                        PatchUpdateExecutionHostPackage.outcome
+                        == PACKAGE_OUTCOME_SUCCEEDED,
+                        1,
+                    ),
+                )
+            ),
+        )
+        .join(
+            PatchUpdateExecutionHost,
+            PatchUpdateExecutionHost.execution_id == PatchUpdateExecution.id,
+        )
+        .join(
+            PatchUpdateExecutionHostPackage,
+            PatchUpdateExecutionHostPackage.execution_host_id
+            == PatchUpdateExecutionHost.id,
+        )
+        .filter(
+            PatchUpdateExecution.plan_id == plan_id,
+            PatchUpdateExecution.state.in_(TERMINAL_EXECUTION_STATES),
+        )
+        .group_by(PatchUpdateExecution.id, PatchUpdateExecution.state)
+        .order_by(PatchUpdateExecution.id.desc())
+        .all()
+    )
+    return [
+        {
+            "execution_id": execution_id,
+            "execution_state": state,
+            "package_result_count": int(result_count or 0),
+            "succeeded_package_count": int(succeeded_count or 0),
+        }
+        for execution_id, state, result_count, succeeded_count in rows
+    ]
+
+
+def _classify_prior_package_work(
+    db: Session, plan_id: int
+) -> Tuple[str, Optional[Dict[str, Any]]]:
+    """Decide what an earlier run says about this plan's package work.
+
+    Returns ``(reason, attempt)``. ``attempt`` is the summary row the
+    reason is drawn from, or None when no terminal execution ever
+    attempted a package.
+
+    An execution counts as having applied the work only when it both
+    finished ``succeeded`` and recorded at least one succeeded package
+    result. Anything else that touched a package manager is reported as
+    a failed attempt, so a run that installed nothing is never
+    described as having applied the plan.
+    """
+    attempts = _prior_package_attempts(db, plan_id)
+    if not attempts:
+        return NO_WORK_REASON_NO_PRIOR_ATTEMPT, None
+
+    applied = next(
+        (
+            a
+            for a in attempts
+            if a["execution_state"] == EXECUTION_STATE_SUCCEEDED
+            and a["succeeded_package_count"] > 0
+        ),
+        None,
+    )
+    if applied is not None:
+        return NO_WORK_REASON_ALREADY_COMPLETED, applied
+    return NO_WORK_REASON_PRIOR_ATTEMPT_FAILED, attempts[0]
+
+
+def _evaluate_selected_work_gate(
+    db: Session, plan: PatchUpdatePlan
+) -> Optional[Dict[str, Any]]:
+    """Refuse a start that would dispatch nothing.
+
+    Without this gate a plan whose hosts all resolve to ``skipped``
+    still materializes a ``running`` execution, and the first dispatch
+    call finalizes it as ``succeeded`` because every host is already
+    terminal. That records a patch run that installed nothing as a
+    successful patch run. Refusing here keeps the execution history
+    honest and leaves nothing behind for a retry to inherit.
+
+    A run with at least one dispatchable host is untouched: mixed plans
+    keep their per-host skips and dispatch the hosts that do have work.
+    """
+    plan_hosts: List[PatchUpdatePlanHost] = (
+        db.query(PatchUpdatePlanHost)
+        .filter(PatchUpdatePlanHost.plan_id == plan.id)
+        .all()
+    )
+    selected_counts = _selected_package_counts(db, [h.id for h in plan_hosts])
+
+    dispatchable_hosts = 0
+    dispatchable_selected_total = 0
+    # Every selected row the plan holds, including rows on hosts that
+    # cannot receive them. Reporting only the dispatchable subset would
+    # make each refusal claim the plan selected nothing, which is false
+    # for a plan whose hosts were blocked or lost their system.
+    selected_total = 0
+    skip_code_counts: Dict[str, int] = {}
+    for plan_host in plan_hosts:
+        selected_count = selected_counts.get(plan_host.id, 0)
+        selected_total += selected_count
+        state, skip_reasons = _plan_host_disposition(plan_host, selected_count)
+        if state == EXECUTION_HOST_STATE_PENDING:
+            dispatchable_hosts += 1
+            dispatchable_selected_total += selected_count
+            continue
+        for reason_entry in skip_reasons:
+            code = reason_entry["code"]
+            skip_code_counts[code] = skip_code_counts.get(code, 0) + 1
+
+    if dispatchable_hosts > 0:
+        return None
+
+    host_count = len(plan_hosts)
+    reason, attempt = _classify_prior_package_work(db, plan.id)
+
+    if reason == NO_WORK_REASON_ALREADY_COMPLETED:
+        message = (
+            "plan has no selected package updates left to apply; execution "
+            f"{attempt['execution_id']} already applied this plan's package work"
+        )
+    elif reason == NO_WORK_REASON_PRIOR_ATTEMPT_FAILED:
+        if attempt["succeeded_package_count"] > 0:
+            message = (
+                "plan has no dispatchable package work left; execution "
+                f"{attempt['execution_id']} ended {attempt['execution_state']} after "
+                f"applying only {attempt['succeeded_package_count']} of "
+                f"{attempt['package_result_count']} package result(s), so this "
+                "plan's work may be incomplete"
+            )
+        else:
+            message = (
+                "plan has no dispatchable package work left; execution "
+                f"{attempt['execution_id']} ended {attempt['execution_state']} without "
+                "applying any packages, so this plan's work has not been applied"
+            )
+    elif selected_total > 0:
+        # The plan did select work; no host can receive it any more.
+        reason = NO_WORK_REASON_NO_DISPATCHABLE_HOSTS
+        message = (
+            f"plan selected {selected_total} package update(s) but no plan host can "
+            f"receive them; all {host_count} plan host(s) would be skipped"
+        )
+    else:
+        reason = NO_WORK_REASON_NEVER_SELECTED
+        message = (
+            "plan has no selected package updates to apply; all "
+            f"{host_count} plan host(s) would be skipped"
+        )
+
+    return {
+        "code": START_REFUSAL_NO_SELECTED_PACKAGES,
+        "message": message,
+        "details": {
+            "reason": reason,
+            "plan_host_count": host_count,
+            "dispatchable_host_count": 0,
+            "selected_package_count": selected_total,
+            "dispatchable_selected_package_count": dispatchable_selected_total,
+            "skip_reason_counts": dict(sorted(skip_code_counts.items())),
+            "prior_execution_id": (
+                attempt["execution_id"] if attempt is not None else None
+            ),
+            "prior_execution_state": (
+                attempt["execution_state"] if attempt is not None else None
+            ),
+            "prior_package_result_count": (
+                attempt["package_result_count"] if attempt is not None else 0
+            ),
+            "prior_succeeded_package_count": (
+                attempt["succeeded_package_count"] if attempt is not None else 0
+            ),
+        },
+    }
+
+
 def _evaluate_start_gate(
     db: Session, plan: PatchUpdatePlan, *, now: datetime
 ) -> Optional[Dict[str, Any]]:
@@ -382,8 +665,13 @@ def _evaluate_start_gate(
     2. plan must have no plan-level block_reasons
     3. approval gate (only enforced when policy requires_approval)
     4. plan must have at least one ``planned`` host
-    5. scheduled_start_at must not be in the future
-    6. no other non-terminal execution may exist for this plan
+    5. at least one host must have selected package work to dispatch
+    6. scheduled_start_at must not be in the future
+    7. no other non-terminal execution may exist for this plan
+
+    Check 5 precedes the timing and concurrency checks because an empty
+    plan stays empty: telling the operator to wait for a start time, or
+    to wait on another run, would send them back to the same refusal.
     """
     if plan.state not in EXECUTABLE_PLAN_STATES:
         return {
@@ -426,6 +714,10 @@ def _evaluate_start_gate(
             "code": START_REFUSAL_NO_HOSTS,
             "details": {"reason": "plan has zero planned hosts"},
         }
+
+    work_refusal = _evaluate_selected_work_gate(db, plan)
+    if work_refusal is not None:
+        return work_refusal
 
     schedule_refusal = _evaluate_schedule_gate(plan, now=now)
     if schedule_refusal is not None:
@@ -471,46 +763,8 @@ def _materialize_execution_hosts(
 
     rows: List[PatchUpdateExecutionHost] = []
     for plan_host in plan_hosts:
-        skip_reasons: List[Dict[str, Any]] = []
-        state = EXECUTION_HOST_STATE_PENDING
         selected_count = selected_counts.get(plan_host.id, 0)
-
-        if plan_host.state == PLAN_HOST_STATE_BLOCKED:
-            state = EXECUTION_HOST_STATE_SKIPPED
-            skip_reasons.append(
-                {
-                    "code": SKIP_REASON_PLAN_HOST_BLOCKED,
-                    "details": {
-                        "plan_host_block_reasons": list(plan_host.block_reasons or []),
-                    },
-                }
-            )
-        elif plan_host.system_id is None:
-            state = EXECUTION_HOST_STATE_SKIPPED
-            skip_reasons.append(
-                {
-                    "code": SKIP_REASON_PLAN_HOST_TARGETLESS,
-                    "details": {
-                        "system_hostname_snapshot": (
-                            plan_host.system_hostname_snapshot
-                        ),
-                    },
-                }
-            )
-        elif selected_count == 0:
-            state = EXECUTION_HOST_STATE_SKIPPED
-            skip_reasons.append(
-                {
-                    "code": SKIP_REASON_NO_SELECTED_PACKAGES,
-                    "details": {
-                        "selection_summary": (
-                            dict(plan_host.selection_summary)
-                            if plan_host.selection_summary
-                            else None
-                        ),
-                    },
-                }
-            )
+        state, skip_reasons = _plan_host_disposition(plan_host, selected_count)
 
         row = PatchUpdateExecutionHost(
             execution_id=execution.id,
@@ -664,9 +918,7 @@ def start_execution(
 
     refusal = _evaluate_start_gate(db, plan, now=current_now)
     if refusal is not None:
-        raise PatchUpdateExecutionError(
-            f"cannot start execution: {refusal['code']}: {refusal['details']}"
-        )
+        raise PatchUpdateExecutionError(_format_start_refusal(refusal))
 
     plan_hosts: List[PatchUpdatePlanHost] = (
         db.query(PatchUpdatePlanHost)
@@ -744,6 +996,17 @@ def start_execution(
             "max_parallel_per_wave": execution.max_parallel_per_wave,
             "failure_threshold_percent": execution.failure_threshold_percent,
             "host_count": execution.progress_summary.get("host_count"),
+            # The start gate guarantees both are non-zero, so the record
+            # itself shows the run had work to do rather than leaving a
+            # reader to infer it from later events.
+            "selected_package_count": execution.progress_summary.get(
+                "selected_package_count"
+            ),
+            "pending_host_count": (
+                execution.progress_summary.get("host_counts_by_state", {}).get(
+                    EXECUTION_HOST_STATE_PENDING
+                )
+            ),
         },
     )
     return execution
