@@ -36,6 +36,7 @@ from app.db.models import (
     Package,
     PackageUpdate,
     PatchPolicy,
+    PatchUpdateExecutionHost,
     PatchUpdateExecutionHostPackage,
     PatchUpdatePlanSelectedPackage,
     System,
@@ -63,7 +64,9 @@ from app.services.patch_execution_dispatch_service import (
 from app.services.patch_execution_service import (
     EXECUTION_HOST_STATE_FAILED,
     EXECUTION_HOST_STATE_PENDING,
+    EXECUTION_HOST_STATE_SKIPPED,
     EXECUTION_HOST_STATE_SUCCEEDED,
+    SKIP_REASON_PLAN_HOST_TARGETLESS,
     PatchUpdateExecutionError,
 )
 
@@ -212,6 +215,31 @@ def _start(
     )
 
 
+def _skip_all_pending_hosts(db, execution_id: int) -> int:
+    """Mark every still-pending host row of an execution ``skipped``.
+
+    Models a target that stops being dispatchable between
+    materialization and the dispatch call, which is how an execution
+    reaches "running with nothing left to dispatch" now that a plan
+    with no selected work at all is refused at the start gate.
+    """
+    rows = (
+        db.query(PatchUpdateExecutionHost)
+        .filter(
+            PatchUpdateExecutionHost.execution_id == execution_id,
+            PatchUpdateExecutionHost.state == EXECUTION_HOST_STATE_PENDING,
+        )
+        .all()
+    )
+    for row in rows:
+        row.state = EXECUTION_HOST_STATE_SKIPPED
+        row.skip_reasons = [
+            {"code": SKIP_REASON_PLAN_HOST_TARGETLESS, "details": {}},
+        ]
+    db.flush()
+    return len(rows)
+
+
 def _succeed_callable() -> Callable:
     """DispatchCallable that always returns exit 0."""
 
@@ -341,11 +369,21 @@ def test_dispatch_refuses_canceled_execution(db, admin_user, host_factory):
 
 def test_dispatch_no_pending_returns_no_pending(db, admin_user, host_factory):
     """An execution with only skipped hosts has no pending hosts; the
-    dispatcher returns ``no_pending=True`` rather than raising."""
+    dispatcher returns ``no_pending=True`` rather than raising.
+
+    The start gate refuses a plan whose every host resolves to zero
+    selected packages, so the state is reached the way it is reachable
+    at run time: a mixed plan starts, and the one dispatchable host is
+    then skipped before the dispatcher runs.
+    """
     pol = _make_policy(db, admin_user, "disp-skipped-only")
-    h = host_factory()  # no Package / PackageUpdate => skipped at materialization
-    _bind(db, admin_user, pol, h)
-    execution = _start(db, admin_user, [h], pol)
+    h_work = _seed_host_with_update(db, host_factory, "nopending")
+    _bind(db, admin_user, pol, h_work)
+    h_empty = host_factory()  # no Package / PackageUpdate => skipped
+    _bind(db, admin_user, pol, h_empty)
+    execution = _start(db, admin_user, [h_work, h_empty], pol)
+
+    _skip_all_pending_hosts(db, execution.id)
 
     summary = dispatch_next_batch(
         db,

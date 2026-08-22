@@ -262,25 +262,39 @@ def test_start_execution_skips_blocked_plan_hosts(db, admin_user, host_factory):
 def test_start_execution_skips_plan_host_with_no_selected_packages(
     db, admin_user, host_factory
 ):
-    """The slice spec calls out the ``no_selected_packages`` skip path
-    explicitly; covered here with a host that has installed packages
-    but no available updates so Slice 2 selection picks zero of them."""
+    """The ``no_selected_packages`` skip path, exercised inside a mixed
+    plan: one host has an available update and one has installed
+    packages but nothing to update, so selection picks zero of them.
+
+    The empty host is skipped and the host with work still dispatches.
+    The plan must be mixed because a plan where every host resolves to
+    zero selected packages is refused at the start gate.
+    """
     pol = _make_policy(db, admin_user, "exec-skip-empty", scope_kind="full")
-    h = host_factory()
-    _add_installed(db, h, "pkg-noupdate", "1.0")
-    # No PackageUpdate row → scope=full produces zero selected rows.
-    _bind(db, admin_user, pol, h)
-    plan = _approved_plan(db, admin_user, pol, [h])
+    h_work = _seed_host_with_update(db, host_factory, "skipmix")
+    _bind(db, admin_user, pol, h_work)
+    h_empty = host_factory()
+    _add_installed(db, h_empty, "pkg-noupdate", "1.0")
+    # No PackageUpdate row -> scope=full produces zero selected rows.
+    _bind(db, admin_user, pol, h_empty)
+    plan = _approved_plan(db, admin_user, pol, [h_work, h_empty])
 
     execution = patch_execution_service.start_execution(
         db, plan_id=plan.id, actor_user_id=admin_user.id
     )
     hosts = patch_execution_service.list_execution_hosts(db, execution.id)
-    assert len(hosts) == 1
-    assert hosts[0].state == EXECUTION_HOST_STATE_SKIPPED
-    assert hosts[0].selected_package_count == 0
-    codes = [s["code"] for s in hosts[0].skip_reasons]
+    assert len(hosts) == 2
+    by_id = {h.system_id_snapshot: h for h in hosts}
+
+    empty_row = by_id[h_empty.id]
+    assert empty_row.state == EXECUTION_HOST_STATE_SKIPPED
+    assert empty_row.selected_package_count == 0
+    codes = [s["code"] for s in empty_row.skip_reasons]
     assert SKIP_REASON_NO_SELECTED_PACKAGES in codes
+
+    work_row = by_id[h_work.id]
+    assert work_row.state == EXECUTION_HOST_STATE_PENDING
+    assert work_row.selected_package_count == 1
 
 
 def test_start_execution_uses_policy_snapshot_as_concurrency_default(

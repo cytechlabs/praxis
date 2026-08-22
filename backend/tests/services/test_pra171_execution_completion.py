@@ -43,6 +43,7 @@ from app.db.models import (
     Package,
     PackageUpdate,
     PatchPolicy,
+    PatchUpdateExecutionHost,
     System,
 )
 from app.services import (
@@ -61,9 +62,11 @@ from app.services.patch_execution_dispatch_service import (
 )
 from app.services.patch_execution_service import (
     EXECUTION_HOST_STATE_PENDING,
+    EXECUTION_HOST_STATE_SKIPPED,
     EXECUTION_STATE_FAILED,
     EXECUTION_STATE_PAUSED,
     EXECUTION_STATE_SUCCEEDED,
+    SKIP_REASON_PLAN_HOST_TARGETLESS,
     PatchUpdateExecutionError,
 )
 
@@ -212,6 +215,31 @@ def _start(
     )
 
 
+def _skip_all_pending_hosts(db, execution_id: int) -> int:
+    """Mark every still-pending host row of an execution ``skipped``.
+
+    Models a target that stops being dispatchable between
+    materialization and the dispatch call, which is how an execution
+    reaches "running with nothing left to dispatch" now that a plan
+    with no selected work at all is refused at the start gate.
+    """
+    rows = (
+        db.query(PatchUpdateExecutionHost)
+        .filter(
+            PatchUpdateExecutionHost.execution_id == execution_id,
+            PatchUpdateExecutionHost.state == EXECUTION_HOST_STATE_PENDING,
+        )
+        .all()
+    )
+    for row in rows:
+        row.state = EXECUTION_HOST_STATE_SKIPPED
+        row.skip_reasons = [
+            {"code": SKIP_REASON_PLAN_HOST_TARGETLESS, "details": {}},
+        ]
+    db.flush()
+    return len(rows)
+
+
 def _ok_callable() -> Callable:
     def _impl(system, cmd):
         return DispatchResult(exit_code=0, transport_name="fake")
@@ -319,17 +347,25 @@ def test_wave_completed_idempotent_across_calls(
 def test_wave_completed_recorded_for_all_skipped_wave(
     db, admin_user, host_factory, monkeypatch
 ):
-    """An execution whose only host is skipped at materialization
-    (no preflight family / no selected packages) still gets a
+    """An execution whose hosts are all skipped still gets a
     ``wave_completed`` for the synthetic wave, and the execution
     finalizes to ``succeeded`` (no failures). The first dispatch
     call (which sees no_pending immediately) runs the
-    reconciliation pass and emits both events."""
+    reconciliation pass and emits both events.
+
+    A plan with no selected work at all is refused at the start gate,
+    so the wave is emptied the way it empties at run time: a mixed plan
+    starts, then its one dispatchable host is skipped before dispatch.
+    """
     captured = _capture_audit(monkeypatch)
     pol = _make_policy(db, admin_user, "comp-skip-wave")
-    h = host_factory()  # no Package / PackageUpdate / HostFacts -> skipped
-    _bind(db, admin_user, pol, h)
-    execution = _start(db, admin_user, [h], pol)
+    h_work = _seed_host_with_update(db, host_factory, "skipwave")
+    _bind(db, admin_user, pol, h_work)
+    h_empty = host_factory()  # no Package / PackageUpdate / HostFacts -> skipped
+    _bind(db, admin_user, pol, h_empty)
+    execution = _start(db, admin_user, [h_work, h_empty], pol)
+
+    _skip_all_pending_hosts(db, execution.id)
 
     summary = dispatch_next_batch(
         db,
