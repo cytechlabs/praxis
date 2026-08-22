@@ -9,7 +9,7 @@ import {
   FleetSearchResult,
 } from '@/services/packageService';
 import Head from 'next/head';
-import { PageHeader, Button, Card, CardBody, StatCard, ConfirmModal } from '@/components/ui';
+import { PageHeader, Button, Card, CardBody, StatCard, ConfirmModal, nativeSelectClass } from '@/components/ui';
 import HelpLink from '@/components/help/HelpLink';
 import { usePackageScope } from '@/hooks/usePackageScope';
 import PackageScopeControl from '@/components/packages/PackageScopeControl';
@@ -322,7 +322,7 @@ const FleetSearch = () => {
                 <select
                   value={heldFilter}
                   onChange={(e) => setHeldFilter(e.target.value as '' | 'true' | 'false')}
-                  className="w-full px-4 py-2 bg-surface-sunken border border-border rounded-md text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring"
+                  className={`w-full px-4 py-2 border border-border rounded-md ${nativeSelectClass}`}
                 >
                   <option value="">All</option>
                   <option value="true">Held Only</option>
@@ -334,7 +334,7 @@ const FleetSearch = () => {
                 <select
                   value={updateFilter}
                   onChange={(e) => setUpdateFilter(e.target.value as '' | 'true' | 'false')}
-                  className="w-full px-4 py-2 bg-surface-sunken border border-border rounded-md text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring"
+                  className={`w-full px-4 py-2 border border-border rounded-md ${nativeSelectClass}`}
                 >
                   <option value="">All</option>
                   <option value="true">Out of Date</option>

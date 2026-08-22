@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import MainLayout from '@/components/MainLayout';
-import { PageHeader, Button, Card, CardBody, Badge, statusToBadgeVariant } from '@/components/ui';
+import { PageHeader, Button, Card, CardBody, Badge, statusToBadgeVariant, nativeSelectClass } from '@/components/ui';
 import HelpLink from '@/components/help/HelpLink';
 import { RefreshCw, Filter, X, CheckCircle, XCircle, Clock, AlertTriangle } from 'lucide-react';
 import { apiFetch } from '@/utils/api';
@@ -172,7 +172,7 @@ const FleetOperationsHistory: React.FC = () => {
                 <select
                   value={operationTypeFilter}
                   onChange={(e) => { setOperationTypeFilter(e.target.value); setPage(1); }}
-                  className="bg-surface-sunken border border-border rounded px-2 py-1 text-content text-sm"
+                  className={`border border-border rounded px-2 py-1 text-sm ${nativeSelectClass}`}
                 >
                   <option value="">All</option>
                   {options?.operation_types.map((t) => <option key={t} value={t}>{t}</option>)}
@@ -183,7 +183,7 @@ const FleetOperationsHistory: React.FC = () => {
                 <select
                   value={statusFilter}
                   onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-                  className="bg-surface-sunken border border-border rounded px-2 py-1 text-content text-sm"
+                  className={`border border-border rounded px-2 py-1 text-sm ${nativeSelectClass}`}
                 >
                   <option value="">All</option>
                   {options?.statuses.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -194,7 +194,7 @@ const FleetOperationsHistory: React.FC = () => {
                 <select
                   value={userFilter}
                   onChange={(e) => { setUserFilter(e.target.value); setPage(1); }}
-                  className="bg-surface-sunken border border-border rounded px-2 py-1 text-content text-sm"
+                  className={`border border-border rounded px-2 py-1 text-sm ${nativeSelectClass}`}
                 >
                   <option value="">All</option>
                   {options?.users.map((u) => <option key={u.id} value={u.id}>{u.username}</option>)}
