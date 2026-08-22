@@ -28,7 +28,17 @@ The credential form has a mode toggle. Once saved, mode can't change - create a 
 ### Auth methods
 
 - **password** - username + password. Password is written to Vault under `password`. Cheap and simple for lab / dev fleets.
-- **ssh_key** - username + private key body (+ optional passphrase). Key is written under `ssh_key` and `ssh_passphrase`. Preferred for production because keys can be rotated without locking out humans.
+- **ssh_key** - username + private key body. The key is written under `ssh_key`; a passphrase-protected key needs its passphrase stored in the same secret under `ssh_passphrase`. Preferred for production because keys can be rotated without locking out humans.
+
+### Private key formats
+
+Praxis reads Ed25519, ECDSA (nistp256, nistp384, nistp521), and RSA private keys, in both the `OPENSSH PRIVATE KEY` container that current `ssh-keygen` writes by default and the older `RSA PRIVATE KEY` / `EC PRIVATE KEY` PEM envelopes. Ed25519 is the recommended default for new credentials.
+
+Strength is checked against the key's own algorithm. RSA keys must be at least 2048 bits, and an SSH security policy's minimum key size raises that floor for the systems it covers - see [ssh-and-security.md](ssh-and-security.md). Ed25519 and ECDSA carry their strength in the algorithm and curve, so the RSA size rule is not applied to them.
+
+Three formats are rejected outright, with an error naming the format: DSA keys, PKCS#8 containers (`BEGIN PRIVATE KEY`), and PuTTY `.ppk` files. Convert a PuTTY key first with `puttygen mykey.ppk -O private-openssh-new -o mykey`.
+
+An encrypted key is usable only when its passphrase is stored under `ssh_passphrase` in the same secret. Without it the connection fails and says so; Praxis never falls back to another authentication method to work around an unusable key.
 
 ### Sudo methods
 
