@@ -12,7 +12,7 @@ import Link from 'next/link';
 import { Eye, Plus, Star, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import MainLayout from '@/components/MainLayout';
-import { Badge, ConfirmModal, ErrorState, LoadingState, PageHeader } from '@/components/ui';
+import { Badge, ConfirmModal, ErrorState, LoadingState, nativeSelectClass, PageHeader } from '@/components/ui';
 import {
   createPatchPolicy,
   deletePatchPolicy,
@@ -179,7 +179,7 @@ const PatchPoliciesListPage: React.FC = () => {
               <label className="text-xs text-content-muted">
                 Scope
                 <select
-                  className="mt-1 w-full rounded bg-black/40 px-2 py-1 text-sm text-content"
+                  className={`mt-1 w-full rounded px-2 py-1 text-sm ${nativeSelectClass}`}
                   value={form.scope_kind}
                   onChange={(e) =>
                     setForm({

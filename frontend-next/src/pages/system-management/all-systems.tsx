@@ -28,7 +28,7 @@ import ExportButton from '../../components/ExportButton';
 import Pagination from '../../components/Pagination';
 import Head from 'next/head';
 import { useFormatTimestamp } from '@/context/TimestampPreferencesContext';
-import { PageHeader, Button, StatusBadge, Card, CardBody, ConfirmModal, EmptyState, SkeletonTable, SearchInput, Select, DetailDrawer } from '@/components/ui';
+import { PageHeader, Button, StatusBadge, Card, CardBody, ConfirmModal, EmptyState, SkeletonTable, SearchInput, Select, DetailDrawer, nativeSelectClass } from '@/components/ui';
 import HelpLink from '@/components/help/HelpLink';
 
 interface SystemListItem {
@@ -1097,7 +1097,7 @@ const AllSystems = () => {
             <select
               value={bulkStatusValue}
               onChange={(e) => setBulkStatusValue(e.target.value)}
-              className="w-full mb-6 px-3 py-2 bg-surface-sunken border border-border rounded-md text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring"
+              className={`w-full mb-6 px-3 py-2 border border-border rounded-md ${nativeSelectClass}`}
             >
               <option value="Active">Active</option>
               <option value="Inactive">Inactive</option>
@@ -1135,7 +1135,7 @@ const AllSystems = () => {
             <select
               value={bulkGroupValue}
               onChange={(e) => setBulkGroupValue(Number(e.target.value))}
-              className="w-full mb-6 px-3 py-2 bg-surface-sunken border border-border rounded-md text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring"
+              className={`w-full mb-6 px-3 py-2 border border-border rounded-md ${nativeSelectClass}`}
             >
               <option value={0}>Select a group...</option>
               {groups.map(g => (
@@ -1173,7 +1173,7 @@ const AllSystems = () => {
             <select
               value={bulkCredentialValue}
               onChange={(e) => setBulkCredentialValue(Number(e.target.value))}
-              className="w-full mb-6 px-3 py-2 bg-surface-sunken border border-border rounded-md text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring"
+              className={`w-full mb-6 px-3 py-2 border border-border rounded-md ${nativeSelectClass}`}
             >
               <option value={0}>Select a credential...</option>
               {credentials.map(c => (

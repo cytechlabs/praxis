@@ -7,6 +7,32 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   icon?: React.ReactNode;
 }
 
+/*
+ * Theme-critical styling every native `<select>` must carry.
+ *
+ * A native option list is painted by the browser, not by the page. The browser
+ * derives it from the control's used background and text colors, so a control
+ * whose background is translucent leaves the list composited against the
+ * browser's own default surface instead of the app surface. That default is
+ * decided by the platform and the browser theme, so light option text can land
+ * on a light list and become unreadable. Options also default to a transparent
+ * background of their own, which leaves the same decision to the browser even
+ * when the closed control looks correct.
+ *
+ * This contract pins both halves: an opaque semantic surface on the control and
+ * explicit colors on the option and optgroup children, so the closed control and
+ * the expanded list always resolve to the same theme-aware pair.
+ *
+ * It deliberately carries no geometry. Width, padding, radius and font size stay
+ * at the call site so adopting it never changes a form's layout.
+ */
+export const nativeSelectClass =
+  'bg-surface-sunken text-content ' +
+  'focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong ' +
+  'disabled:cursor-not-allowed disabled:opacity-60 ' +
+  '[&_option]:bg-surface-sunken [&_option]:text-content ' +
+  '[&_optgroup]:bg-surface-sunken [&_optgroup]:text-content-muted';
+
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ label, error, icon, className = '', id, ...props }, ref) => {
     const generatedId = useId();
@@ -78,9 +104,9 @@ export const Select: React.FC<
       <select
         id={selectId}
         className={`
-          w-full bg-surface-sunken border border-border rounded-md text-sm text-content
+          w-full border border-border rounded-md text-sm
           transition-colors duration-150 px-3 py-2
-          focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong
+          ${nativeSelectClass}
           ${className}
         `}
         {...props}

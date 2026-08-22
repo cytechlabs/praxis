@@ -9,7 +9,7 @@
  */
 import React, { useState } from 'react';
 import { toast } from 'sonner';
-import { Modal } from '@/components/ui';
+import { Modal, nativeSelectClass } from '@/components/ui';
 import {
   createMirror,
   updateMirror,
@@ -17,8 +17,9 @@ import {
   type MirrorRepoCreateInput,
 } from '@/services/mirrorService';
 
-const inputCls =
-  'w-full rounded border border-border-strong bg-black/30 px-2 py-1.5 text-sm text-content focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong focus:outline-none';
+const inputGeometryCls = 'w-full rounded border border-border-strong px-2 py-1.5 text-sm';
+const inputCls = `${inputGeometryCls} bg-surface-sunken text-content focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong focus:outline-none`;
+const selectCls = `${inputGeometryCls} ${nativeSelectClass}`;
 const labelCls = 'block text-xs uppercase tracking-wide text-content-subtle mb-1';
 
 function csvToList(v: string): string[] {
@@ -137,7 +138,7 @@ const MirrorForm: React.FC<Props> = ({ open, onClose, onSaved, existing }) => {
           <div>
             <label className={labelCls}>Package family</label>
             <select
-              className={inputCls}
+              className={selectCls}
               value={family}
               onChange={(e) => setFamily(e.target.value as 'deb' | 'rpm')}
               disabled={isEdit}
@@ -149,7 +150,7 @@ const MirrorForm: React.FC<Props> = ({ open, onClose, onSaved, existing }) => {
           <div>
             <label className={labelCls}>Source mode</label>
             <select
-              className={inputCls}
+              className={selectCls}
               value={sourceMode}
               onChange={(e) =>
                 setSourceMode(e.target.value as 'upstream_sync' | 'imported_offline')

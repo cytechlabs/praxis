@@ -4,7 +4,7 @@ import MainLayout from '../../components/MainLayout';
 import { apiFetch, formatApiError } from '@/utils/api';
 import { Plus, Pencil, Trash2, Search, ToggleLeft, ToggleRight } from 'lucide-react';
 import Head from 'next/head';
-import { PageHeader, Button, Card, CardBody, ConfirmModal, EmptyState, SkeletonTable } from '@/components/ui';
+import { PageHeader, Button, Card, CardBody, ConfirmModal, EmptyState, SkeletonTable, nativeSelectClass } from '@/components/ui';
 import HelpLink from '@/components/help/HelpLink';
 import { humanizeLabel } from '@/utils/humanize';
 
@@ -272,17 +272,17 @@ const CommandWhitelistPage: React.FC = () => {
         {/* Filters */}
         <div className="flex gap-4 mb-4">
           <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}
-            className="bg-white/[0.02] border border-border-strong rounded px-3 py-1.5 text-sm text-content">
+            className={`border border-border-strong rounded px-3 py-1.5 text-sm ${nativeSelectClass}`}>
             <option value="">All Categories</option>
             {CATEGORIES.map(c => <option key={c} value={c}>{humanizeLabel(c)}</option>)}
           </select>
           <select value={filterRisk} onChange={(e) => setFilterRisk(e.target.value)}
-            className="bg-white/[0.02] border border-border-strong rounded px-3 py-1.5 text-sm text-content">
+            className={`border border-border-strong rounded px-3 py-1.5 text-sm ${nativeSelectClass}`}>
             <option value="">All Risk Levels</option>
             {RISK_LEVELS.map(r => <option key={r} value={r}>{r}</option>)}
           </select>
           <select value={filterActive} onChange={(e) => setFilterActive(e.target.value)}
-            className="bg-white/[0.02] border border-border-strong rounded px-3 py-1.5 text-sm text-content">
+            className={`border border-border-strong rounded px-3 py-1.5 text-sm ${nativeSelectClass}`}>
             <option value="">All Status</option>
             <option value="true">Active</option>
             <option value="false">Inactive</option>
@@ -366,7 +366,7 @@ const CommandWhitelistPage: React.FC = () => {
                 <div>
                   <label className="block text-xs text-content-muted mb-1">Category</label>
                   <select value={formCategory} onChange={(e) => setFormCategory(e.target.value)}
-                    className="w-full bg-white/[0.02] border border-border-strong rounded px-3 py-2 text-sm text-content">
+                    className={`w-full border border-border-strong rounded px-3 py-2 text-sm ${nativeSelectClass}`}>
                     {CATEGORIES.map(c => <option key={c} value={c}>{humanizeLabel(c)}</option>)}
                   </select>
                 </div>
@@ -389,7 +389,7 @@ const CommandWhitelistPage: React.FC = () => {
                 <div>
                   <label className="block text-xs text-content-muted mb-1">Risk Level</label>
                   <select value={formRiskLevel} onChange={(e) => setFormRiskLevel(e.target.value)}
-                    className="w-full bg-white/[0.02] border border-border-strong rounded px-3 py-2 text-sm text-content">
+                    className={`w-full border border-border-strong rounded px-3 py-2 text-sm ${nativeSelectClass}`}>
                     {RISK_LEVELS.map(r => <option key={r} value={r}>{r}</option>)}
                   </select>
                 </div>
@@ -441,7 +441,7 @@ const CommandWhitelistPage: React.FC = () => {
                 {formDistroMappings.map((m, idx) => (
                   <div key={idx} className="flex gap-2 items-start mb-2 bg-surface-sunken rounded p-3">
                     <select value={m.distro_id} onChange={(e) => updateDistroMapping(idx, 'distro_id', parseInt(e.target.value))}
-                      className="bg-white/[0.02] border border-border-strong rounded px-2 py-1 text-xs text-content">
+                      className={`border border-border-strong rounded px-2 py-1 text-xs ${nativeSelectClass}`}>
                       {distros.map(d => <option key={d.id} value={d.id}>{d.name} {d.version}</option>)}
                     </select>
                     <input value={m.command_override || ''} onChange={(e) => updateDistroMapping(idx, 'command_override', e.target.value || null)}

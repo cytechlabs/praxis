@@ -23,7 +23,7 @@ import {
   PerformanceTrendsResponse,
 } from '@/services/commandExecutionService';
 import Head from 'next/head';
-import { PageHeader, Card, CardHeader, CardBody, StatCard, SkeletonCards } from '@/components/ui';
+import { PageHeader, Card, CardHeader, CardBody, StatCard, SkeletonCards, nativeSelectClass } from '@/components/ui';
 import HelpLink from '@/components/help/HelpLink';
 
 const getNum = (obj: Record<string, unknown> | undefined, key: string, fallback = 0): number => {
@@ -120,7 +120,7 @@ const CommandMetricsPage: React.FC = () => {
               <select
                 value={days}
                 onChange={(e) => setDays(parseInt(e.target.value, 10))}
-                className="bg-white/[0.02] border border-border-strong text-content rounded px-2 py-1 text-sm"
+                className={`border border-border-strong rounded px-2 py-1 text-sm ${nativeSelectClass}`}
               >
                 <option value={7}>7 days</option>
                 <option value={14}>14 days</option>

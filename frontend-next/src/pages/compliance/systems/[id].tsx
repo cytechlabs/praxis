@@ -22,6 +22,7 @@ import {
   Card,
   CardBody,
   EmptyState,
+  nativeSelectClass,
   PageHeader,
   SkeletonTable,
 } from '@/components/ui';
@@ -151,7 +152,7 @@ const ComplianceSystemEvidencePage: React.FC = () => {
                   Verdict
                 </label>
                 <select
-                  className="bg-surface-sunken border border-border rounded px-3 py-1.5 text-sm text-content"
+                  className={`border border-border rounded px-3 py-1.5 text-sm ${nativeSelectClass}`}
                   value={verdict}
                   onChange={(e) => {
                     setVerdict(e.target.value as Verdict | '');

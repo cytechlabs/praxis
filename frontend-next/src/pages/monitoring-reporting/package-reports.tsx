@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import MainLayout from '@/components/MainLayout';
-import { PageHeader, Button, Card, CardBody, StatCard } from '@/components/ui';
+import { PageHeader, Button, Card, CardBody, StatCard, nativeSelectClass } from '@/components/ui';
 import ExportButton from '@/components/ExportButton';
 import HelpLink from '@/components/help/HelpLink';
 import { RefreshCw, Package, Shield, Lock, AlertTriangle } from 'lucide-react';
@@ -286,7 +286,7 @@ const PackageReports: React.FC = () => {
               <select
                 value={smartGroupId}
                 onChange={(e) => { setSmartGroupId(e.target.value ? Number(e.target.value) : ''); setOutdatedPage(1); }}
-                className="bg-surface-sunken border border-border rounded px-2 py-1 text-content text-sm"
+                className={`border border-border rounded px-2 py-1 text-sm ${nativeSelectClass}`}
                 title="Scope report to a smart group"
               >
                 <option value="">Fleet-wide</option>
@@ -621,7 +621,7 @@ const PackageReports: React.FC = () => {
                     <select
                       value={scheduleForm.report_kind}
                       onChange={(e) => setScheduleForm((f) => ({ ...f, report_kind: e.target.value as ReportKind }))}
-                      className="mt-1 block w-full rounded border border-border bg-surface-sunken p-1.5"
+                      className={`mt-1 block w-full rounded border border-border p-1.5 ${nativeSelectClass}`}
                     >
                       {REPORT_KIND_VALUES.map((k) => (
                         <option key={k} value={k}>
@@ -635,7 +635,7 @@ const PackageReports: React.FC = () => {
                     <select
                       value={scheduleForm.cadence}
                       onChange={(e) => setScheduleForm((f) => ({ ...f, cadence: e.target.value as ReportCadence }))}
-                      className="mt-1 block w-full rounded border border-border bg-surface-sunken p-1.5"
+                      className={`mt-1 block w-full rounded border border-border p-1.5 ${nativeSelectClass}`}
                     >
                       {REPORT_CADENCE_VALUES.map((c) => (
                         <option key={c} value={c}>

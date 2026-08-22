@@ -18,6 +18,7 @@ import {
   ErrorState,
   PageHeader,
   type Column,
+  nativeSelectClass,
 } from '@/components/ui';
 import { BrandWordmark, BrandIcon } from '@/components/ui/BrandLogo';
 import { UnsupportedViewportContent } from '@/components/layout/UnsupportedViewport';
@@ -187,7 +188,7 @@ function Showcase() {
         <div className="max-w-sm space-y-3">
           <Input label="Hostname" placeholder="host.example.com" />
           <FormField label="Environment" required helper="Used for grouping and policy.">
-            <select className="w-full bg-surface-sunken border border-border rounded-md text-sm text-content px-3 py-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring">
+            <select className={`w-full border border-border rounded-md text-sm px-3 py-2 ${nativeSelectClass}`}>
               <option>Production</option>
               <option>Staging</option>
             </select>

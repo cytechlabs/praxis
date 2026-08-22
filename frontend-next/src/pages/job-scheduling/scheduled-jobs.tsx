@@ -8,7 +8,7 @@ import { fetchAllSystems, fetchGroups } from '@/services/systemService';
 import { fetchTags, Tag as TagType } from '@/services/tagService';
 import Head from 'next/head';
 import { useFormatTimestamp } from '@/context/TimestampPreferencesContext';
-import { PageHeader, Button, StatCard, Card, CardHeader, Badge, statusToBadgeVariant, EmptyState, ConfirmModal, Select } from '@/components/ui';
+import { PageHeader, Button, StatCard, Card, CardHeader, Badge, statusToBadgeVariant, EmptyState, ConfirmModal, Select, nativeSelectClass } from '@/components/ui';
 import HelpLink from '@/components/help/HelpLink';
 
 interface ScheduleConfig {
@@ -418,7 +418,7 @@ const ScheduledJobs = () => {
                     <select
                       value={formData.job_type}
                       onChange={(e) => setFormData({ ...formData, job_type: e.target.value })}
-                      className="bg-surface-sunken border border-border rounded-lg px-3 py-2 text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong w-full"
+                      className={`border border-border rounded-lg px-3 py-2 w-full ${nativeSelectClass}`}
                     >
                       <option value="update">Update</option>
                       <option value="security_update">Security Update</option>
@@ -467,7 +467,7 @@ const ScheduledJobs = () => {
                         <select
                           value={scheduleConfig.frequency}
                           onChange={(e) => setScheduleConfig({ ...scheduleConfig, frequency: e.target.value })}
-                          className="bg-surface-sunken border border-border rounded-lg px-3 py-2 text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
+                          className={`border border-border rounded-lg px-3 py-2 ${nativeSelectClass}`}
                         >
                           <option value="daily">Every day</option>
                           <option value="weekly">Every week on</option>
@@ -477,7 +477,7 @@ const ScheduledJobs = () => {
                           <select
                             value={scheduleConfig.dayOfWeek}
                             onChange={(e) => setScheduleConfig({ ...scheduleConfig, dayOfWeek: e.target.value })}
-                            className="bg-surface-sunken border border-border rounded-lg px-3 py-2 text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
+                            className={`border border-border rounded-lg px-3 py-2 ${nativeSelectClass}`}
                           >
                             <option value="0">Sunday</option>
                             <option value="1">Monday</option>
@@ -492,7 +492,7 @@ const ScheduledJobs = () => {
                           <select
                             value={scheduleConfig.dayOfMonth}
                             onChange={(e) => setScheduleConfig({ ...scheduleConfig, dayOfMonth: e.target.value })}
-                            className="bg-surface-sunken border border-border rounded-lg px-3 py-2 text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
+                            className={`border border-border rounded-lg px-3 py-2 ${nativeSelectClass}`}
                           >
                             {Array.from({ length: 28 }, (_, i) => (
                               <option key={i + 1} value={String(i + 1)}>{ordinal(i + 1)}</option>
@@ -518,7 +518,7 @@ const ScheduledJobs = () => {
                     <select
                       value={formData.target_type}
                       onChange={(e) => setFormData({ ...formData, target_type: e.target.value, target_ids: [] })}
-                      className="bg-surface-sunken border border-border rounded-lg px-3 py-2 text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong w-full"
+                      className={`border border-border rounded-lg px-3 py-2 w-full ${nativeSelectClass}`}
                     >
                       <option value="all">All Systems</option>
                       <option value="system">Specific Systems</option>
@@ -741,7 +741,7 @@ const ScheduledJobs = () => {
                         <select
                           value={formData.depends_on_job_id || ''}
                           onChange={(e) => setFormData({ ...formData, depends_on_job_id: e.target.value ? Number(e.target.value) : null })}
-                          className="bg-surface-sunken border border-border rounded-lg px-3 py-2 text-content w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
+                          className={`border border-border rounded-lg px-3 py-2 w-full ${nativeSelectClass}`}
                         >
                           <option value="">None (no dependency)</option>
                           {jobs.filter((j) => j.id !== editingJob?.id).map((j) => (
@@ -754,7 +754,7 @@ const ScheduledJobs = () => {
                         <select
                           value={formData.chain_condition || 'on_success'}
                           onChange={(e) => setFormData({ ...formData, chain_condition: e.target.value })}
-                          className="bg-surface-sunken border border-border rounded-lg px-3 py-2 text-content w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
+                          className={`border border-border rounded-lg px-3 py-2 w-full ${nativeSelectClass}`}
                         >
                           <option value="on_success">On Success (only if dependency succeeded)</option>
                           <option value="on_complete">On Completion (regardless of outcome)</option>

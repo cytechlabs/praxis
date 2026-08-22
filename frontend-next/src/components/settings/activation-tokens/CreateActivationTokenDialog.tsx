@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Button, Input, Modal, Select } from '@/components/ui';
+import { Button, Input, Modal, nativeSelectClass, Select } from '@/components/ui';
 import {
   ActivationTokenCreated,
   TTL_PRESETS,
@@ -128,7 +128,7 @@ const CreateActivationTokenDialog = ({ open, onClose, onCreated }: Props) => {
                 setSystemId(e.target.value === '' ? '' : Number(e.target.value))
               }
               size={6}
-              className="w-full rounded-md border border-border-strong bg-surface-sunken/50 px-3 py-2 text-sm text-content focus-visible:border-border-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring"
+              className={`w-full rounded-md border border-border-strong px-3 py-2 text-sm ${nativeSelectClass}`}
             >
               {filteredSystems.length === 0 ? (
                 <option value="" disabled>
@@ -161,7 +161,7 @@ const CreateActivationTokenDialog = ({ open, onClose, onCreated }: Props) => {
               onChange={(e) =>
                 setTagIds(Array.from(e.target.selectedOptions, (o) => Number(o.value)))
               }
-              className="w-full rounded-md border border-border-strong bg-surface-sunken/50 px-3 py-2 text-sm text-content focus-visible:border-border-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring"
+              className={`w-full rounded-md border border-border-strong px-3 py-2 text-sm ${nativeSelectClass}`}
             >
               {tags.map((t) => (
                 <option key={t.id} value={t.id}>

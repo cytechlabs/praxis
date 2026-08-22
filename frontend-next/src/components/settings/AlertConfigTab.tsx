@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { apiFetch, formatApiError } from '@/utils/api';
 import { Bell, Plus, Pencil, Trash2, TestTube, ChevronDown, ChevronUp, CheckCircle, XCircle, Clock, RefreshCw, AlertTriangle, Key } from 'lucide-react';
-import { Button } from '@/components/ui';
+import { Button, nativeSelectClass } from '@/components/ui';
 import { useFormatTimestamp } from '@/context/TimestampPreferencesContext';
 import { humanizeLabel } from '@/utils/humanize';
 
@@ -426,7 +426,7 @@ const AlertConfigTab: React.FC = () => {
               <select
                 value={formType}
                 onChange={e => setFormType(e.target.value as 'slack' | 'webhook')}
-                className="w-full px-3 py-2 bg-surface-sunken border border-border/60 rounded text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
+                className={`w-full px-3 py-2 border border-border/60 rounded ${nativeSelectClass}`}
               >
                 <option value="slack">Slack Webhook</option>
                 <option value="webhook">Generic Webhook</option>
@@ -497,7 +497,7 @@ const AlertConfigTab: React.FC = () => {
               <select
                 value={formScopeId}
                 onChange={e => setFormScopeId(e.target.value ? Number(e.target.value) : '')}
-                className="w-full px-3 py-2 bg-surface-sunken border border-border/60 rounded text-content focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring focus-visible:border-border-strong"
+                className={`w-full px-3 py-2 border border-border/60 rounded ${nativeSelectClass}`}
               >
                 <option value="">Fleet-wide (no scope)</option>
                 {smartGroups.map(g => (
