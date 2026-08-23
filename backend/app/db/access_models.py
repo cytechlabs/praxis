@@ -503,6 +503,53 @@ class AuditEvent(Base):  # pylint: disable=too-few-public-methods
     target_system = relationship("System")
 
 
+class AuditEventSystem(Base):  # pylint: disable=too-few-public-methods
+    """Hosts affected by an audit event that has no single subject host.
+
+    ``AuditEvent.target_system_id`` carries the one host an event is about, and
+    stays empty for events that concern a set of hosts: a patch plan or
+    execution spanning several targets, or a fleet-wide compliance evaluation.
+    Collapsing such an event onto one host would assert something untrue, so the
+    affected hosts are recorded here instead and a per-host query reads both
+    places.
+
+    Rows are written once beside the event and never updated. They index
+    retrieval; they are not the evidence. The host identity captured at emission
+    time lives in the event's own context, so losing a link row degrades a
+    search and cannot rewrite history.
+    """
+
+    __tablename__ = "audit_event_systems"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    event_id = Column(
+        Integer,
+        ForeignKey("audit_events.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    system_id = Column(
+        Integer,
+        ForeignKey("systems.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(
+        DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False,
+    )
+
+    __table_args__ = (
+        UniqueConstraint("event_id", "system_id", name="uq_audit_event_system"),
+    )
+
+    event = relationship("AuditEvent")
+    system = relationship("System")
+
+
 class AuditSink(Base):  # pylint: disable=too-few-public-methods
     """Operator-configured external audit event sink (PRA-143)."""
 

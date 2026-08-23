@@ -396,6 +396,7 @@ def _emit_audit(
         actor_user_id=actor_user_id,
         actor_username=actor_username,
         actor_ip=actor_ip,
+        target_system_id=row.system_id_snapshot,
         target_kind="patch_update_execution_reboot",
         target_id=str(row.id),
         context=context,

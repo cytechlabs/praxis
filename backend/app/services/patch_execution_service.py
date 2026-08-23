@@ -54,7 +54,7 @@ from ..db.models import (
     PatchUpdatePlanSelectedPackage,
     User,
 )
-from . import patch_update_plan_service
+from . import patch_scope, patch_update_plan_service
 from .audit_event_service import safe_emit
 from .patch_update_plan_service import (
     BLOCK_APPROVAL_REJECTED,
@@ -1008,6 +1008,7 @@ def start_execution(
                 )
             ),
         },
+        related_system_ids=patch_scope.execution_target_system_ids(db, execution.id),
     )
     return execution
 
@@ -1054,6 +1055,7 @@ def pause_execution(
             "plan_id": execution.plan_id,
             "pause_reason": pause_reason,
         },
+        related_system_ids=patch_scope.execution_target_system_ids(db, execution.id),
     )
     return execution
 
@@ -1089,6 +1091,7 @@ def resume_execution(
         target_kind="patch_update_execution",
         target_id=str(execution.id),
         context={"plan_id": execution.plan_id},
+        related_system_ids=patch_scope.execution_target_system_ids(db, execution.id),
     )
     return execution
 
@@ -1190,6 +1193,7 @@ def cancel_execution(
             "canceled_host_count": len(pending_hosts),
             "cancel_reason": cancel_reason,
         },
+        related_system_ids=patch_scope.execution_target_system_ids(db, execution.id),
     )
 
     # PRA-172 Slice 2: auto-reconcile the reboot queue after the cancel

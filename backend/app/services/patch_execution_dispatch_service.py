@@ -51,6 +51,12 @@ session-boundary lock):
   reaches ``succeeded`` or ``failed``.
 - ``patch_update_execution.paused`` — reused when failure-threshold
   auto-pause trips.
+
+A host event names its one host in ``target_system_id``. An execution
+or wave event spans a set of hosts and names none of them as its
+target, so it carries that set as ``related_system_ids`` and reaches
+each affected host's audit history from there. A wave event carries
+only the hosts in that wave, never the whole execution.
 """
 
 from __future__ import annotations
@@ -61,7 +67,7 @@ import logging
 import shlex
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple
 
 from sqlalchemy.orm import Session
 
@@ -74,6 +80,7 @@ from ..db.models import (
     System,
     User,
 )
+from . import patch_scope
 from .audit_event_service import safe_emit
 from .patch_execution_service import (  # noqa: F401  (re-export friendliness)
     AUDIT_EXECUTION_PAUSED,
@@ -512,6 +519,7 @@ def _emit_lifecycle_audit(
     actor_username: Optional[str],
     actor_ip: Optional[str],
     extra: Optional[Dict[str, Any]] = None,
+    related_system_ids: Optional[Set[int]] = None,
 ) -> None:
     context: Dict[str, Any] = {
         "execution_id": execution.id,
@@ -528,6 +536,7 @@ def _emit_lifecycle_audit(
         target_kind="patch_update_execution",
         target_id=str(execution.id),
         context=context,
+        related_system_ids=related_system_ids,
     )
 
 
@@ -580,6 +589,9 @@ def _emit_unrecorded_wave_completions(
                 "host_count": len(wave_rows),
                 "host_counts_by_state": wave_counts,
             },
+            related_system_ids=patch_scope.execution_wave_target_system_ids(
+                db, execution.id, wave_index
+            ),
         )
 
         # PRA-172 Slice 5: as each wave completes, reconcile the
@@ -687,6 +699,7 @@ def _maybe_finalize_execution(
             "terminal_hosts": total,
             "completed_at": now.isoformat(),
         },
+        related_system_ids=patch_scope.execution_target_system_ids(db, execution.id),
     )
 
     # PRA-178 Slice 3: emit the patch.executed notification beside the
@@ -768,6 +781,7 @@ def _maybe_threshold_auto_pause(
             "auto": True,
             **breach,
         },
+        related_system_ids=patch_scope.execution_target_system_ids(db, execution.id),
     )
     return breach
 
@@ -986,6 +1000,7 @@ def _emit_host_audit(
         actor_user_id=actor_user_id,
         actor_username=actor_username,
         actor_ip=actor_ip,
+        target_system_id=execution_host.system_id_snapshot,
         target_kind="patch_update_execution_host",
         target_id=str(execution_host.id),
         context=context,

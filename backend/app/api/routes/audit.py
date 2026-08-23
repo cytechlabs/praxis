@@ -8,10 +8,16 @@ from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from pydantic import BaseModel, Field
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session as DbSession
 
 from ...core.auth import get_current_user, require_role
-from ...db.access_models import AuditEvent, AuditSink, AuditSinkDelivery
+from ...db.access_models import (
+    AuditEvent,
+    AuditEventSystem,
+    AuditSink,
+    AuditSinkDelivery,
+)
 from ...db.models import User
 from ...db.session import get_db
 from ...services import audit_event_service as aes
@@ -80,6 +86,29 @@ def _validate_file_sink_target(target: str) -> None:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
+def _host_history_clause(system_id: int):
+    """Match every event that concerns one host, and nothing that does not.
+
+    A host appears in the audit stream two ways. An event about that host alone
+    carries it in ``target_system_id``. An event that spans a set of hosts (a
+    patch plan or execution over several targets, a fleet-wide compliance
+    evaluation) has no single subject and records its affected hosts as
+    ``AuditEventSystem`` links instead. Reading only the column returns a
+    confident but partial history, so the filter is the union of the two.
+
+    Both sides match one host id exactly, so an event that belongs only to
+    another host is never pulled in.
+    """
+    return or_(
+        AuditEvent.target_system_id == system_id,
+        AuditEvent.id.in_(
+            select(AuditEventSystem.event_id).where(
+                AuditEventSystem.system_id == system_id
+            )
+        ),
+    )
+
+
 def _sink_to_dict(s: AuditSink, *, reveal_secret: bool = False) -> Dict[str, Any]:
     try:
         config = json.loads(s.config_json or "{}")
@@ -121,7 +150,7 @@ async def list_events(
     if actor_user_id is not None:
         q = q.filter(AuditEvent.actor_user_id == actor_user_id)
     if system_id is not None:
-        q = q.filter(AuditEvent.target_system_id == system_id)
+        q = q.filter(_host_history_clause(system_id))
     if outcome is not None:
         q = q.filter(AuditEvent.outcome == outcome)
     if since is not None:
