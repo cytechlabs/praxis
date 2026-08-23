@@ -68,7 +68,10 @@ def _system(db, seed_distro, group, cred, hostname):
 
 def _isolate(monkeypatch, fake_client):
     """Reach client.connect() without real crypto/DB side effects."""
-    monkeypatch.setattr(ssh_service.paramiko, "SSHClient", lambda: fake_client)
+    # The connection path builds a CertificateSSHClient (a paramiko.SSHClient
+    # subclass that only changes certificate algorithm negotiation), so that is
+    # the constructor a fake client has to stand in for.
+    monkeypatch.setattr(ssh_service, "CertificateSSHClient", lambda: fake_client)
     monkeypatch.setattr(ssh_service, "configure_host_key_policy", lambda *a, **k: None)
     monkeypatch.setattr(
         ssh_service.VaultService,

@@ -601,6 +601,76 @@ def load_credential_private_key(
     )
 
 
+# Peer banner version parsing for the certificate-algorithm workaround below.
+_OPENSSH_BANNER = re.compile(r"-OpenSSH_(\d+)(?:\.(\d+))?")
+
+# OpenSSH gained RSA-SHA2 signature support for certificates in 7.8.
+_FIRST_RSA_SHA2_CERT_OPENSSH = (7, 8)
+
+# Banner presented to Paramiko's legacy-server heuristic while a certificate is
+# being offered to a server we have positively identified as modern. It only has
+# to be a version that heuristic does not treat as ancient.
+_MODERN_OPENSSH_BANNER = "SSH-2.0-OpenSSH_8.0"
+
+
+def openssh_supports_rsa_sha2_certificates(remote_version: Optional[str]) -> bool:
+    """True when the peer banner is an OpenSSH new enough for RSA-SHA2 certs.
+
+    Anything that is not an OpenSSH banner returns False, so a non-OpenSSH peer
+    keeps Paramiko's own handling untouched.
+    """
+    if not remote_version:
+        return False
+    match = _OPENSSH_BANNER.search(remote_version)
+    if not match:
+        return False
+    major = int(match.group(1))
+    minor = int(match.group(2) or 0)
+    return (major, minor) >= _FIRST_RSA_SHA2_CERT_OPENSSH
+
+
+def _offers_certificate(pkey) -> bool:
+    """True when this key would be presented as an OpenSSH certificate."""
+    return getattr(pkey, "public_blob", None) is not None
+
+
+class CertificateSSHClient(paramiko.SSHClient):
+    r"""Client that lets a modern OpenSSH negotiate an RSA-SHA2 certificate.
+
+    Paramiko forces the SHA-1 ``ssh-rsa-cert-v01@openssh.com`` algorithm for any
+    certificate whenever the peer banner matches its legacy-server test,
+    ``-OpenSSH_(?:[1-6]|7\.[0-7])``. That pattern has no digit boundary, so the
+    leading "1" of ``OpenSSH_10`` matches ``[1-6]`` and every OpenSSH 10 host is
+    treated as if it were OpenSSH 1.x. Those servers dropped SHA-1 from their
+    default ``PubkeyAcceptedAlgorithms`` years ago, so sshd answers "signature
+    algorithm ssh-rsa-cert-v01@openssh.com not in PubkeyAcceptedAlgorithms" and
+    never evaluates the certificate at all.
+
+    While a certificate is being offered to a server whose banner we have
+    positively identified as OpenSSH 7.8 or newer, the banner Paramiko's
+    heuristic reads is replaced with one it does not treat as ancient, and
+    restored immediately afterwards. Paramiko then runs its normal negotiation
+    and agrees on ``rsa-sha2-512-cert-v01@openssh.com``. Nothing else about
+    authentication changes: password auth, plain public keys, and genuinely old
+    servers all take the untouched path.
+    """
+
+    def _auth(self, username, password, pkey, *args, **kwargs):
+        transport = getattr(self, "_transport", None)
+        remote_version = getattr(transport, "remote_version", None)
+        if not (
+            _offers_certificate(pkey)
+            and openssh_supports_rsa_sha2_certificates(remote_version)
+        ):
+            return super()._auth(username, password, pkey, *args, **kwargs)
+
+        transport.remote_version = _MODERN_OPENSSH_BANNER
+        try:
+            return super()._auth(username, password, pkey, *args, **kwargs)
+        finally:
+            transport.remote_version = remote_version
+
+
 class SSHService:  # pylint: disable=too-many-instance-attributes
     """Service for managing SSH connections to remote systems."""
 
@@ -1063,6 +1133,74 @@ class SSHService:  # pylint: disable=too-many-instance-attributes
                 oldest_hostname,
             )
 
+    def connect_with_certificate(self, system_id: int) -> paramiko.SSHClient:
+        """Open a connection authenticated only by a Vault-signed certificate.
+
+        Enrollment needs a way to prove the access broker really works on a
+        host. :meth:`get_connection` cannot provide it: when certificate auth
+        fails it falls back to the stored credential, so a host that can never
+        use the broker still returns a working client. This method has no
+        fallback -- it either authenticates with the certificate or raises.
+
+        Everything a normal connection enforces still applies: the transport
+        cooldown gate, host-key verification and trust-on-first-use capture, the
+        system's disabled-algorithm policy, and the configured SSH port. The
+        client is deliberately kept out of the connection pool, because it
+        exists to prove one fact and the caller closes it; it neither occupies a
+        pool slot nor displaces a live connection.
+
+        Raises SSHConnectionError (including HostCoolingDownError) on failure.
+        """
+        system = self.db.query(System).filter(System.id == system_id).first()
+        if not system:
+            raise SSHConnectionError(f"System with ID {system_id} not found")
+
+        credential = (
+            self.db.query(Credential)
+            .filter(Credential.id == system.credentials_id)
+            .first()
+        )
+        if not credential:
+            raise SSHConnectionError(
+                f"Credentials not found for system {system.hostname}"
+            )
+
+        raise_if_cooling_down(self.db, system)
+
+        client = CertificateSSHClient()
+        configure_host_key_policy(client, self.db, system)
+
+        ssh_port = self._default_ssh_port
+        if system.system_metadata and system.system_metadata.ssh_port:
+            ssh_port = system.system_metadata.ssh_port
+
+        try:
+            authenticated = self._try_ca_cert_auth(
+                client,
+                system,
+                credential,
+                ssh_port,
+                self._build_disabled_algorithms(system),
+            )
+        except Exception as e:  # pylint: disable=broad-except
+            # An authentication failure means the host is reachable, so the
+            # transport breaker is deliberately not advanced here.
+            self._close_client_quietly(
+                client, system.hostname, reason="certificate_only"
+            )
+            raise SSHConnectionError(
+                f"Certificate authentication failed for {system.hostname}: {e}"
+            ) from e
+
+        if not authenticated:
+            self._close_client_quietly(
+                client, system.hostname, reason="certificate_only"
+            )
+            raise SSHConnectionError(
+                f"Certificate authentication did not complete for {system.hostname}"
+            )
+        return client
+
     def _create_connection(  # pylint: disable=too-many-branches,too-many-statements
         self, system: System, force_password_auth: bool = False
     ) -> paramiko.SSHClient:  # pylint: disable=too-many-branches,too-many-statements
@@ -1072,7 +1210,10 @@ class SSHService:  # pylint: disable=too-many-instance-attributes
         attempts Vault CA-signed cert auth first, falling back to the stored
         credential on any failure (PRA-44).
         """
-        client = paramiko.SSHClient()
+        # CertificateSSHClient only differs from paramiko's client when a
+        # certificate is offered to a modern OpenSSH; every other auth path is
+        # unchanged.
+        client = CertificateSSHClient()
 
         # Configure host key policy based on security settings (shared with
         # browser sessions and SFTP file transfers — PRA-245).
