@@ -78,6 +78,11 @@ from .compliance_service import (
     runner_owner_for_kind,
     utc_iso,
 )
+from .package_version_compare import (
+    is_valid_version,
+    scheme_for_package_family,
+    version_at_least,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -102,6 +107,8 @@ REASON_PACKAGE_NOT_INSTALLED = "package_not_installed"
 REASON_PACKAGE_INSTALLED = "package_installed"
 REASON_VERSION_MISMATCH = "installed_version_below_min"
 REASON_VERSION_UNPARSEABLE = "installed_version_unparseable"
+REASON_MIN_VERSION_UNPARSEABLE = "min_version_unparseable"
+REASON_UNSUPPORTED_PACKAGE_FAMILY = "unsupported_package_family"
 REASON_DEFERRED_PRA166 = "runner_owner_deferred_pra166"
 
 
@@ -256,14 +263,16 @@ def _evaluate_package_absent(
 def _evaluate_package_version_min(
     db: Session, system_id: int, definition: Dict[str, Any]
 ) -> CheckVerdict:
-    # Lazy import — keeps the module load cheap and matches the
-    # runtime's actual dependency on ``packaging`` for version compare.
-    from packaging.version import InvalidVersion, Version
+    # Lazy import: the family resolver lives in the patch stack, and
+    # importing it eagerly would drag that whole import graph into every
+    # compliance evaluation.
+    from .patch_update_plan_service import _derive_package_manager_family
 
     package_name = definition["package"]
     min_version = definition["min_version"]
+    expected = f">= {min_version}"
     row = (
-        db.query(Package.id, Package.installed_version)
+        db.query(Package.id, Package.installed_version, Package.package_type)
         .filter(Package.system_id == system_id, Package.name == package_name)
         .first()
     )
@@ -271,23 +280,43 @@ def _evaluate_package_version_min(
         return _fail(
             REASON_PACKAGE_NOT_INSTALLED,
             observed="absent",
-            expected=f">= {min_version}",
+            expected=expected,
         )
-    try:
-        observed_v = Version(str(row.installed_version))
-        required_v = Version(str(min_version))
-    except InvalidVersion:
+
+    # Distro packages are ordered by their own grammar, not by PEP 440,
+    # so the comparison semantics come from the host's package family.
+    # Host facts are authoritative; the inventory row's own package_type
+    # is the fallback, recorded by the collector that read this version
+    # off the host. Neither infers anything from the version string.
+    facts = db.query(HostFacts).filter(HostFacts.system_id == system_id).first()
+    scheme = scheme_for_package_family(_derive_package_manager_family(facts))
+    if scheme is None:
+        scheme = scheme_for_package_family(row.package_type)
+    if scheme is None:
+        return _error(
+            REASON_UNSUPPORTED_PACKAGE_FAMILY,
+            observed=row.installed_version,
+            expected=expected,
+        )
+
+    if not is_valid_version(scheme, str(row.installed_version)):
         return _error(
             REASON_VERSION_UNPARSEABLE,
             observed=row.installed_version,
-            expected=f">= {min_version}",
+            expected=expected,
         )
-    if observed_v >= required_v:
-        return _pass(observed=row.installed_version, expected=f">= {min_version}")
+    if not is_valid_version(scheme, str(min_version)):
+        return _error(
+            REASON_MIN_VERSION_UNPARSEABLE,
+            observed=row.installed_version,
+            expected=expected,
+        )
+    if version_at_least(scheme, str(row.installed_version), str(min_version)):
+        return _pass(observed=row.installed_version, expected=expected)
     return _fail(
         REASON_VERSION_MISMATCH,
         observed=row.installed_version,
-        expected=f">= {min_version}",
+        expected=expected,
     )
 
 
