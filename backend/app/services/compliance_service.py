@@ -168,7 +168,15 @@ def _validate_package_absent(payload: Any) -> Dict[str, Any]:
     return {"package": _validate_package_name(payload.get("package"))}
 
 
-_VERSION_RE = re.compile(r"^[0-9A-Za-z][0-9A-Za-z._:+~-]{0,127}$")
+# Accepts the characters Debian and RPM versions are built from, so an
+# operator can configure a minimum in the host's own grammar: epochs
+# (``1:``), revisions and releases (``-``), and both RPM ordering
+# separators (``~`` sorts before the base version, ``^`` after it). A
+# version always opens with an alphanumeric, so a separator can never
+# lead. Whether the value is well formed for a given family is decided
+# by that family's grammar at evaluation time; this only keeps shell
+# and control characters out of the stored definition.
+_VERSION_RE = re.compile(r"^[0-9A-Za-z][0-9A-Za-z._:+~^-]{0,127}$")
 
 
 def _validate_package_version_min(payload: Any) -> Dict[str, Any]:
@@ -176,10 +184,12 @@ def _validate_package_version_min(payload: Any) -> Dict[str, Any]:
         raise _err("package_version_min definition must be an object")
     _require_only_keys(payload, ("package", "min_version"))
     version = payload.get("min_version")
-    if not isinstance(version, str) or not _VERSION_RE.match(version or ""):
+    # fullmatch, not match: ``$`` also matches before a trailing newline,
+    # which would let "1.0\n" through into the stored definition.
+    if not isinstance(version, str) or not _VERSION_RE.fullmatch(version or ""):
         raise _err(
             "min_version must be a non-empty version string "
-            "(letters, digits, and . _ : + ~ -)"
+            "(letters, digits, and . _ : + ~ ^ -)"
         )
     return {
         "package": _validate_package_name(payload.get("package")),
