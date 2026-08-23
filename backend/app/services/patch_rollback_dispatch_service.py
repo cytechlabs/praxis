@@ -301,6 +301,7 @@ def _emit_host_audit(
         actor_user_id=actor_user_id,
         actor_username=actor_username,
         actor_ip=actor_ip,
+        target_system_id=host_row.system_id_snapshot,
         target_kind="patch_rollback_dispatch_host",
         target_id=str(host_row.id),
         context=context,

@@ -20,6 +20,7 @@ from .access_models import (  # noqa: F401; pylint: disable=unused-import
     AccessGrant,
     AccessRequest,
     AuditEvent,
+    AuditEventSystem,
     AuditSink,
     AuditSinkDelivery,
     FileTransferAudit,

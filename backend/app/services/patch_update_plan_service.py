@@ -29,7 +29,11 @@ so the slice 4 UI can render them without parsing prose.
 
 Audit emission goes through ``safe_emit`` with no ``db=`` argument so
 it opens its own ``SessionLocal`` per
-``feedback_safe_emit_session_boundary.md``. Reserved event-type
+``feedback_safe_emit_session_boundary.md``. A plan spans a set of
+hosts and has no single subject host, so every plan event passes its
+resolvable target systems as ``related_system_ids`` and stays
+discoverable from each affected host's audit history without any one
+of them being recorded as the plan's target. Reserved event-type
 constants:
 
 * ``patch_update_plan.created`` — emitted on draft/blocked plan create.
@@ -80,6 +84,7 @@ from . import (
     patch_approval_service,
     patch_policy_service,
     patch_ring_service,
+    patch_scope,
 )
 from .audit_event_service import safe_emit
 from .content_profile_service import ContentProfileService
@@ -1889,8 +1894,10 @@ def create_plan(
             "rollout_cadence": policy.rollout_cadence,
             "ring_count_in_set": len(ordered_rings),
         },
+        related_system_ids=patch_scope.plan_target_system_ids(db, plan.id),
     )
     _emit_selection_audit(
+        db,
         plan=plan,
         policy=policy,
         actor_user_id=actor_user_id,
@@ -1899,6 +1906,7 @@ def create_plan(
         aggregate=selection_aggregate,
     )
     _emit_preflight_audit(
+        db,
         plan=plan,
         policy=policy,
         actor_user_id=actor_user_id,
@@ -2015,8 +2023,10 @@ def refresh_plan(
             "rollout_cadence": policy.rollout_cadence,
             "ring_count_in_set": len(ordered_rings),
         },
+        related_system_ids=patch_scope.plan_target_system_ids(db, plan.id),
     )
     _emit_selection_audit(
+        db,
         plan=plan,
         policy=policy,
         actor_user_id=actor_user_id,
@@ -2025,6 +2035,7 @@ def refresh_plan(
         aggregate=selection_aggregate,
     )
     _emit_preflight_audit(
+        db,
         plan=plan,
         policy=policy,
         actor_user_id=actor_user_id,
@@ -2079,6 +2090,7 @@ def cancel_plan(
             "policy_id": plan.policy_id,
             "prior_state": prior_state,
         },
+        related_system_ids=patch_scope.plan_target_system_ids(db, plan.id),
     )
     return plan
 
@@ -2185,6 +2197,9 @@ def delete_plan(
 
     policy_id = plan.policy_id
     prior_state = plan.state
+    # Read the plan's hosts while the rows still exist: the cascade takes them
+    # with the plan, and the audit event still has to reach each of them.
+    related_system_ids = patch_scope.plan_target_system_ids(db, plan_id)
     db.delete(plan)
     try:
         db.commit()
@@ -2212,6 +2227,7 @@ def delete_plan(
             "policy_id": policy_id,
             "prior_state": prior_state,
         },
+        related_system_ids=related_system_ids,
     )
 
 
@@ -2281,6 +2297,7 @@ def archive_plan(
             "archived_at": archived_at.isoformat(),
             "reason": reason,
         },
+        related_system_ids=patch_scope.plan_target_system_ids(db, plan_id),
     )
     return plan
 
@@ -2474,6 +2491,7 @@ def request_approval(
             "approval_id": approval.id,
             "required_approvals": policy.required_approvals,
         },
+        related_system_ids=patch_scope.plan_target_system_ids(db, plan.id),
     )
     return plan
 
@@ -2527,6 +2545,7 @@ def approve_directly(
             "via": "direct",
             "comment": comment,
         },
+        related_system_ids=patch_scope.plan_target_system_ids(db, plan.id),
     )
     return plan
 
@@ -2615,6 +2634,7 @@ def record_approval_vote(
                 "approval_id": approval.id,
                 "comment": comment,
             },
+            related_system_ids=patch_scope.plan_target_system_ids(db, plan.id),
         )
     elif new_status == patch_approval_service.STATUS_REJECTED:
         # Append the rejection block reason to the existing list so the
@@ -2652,6 +2672,7 @@ def record_approval_vote(
                 "approval_id": approval.id,
                 "comment": comment,
             },
+            related_system_ids=patch_scope.plan_target_system_ids(db, plan.id),
         )
     else:
         # Vote recorded but threshold not reached — plan stays in
@@ -2721,6 +2742,7 @@ def schedule_plan(
             "maintenance_window_id": plan.maintenance_window_id,
             "reboot_window_id": plan.reboot_window_id,
         },
+        related_system_ids=patch_scope.plan_target_system_ids(db, plan.id),
     )
     return plan
 
@@ -2771,6 +2793,7 @@ def supersede_plan(
             "prior_state": prior_state,
             "comment": comment,
         },
+        related_system_ids=patch_scope.plan_target_system_ids(db, plan.id),
     )
     return plan
 
@@ -2960,6 +2983,7 @@ def build_export_bundle(
             "selected_count": len(selected),
             "preflight_count": len(preflight),
         },
+        related_system_ids=patch_scope.plan_target_system_ids(db, plan.id),
     )
 
     audit_events = (
@@ -3169,6 +3193,7 @@ def list_plan_selected_packages(
 
 
 def _emit_selection_audit(
+    db: Session,
     *,
     plan: PatchUpdatePlan,
     policy: PatchPolicy,
@@ -3201,10 +3226,12 @@ def _emit_selection_audit(
             "unresolvable_total": aggregate["unresolvable"],
             "inventory_missing_hosts": aggregate["inventory_missing_hosts"],
         },
+        related_system_ids=patch_scope.plan_target_system_ids(db, plan.id),
     )
 
 
 def _emit_preflight_audit(
+    db: Session,
     *,
     plan: PatchUpdatePlan,
     policy: PatchPolicy,
@@ -3238,6 +3265,7 @@ def _emit_preflight_audit(
             "not_applicable_total": aggregate[CONTENT_AVAILABILITY_NOT_APPLICABLE],
             "installed_drift_packages": aggregate["installed_drift_packages"],
         },
+        related_system_ids=patch_scope.plan_target_system_ids(db, plan.id),
     )
 
 
