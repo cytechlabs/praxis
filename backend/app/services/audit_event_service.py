@@ -4,9 +4,15 @@ Every security-relevant action in the app calls ``emit(...)``, which:
 
     1. Persists an AuditEvent row (always — the in-app audit log is the
        source of truth).
-    2. Fans out to every enabled AuditSink as pending
+    2. Records, in that same transaction, the affected hosts of an event
+       that has no single subject host as ``AuditEventSystem`` links, so a
+       per-host query finds a multi-host plan, execution, or fleet-wide
+       evaluation event without any of them being attributed to one host.
+       An event and the attribution that makes it findable are one unit:
+       neither is ever persisted without the other.
+    3. Fans out to every enabled AuditSink as pending
        ``AuditSinkDelivery`` rows.
-    3. A scheduler worker drains pending deliveries through the right
+    4. A scheduler worker drains pending deliveries through the right
        transport (syslog / http / file) with retry + dead-letter after
        ``MAX_ATTEMPTS``.
 
@@ -49,13 +55,20 @@ import socket
 import ssl
 import uuid
 from datetime import datetime, timedelta
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 from urllib.error import URLError
 
 import httpx
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session as DbSession
 
-from ..db.access_models import AuditEvent, AuditSink, AuditSinkDelivery
+from ..db.access_models import (
+    AuditEvent,
+    AuditEventSystem,
+    AuditSink,
+    AuditSinkDelivery,
+)
+from ..db.models import System
 from ..db.session import SessionLocal
 from . import audit_file_sink_guard, outbound_http_guard
 
@@ -87,10 +100,28 @@ def emit(
     target_kind: Optional[str] = None,
     target_id: Optional[str] = None,
     context: Optional[Dict[str, Any]] = None,
+    related_system_ids: Optional[Iterable[int]] = None,
 ) -> AuditEvent:
-    """Persist an event and enqueue one delivery per enabled sink."""
+    """Persist an event and enqueue one delivery per enabled sink.
+
+    ``target_system_id`` names the single host an event is about.
+    ``related_system_ids`` is for events that affect a set of hosts and have no
+    single subject, such as a plan or execution spanning several targets or a
+    fleet-wide evaluation: the callers pass every host the action touched, and a
+    per-host audit query finds the event through those links instead of through
+    a host identity the event does not have.
+
+    The event row and those links are written in one transaction. An event that
+    reached the log without the attribution that makes it findable would answer
+    a per-host query with the same confident, incomplete history this attribution
+    exists to prevent, so a failure to record either one persists neither.
+    """
     if not action or "." not in action:
         raise AuditError(f"action must be dotted (got {action!r})")
+
+    target_system_id, linked_system_ids = _resolve_host_references(
+        db, action, target_system_id, related_system_ids
+    )
 
     row = AuditEvent(
         schema_version=SCHEMA_VERSION,
@@ -107,7 +138,18 @@ def emit(
         context_json=json.dumps(context or {}, separators=(",", ":")),
     )
     db.add(row)
-    db.commit()
+    try:
+        db.flush()  # the links need the event's id, still inside this transaction
+        for system_id in linked_system_ids:
+            db.add(AuditEventSystem(event_id=row.id, system_id=system_id))
+        db.commit()
+    except SQLAlchemyError:
+        # Never swallowed and never half-written: the caller learns the audit
+        # write failed, and no event is left behind claiming a completeness it
+        # does not have. The rollback leaves the session usable for callers that
+        # share one with this emit.
+        db.rollback()
+        raise
     db.refresh(row)
 
     # Enqueue deliveries for each enabled sink (best-effort — a broken sink
@@ -133,6 +175,63 @@ def emit(
         except Exception:  # pylint: disable=broad-except
             pass
     return row
+
+
+def _resolve_host_references(
+    db: DbSession,
+    action: str,
+    target_system_id: Optional[int],
+    related_system_ids: Optional[Iterable[int]],
+) -> Tuple[Optional[int], List[int]]:
+    """Narrow an event's host references to hosts that still exist.
+
+    Callers name hosts from run snapshots taken when the work was planned, and a
+    snapshot outlives the host row it was taken from. Settling that here, before
+    anything is written, is what lets the event and its links share one
+    transaction: a reference that can no longer be satisfied never reaches the
+    insert, so the only way that insert can fail is a real database fault, and
+    such a fault must take the whole event with it rather than leave it standing
+    with part of its attribution.
+
+    A subject host that has been deleted is dropped from the event rather than
+    the event from the log, which is the same resolution the schema already
+    applies through ``ON DELETE SET NULL``. Either way the host the caller named
+    stays readable in the event's own context.
+
+    ``target_system_id`` is excluded from the links, so the link table holds only
+    what the column cannot express and per-host retrieval reads the two as a
+    union.
+    """
+    related = {sid for sid in (related_system_ids or ()) if sid is not None}
+    wanted = set(related)
+    if target_system_id is not None:
+        wanted.add(target_system_id)
+    if not wanted:
+        return target_system_id, []
+
+    live = {sid for (sid,) in db.query(System.id).filter(System.id.in_(wanted)).all()}
+
+    if target_system_id is not None and target_system_id not in live:
+        logger.warning(
+            "audit target host %s no longer exists; recording %s without it",
+            target_system_id,
+            action,
+        )
+        target_system_id = None
+
+    linked = related & live
+    linked.discard(target_system_id)
+
+    dropped = related - live
+    if dropped:
+        # Retrieval only, and the context still names these hosts, so this is a
+        # debug note rather than a warning on what can be a hot path.
+        logger.debug(
+            "audit host attribution skipped removed hosts %s for %s",
+            sorted(dropped),
+            action,
+        )
+    return target_system_id, sorted(linked)
 
 
 def event_to_dict(row: AuditEvent) -> Dict[str, Any]:
