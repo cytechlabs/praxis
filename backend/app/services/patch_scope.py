@@ -41,6 +41,25 @@ def execution_target_system_ids(db: Session, execution_id: int) -> Set[int]:
     return {r[0] for r in rows if r[0] is not None}
 
 
+def execution_wave_target_system_ids(
+    db: Session, execution_id: int, wave_index: int
+) -> Set[int]:
+    """The resolvable target system ids for one wave of an execution.
+
+    Narrower than :func:`execution_target_system_ids`: a wave event concerns the
+    hosts in that wave, so attributing it to the whole execution would put it in
+    the history of hosts it never touched."""
+    rows = (
+        db.query(PatchUpdateExecutionHost.system_id_snapshot)
+        .filter(
+            PatchUpdateExecutionHost.execution_id == execution_id,
+            PatchUpdateExecutionHost.wave_index == wave_index,
+        )
+        .all()
+    )
+    return {r[0] for r in rows if r[0] is not None}
+
+
 def execution_visible_to_scope(
     db: Session, execution_id: int, scope: Optional[Set[int]]
 ) -> bool:

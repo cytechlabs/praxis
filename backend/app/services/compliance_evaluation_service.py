@@ -734,6 +734,7 @@ def evaluate_policy_for_fleet(
             "counts": counts,
             "scope": "per_fleet",
         },
+        related_system_ids=[s.id for s in systems],
     )
     safe_emit(
         action=AUDIT_COMPLIANCE_EVIDENCE_PERSISTED,
@@ -749,6 +750,7 @@ def evaluate_policy_for_fleet(
             "evidence_count": total_persisted,
             "scope": "per_fleet",
         },
+        related_system_ids=[s.id for s in systems],
     )
     return EvaluationSummary(
         policy_id=policy.id,
