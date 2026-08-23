@@ -4,6 +4,10 @@
 </picture>
 
 [![CI](https://github.com/cytechlabs/praxis/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/cytechlabs/praxis/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/cytechlabs/praxis?filter=v*&display_name=tag&label=release)](https://github.com/cytechlabs/praxis/releases/latest)
+[![Docs build](https://github.com/cytechlabs/praxis/actions/workflows/docs-build.yml/badge.svg?branch=main)](https://github.com/cytechlabs/praxis/actions/workflows/docs-build.yml)
+[![Documentation: docs.praxisfleet.com](https://img.shields.io/badge/docs-praxisfleet.com-18181B)](https://docs.praxisfleet.com)
+[![Code coverage](https://app.deepsource.com/gh/cytechlabs/praxis.svg/?label=code+coverage&show_trend=false)](https://app.deepsource.com/gh/cytechlabs/praxis/metrics/?metric=CPCV)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
 **Praxis is a self-hosted Linux fleet lifecycle control plane.** One backend

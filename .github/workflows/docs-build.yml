@@ -1,0 +1,101 @@
+# Public documentation build.
+#
+# The documentation site at docs.praxisfleet.com is built from docs/ by
+# Cloudflare Pages. Cloudflare reports its result as a GitHub check run rather
+# than a commit status, and its details link is a Cloudflare dashboard URL that
+# needs an account to open, so there is no public endpoint that can back a
+# README badge. This lane runs the same public build contract inside GitHub
+# Actions, which does publish a badge, and proves the site is publishable
+# before Cloudflare tries to publish it. Cloudflare's own check stays the
+# authoritative signal that a deployment actually happened.
+#
+# Scope is deliberately the public site only. The CI workflow's documentation
+# lane is the wider gate: it also renders the Mermaid sources, checks the copy
+# committed under frontend-next/public/help, and compares the two builds. Those
+# need a headless browser and prove offline bundling, neither of which the
+# public build depends on, so repeating them here would cost minutes without
+# telling the badge anything new.
+#
+# Only first-party actions/* are used here; no third-party action is
+# introduced that would need SHA pinning.
+name: Docs build
+
+on:
+  # Pull requests are already covered by the CI workflow's documentation lane,
+  # which is a superset of this one. This lane runs where a badge can read it:
+  # the branches whose published state the badge reports.
+  push:
+    branches: [main, 'release/**']
+    paths:
+      - 'docs/**'
+      - 'docs-site/**'
+      - 'scripts/build-docs.mjs'
+      - 'scripts/check-docs-*.mjs'
+      - '.github/workflows/docs-build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Only the newest commit on a branch decides that branch's badge, so a queued
+# older run has nothing left to report.
+concurrency:
+  group: docs-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  public-build:
+    name: Public site
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: docs-site/package-lock.json
+
+      - name: Install dependencies
+        working-directory: docs-site
+        run: npm ci
+
+      - name: Content and type check (astro check)
+        working-directory: docs-site
+        run: npx astro check
+
+      # A cold-cache build, proving the route set comes from the repository
+      # rather than from a populated Astro cache. This runs first so a
+      # discovery problem fails before the gates that depend on a build.
+      - name: Clean build produces the reviewed route set
+        run: node scripts/check-docs-clean-build.mjs
+
+      - name: Build the public site
+        run: node scripts/build-docs.mjs --public
+
+      # Fixtures first: prove the leak detection still rejects real token
+      # shapes and personal paths, and still allows documented placeholders,
+      # before trusting it against the real content.
+      - name: Public content check self-test
+        run: node scripts/check-docs-public-content.mjs --self-test
+
+      - name: Public content boundary
+        run: node scripts/check-docs-public-content.mjs
+
+      - name: Links and anchors
+        run: node scripts/check-docs-links.mjs docs-site/dist
+
+      # A Mermaid fence that failed to render still builds a valid page; it
+      # just ships the diagram source as a code block. Nothing else notices.
+      - name: Diagrams rendered
+        run: node scripts/check-docs-diagrams.mjs docs-site/dist
+
+      # Pagefind encodes page ordinals into its index chunks, so indexing in
+      # filesystem order produces a bundle that cannot be reproduced on a
+      # different filesystem. This proves the ordering is normalised.
+      - name: Search index is independent of discovery order
+        run: node scripts/check-docs-search-order.mjs docs-site/dist
+
+      - name: Search index
+        run: node scripts/check-docs-search.mjs docs-site/dist
