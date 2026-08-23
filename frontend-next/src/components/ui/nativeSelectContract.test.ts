@@ -27,9 +27,9 @@ const BANNED_BG = /\bbg-(?:black|white)\b|\bbg-praxis-[\w-]+|\bbg-[\w[\]./-]*?\/
 
 function walk(dir: string, out: string[]): string[] {
   for (const entry of readdirSync(dir)) {
-    const p = join(dir, entry);
-    if (statSync(p).isDirectory()) walk(p, out);
-    else if (EXTS.has(extname(p))) out.push(p);
+    const entryPath = join(dir, entry);
+    if (statSync(entryPath).isDirectory()) walk(entryPath, out);
+    else if (EXTS.has(extname(entryPath))) out.push(entryPath);
   }
   return out;
 }
@@ -43,26 +43,26 @@ function stripComments(src: string): string {
 function selectTags(src: string): string[] {
   const tags: string[] = [];
   const re = /<select\b/g;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(src))) {
+  let tagMatch: RegExpExecArray | null;
+  while ((tagMatch = re.exec(src))) {
     let i = re.lastIndex;
     let depth = 0;
     let quote: string | null = null;
     while (i < src.length) {
-      const c = src[i];
+      const char = src[i];
       if (quote) {
-        if (c === '\\') {
+        if (char === '\\') {
           i += 2;
           continue;
         }
-        if (c === quote) quote = null;
-      } else if (c === '"' || c === "'" || c === '`') quote = c;
-      else if (c === '{') depth++;
-      else if (c === '}') depth--;
-      else if (c === '>' && depth === 0) break;
+        if (char === quote) quote = null;
+      } else if (char === '"' || char === "'" || char === '`') quote = char;
+      else if (char === '{') depth++;
+      else if (char === '}') depth--;
+      else if (char === '>' && depth === 0) break;
       i++;
     }
-    tags.push(src.slice(m.index, i + 1));
+    tags.push(src.slice(tagMatch.index, i + 1));
   }
   return tags;
 }
@@ -81,13 +81,13 @@ function classExprOf(tag: string): string | null {
   let quote: string | null = null;
   const start = ++i;
   for (; i < tag.length; i++) {
-    const c = tag[i];
+    const char = tag[i];
     if (quote) {
-      if (c === '\\') i++;
-      else if (c === quote) quote = null;
-    } else if (c === '"' || c === "'" || c === '`') quote = c;
-    else if (c === '{') depth++;
-    else if (c === '}') {
+      if (char === '\\') i++;
+      else if (char === quote) quote = null;
+    } else if (char === '"' || char === "'" || char === '`') quote = char;
+    else if (char === '{') depth++;
+    else if (char === '}') {
       if (depth === 0) return tag.slice(start, i);
       depth--;
     }
@@ -97,8 +97,10 @@ function classExprOf(tag: string): string | null {
 
 /** Text of a local `const NAME = ...;` initializer, if the file defines one. */
 function localDefinition(name: string, source: string): string | null {
-  const m = new RegExp(`\\b(?:const|let)\\s+${name}\\s*=([\\s\\S]*?);\\s*$`, 'm').exec(source);
-  return m ? m[1] : null;
+  const match = new RegExp(`\\b(?:const|let)\\s+${name}\\s*=([\\s\\S]*?);\\s*$`, 'm').exec(
+    source,
+  );
+  return match ? match[1] : null;
 }
 
 /**
@@ -120,7 +122,7 @@ function resolveClassExpr(expr: string, source: string, seen = new Set<string>()
     const def = localDefinition(name, source);
     if (def === null) continue;
     seen.add(name);
-    out += ' ' + resolveClassExpr(def, source, seen);
+    out += ` ${resolveClassExpr(def, source, seen)}`;
   }
   return out;
 }
@@ -174,8 +176,10 @@ describe('native select contract', () => {
   it('the shared contract pins both the control and its option children', () => {
     const input = readFileSync(join(SRC, 'components/ui/Input.tsx'), 'utf8');
     const def = /export const nativeSelectClass =([\s\S]*?);\n/.exec(input);
-    expect(def).not.toBeNull();
-    const contract = def![1];
+    // Fail fast rather than index a miss: this proves the regex found the
+    // contract, and narrows `def` so the capture group is safe to read.
+    if (def === null) throw new Error('Input.tsx no longer exports nativeSelectClass');
+    const contract = def[1];
     for (const required of [
       'bg-surface-sunken',
       'text-content',

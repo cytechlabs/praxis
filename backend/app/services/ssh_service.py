@@ -3,7 +3,6 @@ SSH service for managing SSH connections to remote systems.
 """
 
 import base64
-import binascii
 import hashlib
 import io
 import logging
@@ -418,7 +417,7 @@ def _openssh_container(body: str) -> Optional[Tuple[str, bool]]:
     """
     try:
         blob = base64.b64decode("".join(body.split()), validate=True)
-    except (ValueError, binascii.Error):
+    except ValueError:
         return None
     if not blob.startswith(_OPENSSH_KEY_MAGIC):
         return None
@@ -431,7 +430,7 @@ def _openssh_container(body: str) -> Optional[Tuple[str, bool]]:
         public_key, _ = _read_ssh_string(blob, offset + 4)
         algorithm, _ = _read_ssh_string(public_key, 0)
         return algorithm.decode("ascii"), cipher != b"none"
-    except (ValueError, struct.error, UnicodeDecodeError):
+    except (ValueError, struct.error):
         return None
 
 
