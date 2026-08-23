@@ -240,7 +240,9 @@ def test_ssh_service_missing_policy_installs_verifying_policy(
 
     system = _mk_system(db, seed_distro, admin_user, require=None)
     spy = _SpyClient()
-    monkeypatch.setattr(sshs.paramiko, "SSHClient", lambda: spy)
+    # The SSH connection path builds a CertificateSSHClient (a paramiko.SSHClient
+    # subclass that only changes certificate algorithm negotiation).
+    monkeypatch.setattr(sshs, "CertificateSSHClient", lambda: spy)
 
     svc = sshs.SSHService(db)
     # The credential has no Vault path, so the connect attempt fails right after

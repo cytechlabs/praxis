@@ -548,7 +548,9 @@ def _mk_system(db, seed_distro, admin_user, *, minimum_key_size=None) -> System:
 def connect_probe(monkeypatch):
     """Capture the ``connect`` kwargs without opening a socket."""
     client = MagicMock(spec=paramiko.SSHClient)
-    monkeypatch.setattr(ssh_service.paramiko, "SSHClient", lambda: client)
+    # The SSH connection path builds a CertificateSSHClient (a paramiko.SSHClient
+    # subclass that only changes certificate algorithm negotiation).
+    monkeypatch.setattr(ssh_service, "CertificateSSHClient", lambda: client)
     monkeypatch.setattr(
         ssh_service.SSHService, "_on_connected", lambda self, *a, **k: None
     )
