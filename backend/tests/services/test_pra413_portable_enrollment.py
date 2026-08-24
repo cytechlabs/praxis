@@ -359,7 +359,9 @@ def _record_privileged_argv(tmp_path, program):
 
 def test_install_command_passes_mode_owner_and_paths_as_single_arguments(tmp_path):
     program = build_privileged_install_command(CA_KEY_BODY, CA_KEY_PATH, "0644")
-    install_call, mv_call = _record_privileged_argv(tmp_path, program)
+    calls = _record_privileged_argv(tmp_path, program)
+    assert len(calls) == 2, f"expected one install and one mv call, got {calls}"
+    install_call, mv_call = calls
     assert install_call[:6] == [
         "install",
         "-m",
@@ -377,7 +379,9 @@ def test_install_command_quotes_a_destination_with_shell_metacharacters(tmp_path
     login = "odd; touch /tmp/praxis-pra413-pwned"
     dest = f"{PRINCIPALS_DIR}/{login}"
     program = build_privileged_install_command(f"{login}\n", dest, "0644")
-    install_call, mv_call = _record_privileged_argv(tmp_path, program)
+    calls = _record_privileged_argv(tmp_path, program)
+    assert len(calls) == 2, f"expected one install and one mv call, got {calls}"
+    install_call, mv_call = calls
     # The whole path arrives as one argument rather than being split at the ';'.
     assert install_call[-1] == f"{dest}.praxis-tmp"
     assert mv_call[-1] == dest
@@ -611,9 +615,8 @@ def test_deploy_ca_trust_failure_never_surfaces_key_material(
     )
     service = _service(db, monkeypatch, host)
 
-    with caplog.at_level(logging.DEBUG):
-        with pytest.raises(SSHIdentityError) as excinfo:
-            service.deploy_ca_trust(system.id)
+    with caplog.at_level(logging.DEBUG), pytest.raises(SSHIdentityError) as excinfo:
+        service.deploy_ca_trust(system.id)
 
     assert CA_KEY_BODY not in str(excinfo.value)
     assert CA_KEY_BODY not in caplog.text
