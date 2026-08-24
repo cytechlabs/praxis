@@ -48,6 +48,7 @@ from .access_authorization_service import (
 )
 from .broker_client import BrokerClient
 from .ssh_service import (
+    CertificateSSHClient,
     SSHConnectionError,
     SSHService,
     configure_host_key_policy,
@@ -192,7 +193,11 @@ def _open_sftp(
     # value so operators tune one knob and the SFTP path can't wait longer than
     # command execution / health checks.
     timeout = connection_timeout_for(db)
-    client = paramiko.SSHClient()
+    # This path only ever authenticates with the Vault-signed certificate minted
+    # above, so it needs the client that lets a modern OpenSSH negotiate an
+    # RSA-SHA2 certificate algorithm instead of the SHA-1 one those servers no
+    # longer accept. It behaves exactly like paramiko's client otherwise.
+    client = CertificateSSHClient()
     try:
         # Enforce the system's host-key verification policy (PRA-245) — the same
         # path SSH sessions use. A mismatch/unknown key fails the connect below

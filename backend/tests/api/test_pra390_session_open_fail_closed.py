@@ -123,7 +123,7 @@ def open_ready(db, admin_user, system, monkeypatch, tmp_path):
     monkeypatch.setattr(aes, "emit_user_cert_sign", lambda *a, **k: None)
 
     spy = _SpyClient()
-    monkeypatch.setattr(ss.paramiko, "SSHClient", lambda: spy)
+    monkeypatch.setattr(ss, "CertificateSSHClient", lambda: spy)
     return spy
 
 
