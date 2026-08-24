@@ -264,7 +264,7 @@ def test_file_transfer_uses_reject_policy_when_required(
     _store_key(db, system, key_type="ssh-rsa")
     spy = _SpyClient()
     monkeypatch.setattr(fts, "_mint_cert_for", lambda user, login, ttl=300: MagicMock())
-    monkeypatch.setattr(fts.paramiko, "SSHClient", lambda: spy)
+    monkeypatch.setattr(fts, "CertificateSSHClient", lambda: spy)
     with fts._open_sftp(db, admin_user, system, "root") as sftp:
         assert sftp is not None
     assert isinstance(spy.policy, paramiko.RejectPolicy)
@@ -280,7 +280,7 @@ def test_file_transfer_rejects_changed_or_unknown_key(
     _store_key(db, system, key_type="ssh-rsa")
     spy = _SpyClient(connect_raises=paramiko.SSHException("host key mismatch/unknown"))
     monkeypatch.setattr(fts, "_mint_cert_for", lambda *a, **k: MagicMock())
-    monkeypatch.setattr(fts.paramiko, "SSHClient", lambda: spy)
+    monkeypatch.setattr(fts, "CertificateSSHClient", lambda: spy)
     with pytest.raises(fts.FileTransferError, match="ssh_connect_failed"):
         with fts._open_sftp(db, admin_user, system, "root"):
             pass
@@ -294,7 +294,7 @@ def test_file_transfer_missing_policy_never_uses_autoadd(
     system = _mk_system(db, seed_distro, admin_user, require=None)
     spy = _SpyClient()
     monkeypatch.setattr(fts, "_mint_cert_for", lambda user, login, ttl=300: MagicMock())
-    monkeypatch.setattr(fts.paramiko, "SSHClient", lambda: spy)
+    monkeypatch.setattr(fts, "CertificateSSHClient", lambda: spy)
     with fts._open_sftp(db, admin_user, system, "root") as sftp:
         assert sftp is not None
     assert isinstance(spy.policy, HostKeyPromptPolicy)
@@ -308,7 +308,7 @@ def test_file_transfer_unsupported_key_fails_closed(
     _store_key(db, system, key_type="ecdsa-sha2-nistp256")
     spy = _SpyClient()
     monkeypatch.setattr(fts, "_mint_cert_for", lambda *a, **k: MagicMock())
-    monkeypatch.setattr(fts.paramiko, "SSHClient", lambda: spy)
+    monkeypatch.setattr(fts, "CertificateSSHClient", lambda: spy)
     with pytest.raises(fts.FileTransferError, match="ssh_host_key_error"):
         with fts._open_sftp(db, admin_user, system, "root"):
             pass
@@ -351,7 +351,7 @@ def _open_session_with_spy(db, admin_user, system, monkeypatch, login="root"):
 
     # A rejected host key at connect (as RejectPolicy would produce).
     spy = _SpyClient(connect_raises=paramiko.SSHException("host key mismatch/unknown"))
-    monkeypatch.setattr(ss.paramiko, "SSHClient", lambda: spy)
+    monkeypatch.setattr(ss, "CertificateSSHClient", lambda: spy)
 
     with pytest.raises(ss.SessionError):
         ss.open_session(db, admin_user, system.id, login=login)
