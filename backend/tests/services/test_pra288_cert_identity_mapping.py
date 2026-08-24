@@ -266,7 +266,7 @@ def test_session_signs_immutable_principal_connects_as_login(
     monkeypatch.setattr(aes, "emit_user_cert_sign", lambda *a, **k: None)
 
     spy = _SpyClient(connect_raises=paramiko.SSHException("stop-after-connect"))
-    monkeypatch.setattr(ss.paramiko, "SSHClient", lambda: spy)
+    monkeypatch.setattr(ss, "CertificateSSHClient", lambda: spy)
 
     with pytest.raises(ss.SessionError):
         ss.open_session(db, admin_user, s.id, login=login)
@@ -308,7 +308,7 @@ def test_file_transfer_connects_as_linux_login(
     s = _system(db, seed_distro, group, cred, "p288-xfer")
     spy = _SpyClient()
     monkeypatch.setattr(fts, "_mint_cert_for", lambda user, login, ttl=300: MagicMock())
-    monkeypatch.setattr(fts.paramiko, "SSHClient", lambda: spy)
+    monkeypatch.setattr(fts, "CertificateSSHClient", lambda: spy)
 
     with fts._open_sftp(db, admin_user, s, "svc") as sftp:
         assert sftp is not None
