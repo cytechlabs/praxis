@@ -406,9 +406,7 @@ def test_a_host_outcome_event_regains_its_own_host(
 def test_a_wave_event_is_attributed_only_to_its_own_wave(
     db, admin_user, host_factory, migration
 ):
-    _, hosts, _, execution = _patched_fleet(
-        db, admin_user, host_factory, "pra402-bf-wave"
-    )
+    _, _, _, execution = _patched_fleet(db, admin_user, host_factory, "pra402-bf-wave")
     rows = (
         db.query(PatchUpdateExecutionHost)
         .filter(PatchUpdateExecutionHost.execution_id == execution.id)
@@ -589,7 +587,7 @@ def test_a_host_that_no_longer_exists_is_never_linked(
     db, admin_user, host_factory, migration
 ):
     """Execution host rows keep a snapshot id, which outlives the host row."""
-    _, hosts, plan, execution = _patched_fleet(
+    _, _, plan, execution = _patched_fleet(
         db, admin_user, host_factory, "pra402-bf-gone"
     )
     _patch_history(db, plan, execution, attributed=False)
