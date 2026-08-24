@@ -39,7 +39,7 @@ from .access_authorization_service import (
     has_fresh_totp,
 )
 from .session_runtime import SessionRuntime
-from .ssh_service import configure_host_key_policy
+from .ssh_service import CertificateSSHClient, configure_host_key_policy
 from .vault_service import VaultService
 
 logger = logging.getLogger(__name__)
@@ -325,7 +325,11 @@ def open_session(
 
     # --- paramiko transport + PTY -----------------------------------------
     port = _resolve_ssh_port(db, system)
-    client = paramiko.SSHClient()
+    # A session always authenticates with the Vault-signed certificate minted
+    # above, so it needs the client that lets a modern OpenSSH negotiate an
+    # RSA-SHA2 certificate algorithm instead of the SHA-1 one those servers no
+    # longer accept. It behaves exactly like paramiko's client otherwise.
+    client = CertificateSSHClient()
     try:
         # Enforce the system's host-key verification policy (PRA-245); a
         # mismatch/unknown key (or unsupported stored key) fails the connect,
@@ -341,6 +345,20 @@ def open_session(
             look_for_keys=False,
         )
     except Exception as e:  # pylint: disable=broad-except
+        # Paramiko leaves the transport and socket allocated when
+        # authentication fails, so a refused session must release the client
+        # itself. This runs before the allow-list probe below, which opens its
+        # own connection and can take a moment. Teardown is best effort and
+        # logged by failure category only: it can never replace or reshape the
+        # connect failure the caller has to see.
+        try:
+            client.close()
+        except Exception as close_error:  # pylint: disable=broad-except
+            logger.warning(
+                "ssh client teardown for session %d failed (%s)",
+                row.id,
+                type(close_error).__name__,
+            )
         # PRA-234: a Vault-signed cert that authenticates fine can still be
         # rejected by native sshd account allow-lists (AllowUsers/AllowGroups)
         # *before* the cert is evaluated — paramiko only sees a generic
