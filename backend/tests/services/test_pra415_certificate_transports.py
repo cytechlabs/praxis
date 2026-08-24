@@ -342,7 +342,7 @@ def test_session_builds_the_certificate_client_and_negotiates_rsa_sha2(
 
     monkeypatch.setattr(ss, "CertificateSSHClient", _factory)
 
-    row, runtime = ss.open_session(db, admin_user, system.id)
+    row, _ = ss.open_session(db, admin_user, system.id)
     try:
         assert row.status == "active"
         assert len(built) == 1
@@ -430,7 +430,7 @@ def test_session_connect_arguments_and_host_key_policy_are_unchanged(
     client = _LoopbackCertificateClient()
     monkeypatch.setattr(ss, "CertificateSSHClient", lambda: client)
 
-    row, runtime = ss.open_session(db, admin_user, system.id)
+    row, _ = ss.open_session(db, admin_user, system.id)
     try:
         kwargs = client.connect_kwargs
         assert kwargs["hostname"] == str(system.ip_address)
@@ -487,9 +487,11 @@ def test_file_transfer_still_fails_closed_on_a_host_key_error(
         MagicMock(side_effect=fts.SSHConnectionError("Unsupported host key type")),
     )
 
-    with pytest.raises(fts.FileTransferError, match="ssh_host_key_error"):
-        with fts._open_sftp(db, admin_user, system, "svc"):
-            pass
+    with (
+        pytest.raises(fts.FileTransferError, match="ssh_host_key_error"),
+        fts._open_sftp(db, admin_user, system, "svc"),
+    ):
+        pass
 
     assert client.connect_kwargs is None
     assert client.closed >= 1
@@ -508,10 +510,12 @@ def test_file_transfer_rejected_certificate_fails_closed_and_closes_the_client(
     )
     monkeypatch.setattr(fts, "CertificateSSHClient", lambda: client)
 
-    with _capture_service_logs() as logs:
-        with pytest.raises(fts.FileTransferError) as excinfo:
-            with fts._open_sftp(db, admin_user, system, "svc"):
-                pass
+    with (
+        _capture_service_logs() as logs,
+        pytest.raises(fts.FileTransferError) as excinfo,
+        fts._open_sftp(db, admin_user, system, "svc"),
+    ):
+        pass
 
     assert "ssh_auth_failed" in str(excinfo.value)
     # No second credential is tried inside the governed operation.
@@ -533,9 +537,8 @@ def test_session_rejected_certificate_fails_closed_without_a_runtime(
     )
     monkeypatch.setattr(ss, "CertificateSSHClient", lambda: client)
 
-    with _capture_service_logs() as logs:
-        with pytest.raises(ss.SessionError) as excinfo:
-            ss.open_session(db, admin_user, system.id)
+    with _capture_service_logs() as logs, pytest.raises(ss.SessionError) as excinfo:
+        ss.open_session(db, admin_user, system.id)
 
     row = (
         db.query(SessionRow)
@@ -570,9 +573,8 @@ def test_session_close_failure_cannot_replace_the_connect_error(
     )
     monkeypatch.setattr(ss, "CertificateSSHClient", lambda: client)
 
-    with _capture_service_logs() as logs:
-        with pytest.raises(ss.SessionError) as excinfo:
-            ss.open_session(db, admin_user, system.id)
+    with _capture_service_logs() as logs, pytest.raises(ss.SessionError) as excinfo:
+        ss.open_session(db, admin_user, system.id)
 
     # The connect failure still reaches the caller, unchanged, and the teardown
     # error neither surfaces nor becomes the raised exception.
@@ -618,9 +620,8 @@ def test_session_recording_failure_still_refuses_and_closes_the_certificate_clie
         MagicMock(side_effect=OSError("Permission denied")),
     )
 
-    with _capture_service_logs() as logs:
-        with pytest.raises(ss.SessionError) as excinfo:
-            ss.open_session(db, admin_user, system.id)
+    with _capture_service_logs() as logs, pytest.raises(ss.SessionError) as excinfo:
+        ss.open_session(db, admin_user, system.id)
 
     assert ss.UNRECORDED_ABORT_REASON in str(excinfo.value)
     row = (
