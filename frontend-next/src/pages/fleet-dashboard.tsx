@@ -9,6 +9,7 @@ import { RefreshCw, Activity, AlertTriangle, CheckCircle2, Clock, Server, Packag
 import {
   fetchFleetDashboard,
   checkAllSystems,
+  describeSecurityPosture,
   FleetDashboard,
   groupAttentionByHost,
 } from '@/services/fleetHealthService';
@@ -23,6 +24,15 @@ import { apiFetch } from '@/utils/api';
 import Head from 'next/head';
 import { useFormatTimestamp } from '@/context/TimestampPreferencesContext';
 import { humanizeStatus } from '@/utils/humanize';
+
+// Tile colors per security state. An unknown or untrustworthy state is never
+// green, so an unscanned fleet cannot read as a clean one.
+const securityToneClass: Record<string, string> = {
+  healthy: 'text-emerald-400',
+  warning: 'text-yellow-400',
+  critical: 'text-red-400',
+  unknown: 'text-content-muted',
+};
 
 const statusBarColors: Record<string, string> = {
   Active: 'bg-emerald-500',
@@ -151,6 +161,7 @@ const FleetDashboardPage = () => {
   }
 
   const totalSystems = Object.values(data.status_counts).reduce((a, b) => a + b, 0);
+  const securityDisplay = describeSecurityPosture(data.security_posture);
   const upToDatePct = data.patch_compliance.total > 0
     ? Math.round((data.patch_compliance.up_to_date / data.patch_compliance.total) * 100)
     : 0;
@@ -193,6 +204,7 @@ const FleetDashboardPage = () => {
         pendingUpdates={data.patch_compliance.pending_package_updates}
         systemsWithUpdates={data.patch_compliance.with_updates}
         totalSystems={totalSystems}
+        securityPosture={data.security_posture}
       />
 
       {/* Stat cards - every card is a link to its filtered view */}
@@ -276,9 +288,25 @@ const FleetDashboardPage = () => {
                 <div className="text-xs text-content-subtle mt-1">Systems with Updates</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-red-400 tabular-nums">{data.patch_compliance.with_security_updates}</div>
-                <div className="text-xs text-content-subtle mt-1">Systems with Security Updates</div>
+                {/* A security count is shown only when a completed security scan
+                    established it; otherwise the tile names the state, because a
+                    numeric zero would claim a question that was never asked. */}
+                <div
+                  className={`font-bold tabular-nums ${securityDisplay.showsCount ? 'text-2xl' : 'text-base pt-1.5'} ${securityToneClass[securityDisplay.tone]}`}
+                  data-testid="security-tile-value"
+                >
+                  {securityDisplay.value}
+                </div>
+                <div className="text-xs text-content-subtle mt-1">
+                  {securityDisplay.showsCount ? 'Systems with Security Updates' : 'Security Scan Status'}
+                </div>
               </div>
+            </div>
+            <div className="text-xs text-content-subtle mb-3">
+              {data.security_posture.coverage_detail}
+              {data.security_posture.last_successful_scan_at
+                ? ` Last successful scan: ${formatTimestamp(data.security_posture.last_successful_scan_at)}.`
+                : ''}
             </div>
             <div className="w-full h-2 bg-surface-overlay rounded-full overflow-hidden flex">
               <div className="h-2 bg-emerald-500 transition-all duration-500" style={{ width: `${upToDatePct}%` }} />
