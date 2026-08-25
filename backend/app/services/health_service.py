@@ -22,6 +22,7 @@ from ..db.models import (
     SystemMetadata,
 )
 from .notification_service import create_notification
+from .security_scan_status_service import build_security_posture
 from .ssh_service import SSHService, is_host_cooling_down
 
 logger = logging.getLogger(__name__)
@@ -557,6 +558,17 @@ class HealthService:
                 }
             )
 
+        # Security-scan provenance for the same scope. Security counts mean
+        # nothing without it: an inventory scan never classifies an update as
+        # security related, so a zero can equally mean "none pending" or "never
+        # asked".
+        security_posture = build_security_posture(
+            self.db,
+            system_ids=system_ids,
+            systems_with_security_updates=systems_with_security,
+            pending_security_updates=pending_security_updates,
+        )
+
         # Health summary
         health = self.get_fleet_health(system_ids=system_ids)
 
@@ -574,6 +586,7 @@ class HealthService:
                 "pending_package_updates": pending_package_updates,
                 "pending_security_updates": pending_security_updates,
             },
+            "security_posture": security_posture,
             "active_jobs": active_jobs,
             "recent_jobs": recent_jobs,
             "attention": attention,
