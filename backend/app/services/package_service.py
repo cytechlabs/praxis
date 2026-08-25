@@ -13,6 +13,7 @@ from sqlalchemy import false
 from sqlalchemy.orm import Session
 
 from ..db.models import Distro, Package, PackageHistory, PackageUpdate, System, User
+from .security_scan_status_service import STATE_COMPLETE, STATE_FAILED, STATE_PARTIAL
 from .ssh_service import SSHConnectionError, SSHService
 
 # PRA-322: per-host single-flight for expensive SSH/package-manager work. Repeated
@@ -49,6 +50,10 @@ def _apply_system_scope(query, column, system_ids: Optional[Set[int]]):
 
 
 logger = logging.getLogger(__name__)
+
+# Upper bound on package names echoed back in a scan summary, so a host with a
+# large unusable result set cannot return an unbounded payload.
+MAX_REPORTED_PACKAGES = 10
 
 # Package manager commands by distro family
 PKG_COMMANDS = {
@@ -274,6 +279,7 @@ class PackageService:
         results: List[Dict[str, Any]] = []
         success = failure = skipped = 0
         for system_id, hostname in targets:
+            scan_state = None
             try:
                 summary = (
                     self.scan_security_updates(system_id)
@@ -282,11 +288,14 @@ class PackageService:
                 )
                 status = summary.get("status", "error")
                 message = summary.get("message")
+                scan_state = summary.get("scan_state")
             except SSHConnectionError as e:
                 status, message = "error", str(e)
+                scan_state = STATE_FAILED if security else None
             except Exception as e:  # pylint: disable=broad-except
                 logger.warning("Cohort scan failed for system %s: %s", system_id, e)
                 status, message = "error", str(e)
+                scan_state = STATE_FAILED if security else None
 
             if status == "success":
                 success += 1
@@ -301,6 +310,7 @@ class PackageService:
                     "hostname": hostname,
                     "status": status,
                     "message": message,
+                    "scan_state": scan_state,
                 }
             )
 
@@ -661,13 +671,17 @@ class PackageService:
                 "system_id": system_id,
                 "hostname": system.hostname,
                 "status": "error",
+                "scan_state": STATE_FAILED,
                 "message": f"Failed to scan security updates: {result.get('stderr', '').strip() or 'no output from remote host'}",
                 "packages_found": 0,
                 "packages_added": 0,
                 "packages_updated": 0,
                 "updates_available": 0,
+                "unreadable_advisories": 0,
+                "unmatched_packages": [],
             }
 
+        unreadable_rows = 0
         if pkg_manager in ("yum", "dnf"):
             updates, unreadable_rows = self._parse_rpm_security_updates(
                 result["stdout"]
@@ -685,6 +699,7 @@ class PackageService:
                     "system_id": system_id,
                     "hostname": system.hostname,
                     "status": "error",
+                    "scan_state": STATE_FAILED,
                     "message": (
                         f"Security scan could not read any of the {unreadable_rows} "
                         "advisory line(s) returned by the package manager; no "
@@ -694,6 +709,8 @@ class PackageService:
                     "packages_added": 0,
                     "packages_updated": 0,
                     "updates_available": 0,
+                    "unreadable_advisories": unreadable_rows,
+                    "unmatched_packages": [],
                 }
             if unreadable_rows:
                 logger.warning(
@@ -723,6 +740,7 @@ class PackageService:
                 "system_id": system_id,
                 "hostname": system.hostname,
                 "status": "error",
+                "scan_state": STATE_FAILED,
                 "message": (
                     f"Security scan found {len(unmatched)} update(s) for packages "
                     f"that are not in this host's package inventory "
@@ -732,6 +750,8 @@ class PackageService:
                 "packages_added": 0,
                 "packages_updated": 0,
                 "updates_available": 0,
+                "unreadable_advisories": unreadable_rows,
+                "unmatched_packages": unmatched[:MAX_REPORTED_PACKAGES],
             }
         if unmatched:
             logger.warning(
@@ -753,16 +773,30 @@ class PackageService:
                 severity="warning",
             )
 
-        return {
+        scan_state = STATE_PARTIAL if (unreadable_rows or unmatched) else STATE_COMPLETE
+        summary = {
             "system_id": system_id,
             "hostname": system.hostname,
             "status": "success",
+            "scan_state": scan_state,
             "packages_found": 0,
             "packages_added": 0,
             "packages_updated": 0,
             "updates_available": updates_found,
+            "unreadable_advisories": unreadable_rows,
+            "unmatched_packages": unmatched[:MAX_REPORTED_PACKAGES],
             "scanned_at": datetime.utcnow().isoformat(),
         }
+        if scan_state == STATE_PARTIAL:
+            # A count that skipped rows is a floor, not a total, so the caller
+            # is told what the scan could not account for.
+            summary["message"] = (
+                f"Security scan stored {updates_found} update(s) but skipped "
+                f"{unreadable_rows} unreadable advisory line(s) and "
+                f"{len(unmatched)} package(s) missing from this host's "
+                "inventory; the count is incomplete."
+            )
+        return summary
 
     def _upsert_security_updates(
         self, system_id: int, updates: List[Dict[str, str]], pkg_manager: str

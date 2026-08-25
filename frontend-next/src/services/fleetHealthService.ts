@@ -88,6 +88,97 @@ export function groupAttentionByHost(attention: DashboardAttention[]): GroupedAt
   return order.map((id) => byId.get(id)!);
 }
 
+/**
+ * How much of the fleet a security scan has actually covered. A security count
+ * only means something once a scan has asked the question, so the count travels
+ * with the state that says whether it can be believed.
+ */
+export type SecurityPostureState =
+  | 'not_scanned'
+  | 'scanning'
+  | 'failed'
+  | 'partial'
+  | 'complete';
+
+export interface SecurityPosture {
+  state: SecurityPostureState;
+  coverage_complete: boolean;
+  counts_trustworthy: boolean;
+  systems_total: number;
+  systems_scanned: number;
+  systems_partial: number;
+  systems_failed: number;
+  systems_scanning: number;
+  systems_never_scanned: number;
+  last_successful_scan_at: string | null;
+  last_scan_at: string | null;
+  last_failure_detail: string | null;
+  coverage_detail: string;
+  systems_with_security_updates: number;
+  pending_security_updates: number;
+}
+
+export type SecurityPostureTone = 'healthy' | 'warning' | 'critical' | 'unknown';
+
+export interface SecurityPostureDisplay {
+  /** What the tile shows: a number only when a scan established it. */
+  value: string;
+  tone: SecurityPostureTone;
+  /** True when ``value`` is a count rather than a state label. */
+  showsCount: boolean;
+}
+
+/**
+ * Render a security count only when a completed scan vouches for it.
+ *
+ * An unknown, in-flight, failed, or partially covered fleet gets a state label
+ * instead of a number, because a numeric zero would assert that the question
+ * was asked and answered. Partial coverage with findings keeps its count but
+ * marks it as a floor.
+ */
+export const describeSecurityPosture = (
+  posture?: SecurityPosture | null,
+): SecurityPostureDisplay => {
+  if (!posture) {
+    return { value: 'Unknown', tone: 'unknown', showsCount: false };
+  }
+  const affected = posture.systems_with_security_updates;
+  switch (posture.state) {
+    case 'complete':
+      return {
+        value: String(affected),
+        tone: affected > 0 ? 'critical' : 'healthy',
+        showsCount: true,
+      };
+    case 'partial':
+      return affected > 0
+        ? { value: `${affected}+`, tone: 'critical', showsCount: true }
+        : { value: 'Partial scan', tone: 'warning', showsCount: false };
+    case 'failed':
+      return { value: 'Scan failed', tone: 'warning', showsCount: false };
+    case 'scanning':
+      return { value: 'Scanning', tone: 'unknown', showsCount: false };
+    default:
+      return { value: 'Not scanned', tone: 'unknown', showsCount: false };
+  }
+};
+
+/** One-line summary of what the security state means for the whole fleet. */
+export const securityPostureHeadline = (posture: SecurityPosture): string => {
+  switch (posture.state) {
+    case 'scanning':
+      return 'Security scan in progress';
+    case 'failed':
+      return 'Security scan failed - security status unknown';
+    case 'partial':
+      return `Security scan covers ${posture.systems_scanned} of ${posture.systems_total} systems`;
+    case 'complete':
+      return 'Security scan complete';
+    default:
+      return 'Security status unknown - no security scan has completed';
+  }
+};
+
 export interface FleetDashboard {
   status_counts: Record<string, number>;
   systems_by_group: { group: string; count: number }[];
@@ -102,6 +193,8 @@ export interface FleetDashboard {
     pending_package_updates: number;
     pending_security_updates: number;
   };
+  // Security-scan provenance for the same scope as patch_compliance.
+  security_posture: SecurityPosture;
   active_jobs: DashboardActiveJob[];
   recent_jobs: DashboardRecentJob[];
   attention: DashboardAttention[];
