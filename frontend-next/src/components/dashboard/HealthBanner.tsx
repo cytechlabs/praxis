@@ -1,6 +1,10 @@
 import React from 'react';
 import Link from 'next/link';
-import { CheckCircle2, AlertTriangle, ShieldAlert, Download, ChevronRight } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, ShieldAlert, ShieldQuestion, Download, ChevronRight } from 'lucide-react';
+import {
+  securityPostureHeadline,
+  type SecurityPosture,
+} from '@/services/fleetHealthService';
 
 interface HealthBannerProps {
   unreachable: number;
@@ -12,13 +16,16 @@ interface HealthBannerProps {
   pendingUpdates: number;
   systemsWithUpdates: number;
   totalSystems: number;
+  // Whether a security scan has actually established the security counts. A
+  // fleet nobody has security-scanned must never be announced as healthy.
+  securityPosture?: SecurityPosture | null;
 }
 
 // "on 1 system" vs "across N systems" - keeps the hero copy grammatical.
 const systemsPhrase = (n: number): string =>
   n === 1 ? 'on 1 system' : `across ${n} systems`;
 
-type Severity = 'critical' | 'warning' | 'info' | 'healthy';
+type Severity = 'critical' | 'warning' | 'info' | 'healthy' | 'unknown';
 
 interface BannerState {
   severity: Severity;
@@ -36,8 +43,15 @@ const HealthBanner: React.FC<HealthBannerProps> = ({
   pendingUpdates,
   systemsWithUpdates,
   totalSystems,
+  securityPosture,
 }) => {
   let state: BannerState;
+
+  // A count nothing vouches for cannot close out the security question, so an
+  // incomplete scan keeps the banner off its healthy state.
+  const posture = securityPosture ?? null;
+  const securityUnknown = posture !== null && posture.state !== 'complete';
+  const securityCaveat = posture && securityUnknown ? ` ${posture.coverage_detail}` : '';
 
   if (unreachable > 0) {
     state = {
@@ -53,9 +67,20 @@ const HealthBanner: React.FC<HealthBannerProps> = ({
       severity: 'warning',
       icon: <ShieldAlert size={20} />,
       headline: `${securityUpdates} critical security update${securityUpdates === 1 ? '' : 's'} pending ${systemsPhrase(systemsWithSecurityUpdates)}`,
-      detail: 'Patch these to close known vulnerabilities across your fleet.',
+      detail: `Patch these to close known vulnerabilities across your fleet.${securityCaveat}`,
       href: '/package-management/security-updates',
       cta: 'Review security updates',
+    };
+  } else if (posture && securityUnknown) {
+    state = {
+      severity: 'unknown',
+      icon: <ShieldQuestion size={20} />,
+      headline: securityPostureHeadline(posture),
+      detail: posture.last_failure_detail
+        ? `${posture.coverage_detail} Last failure: ${posture.last_failure_detail}`
+        : posture.coverage_detail,
+      href: '/package-management/security-updates',
+      cta: 'Run a security scan',
     };
   } else if (pendingUpdates > 0) {
     state = {
@@ -74,7 +99,7 @@ const HealthBanner: React.FC<HealthBannerProps> = ({
         ? `All ${totalSystems} system${totalSystems === 1 ? '' : 's'} healthy`
         : 'No systems registered yet',
       detail: totalSystems > 0
-        ? 'No outstanding issues. Last check is current.'
+        ? `No outstanding issues.${posture ? ` ${posture.coverage_detail}` : ' Last check is current.'}`
         : 'Register your first Linux system to start monitoring.',
       href: totalSystems > 0
         ? '/system-management/all-systems'
@@ -111,6 +136,14 @@ const HealthBanner: React.FC<HealthBannerProps> = ({
       icon: 'text-emerald-400 bg-emerald-500/10',
       text: 'text-emerald-100',
       cta: 'text-emerald-300 hover:text-emerald-200',
+    },
+    // Deliberately not green: an unknown security state is not a clean one.
+    unknown: {
+      bg: 'bg-slate-900/60',
+      border: 'border-slate-600/60',
+      icon: 'text-slate-200 bg-slate-500/20',
+      text: 'text-slate-100',
+      cta: 'text-slate-200 hover:text-slate-50',
     },
   };
 

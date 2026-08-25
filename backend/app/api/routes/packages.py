@@ -20,6 +20,14 @@ from ...services.access_authorization_service import (
     user_can_access_system,
 )
 from ...services.package_service import PackageService
+from ...services.security_scan_status_service import (
+    RESULT_FAILURE,
+    RESULT_SKIPPED,
+    SECURITY_SCAN_OPERATION_COHORT,
+    SECURITY_SCAN_OPERATION_SINGLE,
+    redact_result_message,
+    result_status_for_scan,
+)
 from ...services.ssh_service import SSHConnectionError
 
 logger = logging.getLogger(__name__)
@@ -371,7 +379,7 @@ def scan_scope_packages(
 
     fleet_op_id = fleet_operation_service.start_operation(
         operation_type=(
-            "cohort_security_scan" if body.security else "cohort_package_scan"
+            SECURITY_SCAN_OPERATION_COHORT if body.security else "cohort_package_scan"
         ),
         user_id=current_user.id,
         target_count=len(targets),
@@ -387,17 +395,19 @@ def scan_scope_packages(
         service = PackageService(db)
         result = service.scan_scope(targets, security=body.security)
         for row in result["results"]:
-            if row["status"] == "success":
-                audit_status = "success"
-            elif row["status"] == "already_running":
-                audit_status = "skipped"
-            else:
-                audit_status = "failure"
+            # A security scan that could not read or store part of its result is
+            # recorded as partial, so the host is not counted as covered by a
+            # trustworthy scan even though the host itself did not fail. Its
+            # message can be a remote failure string, so it is redacted before
+            # it is persisted.
+            message = row.get("message")
             fleet_operation_service.record_result(
                 fleet_op_id,
                 row["system_id"],
-                audit_status,
-                error_message=row.get("message"),
+                result_status_for_scan(row),
+                error_message=(
+                    redact_result_message(message) if body.security else message
+                ),
             )
         # Skipped (single-flight already-running) hosts are not failures — the
         # operation's failure_count reflects real failures only.
@@ -460,6 +470,19 @@ def list_system_security_updates(
         ) from e
 
 
+def _record_single_host_scan_failure(
+    fleet_op_id: int, system_id: int, message: str
+) -> None:
+    """Record a security scan that raised before returning a per-host result."""
+    fleet_operation_service.record_result(
+        fleet_op_id,
+        system_id,
+        RESULT_FAILURE,
+        error_message=redact_result_message(message),
+    )
+    fleet_operation_service.complete_operation(fleet_op_id, 0, 1, status="failed")
+
+
 @router.post(
     "/{system_id}/scan-security",
     response_model=Dict[str, Any],
@@ -467,26 +490,60 @@ def list_system_security_updates(
 )
 def scan_security_updates(
     system_id: int = Path(..., description="The ID of the system to scan"),
-    current_user: User = Depends(
-        require_role("admin", "maintainer")
-    ),  # pylint:disable=unused-argument
+    current_user: User = Depends(require_role("admin", "maintainer")),
     db: Session = Depends(get_db),
 ):
+    """Scan one host for security updates and record the scan itself.
+
+    The outcome is recorded per host so fleet security state can tell a host
+    that was scanned apart from one that was never asked the question. A scan
+    that never produced a usable result is recorded as a failure rather than
+    leaving the host looking clean.
+    """
     system = db.query(System).filter(System.id == system_id).first()
     if not system:
         raise HTTPException(status_code=404, detail="System not found")
 
+    fleet_op_id = fleet_operation_service.start_operation(
+        operation_type=SECURITY_SCAN_OPERATION_SINGLE,
+        user_id=current_user.id,
+        target_count=1,
+        parameters={
+            "system_ids": [system.id],
+            "hostnames": [system.hostname],
+        },
+    )
     try:
         service = PackageService(db)
-        return service.scan_security_updates(system_id)
-    except SSHConnectionError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
-    except ValueError as e:
+        result = service.scan_security_updates(system_id)
+    except (SSHConnectionError, ValueError) as e:
+        _record_single_host_scan_failure(fleet_op_id, system_id, str(e))
         raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
+        _record_single_host_scan_failure(fleet_op_id, system_id, "Security scan failed")
         raise internal_error(
             e, context="scanning security updates", logger=logger
         ) from e
+
+    outcome = result_status_for_scan(result)
+    fleet_operation_service.record_result(
+        fleet_op_id,
+        system_id,
+        outcome,
+        error_message=redact_result_message(result.get("message")),
+    )
+    if outcome == RESULT_FAILURE:
+        success_count, failure_count = 0, 1
+    elif outcome == RESULT_SKIPPED:
+        # Another package operation held the host, so no scan ran for it.
+        success_count, failure_count = 0, 0
+    else:
+        success_count, failure_count = 1, 0
+    fleet_operation_service.complete_operation(
+        fleet_op_id, success_count, failure_count
+    )
+    result["fleet_operation_id"] = fleet_op_id
+    return result
 
 
 @router.post(
