@@ -155,7 +155,7 @@ const SecurityUpdates = () => {
     notifyRebootStatus(result, toast);
   };
 
-  const handleApplyAll = async () => {
+  const handleApplyAll = () => {
     if (selectedSystem === 'all') return;
     const hostname = getSystemHostname(selectedSystem);
     const unheldUpdates = updates.filter((u) => !heldPackageNames.has(u.package_name));
@@ -197,7 +197,7 @@ const SecurityUpdates = () => {
     });
   };
 
-  const handleApplySingle = async (
+  const handleApplySingle = (
     updateId: number,
     systemId: number,
     packageName: string

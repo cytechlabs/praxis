@@ -104,8 +104,6 @@ def _mk_operation(
     status="completed",
     created_at=None,
 ):
-    import json
-
     op = FleetOperation(
         operation_type=operation_type,
         user_id=admin_user.id,

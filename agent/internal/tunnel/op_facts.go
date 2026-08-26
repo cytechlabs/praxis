@@ -752,7 +752,7 @@ func sshBaselineWanted(key string) bool {
 // names, in the order the server would read them. Relative patterns
 // resolve under the configuration directory.
 func sshdIncludeTargets(value string) []string {
-	targets := []string{}
+	var targets []string
 	for _, pattern := range strings.Fields(value) {
 		pattern = strings.Trim(pattern, `"`)
 		if pattern == "" {

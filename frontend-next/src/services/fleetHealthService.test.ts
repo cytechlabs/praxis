@@ -125,7 +125,7 @@ describe('describeSecurityPosture', () => {
   });
 
   it('falls back to unknown when the payload carries no posture', () => {
-    expect(describeSecurityPosture(undefined)).toEqual({
+    expect(describeSecurityPosture()).toEqual({
       value: 'Unknown',
       tone: 'unknown',
       showsCount: false,
