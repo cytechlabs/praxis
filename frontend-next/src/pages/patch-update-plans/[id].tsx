@@ -48,6 +48,7 @@ import {
 import {
   cancelPatchUpdateExecution,
   dispatchNextPatchUpdateExecution,
+  getExecutionRebootQueue,
   getLatestExecutionForPlan,
   listExecutionHostPackages,
   pausePatchUpdateExecution,
@@ -59,7 +60,9 @@ import {
   type ExecutionState,
   type PackageOutcome,
   type PatchUpdateExecutionDetail,
+  type RebootReconciliation,
 } from '@/services/patchExecutionService';
+import RebootReconciliationWarning from '@/components/patch/RebootReconciliationWarning';
 import RollbackPanel from '@/components/patch/RollbackPanel';
 import PlanRollbackSummary from '@/components/patch/PlanRollbackSummary';
 import { useFormatTimestamp } from '@/context/TimestampPreferencesContext';
@@ -678,14 +681,28 @@ const ExecutionPanel: React.FC<{
   );
   const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [rebootReconciliation, setRebootReconciliation] =
+    useState<RebootReconciliation | null>(null);
 
   const refreshExecution = useCallback(async () => {
     try {
       const data = await getLatestExecutionForPlan(plan.id);
       setExecution(data);
+      // The reboot queue is read only for its reconciliation health. A
+      // queue that could not be built is an operator-actionable state, so
+      // it must reach this surface rather than living in the API alone. A
+      // failed read is not reported as an error: it must not turn loading
+      // an execution into a failure.
+      try {
+        const queue = await getExecutionRebootQueue(data.id);
+        setRebootReconciliation(queue.summary?.reconciliation ?? null);
+      } catch {
+        setRebootReconciliation(null);
+      }
     } catch (e) {
       if (e instanceof PatchUpdateExecutionApiError && e.status === 404) {
         setExecution(null);
+        setRebootReconciliation(null);
       } else {
         reportError('Load execution', e);
       }
@@ -829,6 +846,10 @@ const ExecutionPanel: React.FC<{
           Execution substrate only - package-manager dispatch is not yet
           available.
         </div>
+      )}
+
+      {execution && (
+        <RebootReconciliationWarning reconciliation={rebootReconciliation} />
       )}
 
       {execution && (

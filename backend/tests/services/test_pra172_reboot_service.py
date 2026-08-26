@@ -8,8 +8,9 @@ Covers the Slice 1 contract:
   ``always``; missing/invalid policy snapshots produce explicit
   ``policy_missing`` / ``policy_invalid`` decisions, not silent
   pending rows.
-* The eligibility derivation reads ``host_facts.reboot_required``
-  and treats null/false as "not required" under ``if_required``.
+* Under ``if_required`` the eligibility derivation uses a fresh
+  authoritative observation of the host; an observation that does
+  not conclude leaves the row queued rather than clearing it.
 * Hosts whose execution-host state is not ``succeeded`` are
   represented as ``skipped`` with ``host_did_not_succeed`` (not
   silently omitted).
@@ -28,7 +29,7 @@ reboot transport, scheduling, or verification.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 import pytest
@@ -43,7 +44,7 @@ from app.db.models import (
     PatchUpdateExecutionReboot,
     System,
 )
-from app.services import patch_reboot_service
+from app.services import patch_reboot_service, reboot_evidence_service
 from app.services.patch_execution_service import (
     EXECUTION_HOST_STATE_FAILED,
     EXECUTION_HOST_STATE_SKIPPED,
@@ -54,6 +55,7 @@ from app.services.patch_execution_service import (
     EXECUTION_STATE_SUCCEEDED,
 )
 from app.services.patch_reboot_service import (
+    REBOOT_DECISION_EVIDENCE_UNKNOWN,
     REBOOT_DECISION_FACT_NOT_REQUIRED,
     REBOOT_DECISION_HOST_DID_NOT_SUCCEED,
     REBOOT_DECISION_HOST_FACT_REBOOT_REQUIRED,
@@ -253,6 +255,24 @@ def _make_execution_host_row(
     return host
 
 
+def _observing(default: Optional[bool] = None, by_system: Optional[dict] = None):
+    """Return a probe runner that answers ``True`` / ``False`` per host.
+
+    ``by_system`` maps a system id to the answer for that host;
+    ``default`` covers the rest. ``None`` means the host does not
+    answer, which the reconcile pass must treat as unknown.
+    """
+
+    def _run(system, argv):
+        answer = (by_system or {}).get(system.id, default)
+        if answer is None:
+            return {"outcome": "transport_error", "stderr": "no answer"}
+        token = "true" if answer else "false"
+        return {"exit_code": 0, "stdout": f"PRAXIS_REBOOT_PROBE={token}"}
+
+    return _run
+
+
 # ---------------------------------------------------------------------------
 # reconcile_reboot_queue: gate + policy decisions
 # ---------------------------------------------------------------------------
@@ -286,7 +306,9 @@ def test_reconcile_if_required_with_reboot_required_fact(db, admin_user, host_fa
     h = host_factory(reboot_required=True)
     _make_execution_host_row(db, execution, h, state=EXECUTION_HOST_STATE_SUCCEEDED)
 
-    rows = patch_reboot_service.reconcile_reboot_queue(db, execution.id)
+    rows = patch_reboot_service.reconcile_reboot_queue(
+        db, execution.id, evidence_runner=_observing(True)
+    )
     assert len(rows) == 1
     row = rows[0]
     assert row.state == REBOOT_STATE_PENDING
@@ -309,7 +331,9 @@ def test_reconcile_if_required_with_no_reboot_required_fact(
     h = host_factory(reboot_required=False)
     _make_execution_host_row(db, execution, h, state=EXECUTION_HOST_STATE_SUCCEEDED)
 
-    rows = patch_reboot_service.reconcile_reboot_queue(db, execution.id)
+    rows = patch_reboot_service.reconcile_reboot_queue(
+        db, execution.id, evidence_runner=_observing(False)
+    )
     assert len(rows) == 1
     row = rows[0]
     assert row.state == REBOOT_STATE_NOT_REQUIRED
@@ -317,10 +341,12 @@ def test_reconcile_if_required_with_no_reboot_required_fact(
     assert row.reboot_required_fact is False
 
 
-def test_reconcile_if_required_with_null_facts(db, admin_user, host_factory):
-    """A succeeded host with no HostFacts row is treated as
-    "no signal" — recorded as ``not_required``, not silently
-    pending. A later slice may re-evaluate after refreshing facts."""
+def test_reconcile_if_required_with_no_answer_from_the_host(
+    db, admin_user, host_factory
+):
+    """A host that cannot be observed leaves the question open. The row
+    stays queued for an operator; silence is never read as "no reboot
+    needed"."""
     pol = _make_policy_row(
         db, "rb-if-req-null", admin_user, reboot_policy=REBOOT_POLICY_IF_REQUIRED
     )
@@ -329,10 +355,12 @@ def test_reconcile_if_required_with_null_facts(db, admin_user, host_factory):
     h = host_factory(reboot_required=None)  # no HostFacts row
     _make_execution_host_row(db, execution, h, state=EXECUTION_HOST_STATE_SUCCEEDED)
 
-    rows = patch_reboot_service.reconcile_reboot_queue(db, execution.id)
+    rows = patch_reboot_service.reconcile_reboot_queue(
+        db, execution.id, evidence_runner=_observing(None)
+    )
     assert len(rows) == 1
-    assert rows[0].state == REBOOT_STATE_NOT_REQUIRED
-    assert rows[0].decision_code == REBOOT_DECISION_FACT_NOT_REQUIRED
+    assert rows[0].state == REBOOT_STATE_PENDING
+    assert rows[0].decision_code == REBOOT_DECISION_EVIDENCE_UNKNOWN
     assert rows[0].reboot_required_fact is None
 
 
@@ -390,7 +418,9 @@ def test_reconcile_non_succeeded_hosts_are_skipped_not_omitted(
         db, execution, h_skipped, state=EXECUTION_HOST_STATE_SKIPPED
     )
 
-    rows = patch_reboot_service.reconcile_reboot_queue(db, execution.id)
+    rows = patch_reboot_service.reconcile_reboot_queue(
+        db, execution.id, evidence_runner=_observing(True)
+    )
     assert len(rows) == 3
     by_sysid = {r.system_id_snapshot: r for r in rows}
     assert by_sysid[h_ok.id].state == REBOOT_STATE_PENDING
@@ -500,7 +530,10 @@ def test_reconcile_is_idempotent_and_refreshes_decision(db, admin_user, host_fac
     h = host_factory(reboot_required=False)
     _make_execution_host_row(db, execution, h, state=EXECUTION_HOST_STATE_SUCCEEDED)
 
-    rows = patch_reboot_service.reconcile_reboot_queue(db, execution.id)
+    first_pass_at = datetime(2026, 5, 12, 3, 0, 0)
+    rows = patch_reboot_service.reconcile_reboot_queue(
+        db, execution.id, now=first_pass_at, evidence_runner=_observing(False)
+    )
     assert len(rows) == 1
     first_id = rows[0].id
     assert rows[0].state == REBOOT_STATE_NOT_REQUIRED
@@ -510,12 +543,15 @@ def test_reconcile_is_idempotent_and_refreshes_decision(db, admin_user, host_fac
     rows[0].scheduled_for_at = scheduled
     db.commit()
 
-    # Flip the facts and re-run.
-    facts = db.query(HostFacts).filter(HostFacts.system_id == h.id).one()
-    facts.reboot_required = True
-    db.commit()
-
-    rows_b = patch_reboot_service.reconcile_reboot_queue(db, execution.id)
+    # Far enough later that the first observation no longer describes
+    # the host, so the pass observes again and the row follows the new
+    # answer.
+    second_pass_at = first_pass_at + timedelta(
+        seconds=reboot_evidence_service.MAX_EVIDENCE_AGE_SECONDS + 1
+    )
+    rows_b = patch_reboot_service.reconcile_reboot_queue(
+        db, execution.id, now=second_pass_at, evidence_runner=_observing(True)
+    )
     assert len(rows_b) == 1
     assert rows_b[0].id == first_id  # same row, not a duplicate
     assert rows_b[0].state == REBOOT_STATE_PENDING
@@ -554,7 +590,13 @@ def test_get_reboot_queue_returns_summary_and_rows(db, admin_user, host_factory)
     )
     _make_execution_host_row(db, execution, h_failed, state=EXECUTION_HOST_STATE_FAILED)
 
-    patch_reboot_service.reconcile_reboot_queue(db, execution.id)
+    patch_reboot_service.reconcile_reboot_queue(
+        db,
+        execution.id,
+        evidence_runner=_observing(
+            by_system={h_pending.id: True, h_not_required.id: False}
+        ),
+    )
     execution_out, rows, summary = patch_reboot_service.get_reboot_queue(
         db, execution.id
     )
@@ -674,14 +716,18 @@ def test_get_plan_reboot_queue_aggregates_across_executions(
     e_a = _make_execution_row(db, plan, admin_user, state=EXECUTION_STATE_SUCCEEDED)
     h_a = host_factory(reboot_required=True)
     _make_execution_host_row(db, e_a, h_a, state=EXECUTION_HOST_STATE_SUCCEEDED)
-    patch_reboot_service.reconcile_reboot_queue(db, e_a.id)
+    patch_reboot_service.reconcile_reboot_queue(
+        db, e_a.id, evidence_runner=_observing(True)
+    )
 
     e_b = _make_execution_row(db, plan, admin_user, state=EXECUTION_STATE_FAILED)
     h_b = host_factory(reboot_required=False)
     h_c = host_factory(reboot_required=True)
     _make_execution_host_row(db, e_b, h_b, state=EXECUTION_HOST_STATE_SUCCEEDED)
     _make_execution_host_row(db, e_b, h_c, state=EXECUTION_HOST_STATE_FAILED)
-    patch_reboot_service.reconcile_reboot_queue(db, e_b.id)
+    patch_reboot_service.reconcile_reboot_queue(
+        db, e_b.id, evidence_runner=_observing(False)
+    )
 
     plan_out, executions, rows, summary = patch_reboot_service.get_plan_reboot_queue(
         db, plan.id

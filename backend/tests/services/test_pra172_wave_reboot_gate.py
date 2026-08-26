@@ -47,6 +47,7 @@ from app.services import (
     patch_policy_service,
     patch_reboot_service,
     patch_update_plan_service,
+    reboot_evidence_service,
 )
 from app.services.patch_execution_dispatch_service import (
     DispatchResult,
@@ -71,6 +72,24 @@ from app.services.patch_reboot_service import (
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def hosts_report_no_reboot_needed(monkeypatch):
+    """Make every reboot-evidence probe answer "no reboot needed".
+
+    The dispatcher path collects the answer from the host itself, and
+    these tests exercise the wave gate rather than the transport, so
+    the observation is supplied instead of attempting a connection.
+    """
+
+    def _runner(db_arg):
+        def _run(system, argv):
+            return {"exit_code": 0, "stdout": "PRAXIS_REBOOT_PROBE=false"}
+
+        return _run
+
+    monkeypatch.setattr(reboot_evidence_service, "dispatch_runner", _runner)
 
 
 @pytest.fixture
@@ -835,11 +854,11 @@ def test_blocker_context_clears_when_gate_resolves(db, admin_user, host_factory)
 
 
 def test_gate_does_not_block_when_only_safe_states_in_prior_wave(
-    db, admin_user, host_factory
+    db, admin_user, host_factory, hosts_report_no_reboot_needed
 ):
     """When wave 0 hosts produce only ``not_required`` /
-    ``skipped`` rows (e.g. reboot_policy=if_required and facts
-    say no reboot needed), the gate must NOT block wave 1."""
+    ``skipped`` rows (reboot_policy=if_required and the hosts report
+    they do not need a reboot), the gate must NOT block wave 1."""
     pol = _make_policy(db, admin_user, "rb5-safe-only", reboot_policy="if_required")
     h_a = _seed_host_with_update(db, host_factory, "sa", reboot_required=False)
     h_b = _seed_host_with_update(db, host_factory, "sb", reboot_required=False)

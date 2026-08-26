@@ -35,12 +35,21 @@ class PatchUpdateExecutionRebootRowRead(BaseModel):
 
     ``decision_code`` is a short machine-readable reason
     (``host_fact_reboot_required`` / ``policy_always`` /
-    ``fact_not_required`` / ``policy_never`` /
-    ``host_did_not_succeed`` / ``policy_invalid`` /
-    ``policy_missing``). ``decision_details`` is JSONB context that
+    ``fact_not_required`` / ``reboot_evidence_unknown`` /
+    ``policy_never`` / ``host_did_not_succeed`` / ``policy_invalid``
+    / ``policy_missing``). ``decision_details`` is JSONB context that
     backs the operator UI's "why" display, including
     ``reboot_window_status`` (``set`` or ``unset``) so missing
-    window context is explicit instead of silent.
+    window context is explicit instead of silent, and
+    ``reboot_evidence`` carrying the observation the decision was
+    made from (value, source indicator, collection time, probe
+    outcome).
+
+    ``reboot_required_fact`` is the observed value and is null
+    whenever the observation did not conclude. A null here with
+    ``decision_code`` of ``reboot_evidence_unknown`` means the host's
+    reboot state could not be established, never that no reboot is
+    needed.
     """
 
     id: int
@@ -80,11 +89,20 @@ class PatchUpdateExecutionRebootSummary(BaseModel):
     counts when not present, so the operator UI doesn't need to
     defensively check for missing keys. ``decision_counts`` is keyed
     by the row decision codes that actually appear (sorted for
-    deterministic polling responses)."""
+    deterministic polling responses).
+
+    ``reconciliation`` reports whether the queue actually describes
+    the whole run: ``status`` is ``ok``, ``incomplete`` (hosts that
+    finished their package work have no queue row), or ``failed`` (a
+    reconcile pass recorded a failure), and ``action_required`` is
+    true for anything but ``ok``. The counts above cannot be read as
+    "nothing outstanding" while ``action_required`` is set. It is
+    null only where the scope has no execution to evaluate."""
 
     row_count: int
     state_counts: Dict[str, int]
     decision_counts: Dict[str, int]
+    reconciliation: Optional[Dict[str, Any]] = None
 
 
 class PatchUpdateExecutionRebootQueue(BaseModel):

@@ -13,6 +13,7 @@ from sqlalchemy import false
 from sqlalchemy.orm import Session
 
 from ..db.models import Distro, Package, PackageHistory, PackageUpdate, System, User
+from . import reboot_evidence_service
 from .security_scan_status_service import STATE_COMPLETE, STATE_FAILED, STATE_PARTIAL
 from .ssh_service import SSHConnectionError, SSHService
 
@@ -253,6 +254,34 @@ class PackageService:
         if not commands:
             raise ValueError(f"No commands defined for package manager: {pkg_manager}")
         return commands
+
+    def _collect_reboot_evidence(self, system: System) -> Dict[str, Any]:
+        """Observe whether ``system`` needs a reboot after a mutation.
+
+        Direct package updates are not governed by the patch-plan reboot
+        queue, so this response is the only place their operator learns
+        that an update left the host one reboot behind. The observation
+        rides the SSH connection the update itself used, so it inherits
+        the same credential and ``sudo_method``.
+
+        Never raises. A probe that cannot answer reports an unknown
+        outcome and a null value; it must not turn a package update that
+        actually succeeded into a failed response.
+        """
+        try:
+            evidence = reboot_evidence_service.collect_over_ssh(
+                self.db, system, ssh_service=self.ssh_service
+            )
+        except Exception as exc:  # pylint: disable=broad-except
+            # Category only: the exception text can carry remote output or a
+            # credential. The redacted detail rides on the evidence record.
+            logger.warning(
+                "reboot evidence collection failed for system %s: %s",
+                system.id,
+                type(exc).__name__,
+            )
+            evidence = reboot_evidence_service.transport_failure(reason=exc)
+        return evidence.to_dict()
 
     @staticmethod
     def _ssh_result_ok(result: Dict[str, Any]) -> bool:
@@ -974,7 +1003,7 @@ class PackageService:
         system.last_successful_update = datetime.utcnow()
         self.db.commit()
 
-        return {
+        response: Dict[str, Any] = {
             "system_id": system_id,
             "hostname": system.hostname,
             "status": "success",
@@ -982,6 +1011,18 @@ class PackageService:
             "packages_skipped": packages_skipped,
             "applied_at": datetime.utcnow().isoformat(),
         }
+
+        # Observe the host only when verification proved a package actually
+        # changed. A package-manager command that exited zero without moving
+        # any installed version mutated nothing, so there is no new reboot
+        # answer to report and no reason to spend a round-trip asking for
+        # one.
+        if completed > 0:
+            reboot_evidence = self._collect_reboot_evidence(system)
+            response["reboot_required"] = reboot_evidence["value"]
+            response["reboot_evidence"] = reboot_evidence
+
+        return response
 
     def hold_packages(self, system_id: int, package_names: List[str]) -> Dict[str, Any]:
         """Hold packages via SSH (per-host single-flight)."""
@@ -1497,7 +1538,7 @@ class PackageService:
         system.last_successful_update = datetime.utcnow()
         self.db.commit()
 
-        return {
+        response: Dict[str, Any] = {
             "system_id": system_id,
             "hostname": system.hostname,
             "status": "success",
@@ -1505,6 +1546,18 @@ class PackageService:
             "packages_skipped": packages_skipped,
             "applied_at": datetime.utcnow().isoformat(),
         }
+
+        # Observe the host only when verification proved a package actually
+        # changed. A package-manager command that exited zero without moving
+        # any installed version mutated nothing, so there is no new reboot
+        # answer to report and no reason to spend a round-trip asking for
+        # one.
+        if completed > 0:
+            reboot_evidence = self._collect_reboot_evidence(system)
+            response["reboot_required"] = reboot_evidence["value"]
+            response["reboot_evidence"] = reboot_evidence
+
+        return response
 
     def _create_pending_history(
         self,
