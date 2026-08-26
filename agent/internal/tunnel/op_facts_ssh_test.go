@@ -151,7 +151,7 @@ func sshCoverageNotes(partial []map[string]any) map[string]string {
 func writeSSHConfig(t *testing.T, dir, name, body string) string {
 	t.Helper()
 	path := filepath.Join(dir, name)
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 		t.Fatalf("mkdir: %v", err)
 	}
 	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
@@ -260,7 +260,7 @@ Match Address 10.0.0.0/8
 // root and for an unprivileged user.
 func writeDanglingDropIn(t *testing.T, dir, name string) {
 	t.Helper()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
 		t.Fatalf("mkdir: %v", err)
 	}
 	link := filepath.Join(dir, name)

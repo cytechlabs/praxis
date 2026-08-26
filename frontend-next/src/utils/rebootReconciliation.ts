@@ -17,7 +17,7 @@ export interface RebootReconciliationNotice {
  * notice exists to say so on the surface that shows those counts.
  */
 export function rebootReconciliationNotice(
-  reconciliation: RebootReconciliation | null | undefined,
+  reconciliation?: RebootReconciliation | null,
 ): RebootReconciliationNotice | null {
   if (!reconciliation || !reconciliation.action_required) return null;
 

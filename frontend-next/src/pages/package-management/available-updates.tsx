@@ -180,7 +180,7 @@ const AvailableUpdates = () => {
     notifyRebootStatus(result, toast);
   };
 
-  const handleUpdateAll = async () => {
+  const handleUpdateAll = () => {
     if (selectedSystem === 'all') return;
     const hostname = getSystemHostname(selectedSystem);
     const unheldUpdates = updates.filter((u) => !heldPackageNames.has(u.package_name));
@@ -220,7 +220,7 @@ const AvailableUpdates = () => {
     });
   };
 
-  const handleUpdateSingle = async (updateId: number, systemId: number, packageName: string) => {
+  const handleUpdateSingle = (updateId: number, systemId: number, packageName: string) => {
     if (heldPackageNames.has(packageName)) {
       toast.error(`${packageName} is held. Unhold it before updating.`);
       return;
