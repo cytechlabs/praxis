@@ -52,6 +52,8 @@ type fakeFactsCollector struct {
 	pmErr         error
 	virt          string
 	virtErr       error
+	ssh           sshBaseline
+	sshErr        error
 	disksOut      []map[string]any
 	disksErr      error
 	cloudProvider string
@@ -80,6 +82,9 @@ func (f *fakeFactsCollector) packageManager() (string, string, error) {
 }
 func (f *fakeFactsCollector) virtualization() (string, error) {
 	return f.virt, f.virtErr
+}
+func (f *fakeFactsCollector) sshBaseline() (sshBaseline, error) {
+	return f.ssh, f.sshErr
 }
 func (f *fakeFactsCollector) disks() ([]map[string]any, error) {
 	return f.disksOut, f.disksErr

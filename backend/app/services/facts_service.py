@@ -14,6 +14,21 @@ Locked rules (from PRA-155 design lock):
   * No silent merge: each ingest is one collection attempt. Missing
     fields land as NULL on the new row. Fields that the prior row had
     are NOT carried forward — that would mask collector regressions.
+    The one exception is the SSH baseline pair
+    (``_PRESERVED_EVIDENCE_KEYS``); see the freshness/merge rule below.
+  * Freshness/merge rule for the SSH baseline: a collection that reports
+    nothing for one of those keys does not erase a value an earlier
+    collection established. Transports differ in what they can probe, so
+    an absent value means "this run could not establish it", not "the
+    host no longer has it". Retention keeps the evidence readable; it
+    does not make it current: every carried-forward key is guaranteed a
+    ``partial_errors`` coverage entry, supplied by ingestion when the
+    collector was too old or too limited to report one itself. Compliance
+    evaluation reads that coverage before the value, so a retained value
+    is never reported as a fresh observation.
+    Preserved keys are named in the audit row and on ``IngestResult`` so
+    the carry-forward is never silent, and ``force=True`` bypasses it for
+    a deliberate correction.
   * Unknown payload keys are dropped (forward-compat for newer agents
     pushing fields a back-revved backend doesn't know yet).
   * Cloud metadata sanitizer is the gate. Anything not in the v1
@@ -31,7 +46,7 @@ Locked rules (from PRA-155 design lock):
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -87,6 +102,49 @@ _ALLOWED_SCALAR_TYPES: Dict[str, tuple] = {
 _NONNEG_NUMERIC_KEYS = frozenset({"cpu_cores", "ram_total_bytes", "uptime_seconds"})
 _ALLOWED_SCALAR_KEYS = frozenset(_ALLOWED_SCALAR_TYPES.keys())
 
+# The SSH baseline pair: the only keys exempt from the no-carry-forward
+# rule.
+#
+# Every other scalar is inventory: a NULL reads as "unknown" and costs an
+# operator nothing. These two decide a security verdict, and not every
+# transport or collector revision can probe them. Letting a collection
+# that could not establish a value overwrite one that a previous
+# collection did establish turns working evidence into a permanent
+# coverage gap for the whole fleet, which is exactly the failure the
+# no-carry-forward rule was meant to expose elsewhere.
+#
+# Retention only tells the truth while something records that the latest
+# collection did not observe the value, because compliance evaluation
+# reads that coverage metadata before it reads a retained value. Ingestion
+# guarantees it for every key listed here, so retention does not depend on
+# how new or capable the reporting collector is.
+#
+# The kernel sysctls are deliberately absent. Adding a key here is what
+# turns on both retention and the marker, and it is only worth doing for
+# facts that decide a verdict; for inventory a NULL already reads as
+# "unknown" and retention would add stale values for no gain.
+#
+# The keys are the payload names, which match their ``HostFacts``
+# attribute names.
+_PRESERVED_EVIDENCE_KEYS: Tuple[str, ...] = (
+    "ssh_permit_root_login",
+    "ssh_password_authentication",
+)
+
+# The collector's whole-probe coverage key for the SSH baseline. One entry
+# under it means neither setting was established, so it already covers both
+# and ingestion adds nothing on top. Compliance evaluation matches the same
+# key (``FACT_KEY_TO_COLLECTOR_PROBE_KEYS`` in the evaluation service).
+_SSH_BASELINE_PROBE_KEY = "ssh_config"
+
+# Coverage reason recorded when INGESTION, not the collector, noticed that a
+# value went unreported. A collector that can tell the difference between
+# "could not establish" and "did not look" says so itself and this is never
+# used; an older or lower-coverage collector simply omits the field, and
+# this marker is what stops the retained value being read as a fresh
+# observation.
+PRESERVED_WITHOUT_COVERAGE_REASON = "value_not_reported_preserved"
+
 # Allowlisted keys inside ``cloud_instance_metadata``. Anything else
 # is dropped by ``_sanitize_cloud_metadata`` before write/audit. Per
 # the PRA-155 lock: provider / instance_id / region / zone only.
@@ -126,12 +184,17 @@ class IngestResult:
       * ``"noop_empty"``   — payload had no recognized fields after
         sanitization. Treated as a successful poll-with-nothing-to-say
         for audit purposes.
+
+    ``preserved_keys`` names the SSH baseline scalars this collection
+    could not establish and whose previously collected value was
+    therefore kept. Empty on every other path.
     """
 
     status: str
     row: Optional[HostFacts]
     rejected_keys: List[str]
     partial_errors: List[Dict[str, Any]]
+    preserved_keys: List[str] = field(default_factory=list)
 
 
 # ----------------------------------------------------------------- helpers
@@ -266,6 +329,55 @@ def _sanitize_scalars(
         else:
             rejected_unknown.append(k)
     return kept, rejected_unknown
+
+
+def _preserved_evidence(
+    existing: Optional[HostFacts], scalars: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Return the SSH baseline values this collection did not establish
+    and the previous collection did.
+
+    Only keys absent from ``scalars`` are considered, so a collection
+    that reports a value always wins, including when it reports a
+    changed one. A key the previous row left NULL stays NULL.
+    """
+    if existing is None:
+        return {}
+    preserved: Dict[str, Any] = {}
+    for key in _PRESERVED_EVIDENCE_KEYS:
+        if scalars.get(key) is not None:
+            continue
+        prior = getattr(existing, key, None)
+        if prior is not None:
+            preserved[key] = prior
+    return preserved
+
+
+def _preserved_coverage_markers(
+    preserved: Dict[str, Any], partial_errors: List[Dict[str, Any]]
+) -> List[Dict[str, Any]]:
+    """Return the coverage entries ingestion must add for carried-forward
+    values the incoming collection said nothing about.
+
+    Retaining a value is only truthful while something records that this
+    collection did not observe it. A collector that reports its own coverage
+    already provides that, per key or once for the whole probe, and its
+    entry is left alone. Anything it omitted silently gets a marker here, so
+    the guarantee holds for every transport and every collector revision
+    rather than only for the ones new enough to report gaps.
+    """
+    if not preserved:
+        return []
+    covered = {
+        str(entry.get("key")) for entry in partial_errors if isinstance(entry, dict)
+    }
+    if _SSH_BASELINE_PROBE_KEY in covered:
+        return []
+    return [
+        {"key": key, "error": PRESERVED_WITHOUT_COVERAGE_REASON}
+        for key in _PRESERVED_EVIDENCE_KEYS
+        if key in preserved and key not in covered
+    ]
 
 
 def _coerce_collected_at(
@@ -486,9 +598,20 @@ def ingest(
             partial_errors=partial_errors,
         )
 
-    # Upsert. We deliberately do NOT carry forward fields from the prior
-    # row — each ingest represents one collection attempt and missing
-    # fields stay NULL.
+    # SSH baseline carry-forward. Read before any assignment below,
+    # because ``row`` and ``existing`` are the same object on the update
+    # path and the prior values would otherwise already be gone.
+    # ``force`` skips it so an out-of-band correction can clear a value.
+    preserved = {} if force else _preserved_evidence(existing, scalars)
+    # A lower-coverage collector omits a value without saying it could not
+    # establish one. Ingestion supplies the missing per-key coverage so the
+    # retained value is never read as something this collection observed.
+    partial_errors.extend(_preserved_coverage_markers(preserved, partial_errors))
+
+    # Upsert. Apart from the preserved SSH baseline scalars we
+    # deliberately do NOT carry forward fields from the prior row; each
+    # ingest represents one collection attempt and missing fields stay
+    # NULL.
     if existing is None:
         row = HostFacts(system_id=system_id)
         db.add(row)
@@ -512,9 +635,19 @@ def ingest(
     row.cloud_provider = scalars.get("cloud_provider") or (
         cloud_md.get("cloud_provider") if cloud_md else None
     )
-    # PRA-359: SSH-config + kernel-sysctl scalars.
-    row.ssh_permit_root_login = scalars.get("ssh_permit_root_login")
-    row.ssh_password_authentication = scalars.get("ssh_password_authentication")
+    # SSH baseline scalars. These back compliance verdicts, so an absent
+    # value falls back to the last one a collection managed to establish
+    # instead of erasing the evidence. Coverage metadata, from the
+    # collector or added above on its behalf, decides the verdict; the
+    # retained value is kept for traceability, not to be scored.
+    for evidence_key in _PRESERVED_EVIDENCE_KEYS:
+        value = scalars.get(evidence_key)
+        if value is None:
+            value = preserved.get(evidence_key)
+        setattr(row, evidence_key, value)
+    # Kernel sysctls follow the ordinary no-carry-forward rule: no
+    # collector reports coverage for them, so a retained value could not
+    # be told apart from a freshly observed one.
     row.sysctl_kernel_randomize_va_space = scalars.get(
         "sysctl_kernel_randomize_va_space"
     )
@@ -543,6 +676,7 @@ def ingest(
         partial_error_count=len(partial_errors),
         cloud_metadata=cloud_md,
         reason="upserted",
+        preserved_keys=sorted(preserved),
     )
 
     # PRA-155 #2d + PRA-156 #3c: ingest-time scoped recompute. Fires
@@ -574,6 +708,7 @@ def ingest(
         row=row,
         rejected_keys=rejected_scalar_keys + rejected_cloud_keys,
         partial_errors=partial_errors,
+        preserved_keys=sorted(preserved),
     )
 
 
@@ -591,9 +726,14 @@ def _emit(
     partial_error_count: int,
     cloud_metadata: Optional[Dict[str, Any]],
     reason: str,
+    preserved_keys: Optional[List[str]] = None,
 ) -> None:
     """Audit-row helper. ``cloud_metadata`` is ALREADY sanitized at
-    this point — never pass raw payload values here."""
+    this point; never pass raw payload values here.
+
+    ``preserved_keys`` names SSH baseline scalars kept from the previous
+    collection, so a carry-forward is always traceable to the ingest that
+    performed it."""
     context: Dict[str, Any] = {
         "system_id": system_id,
         "source_transport": source_transport,
@@ -608,6 +748,8 @@ def _emit(
         context["rejected_scalar_keys"] = rejected_scalar_keys
     if rejected_cloud_keys:
         context["rejected_cloud_keys"] = rejected_cloud_keys
+    if preserved_keys:
+        context["preserved_evidence_keys"] = preserved_keys
     if cloud_metadata:
         # Sanitized only — _sanitize_cloud_metadata already filtered.
         context["cloud_metadata"] = cloud_metadata

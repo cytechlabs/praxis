@@ -38,7 +38,9 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -79,6 +81,8 @@ type factsResult struct {
 	PackageManager        string           `json:"package_manager,omitempty"`
 	PackageManagerVersion string           `json:"package_manager_version,omitempty"`
 	Virtualization        string           `json:"virtualization,omitempty"`
+	SSHPermitRootLogin    string           `json:"ssh_permit_root_login,omitempty"`
+	SSHPasswordAuth       string           `json:"ssh_password_authentication,omitempty"`
 	CloudProvider         string           `json:"cloud_provider,omitempty"`
 	CloudInstanceMetadata map[string]any   `json:"cloud_instance_metadata,omitempty"`
 	Disks                 []map[string]any `json:"disks,omitempty"`
@@ -97,6 +101,7 @@ type factsCollector interface {
 	rebootRequired() (bool, error)
 	packageManager() (string, string, error)
 	virtualization() (string, error)
+	sshBaseline() (sshBaseline, error)
 	disks() ([]map[string]any, error)
 	cloudMetadata(ctx context.Context) (string, map[string]any, error)
 }
@@ -213,6 +218,31 @@ func collectFacts(
 		partial = append(partial, probeError("virtualization", err))
 	} else if v != "" {
 		out["virtualization"] = v
+	}
+
+	// SSH server baseline. Only values we can prove are effective are
+	// emitted; anything else stays absent and records why under the key
+	// it concerns, so downstream evaluation can tell "not collected yet"
+	// from "this collection could not establish it".
+	if ssh, err := c.sshBaseline(); err != nil {
+		// Whole-probe failure: neither setting was established, so the
+		// note is filed against the probe rather than one payload key.
+		partial = append(partial, probeError(sshBaselineProbeKey, err))
+	} else {
+		if ssh.PermitRootLogin != "" {
+			out[sshPermitRootLoginKey] = ssh.PermitRootLogin
+		}
+		if ssh.PasswordAuthentication != "" {
+			out[sshPasswordAuthKey] = ssh.PasswordAuthentication
+		}
+		for _, key := range sshBaselinePayloadKeys {
+			if reason, gap := ssh.Coverage[key]; gap {
+				partial = append(partial, map[string]any{
+					"key":   key,
+					"error": reason,
+				})
+			}
+		}
 	}
 
 	if d, err := c.disks(); err != nil {
@@ -450,6 +480,326 @@ func (defaultFactsCollector) virtualization() (string, error) {
 		return "", err
 	}
 	return strings.TrimSpace(out), nil
+}
+
+// ------------------------------------------------------------ ssh baseline
+
+// sshBaselineProbeKey labels every partial_errors entry produced by the
+// SSH server probe. Downstream compliance evaluation matches on this key
+// to tell "this host cannot report the value" apart from "this host has
+// not been collected yet".
+const sshBaselineProbeKey = "ssh_config"
+
+// sshdConfigPath is the canonical server configuration file. The file
+// fallback reads it and any files it includes; nothing is written.
+const sshdConfigPath = "/etc/ssh/sshd_config"
+
+// sshdIncludeBaseDir resolves relative Include patterns, matching the
+// server's own behavior for patterns that are not absolute paths.
+const sshdIncludeBaseDir = "/etc/ssh"
+
+// sshdBinaryCandidates are the absolute locations checked when sshd is
+// not on PATH. A managed command's PATH frequently omits the sbin
+// directories where the server binary actually lives. The list is fixed
+// at compile time: no value read from the host is ever interpolated
+// into an executed path.
+var sshdBinaryCandidates = []string{
+	"/usr/sbin/sshd",
+	"/sbin/sshd",
+	"/usr/local/sbin/sshd",
+}
+
+// Bounds on the configuration walk so a self-referential or pathological
+// Include set cannot spin the probe.
+const (
+	sshdIncludeMaxDepth = 8
+	sshdConfigMaxFiles  = 64
+)
+
+// sshBaselineKeys are the directives collected, keyed by the lowercased
+// name `sshd -T` prints. Config-file matching is case-insensitive, so the
+// same lowercased name works for both sources.
+var sshBaselineKeys = []string{"permitrootlogin", "passwordauthentication"}
+
+// Payload keys for the two settings, matching the ingest column names.
+const (
+	sshPermitRootLoginKey = "ssh_permit_root_login"
+	sshPasswordAuthKey    = "ssh_password_authentication"
+)
+
+// sshBaselinePayloadKeys fixes the order coverage notes are emitted in, so
+// a report is byte-identical across runs on the same host.
+var sshBaselinePayloadKeys = []string{sshPermitRootLoginKey, sshPasswordAuthKey}
+
+// Coverage reasons. Fixed codes only: no configuration content, and no
+// host-supplied path, is ever placed in a reason string.
+const (
+	sshCoverageConfigUnreadable = "config_unreadable_precedence_unknown"
+	sshCoverageOverridable      = "config_precedence_unknown"
+	sshCoverageNotConfigured    = "directive_not_in_global_config"
+)
+
+// sshBaseline carries the two normalized server settings plus a per-setting
+// explanation of anything that could not be established. An empty value
+// means "no trustworthy evidence" and is never emitted as a fact.
+//
+// Coverage is keyed by payload key rather than by probe, so a gap in one
+// setting never casts doubt on the other: a host whose configuration pins
+// PermitRootLogin but leaves PasswordAuthentication to the compiled-in
+// default still yields a real verdict for the first.
+type sshBaseline struct {
+	PermitRootLogin        string
+	PasswordAuthentication string
+	Coverage               map[string]string
+}
+
+// sshBaseline reports the effective PermitRootLogin and
+// PasswordAuthentication settings.
+//
+// `sshd -T` is preferred because it prints what the server actually
+// resolved. When it is unavailable the configuration files are read in
+// the server's own merge order. That fallback only yields a value when
+// no earlier configuration could have supplied a different one, so an
+// overridden file directive is never reported as effective.
+//
+// Collection is read-only and never records configuration content: the
+// only values that leave this function are the two normalized settings.
+func (defaultFactsCollector) sshBaseline() (sshBaseline, error) {
+	out := sshBaseline{Coverage: map[string]string{}}
+
+	if effective, ok := sshdEffectiveConfig(); ok {
+		out.PermitRootLogin = normalizeSSHValue(effective["permitrootlogin"])
+		out.PasswordAuthentication = normalizeSSHValue(effective["passwordauthentication"])
+	}
+	if out.PermitRootLogin != "" && out.PasswordAuthentication != "" {
+		return out, nil
+	}
+
+	// File fallback for whatever the effective read did not supply. A value
+	// it yields is as trustworthy as an effective one, because the walker
+	// only reports settings no earlier configuration could have overridden,
+	// so a successful fallback records no coverage gap.
+	resolved, reason := sshdGlobalDirectives(sshdConfigPath)
+	if out.PermitRootLogin == "" {
+		out.PermitRootLogin = normalizeSSHValue(resolved["permitrootlogin"])
+	}
+	if out.PasswordAuthentication == "" {
+		out.PasswordAuthentication = normalizeSSHValue(resolved["passwordauthentication"])
+	}
+	if out.PermitRootLogin == "" {
+		out.Coverage[sshPermitRootLoginKey] = reason
+	}
+	if out.PasswordAuthentication == "" {
+		out.Coverage[sshPasswordAuthKey] = reason
+	}
+	return out, nil
+}
+
+// sshdEffectiveConfig runs the server's own configuration dump and
+// returns the parsed key/value pairs. The second result is false when no
+// server binary was found or the dump did not run.
+func sshdEffectiveConfig() (map[string]string, bool) {
+	bin := locateSSHDBinary()
+	if bin == "" {
+		return nil, false
+	}
+	out, err := exec.Command(bin, "-T").Output()
+	if err != nil || len(out) == 0 {
+		return nil, false
+	}
+	parsed := map[string]string{}
+	scanner := bufio.NewScanner(strings.NewReader(string(out)))
+	for scanner.Scan() {
+		key, value, ok := splitSSHDirective(scanner.Text())
+		if !ok {
+			continue
+		}
+		if _, seen := parsed[key]; !seen {
+			parsed[key] = value
+		}
+	}
+	return parsed, true
+}
+
+// locateSSHDBinary returns the server binary path, or "" when none of
+// the known locations holds an executable file.
+func locateSSHDBinary() string {
+	if path, err := exec.LookPath("sshd"); err == nil {
+		return path
+	}
+	for _, candidate := range sshdBinaryCandidates {
+		info, err := os.Stat(candidate)
+		if err != nil || info.IsDir() || info.Mode()&0o111 == 0 {
+			continue
+		}
+		return candidate
+	}
+	return ""
+}
+
+// sshdGlobalDirectives resolves the wanted directives from the
+// configuration files in the server's merge order.
+//
+// Two rules make a resolved value trustworthy:
+//
+//   - The first occurrence of a directive wins, matching the server. A
+//     later line cannot change an already-resolved value.
+//   - The global section ends at the first Match block. Directives after
+//     it apply only to matching connections, so they are not read.
+//
+// The walk stops as soon as a file that could hold an earlier, winning
+// value cannot be read. Anything already resolved at that point is still
+// trustworthy; anything outstanding is reported through the returned
+// reason code, which is also returned when the configuration simply does
+// not set a directive.
+func sshdGlobalDirectives(path string) (map[string]string, string) {
+	w := &sshdConfigWalk{resolved: map[string]string{}, reason: sshCoverageNotConfigured}
+	w.walk(path, 0)
+	return w.resolved, w.reason
+}
+
+type sshdConfigWalk struct {
+	resolved map[string]string
+	files    int
+	stopped  bool
+	reason   string
+}
+
+// complete reports whether every wanted directive already has a value,
+// in which case no unread file can change the outcome.
+func (w *sshdConfigWalk) complete() bool {
+	for _, key := range sshBaselineKeys {
+		if w.resolved[key] == "" {
+			return false
+		}
+	}
+	return true
+}
+
+// halt ends the walk with the supplied reason unless everything is
+// already resolved.
+func (w *sshdConfigWalk) halt(reason string) {
+	w.stopped = true
+	if !w.complete() {
+		w.reason = reason
+	}
+}
+
+func (w *sshdConfigWalk) walk(path string, depth int) {
+	if w.stopped || w.complete() {
+		return
+	}
+	if depth > sshdIncludeMaxDepth || w.files >= sshdConfigMaxFiles {
+		w.halt(sshCoverageOverridable)
+		return
+	}
+	w.files++
+
+	// The path is the fixed configuration root or a file that root's own
+	// configuration named through Include; nothing else reaches here.
+	f, err := os.Open(path)
+	if err != nil {
+		w.halt(sshCoverageConfigUnreadable)
+		return
+	}
+	defer f.Close() //nolint:errcheck
+
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		key, value, ok := splitSSHDirective(scanner.Text())
+		if !ok {
+			continue
+		}
+		switch key {
+		case "match":
+			// Everything past here is conditional, so the global
+			// section is finished for the whole merged configuration.
+			w.halt(sshCoverageNotConfigured)
+			return
+		case "include":
+			for _, included := range sshdIncludeTargets(value) {
+				w.walk(included, depth+1)
+				if w.stopped || w.complete() {
+					return
+				}
+			}
+		default:
+			if sshBaselineWanted(key) && w.resolved[key] == "" {
+				w.resolved[key] = value
+				if w.complete() {
+					return
+				}
+			}
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		w.halt(sshCoverageConfigUnreadable)
+	}
+}
+
+// sshBaselineWanted reports whether a directive is one of the two the
+// probe collects.
+func sshBaselineWanted(key string) bool {
+	for _, k := range sshBaselineKeys {
+		if k == key {
+			return true
+		}
+	}
+	return false
+}
+
+// sshdIncludeTargets expands one Include argument list into the files it
+// names, in the order the server would read them. Relative patterns
+// resolve under the configuration directory.
+func sshdIncludeTargets(value string) []string {
+	targets := []string{}
+	for _, pattern := range strings.Fields(value) {
+		pattern = strings.Trim(pattern, `"`)
+		if pattern == "" {
+			continue
+		}
+		if !strings.HasPrefix(pattern, "/") {
+			pattern = filepath.Join(sshdIncludeBaseDir, pattern)
+		}
+		matches, err := filepath.Glob(pattern)
+		if err != nil {
+			continue
+		}
+		sort.Strings(matches)
+		targets = append(targets, matches...)
+	}
+	return targets
+}
+
+// splitSSHDirective parses one configuration or dump line into a
+// lowercased keyword and its argument. Comments, blank lines, and lines
+// without an argument are skipped. Both `Key value` and `Key=value`
+// forms are accepted, matching the server's parser.
+func splitSSHDirective(line string) (string, string, bool) {
+	line = strings.TrimSpace(line)
+	if line == "" || strings.HasPrefix(line, "#") {
+		return "", "", false
+	}
+	if i := strings.IndexByte(line, '='); i > 0 && !strings.ContainsAny(line[:i], " \t") {
+		key := strings.ToLower(strings.TrimSpace(line[:i]))
+		return key, strings.TrimSpace(line[i+1:]), key != "" && strings.TrimSpace(line[i+1:]) != ""
+	}
+	fields := strings.Fields(line)
+	if len(fields) < 2 {
+		return "", "", false
+	}
+	return strings.ToLower(fields[0]), strings.Join(fields[1:], " "), true
+}
+
+// normalizeSSHValue reduces a directive argument to the single lowercased
+// token the server reports, so agent-collected values compare the same way
+// regardless of how an administrator capitalized the file.
+func normalizeSSHValue(raw string) string {
+	fields := strings.Fields(raw)
+	if len(fields) == 0 {
+		return ""
+	}
+	return strings.ToLower(strings.Trim(fields[0], `"`))
 }
 
 func (defaultFactsCollector) disks() ([]map[string]any, error) {
