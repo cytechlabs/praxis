@@ -81,7 +81,6 @@ export const sidebar = [
       { slug: 'access-revocation' },
       { slug: 'compliance-map' },
       { slug: 'audit-schema' },
-      { slug: 'dependency-security-policy' },
     ],
   },
   {

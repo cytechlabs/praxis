@@ -7,7 +7,7 @@ This document defines the official Linux **managed-host** support boundary for
 Praxis 1.0: which distributions, package-manager families, and architectures
 Praxis manages, and how far each lifecycle capability is validated.
 
-> **Scope.** This matrix is about the **fleet** — the Linux hosts Praxis
+> **Scope.** This matrix is about the **fleet**: the Linux hosts Praxis
 > enrolls and manages. It is **not** about the control-plane deployment
 > (Praxis itself runs as container images via `docker compose`; see
 > [production-hardening.md](production-hardening.md) for supported
@@ -35,9 +35,9 @@ trust, and content profiles. The mapping is enforced in code
 
 | Family | Package managers mapped in | Serviceable? |
 |---|---|---|
-| `apt` | `apt`, `apt-get`, `dpkg` | Yes — deb mirrors, apt patch/rollback |
-| `dnf` | `dnf`, `yum`, `rpm` | Yes — rpm mirrors, dnf patch/rollback |
-| `unknown` | anything else (`zypper`, `pacman`, `apk`, …) | No — rejected as `unsupported_package_family` |
+| `apt` | `apt`, `apt-get`, `dpkg` | Yes, with deb mirrors and apt patch/rollback |
+| `dnf` | `dnf`, `yum`, `rpm` | Yes, with rpm mirrors and dnf patch/rollback |
+| `unknown` | anything else (`zypper`, `pacman`, `apk`, …) | No, rejected as `unsupported_package_family` |
 
 A host whose family resolves to `unknown` is refused at patch dispatch and
 rollback with the structured error `unsupported_package_family`.
@@ -85,7 +85,7 @@ receiving extended/ESM updates.
 | openSUSE / SLES | `zypper` | Detect-only; no patch/rollback/mirror support (`unsupported_package_family`). |
 | Arch Linux | `pacman` | Detect-only; no patch/rollback/mirror support. |
 | Alpine | `apk` | Detect-only; no patch/rollback/mirror support. |
-| Any distro past EOL with no ESM/extended window | — | Out of lifecycle coverage. |
+| Any distro past EOL with no ESM/extended window | none | Out of lifecycle coverage. |
 
 ## Validation grid
 
@@ -115,16 +115,22 @@ and collect facts on a best-effort basis.
 
 ## Known distro-specific limitations
 
-1. **Reboot-required detection is Debian-centric.** Both the SSH facts
-   collector (`backend/app/services/_assets/collect-facts.sh`) and the agent
-   collector report `reboot_required=true` only when
-   `/var/run/reboot-required` or `/run/reboot-required` exists — the
-   Debian/Ubuntu `update-notifier` convention. EL-family hosts signal pending
-   reboots through `dnf needs-restarting -r`, which the collector does **not**
-   evaluate, so RHEL/Rocky/AlmaLinux hosts report `reboot_required=false` even
-   when a reboot is pending. Reboot **policy** (`policy_always`,
-   reboot-window scheduling) still works on EL hosts; only the
-   `host_fact_reboot_required` signal underreports.
+1. **RPM hosts need `needs-restarting` installed for reboot evidence.**
+   After patching, Praxis asks the host itself whether it needs a reboot.
+   Debian-family hosts answer through the `/var/run/reboot-required` or
+   `/run/reboot-required` marker. RPM-family hosts answer through
+   `needs-restarting -r`, which ships in `dnf-utils` / `yum-utils` and is
+   **absent from a minimal install**. A host without it records the evidence
+   outcome `unsupported`, which fails closed: the reboot row stays pending
+   rather than reading as "no reboot needed". Install `dnf-utils` (or
+   `yum-utils`) on RPM hosts you intend to patch under `if_required`. See
+   [reboot evidence](patch-workflows.md#reboot-evidence).
+
+   The stored `reboot_required` **inventory fact** remains Debian-centric:
+   both the SSH facts collector
+   (`backend/app/services/_assets/collect-facts.sh`) and the agent collector
+   set it from the marker files only, so it reads `false` on RPM hosts.
+   Reboot decisions no longer read that fact.
 
 2. **The dnf family always invokes `dnf`.** Patch and rollback dispatch build
    `dnf install` / `dnf remove` for the entire dnf family, including hosts

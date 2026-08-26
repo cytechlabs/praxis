@@ -54,7 +54,7 @@ jobs:
             # PRA-317: exempt Dependabot. Its commits are bot-authored and cannot
             # carry a DCO sign-off, so require both the Dependabot PR actor and
             # its noreply author email. Matching email alone is spoofable.
-            # See docs/dependency-security-policy.md.
+            # See docs/maintainers/dependency-security-policy.md.
             author_email="$(git show -s --format='%ae' "${sha}")"
             if [ "${PR_AUTHOR}" = "dependabot[bot]" ]; then
               case "${author_email}" in

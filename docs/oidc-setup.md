@@ -64,24 +64,24 @@ public one.
 
 ## Keycloak walkthrough
 
-1. **Realm** — create or select the realm your users live in.
-2. **Client** — create a client:
+1. **Realm**: create or select the realm your users live in.
+2. **Client**: create a client:
    - **Client type:** OpenID Connect.
    - **Client authentication:** ON (this makes it a *confidential* client with a
-     secret — required).
+     secret, which is required).
    - **Standard flow:** ENABLED (this is the Authorization Code flow). Direct
      access grants / implicit are not needed.
-3. **Valid redirect URIs** — add your exact Praxis redirect URI:
+3. **Valid redirect URIs**: add your exact Praxis redirect URI:
    `https://<praxis-host>/api/backend/auth/oidc/callback`.
-4. **Web origins** — add your Praxis origin (`https://<praxis-host>`) so the
+4. **Web origins**: add your Praxis origin (`https://<praxis-host>`) so the
    browser exchange is allowed.
-5. **Credentials** — copy the client secret and paste it into the Praxis
+5. **Credentials**: copy the client secret and paste it into the Praxis
    provider form along with the client ID and the realm's issuer URL
    (`https://<keycloak-host>/realms/<realm>`).
-6. **Identity claims** — make sure `email`, `preferred_username`, and profile
+6. **Identity claims**: make sure `email`, `preferred_username`, and profile
    claims are present in the token (the default `email` and `profile` client
    scopes cover this).
-7. **Emit roles into the ID token** — this is the step people miss. Add a
+7. **Emit roles into the ID token**: this is the step people miss. Add a
    mapper that puts the user's roles into the **ID token**:
    - **Realm roles:** add a *User Realm Role* mapper. Roles land at
      `realm_access.roles`.
@@ -90,7 +90,7 @@ public one.
    - On the mapper, **enable "Add to ID token."** Keycloak's role mappers put
      roles in the access token by default; Praxis validates the **ID token**, so
      the roles must be added there too.
-8. **Role claim path in Praxis** — set the provider's **role claim** to the
+8. **Role claim path in Praxis**: set the provider's **role claim** to the
    dotted path you chose above (`realm_access.roles` or
    `resource_access.<client-id>.roles`), and map the emitted values to Praxis
    roles (see [Role mapping](#role-mapping)).
@@ -99,7 +99,7 @@ public one.
 
 For any non-Keycloak provider, confirm:
 
-- **Discovery URL** — the provider publishes `/.well-known/openid-configuration`.
+- **Discovery URL**: the provider publishes `/.well-known/openid-configuration`.
   Praxis reads the `issuer`, authorization endpoint, token endpoint, and
   `jwks_uri` from it.
 - **Confidential client** using the **Authorization Code flow**
@@ -107,14 +107,14 @@ For any non-Keycloak provider, confirm:
 - **Redirect URI** registered with an **exact** string match to
   `https://<praxis-host>/api/backend/auth/oidc/callback` (or your
   `OIDC_REDIRECT_URI`).
-- **Scopes** — `openid email profile` at minimum. Add whatever provider-specific
+- **Scopes**: `openid email profile` at minimum. Add whatever provider-specific
   scope is required to include roles/groups in the token.
 - **Issuer and JWKS reachable** from the Praxis backend.
-- **Role claim in the ID token** — the claim you point Praxis at must be present
+- **Role claim in the ID token**: the claim you point Praxis at must be present
   in the **ID token**, not only in the access token or the userinfo response.
-- **Identity claims** — `sub` (stable subject), plus `email` /
+- **Identity claims**: `sub` (stable subject), plus `email` /
   `preferred_username` for a usable account.
-- **Clock sync** — the IdP and Praxis hosts should agree on time (NTP); token
+- **Clock sync**: the IdP and Praxis hosts should agree on time (NTP); token
   `exp`/`iat`/`nbf` and `nonce` checks are time-sensitive.
 
 ## Role mapping
@@ -123,19 +123,19 @@ Praxis reads the configured **role claim** from the **ID token** and turns its
 values into Praxis roles. The claim path is **dotted**, so a nested claim is
 addressed by its full path:
 
-- `realm_access.roles` — Keycloak realm roles.
-- `resource_access.<client-id>.roles` — Keycloak client roles.
+- `realm_access.roles`: Keycloak realm roles.
+- `resource_access.<client-id>.roles`: Keycloak client roles.
 - A top-level claim like `roles` also works (a single unqualified segment). If
   no role claim is configured, Praxis looks for a top-level `roles` claim.
 
 Each value found at that path is resolved to a Praxis role **only through the
 provider's explicit role mapping allowlist**:
 
-1. Configure a **role mapping** — a JSON map of IdP value → Praxis role, e.g.
+1. Configure a **role mapping**, a JSON map of IdP value → Praxis role, e.g.
    `{"praxis-admins": "admin", "praxis-ops": "maintainer"}`. Only claim values
    present as keys in this map, resolving to a real Praxis role, grant that role.
 2. There is **no direct pass-through**. An IdP claim value of `admin`,
-   `maintainer`, or `auditor` grants nothing on its own — the value must be
+   `maintainer`, or `auditor` grants nothing on its own; the value must be
    allowlisted in the mapping (map `"admin": "admin"` explicitly if your IdP
    really does emit Praxis role names and you trust them). This prevents a hostile
    or misconfigured IdP from handing itself Praxis admin via a `roles: ["admin"]`
@@ -148,12 +148,12 @@ union.
 > **Default when no role maps:** if the role claim is missing, or none of its
 > values map to a Praxis role, the user is provisioned as **`auditor`**
 > (read-only). Configure your mapping so privileged users don't silently land
-> read-only — and so unknown users get the least privilege by default.
+> read-only, and so unknown users get the least privilege by default.
 
 ## Account provisioning and linking
 
 Praxis binds an SSO login to the stable **`(issuer, sub)`** identity from the ID
-token — never to a matching username or email. This is deliberate and fails
+token, never to a matching username or email. This is deliberate and fails
 closed to prevent account takeover:
 
 - **Returning users** are matched only by `(issuer, sub)`. If that user is
@@ -162,7 +162,7 @@ closed to prevent account takeover:
   (`email_verified: true` in the ID token). A login without a verified email
   cannot create an account.
 - **No auto-linking.** If a new OIDC subject's username or email collides with an
-  **existing** Praxis account (e.g. a local admin), the login **fails** — Praxis
+  **existing** Praxis account (e.g. a local admin), the login **fails**, and Praxis
   never rewrites the existing account into an OIDC-linked one. To let an existing
   operator sign in via SSO, an admin must reconcile that account deliberately;
   a matching email claim alone is not accepted as proof of ownership.
@@ -181,44 +181,44 @@ browser; the specific reason is logged server-side.
   - the **audience** matches your client ID,
   - the signature verifies against the matching **JWKS** key (`kid`, RS256),
   - the **`nonce`** matches the one issued at login.
-- **`at_hash`** — providers that include an `at_hash` claim in the ID token
+- **`at_hash`**: providers that include an `at_hash` claim in the ID token
   (Keycloak does) are validated correctly, because Praxis passes the access
   token into ID-token validation so the `at_hash` binding can be checked.
 
 ## Troubleshooting
 
-- **`invalid_redirect_uri` / the IdP rejects the redirect** — the redirect URI
+- **`invalid_redirect_uri` / the IdP rejects the redirect**: the redirect URI
   registered at the IdP doesn't exactly match what Praxis sent. Confirm
   `PUBLIC_BASE_URL` (or `OIDC_REDIRECT_URI`) resolves to
   `https://<praxis-host>/api/backend/auth/oidc/callback` and that the IdP has
   that exact string, scheme and all.
-- **SSO logs in but the user is only `auditor` / has no privileges** — the role
+- **SSO logs in but the user is only `auditor` / has no privileges**: the role
   claim almost certainly isn't in the **ID token**. Roles that appear only in
   the **access token** or the **userinfo** response are not seen by Praxis. In
   Keycloak, enable "Add to ID token" on the role mapper; on other providers, add
   the role/group claim to the ID token. Also confirm the Praxis role claim path
   matches where the roles actually land (`realm_access.roles` vs
   `resource_access.<client-id>.roles`).
-- **`Invalid issuer` / signature or key errors** — the issuer in the token
+- **`Invalid issuer` / signature or key errors**: the issuer in the token
   doesn't match the discovery document, or the backend can't fetch the current
   JWKS. Verify the issuer URL and that the backend can reach the JWKS endpoint.
-- **Token expired / `nonce`/`iat` errors that come and go** — clock skew.
+- **Token expired / `nonce`/`iat` errors that come and go**: clock skew.
   Ensure the IdP and Praxis hosts are NTP-synced.
-- **Login fails only after an upgrade, with an `at_hash` error** — very old
+- **Login fails only after an upgrade, with an `at_hash` error**: very old
   builds validated the ID token without the access token and could reject
   Keycloak tokens carrying `at_hash`. Current builds pass the access token into
   validation; make sure you're on a current build.
-- **Backend can't reach discovery/JWKS** — the browser reaching the IdP is not
+- **Backend can't reach discovery/JWKS**: the browser reaching the IdP is not
   enough; the Praxis **backend** must reach the IdP's discovery and JWKS URLs.
   Open backend egress to the IdP.
-- **Everything 404s / redirect returns to the wrong place** — `PUBLIC_BASE_URL`
+- **Everything 404s / redirect returns to the wrong place**: `PUBLIC_BASE_URL`
   doesn't match the origin the browser actually uses, or the proxy in front of
   Praxis isn't forwarding `/api/backend/...` to the backend. Fix the public
   origin and proxy routing.
 
 ## See also
 
-- [Production Hardening](production-hardening.md) — deployment shapes and
+- [Production Hardening](production-hardening.md): deployment shapes and
   environment validation.
 - In-app help: **Settings → Admin** documents the OIDC provider form and the
   role-claim mapping note.

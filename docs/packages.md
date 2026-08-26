@@ -39,6 +39,45 @@ Two common workflows from this page:
 
 `Update > Security Updates` is a convenience filter over Available Updates. Packages marked `is_security_critical` surface advisory references where the distro provides them.
 
+### A security count needs a security scan
+
+An ordinary package scan asks a host what is upgradable. It never asks which of those updates carries a security advisory, so it classifies nothing as a security update. Until a security scan has asked that question, the absence of security rows means "not asked", not "none pending".
+
+Ask it explicitly:
+
+- **one host**, from `Update > Security Updates`: select the system and run its security scan;
+- **a cohort**, from the scope scan with the security option enabled.
+
+### Scan states on the dashboard
+
+The Fleet Dashboard reports the state of security scanning across the hosts in your fleet scope rather than a bare number:
+
+| State | Shown as | Meaning |
+|---|---|---|
+| Never scanned | `Not scanned` | No security scan has run for these hosts. |
+| In flight | `Scanning` | A security scan is running. |
+| Failed | `Scan failed` | A scan ran and produced no usable result. The failure reason and the last successful scan time are shown with it. |
+| Partial | `Partial scan` | Some hosts in scope are covered and some are not, or a scan stored rows but could not use part of its result. Any count is a floor, rendered `N+`. |
+| Complete | a number | Every host in scope has a successful scan behind it. This is the only state in which a count, zero included, is trustworthy. |
+
+A zero appears only after a completed scan. Failed and partial states never render as zero, and the health banner does not call a fleet healthy while security state is unknown, in flight, failed, or partially covered.
+
+A scan is **partial** rather than successful when the host was reached but part of the result could not be used: advisory output that could not be read, or reported packages absent from that host's inventory. The host does not count as covered, so its number stays a floor.
+
+A scan still marked running after 30 minutes stops being reported as in progress, which releases a host pinned by a process that died mid-scan.
+
+`GET /fleet/dashboard` carries this as a `security_posture` object: `state`, `counts_trustworthy`, `coverage_complete`, `systems_total`, `systems_scanned`, `systems_partial`, `systems_failed`, `systems_scanning`, `systems_never_scanned`, `last_successful_scan_at`, `last_scan_at`, `last_failure_detail`, `coverage_detail`, `systems_with_security_updates`, and `pending_security_updates`. The existing `patch_compliance` block is unchanged.
+
+Scans are recorded in the operation trail: a single-host scan as `security_scan`, a cohort scan as `cohort_security_scan`. A per-host result is `success`, `partial`, `failure`, or `skipped`.
+
+## Direct updates and reboot evidence
+
+An update run from the package pages applies immediately. It is not part of a patch plan, so it is not governed by the patch-plan reboot queue: nothing is queued, scheduled, or dispatched for reboot on its behalf. See [reboot scheduling](patch-workflows.md#reboot-scheduling) for the governed path.
+
+When such a run verifies that at least one installed version actually moved, Praxis asks the host whether it now needs a reboot and returns the answer with the result: `reboot_required` plus a structured `reboot_evidence` block. The update surfaces show that as required, not required, or unknown.
+
+Those two fields are **absent** when nothing was changed: every package held, no updates to apply, or a package-manager command that exited cleanly without moving a single installed version. Their absence means no observation was made, not that no reboot is needed.
+
 ## Update history
 
 Every package update Praxis runs (manual or scheduled) records a `package_history` row with `from_version`, `to_version`, `status`, `error_message`, and the triggering user or job. `Update > Update History` is a paginated audit trail across the fleet. Use it to answer "when did this system last patch `kernel-*`?" or to verify rollout after a scheduled job.
