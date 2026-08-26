@@ -3,9 +3,9 @@ title: Remediation workflow
 description: The governed request, approve, plan, acknowledge, and dispatch lifecycle that turns a failing check into a fix.
 ---
 
-The compliance remediation workflow turns a failing compliance evidence row into a tracked, auditable plan of intent — without running anything on a host.
+The compliance remediation workflow turns a failing compliance evidence row into a tracked, auditable plan of intent, without running anything on a host.
 
-**Praxis does not execute remediation today.** The whole remediation substrate is a non-executing workflow that records what an operator intends to fix, who approved it, what a future execution capability *would* do, and whether that plan is ready to run. A future release will add the runner that consumes the ready state described below; until then the readiness gate is a contract, not a dispatcher.
+**Praxis does not execute remediation.** The remediation substrate is a non-executing workflow: it records what an operator intends to fix, who approved it, what the fix *would* do, and whether that plan is ready to run. The readiness gate described below is a contract that an executor can consult, not a dispatcher.
 
 This document covers the operator-facing surface of the workflow. For auditor-facing evidence mapping see [`compliance-map.md`](compliance-map.md). For the wire format of the audit events fired along the way see [`audit-schema.md`](audit-schema.md).
 
@@ -39,7 +39,7 @@ acknowledged plan
       │
       ▼
 ready_for_execution gate
-  (a future execution capability consumes this; today it is metadata only)
+  (metadata only; nothing dispatches on it)
 ```
 
 Every transition emits an audit event via the existing `safe_emit` pipeline. No transition runs commands, dispatches jobs, refreshes facts, scans packages, mutates a host, installs or removes packages, reboots, rolls back, or auto-executes after approval.
@@ -52,9 +52,9 @@ Every transition emits an audit event via the existing `safe_emit` pipeline. No 
 
 A maintainer opens a remediation request against a single failing compliance evidence row. The service:
 
-- requires `evidence.verdict == 'fail'` — `pass` and `error` rows cannot be remediated;
+- requires `evidence.verdict == 'fail'`; `pass` and `error` rows cannot be remediated;
 - snapshots the policy / check / system / evidence identity (`policy_slug`, `policy_version`, `check_slug`, `check_kind`, `severity_snapshot`, `verdict_snapshot`, `verdict_reason_snapshot`, `evaluation_run_id`);
-- resolves remediation guidance — check-level wins, policy-level is the fallback, bounded to 16 384 chars;
+- resolves remediation guidance, where check-level wins and policy-level is the fallback, bounded to 16 384 chars;
 - records the requester and a free-form `justification` (bounded to 4 096 chars).
 
 Audit event: `compliance_remediation.requested`.
@@ -70,7 +70,7 @@ RBAC:
 
 ### 2. Plan preview (build / refresh)
 
-Once a request is `approved` an operator builds a plan preview. The preview is a structured, operator-readable JSON description of what a future execution capability *would* do. It is **not** executable shell.
+Once a request is `approved` an operator builds a plan preview. The preview is a structured, operator-readable JSON description of what the fix *would* do. It is **not** executable shell.
 
 The plan vocabulary maps 1:1 to the compliance check kinds:
 
@@ -88,13 +88,13 @@ Each step in the plan is a structured object: `action_intent`, `target` descript
 
 Plan state vocabulary: `planned`, `unsupported`, `failed`.
 
-A SHA-256 fingerprint of the canonical-JSON live check definition is captured at build time. The fingerprint is the **only** staleness signal — the full live definition is never persisted twice.
+A SHA-256 fingerprint of the canonical-JSON live check definition is captured at build time. The fingerprint is the **only** staleness signal; the full live definition is never persisted twice.
 
 Audit events: `compliance_remediation_plan.built` on first build, `.refreshed` when an existing draft is rebuilt in place, `.unsupported` paired with the build event when the plan resolves to `unsupported`.
 
 ### 3. Acknowledgement and supersede
 
-An operator who has reviewed a plan **acknowledges** it — that's the explicit "this is the plan I intend to run" signal. Once acknowledged the row is immutable from the service layer. A subsequent rebuild creates a new current draft and points the old row's `superseded_by_plan_id` at it; the old row keeps its `acknowledged_at` / `acknowledged_by` verbatim as supersede history.
+An operator who has reviewed a plan **acknowledges** it, which is the explicit "this is the plan I intend to run" signal. Once acknowledged the row is immutable from the service layer. A subsequent rebuild creates a new current draft and points the old row's `superseded_by_plan_id` at it; the old row keeps its `acknowledged_at` / `acknowledged_by` verbatim as supersede history.
 
 A partial unique index in the database (`request_id WHERE superseded_by_plan_id IS NULL`) guarantees exactly one current plan per remediation request.
 
@@ -103,7 +103,7 @@ Acknowledgement fails closed when the plan is:
 - already acknowledged;
 - not current (already superseded);
 - not in state `planned` (cannot acknowledge `unsupported` / `failed` previews);
-- stale (live check definition no longer matches the build-time fingerprint, or the source check has been deleted — NULL fingerprint also reads as stale);
+- stale (live check definition no longer matches the build-time fingerprint, or the source check has been deleted; a NULL fingerprint also reads as stale);
 - belongs to a request whose state is no longer `approved`.
 
 RBAC: `admin` only (operator-level decision; intentionally stricter than the cancel RBAC).
@@ -119,16 +119,16 @@ The plan read envelope surfaces a derived `ready_for_execution` boolean. It is *
 - the plan state is `planned` (not `unsupported` / `failed`);
 - the plan is acknowledged;
 - the plan is not stale;
-- the plan kind is one a future execution capability can act on — i.e. one of `package_install_preview`, `package_remove_preview`, `package_upgrade_preview`. Review-required and unsupported kinds always read `ready_for_execution=false`.
+- the plan kind is one that can be acted on, meaning one of `package_install_preview`, `package_remove_preview`, or `package_upgrade_preview`. Review-required and unsupported kinds always read `ready_for_execution=false`.
 
-The gate consults the live check definition (to recompute staleness) but never touches a host. A future execution capability will consume this flag; today the flag is the contract, not a dispatcher.
+The gate consults the live check definition (to recompute staleness) but never touches a host. The flag is the contract an executor would read; on its own it dispatches nothing.
 
 ### 5. Read-only rollups
 
 Two read-only API surfaces summarize the workflow without changing it:
 
-- **Fleet summary** — `GET /compliance/remediation/fleet-summary` returns counts by request state, current-plan state, acknowledgement, `ready_for_execution`, staleness, plus a per-severity rollup keyed on the request `severity_snapshot`.
-- **Per-host inventory** — `GET /compliance/systems/{system_id}/remediation` returns five bounded paged sections: `open_requests`, `approved_requests`, `current_plans`, `ready_plans`, `superseded_history`. A shared `limit` (default 50, max 500) plus per-section `*_offset` query params let operators page through one section without disturbing the others. Missing hosts return 404.
+- **Fleet summary**: `GET /compliance/remediation/fleet-summary` returns counts by request state, current-plan state, acknowledgement, `ready_for_execution`, staleness, plus a per-severity rollup keyed on the request `severity_snapshot`.
+- **Per-host inventory**: `GET /compliance/systems/{system_id}/remediation` returns five bounded paged sections: `open_requests`, `approved_requests`, `current_plans`, `ready_plans`, `superseded_history`. A shared `limit` (default 50, max 500) plus per-section `*_offset` query params let operators page through one section without disturbing the others. Missing hosts return 404.
 
 Both endpoints accept any authenticated user (auditor inclusive). Neither emits new audit events.
 
@@ -154,18 +154,11 @@ Operators reading the inventory will see specific lifecycle states. The most com
 - **Not a dispatcher.** Approving a request or acknowledging a plan only flips metadata; nothing is queued, scheduled, or enqueued as a side effect.
 - **Not a content store.** File-restore and command-style checks produce `*_review_required` previews; Praxis does not currently store the source content needed to automate them.
 - **Not a notification system.** The remediation workflow emits audit events but does not push inbox notifications, chat messages, or email. Operators consume the audit log and the rollup endpoints.
-- **Not a frontend.** No dashboard widgets, exports, or UI affordances ship in the current release — only backend / API / data-model substrate and these docs.
-
-When a future release adds the execution arc, it will:
-
-- consume the `ready_for_execution` gate from the current plan;
-- run only the plan kinds in `EXECUTABLE_PLAN_KINDS` (the three package-preview kinds);
-- emit its own dispatch / outcome audit events on a new `compliance_remediation_execution.*` namespace;
-- leave the remediation substrate wire shapes unchanged.
+- **Not a frontend.** No dashboard widgets, exports, or UI affordances: the workflow is backend, API, and data-model substrate plus this documentation.
 
 ---
 
 ## Where to look next
 
-- [Compliance evidence map](compliance-map.md) — how remediation audit events line up with SOC 2 / PCI / HIPAA control families.
-- [Audit event schema](audit-schema.md) — wire format and stable context keys for every audit action listed above.
+- [Compliance evidence map](compliance-map.md): how remediation audit events line up with SOC 2, PCI, and HIPAA control families.
+- [Audit event schema](audit-schema.md): wire format and stable context keys for every audit action listed above.

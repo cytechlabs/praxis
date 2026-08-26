@@ -9,11 +9,11 @@ catalog served at `GET /reports/catalog`.
 
 ## Two tiers
 
-- **Table export (shortcut)** — downloads the visible table (current page +
+- **Table export (shortcut)**: downloads the visible table (current page +
   filters) as CSV/JSON. A convenience only; **not** recorded as a report run,
   **not** schedulable. Lives on data pages (Systems, Package Inventory, Job
   History, Config Audit, System Comparison, Access Review CSV).
-- **Report generation (contract)** — a named **report kind** with a defined
+- **Report generation (contract)**: a named **report kind** with a defined
   scope, filters, and format. Generating one materializes rows, streams a
   bounded download, records a durable `report_runs` row, and is schedulable.
   Manual and scheduled runs go through the **same** report-kind contract.
@@ -66,31 +66,31 @@ Every report kind records a `report_runs` row with: `report_kind`,
 
 ## Bounding
 
-Exports cap the review window (≤ 366 days) and row count
+Exports cap the review window (366 days) and row count
 (`_export_helpers.EXPORT_MAX_ROWS = 50_000`), and chunk queries with
 `yield_per`. Compliance evidence streams row-by-row. Oversized requests are
 rejected with HTTP 422; narrow the window/filters and retry.
 
-## Deferred for 1.0 (table export or read-only dashboard only)
+## Surfaces that export without being report kinds
 
-Not yet first-class report kinds — candidates for post-1.0 promotion:
+These download data but are not report kinds, so they record no run, carry no
+manifest, and cannot be scheduled:
 
-- Fleet inventory (Systems) — `GET /export/systems` (table export).
-- Package inventory — `GET /export/packages` (table export).
-- Job / automation history — `GET /export/jobs` (table export).
-- Audit events — `GET /export/audits` (table export).
-- System comparison — `GET /systems/compare/export` (table export).
-- Access reviews — `GET /access-reviews/{id}/export.csv` (table export).
-- Session recordings — `GET /recordings/{id}/cast` (artifact download).
-- Content / mirror / airgap history — read dashboards; airgap bundles build via
-  `POST /airgap/exports` (own bundle lifecycle, not a report run).
+- Fleet inventory (Systems): `GET /export/systems` (table export).
+- Package inventory: `GET /export/packages` (table export).
+- Job and automation history: `GET /export/jobs` (table export).
+- Audit events: `GET /export/audits` (table export).
+- System comparison: `GET /systems/compare/export` (table export).
+- Access reviews: `GET /access-reviews/{id}/export.csv` (table export).
+- Session recordings: `GET /recordings/{id}/cast` (artifact download).
+- Content, mirror, and airgap history: read dashboards. Airgap bundles build
+  via `POST /airgap/exports`, which has its own bundle lifecycle and is not a
+  report run.
 
-Deferred scheduling UX: **structured per-kind schedule filter controls.** 1.0
-report schedules carry their scope/filters as a raw JSON `filters_snapshot`
-(validated for date keys + size, not per-kind form controls). Form-based
-schedule filter builders are a post-1.0 item; the report catalog
-(`GET /reports/catalog`) already exposes each kind's `filter_keys` so a future UI
-can generate those controls from it.
+Report schedules carry their scope and filters as a raw JSON
+`filters_snapshot`, validated for date keys and size rather than through
+per-kind form controls. The report catalog (`GET /reports/catalog`) exposes each
+kind's `filter_keys`.
 
-Explicitly out of scope for 1.0: a custom report query language, PDF output, and
-any credential-secret export.
+Out of scope: a custom report query language, PDF output, and any
+credential-secret export.

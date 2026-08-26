@@ -6,7 +6,7 @@
 #
 # DCO: Dependabot commits are bot-authored and cannot carry a `Signed-off-by`
 # trailer; the DCO workflow (.github/workflows/dco.yml) exempts the Dependabot
-# bot so these PRs are mergeable. See docs/dependency-security-policy.md.
+# bot so these PRs are mergeable. See docs/maintainers/dependency-security-policy.md.
 #
 # Trivy remains the vulnerability GATE (image CRITICAL gates + the repo
 # filesystem CRITICAL gate in ci.yml). Dependabot is the mechanism that keeps

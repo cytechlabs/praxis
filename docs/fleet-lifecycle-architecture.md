@@ -33,7 +33,7 @@ The backend owns:
 - Credential metadata and Vault-backed secret access.
 - SSH execution and interactive access flows.
 - Package, job, fleet operation, and reporting workflows.
-- Agent identity, broker coordination, and transport selection as M13 lands.
+- Agent identity, broker coordination, and transport selection.
 
 Vault owns secret material and certificate authority state. PostgreSQL stores
 application metadata, audit events, operation state, and lifecycle records.

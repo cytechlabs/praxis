@@ -1,6 +1,6 @@
 ---
 title: Upgrade notes for 1.0
-description: What changes on the way to 1.0 and the order to apply it in.
+description: What changes when you move to 1.0 and the order to apply it in.
 ---
 
 These notes cover moving to `1.0.0` from a prerelease or a local development
@@ -9,7 +9,7 @@ older tagged release because none exists.
 
 If you are installing fresh, follow the
 [installation guide](install.md)
-instead — you do not need this document.
+instead; you do not need this document.
 
 ## Before you upgrade
 
@@ -78,13 +78,13 @@ instead — you do not need this document.
 
 ## Breaking change: privileged access baseline
 
-Praxis 1.0 ships **no standing user-facing privileged escalation** — no
+Praxis 1.0 ships **no standing user-facing privileged escalation**: no
 Praxis-issued root shell, no password-sudo path, no break-glass root profile, no
 raw sudoers authoring, and no sudo inheritance. The upgrade migration corrects the
-launch-incompatible defaults that earlier versions seeded:
+incompatible defaults that earlier builds seeded:
 
 - Every fleet role's raw `sudoers_snippet` is **cleared**, and privileged OS
-  groups (`wheel`/`sudo`/`root`/`admin`) are **stripped** from every role —
+  groups (`wheel`/`sudo`/`root`/`admin`) are **stripped** from every role, both
   built-in **and** custom. The built-in `admin` and `maintainer` roles no longer
   carry `ALL=(ALL) NOPASSWD:ALL`. Raw sudoers text is **not** preserved as dormant
   config; if you genuinely need the prior policy text, recover it from your
@@ -92,8 +92,8 @@ launch-incompatible defaults that earlier versions seeded:
 - The fleet-role API now rejects any request that sets a raw sudoers snippet or a
   privileged OS group.
 
-**Clearing the database is not enough — you must reconcile hosts.** Any
-`/etc/sudoers.d/praxis-<login>` drop-in already deployed by a pre-1.0 release
+**Clearing the database is not enough; you must reconcile hosts.** Any
+`/etc/sudoers.d/praxis-<login>` drop-in already deployed by an earlier build
 stays on the host until reconciliation removes it. The migration flags every live
 managed account for privilege reconciliation; run a fleet reconcile after
 upgrading to remove the on-host drop-ins:
@@ -106,8 +106,8 @@ docker compose exec -T backend python -c \
 ```
 
 Any host that is unreachable stays flagged (and is surfaced as `error` /
-unreconciled) and is retried on the next reconcile — the stale sudo privilege is
-never silently left live. Check what is still outstanding with
+unreconciled) and is retried on the next reconcile, so the stale sudo privilege
+is never silently left live. Check what is still outstanding with
 `fleet_reconciliation_service.privilege_reconcile_status(db)`, which reports the
 count of hosts/accounts still pending drop-in removal. Interactive root on managed
 hosts is now **out-of-band** under your ops runbook, not a Praxis-issued grant.

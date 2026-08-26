@@ -8,6 +8,7 @@ import { renderDiagrams } from './src/plugins/render-diagrams.mjs';
 import { rewriteDocLinks } from './src/plugins/rewrite-doc-links.mjs';
 import { wrapDiagrams } from './src/plugins/wrap-diagrams.mjs';
 import { sidebar } from './src/sidebar.mjs';
+import { PRODUCT_VERSION } from './src/version.mjs';
 
 /**
  * The compiled site is served from two mount points:
@@ -63,6 +64,17 @@ export default defineConfig({
     service: passthroughImageService(),
   },
   compressHTML: true,
+  vite: {
+    define: {
+      // The canonical product version, read from
+      // frontend-next/src/config/version.ts. This file runs in Node and can
+      // reach it; a page cannot, because pages are bundled and lose the path
+      // the version module resolves against. Injecting the value keeps the
+      // read in one place and puts the same string in every page of both
+      // builds.
+      __PRAXIS_DOCS_VERSION__: JSON.stringify(PRODUCT_VERSION),
+    },
+  },
   devToolbar: {
     enabled: false,
   },

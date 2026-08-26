@@ -29,7 +29,7 @@ see its release notes and [upgrade notes for 1.0](upgrade-notes-1-0.md).
 Pin the new version in `.env`:
 
 ```text
-PRAXIS_VERSION=1.0.1
+PRAXIS_VERSION=1.0.0
 ```
 
 Then pull and restart:

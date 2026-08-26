@@ -14,7 +14,7 @@ matching `agent-vX.Y.Z` tag. For 1.0 that is app tag **`v1.0.0`** and agent tag
 > upgrade, backup/restore) are exercised only by manual scripts, not by blocking
 > CI. They are captured here as explicit gates rather than left implicit.
 
-The runbook is ordered. Do not skip ahead — later steps assume earlier gates
+The runbook is ordered. Do not skip ahead; later steps assume earlier gates
 passed.
 
 For a patch in an existing supported minor line, first follow the
@@ -90,11 +90,11 @@ git diff --check        # no whitespace/conflict errors
 Run these against the release candidate before tagging. None publish artifacts;
 they are verification only.
 
-1. **Cold-rebuild gate** — `scripts/test-cold-rebuild.sh`. Tears the stack down
+1. **Cold-rebuild gate**: `scripts/test-cold-rebuild.sh`. Tears the stack down
    (`down -v`), rebuilds from scratch, reconciles seeded sequences, and runs the
    curated end-to-end suite, including the 1.0-hardening remediation tests. This
    is the authoritative "survives a clean rebuild" gate.
-2. **Production overlay fresh install** — bring up the prod overlay and confirm
+2. **Production overlay fresh install**: bring up the prod overlay and confirm
    `docker compose ps` reports backend and frontend `healthy`:
 
    ```sh
@@ -104,7 +104,7 @@ they are verification only.
      --profile bundled --profile proxy ps
    ```
 
-3. **End-to-end (Playwright)** — run `e2e/smoke.spec.ts` against the running
+3. **End-to-end (Playwright)**: run `e2e/smoke.spec.ts` against the running
    prod-proxy stack (started above with `--profile proxy`). Playwright defaults
    its browser base URL to Caddy at `https://localhost` and accepts the internal
    self-signed cert (`ignoreHTTPSErrors`); override with `E2E_BASE_URL` for a real
@@ -115,18 +115,18 @@ they are verification only.
    # against a real domain:
    E2E_BASE_URL=https://praxis.example.com npx playwright test e2e/smoke.spec.ts
    ```
-4. **Upgrade path** — start from the previous release images, then
+4. **Upgrade path**: start from the previous release images, then
    `alembic upgrade head` on the new backend image; confirm migrations apply
    cleanly and the app boots. (`scripts/test-upgrade-smoke.sh`.)
    For a patch, test the immediately preceding supported patch (for example,
    `1.0.0 -> 1.0.1`). For a minor, test the newest supported patch in the prior
    minor line (for example, `1.0.latest -> 1.1.0`).
-5. **Backup / restore** — exercise `scripts/backup.sh` and the documented
+5. **Backup / restore**: exercise `scripts/backup.sh` and the documented
    restore procedure (see `backend/docs/database-backup-restore.md`); confirm a
    restored database boots the app. (`scripts/test-backup-restore-smoke.sh`.)
-6. **SBOM + Trivy review** — review the CycloneDX SBOMs and Trivy reports
+6. **SBOM + Trivy review**: review the CycloneDX SBOMs and Trivy reports
    attached to the build; confirm no unaccepted CRITICAL/HIGH findings.
-7. **Lifecycle / EOL seed refresh** — after pull/build/migrations on an existing
+7. **Lifecycle / EOL seed refresh**: after pull/build/migrations on an existing
    database, reconcile the lifecycle reference data and confirm it is already
    current:
 
@@ -139,7 +139,7 @@ they are verification only.
 
    (A fresh database already loads the seed via the Alembic migration; this gate
    catches an existing DB whose lifecycle rows drifted from the shipped seed.)
-8. **Demo proof path** — seed the synthetic demo fixture and run the
+8. **Demo proof path**: seed the synthetic demo fixture and run the
    demo walkthrough end to end as a release-confidence smoke:
 
    ```sh
@@ -149,7 +149,7 @@ they are verification only.
 
    Confirm the walkthrough passes (it asserts stable headings **and** the seeded
    demo data) and that the captured screenshots under
-   `test-results/demo-walkthrough/` reflect the final UI — three supported demo
+   `test-results/demo-walkthrough/` reflect the final UI: three supported demo
    hosts, an approved plan with a succeeded execution, a compliance finding, and
    a remediation request. See
    [docs/demo-walkthrough-operator.md](../demo-walkthrough-operator.md) and
@@ -339,13 +339,13 @@ scripts/check-release-readiness.sh 1.0.0      # or assert an explicit target ver
 ## 9. Post-publish smoke with `PRAXIS_VERSION`
 
 Deploy the *published* images (not a local build) and confirm they run. Release
-deploys MUST pin an exact `PRAXIS_VERSION` — the compose default is the unpinned
+deploys MUST pin an exact `PRAXIS_VERSION`, because the compose default is the unpinned
 `:latest`, which must never be used for a release (an accidental `latest` deploy
 tracks whatever GHCR most recently published, not the version under test). Add
 `--profile proxy` for the public browser ingress:
 
 ```sh
-export PRAXIS_VERSION=X.Y.Z   # exact tag — never leave unset (would be :latest)
+export PRAXIS_VERSION=X.Y.Z   # exact tag; never leave unset (would be :latest)
 docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile bundled --profile proxy pull
 docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile bundled --profile proxy up -d
 docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile bundled --profile proxy ps

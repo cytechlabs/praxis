@@ -21,7 +21,9 @@ The Fleet Dashboard (`/fleet-dashboard`) is your landing page. Top row StatCards
 - **Active Jobs** - anything currently running
 - **Drifted Systems** - hosts that diverge from at least one enabled baseline ([see Drift Detection](monitoring-and-alerts.md#drift-detection))
 
-Below the cards is a HealthBanner that surfaces critical alerts (unreachable hosts, failed jobs, pending security updates) and a set of detail cards: systems-by-status pie, recent activity, groups breakdown.
+Below the cards is a HealthBanner that surfaces critical alerts (unreachable hosts, failed jobs, security posture) and a set of detail cards: systems-by-status pie, recent activity, groups breakdown.
+
+The Patch Compliance card's security tile reports the **state** of security scanning, not a bare count: a number appears only once every host in scope has a completed security scan, and the banner will not call the fleet healthy while that state is unknown, in flight, failed, or partial. [Security updates](packages.md#security-updates) explains each state.
 
 ## Tour of the interface
 
