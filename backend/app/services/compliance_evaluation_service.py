@@ -103,6 +103,7 @@ VALID_VERDICTS: Tuple[str, ...] = (VERDICT_PASS, VERDICT_FAIL, VERDICT_ERROR)
 REASON_NO_HOST_FACTS = "no_host_facts_row"
 REASON_FACT_KEY_UNMAPPED = "fact_key_not_in_slice_2_schema"
 REASON_FACT_VALUE_NULL = "fact_value_null"
+REASON_FACT_COLLECTION_UNAVAILABLE = "fact_collection_unavailable"
 REASON_PACKAGE_NOT_INSTALLED = "package_not_installed"
 REASON_PACKAGE_INSTALLED = "package_installed"
 REASON_VERSION_MISMATCH = "installed_version_below_min"
@@ -138,6 +139,40 @@ FACT_KEY_TO_HOSTFACTS_COLUMN: Dict[str, str] = {
     "sysctl.net.ipv4.ip_forward": "sysctl_net_ipv4_ip_forward",
     "sysctl.net.ipv4.conf.all.rp_filter": "sysctl_net_ipv4_conf_all_rp_filter",
 }
+
+
+# ``partial_errors`` keys a collector writes when it ran a probe and could
+# not establish a trustworthy value for a fact. A fact named here is a
+# coverage gap on the host, not a host that has never been scanned, so it
+# must not read as pass, fail, or "run a scan". The mapped ``HostFacts``
+# column name always counts as well: collectors report per-field where they
+# can and fall back to the probe name only when the whole probe failed.
+FACT_KEY_TO_COLLECTOR_PROBE_KEYS: Dict[str, Tuple[str, ...]] = {
+    "ssh.config.PermitRootLogin": ("ssh_config",),
+    "ssh.config.PasswordAuthentication": ("ssh_config",),
+}
+
+
+def _collection_unavailable(row: Any, fact_key: str) -> bool:
+    """True when the latest collection recorded that it could not establish
+    a trustworthy value for ``fact_key``.
+
+    This is checked before the stored value is read, not only when the value
+    is NULL. Ingest may retain a previously collected value so evidence is
+    not lost, but a retained value is not an observation the latest
+    collection made, and reporting it as pass or fail would date old
+    evidence to the new collection timestamp."""
+    entries = getattr(row, "partial_errors", None)
+    if not isinstance(entries, list):
+        return False
+    probe_keys = set(FACT_KEY_TO_COLLECTOR_PROBE_KEYS.get(fact_key, ()))
+    column = FACT_KEY_TO_HOSTFACTS_COLUMN.get(fact_key)
+    if column:
+        probe_keys.add(column)
+    for entry in entries:
+        if isinstance(entry, dict) and str(entry.get("key")) in probe_keys:
+            return True
+    return False
 
 
 AUDIT_COMPLIANCE_EVALUATION_RUN = "compliance_evaluation.run"
@@ -351,6 +386,12 @@ def _evaluate_fact_equals(
     facts_row = db.query(HostFacts).filter(HostFacts.system_id == system_id).first()
     if facts_row is None:
         return _error(REASON_NO_HOST_FACTS, expected=str(expected))
+    if _collection_unavailable(facts_row, fact_key):
+        return _error(
+            REASON_FACT_COLLECTION_UNAVAILABLE,
+            observed=None,
+            expected=str(expected),
+        )
     if value is None:
         return _error(
             REASON_FACT_VALUE_NULL,
@@ -372,6 +413,12 @@ def _evaluate_fact_present(
     facts_row = db.query(HostFacts).filter(HostFacts.system_id == system_id).first()
     if facts_row is None:
         return _error(REASON_NO_HOST_FACTS)
+    if _collection_unavailable(facts_row, fact_key):
+        return _error(
+            REASON_FACT_COLLECTION_UNAVAILABLE,
+            observed=None,
+            expected="present",
+        )
     if value is None:
         return _fail(REASON_FACT_VALUE_NULL, observed=None, expected="present")
     return _pass(observed=value, expected="present")
@@ -387,6 +434,15 @@ def _evaluate_fact_absent(
     facts_row = db.query(HostFacts).filter(HostFacts.system_id == system_id).first()
     if facts_row is None:
         return _error(REASON_NO_HOST_FACTS)
+    if _collection_unavailable(facts_row, fact_key):
+        # The collection could not read the host. That is not evidence the
+        # setting is absent, and a retained value is not evidence it is
+        # present.
+        return _error(
+            REASON_FACT_COLLECTION_UNAVAILABLE,
+            observed=None,
+            expected="absent",
+        )
     if value is None:
         return _pass(observed=None, expected="absent")
     return _fail(reason=None, observed=value, expected="absent")
