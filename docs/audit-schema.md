@@ -85,7 +85,7 @@ Fields:
 | `access_request.create` | `fleet_role_id`, `scope_group_id`, `scope_smart_group_id`, `duration_seconds`, `justification` |
 | `access_request.approve` | `requested_by`, `fleet_role_id`, `resulting_binding_id`, `duration_seconds`, `comment` |
 | `access_request.reject` | `requested_by`, `comment` |
-| `access_request.revoke` | — |
+| `access_request.revoke` | none |
 
 ### Authentication
 
@@ -97,7 +97,7 @@ Fields:
 
 Sensitive secret and PKI actions emit unified audit events so secret access and
 CA lifecycle changes reach external sinks. `context` carries only locators and
-non-secret metadata — never secret values, passwords, private keys, certificate
+non-secret metadata, never secret values, passwords, private keys, certificate
 material, tokens, or raw Vault exception text.
 
 `ssh.user_cert.sign` fires when Vault signs a short-lived SSH *user* certificate
@@ -120,8 +120,8 @@ single user actor at the mint point; that host access is audited via its parent
 | `vault.secret.password_update` | Password field updated within a Vault secret | `vault_path`, `username` |
 | `vault.secret.delete` | Direct Vault secret deleted | `vault_path` |
 | `ssh.user_cert.sign` | Short-lived SSH user cert minted for host access | `login`, `ttl_s`, `cert_serial`, `purpose` |
-| `ssh.ca.rotate` | SSH CA keypair regenerated in Vault | — |
-| `ssh.ca.revoke_user_certs` | SSH CA identifier bumped + pooled sessions dropped | — |
+| `ssh.ca.rotate` | SSH CA keypair regenerated in Vault | none |
+| `ssh.ca.revoke_user_certs` | SSH CA identifier bumped and pooled sessions dropped | none |
 
 `target.kind` is `credential` (with `target.id` = credential id), `vault_secret`
 (with `target.id` = vault path), `system` (for `ssh.user_cert.sign` when the
@@ -144,7 +144,7 @@ exception text.
 
 ### Compliance remediation requests
 
-Non-executing workflow that captures operator intent to remediate a failing compliance evidence row plus the approval-gate state. Approval flips the request state only — no host mutation, no command execution, no dispatch.
+Non-executing workflow that captures operator intent to remediate a failing compliance evidence row plus the approval-gate state. Approval flips the request state only: no host mutation, no command execution, no dispatch.
 
 `target.kind` is `compliance_remediation_request` and `target.id` is the request id. `target.system_id` is the host the request applies to.
 
@@ -157,7 +157,7 @@ Stable `context` keys present on every action: `policy_id`, `policy_slug`, `poli
 | `compliance_remediation.requested` | Operator opens a remediation request for a failing evidence row | `has_guidance_snapshot` (bool), `justification_length` (int, 0 when omitted) |
 | `compliance_remediation.approved` | Admin approves the request; state flips to `approved`. Does NOT execute anything | `separation_of_duties_enforced` (bool, always `true` in the current release), `decided_reason_length` (int) |
 | `compliance_remediation.rejected` | Admin rejects the request; terminal state | `decided_reason_length` (int) |
-| `compliance_remediation.cancelled` | Admin or original requester withdraws the request; terminal state | `self_cancel` (bool — `true` when the requester withdrew their own request), `decided_reason_length` (int) |
+| `compliance_remediation.cancelled` | Admin or original requester withdraws the request; terminal state | `self_cancel` (bool, `true` when the requester withdrew their own request), `decided_reason_length` (int) |
 
 ### Compliance remediation plan previews
 
@@ -174,10 +174,10 @@ Stable `context` keys present on every action: `request_id`, `policy_id`, `check
 | `compliance_remediation_plan.built` | First plan preview is generated for an approved remediation request | `plan_state` (`planned` / `unsupported` / `failed`), `plan_kind`, `step_count` (int), `refreshed` (bool, always `false`), `superseded_plan_id` (int or null) |
 | `compliance_remediation_plan.refreshed` | A non-acknowledged current draft plan is rebuilt in place (idempotent recompute; row id stable) | `plan_state`, `plan_kind`, `step_count`, `refreshed` (bool, always `true`), `superseded_plan_id` (always null) |
 | `compliance_remediation_plan.unsupported` | The resolved plan kind is `unsupported` (paired with the matching `built`/`refreshed` event) | `unsupported_reason` (string) |
-| `compliance_remediation_plan.acknowledged` | Operator explicitly acknowledges the current plan ("this is what I intend to run") — metadata only, no execution | `plan_kind`, `ready_for_execution` (bool) |
-| `compliance_remediation_plan.superseded` | An acknowledged current plan is replaced by a fresh build (the new plan becomes current; the old one is locked as history) | `superseded_by_plan_id` (int — the new current plan id) |
+| `compliance_remediation_plan.acknowledged` | Operator explicitly acknowledges the current plan ("this is what I intend to run"); metadata only, no execution | `plan_kind`, `ready_for_execution` (bool) |
+| `compliance_remediation_plan.superseded` | An acknowledged current plan is replaced by a fresh build (the new plan becomes current; the old one is locked as history) | `superseded_by_plan_id` (int, the new current plan id) |
 
-The plan read envelope also exposes lifecycle metadata fields: `check_definition_fingerprint`, `is_current`, `superseded_by_plan_id`, `acknowledged_at`, `acknowledged_by`, `is_stale`, and `ready_for_execution`. These are derived/snapshot fields and are not separate audit events. `ready_for_execution` is the gate a future execution flow will consult; it is true only when the source request is still `approved`, the plan is current, `state='planned'`, acknowledged, not stale, and of an executable plan_kind (i.e. one of `package_install_preview` / `package_remove_preview` / `package_upgrade_preview` — review-required kinds always read `false`).
+The plan read envelope also exposes lifecycle metadata fields: `check_definition_fingerprint`, `is_current`, `superseded_by_plan_id`, `acknowledged_at`, `acknowledged_by`, `is_stale`, and `ready_for_execution`. These are derived/snapshot fields and are not separate audit events. `ready_for_execution` is the gate an execution flow consults; it is true only when the source request is still `approved`, the plan is current, `state='planned'`, acknowledged, not stale, and of an executable plan_kind (i.e. one of `package_install_preview` / `package_remove_preview` / `package_upgrade_preview`; review-required kinds always read `false`).
 
 ### Compliance remediation execution attempts
 
@@ -199,16 +199,28 @@ The attempt read envelope additionally exposes `approval_decided_at`, `transport
 
 The readiness gate is re-checked at dispatch time so a stale UI cannot bypass it by replaying a previously-true `ready_for_execution` flag. Lineage drift (mismatched request_id, plan_kind drift, missing package_name, unsafe package_name, missing/unparsable upgrade version target, unknown host package-manager family, source request no longer approved, plan superseded/stale/unacknowledged/non-`planned`) raises **before** any audit row is written and before any host mutation. The dispatch path uses only the governed transport seam (`patch_execution_dispatch_service.default_dispatch`); there is no raw SSH/agent/subprocess/local-fallback path.
 
+### Patch reboot reconciliation
+
+The reboot queue for an execution is rebuilt by a reconcile pass. When that pass raises, the failure is recorded rather than left to a log line, because the queue counts are what an operator reads as "what still has to reboot".
+
+`target.kind` is `patch_update_execution` and `target.id` is the execution id.
+
+| Action | When it fires | `outcome` | `context` keys |
+|---|---|---|---|
+| `patch_update_execution_reboot.reconcile_failed` | A reboot reconcile pass for an execution raises, and the failure is surfaced. A queue that merely reads as incomplete does not emit this action | `failure` | `execution_id`, `plan_id`, `phase`, `wave_index`, `reason` (redacted and bounded), `recorded` (bool, whether the marker was persisted on the execution) |
+
+The same failure raises a `patch.reboot_required` notification at `error` severity and blocks dependent waves. See [when the reboot queue is incomplete](patch-workflows.md#when-the-reboot-queue-is-incomplete) for the operator path.
+
 ### Patch and compliance notifications
 
-This release expands the **notification** vocabulary alongside the existing audit-event vocabulary. Notifications flow through the existing `notification_service.create_notification` → `alert_service.send_alert` path: per-user disable (`notification_preferences`), per-fleet smart-group scope, and the existing retry/dead-letter behavior all apply unchanged. There are no new audit-event actions here — emission lives **beside** the existing service-level audit emits at the same stable state transitions, and the helper functions in `app.services.notification_events` are best-effort (failures log + swallow so an audit event always wins precedence).
+This release expands the **notification** vocabulary alongside the existing audit-event vocabulary. Notifications flow through the existing `notification_service.create_notification` → `alert_service.send_alert` path: per-user disable (`notification_preferences`), per-fleet smart-group scope, and the existing retry/dead-letter behavior all apply unchanged. There are no new audit-event actions here; emission lives **beside** the existing service-level audit emits at the same stable state transitions, and the helper functions in `app.services.notification_events` are best-effort (failures log + swallow so an audit event always wins precedence).
 
 Event vocabulary (each is also a valid `disabled_types` entry on the `/notification-preferences` route and a valid `events[]` entry on an `AlertConfig`):
 
 | Event | Severity | Fires from |
 |---|---|---|
 | `patch.executed` | `info` on succeeded, `warning` on canceled, `error` on failed | `patch_execution_dispatch_service._maybe_finalize_execution` when an execution reaches its terminal state |
-| `patch.reboot_required` | `warning` | `patch_reboot_service.auto_reconcile_on_terminal` when a `queued` reboot row is added for a host that needs a reboot |
+| `patch.reboot_required` | `warning` on a queued reboot, `error` on a failed reconcile | `patch_reboot_service.auto_reconcile_on_terminal` when a `queued` reboot row is added for a host that needs a reboot, and `patch_reboot_service.surface_reconciliation_failure` when a reconcile pass raises. A queue that merely reads as incomplete raises no notification |
 | `patch.reboot_completed` | `info` on healthy, `error` on failed | `patch_reboot_verify_service.verify_due_reboots` once per row's terminal verify transition |
 | `patch.rollback_started` | `warning` | `patch_rollback_dispatch_service.start_rollback_execution` |
 | `patch.rollback_completed` | `info` on succeeded, `warning` on canceled, `error` on failed | `patch_rollback_dispatch_service._maybe_finalize_run` when the run reaches its terminal state |
@@ -235,7 +247,7 @@ Manual operator-driven export endpoints for review-period reporting. Each event 
 | `compliance_remediation_plan_export.requested` | Operator downloads compliance remediation plans (current + superseded) over a bounded review window via `GET /compliance/exports/remediation-plans` | `compliance_remediation_plan_export` | `format` (`csv` / `json`), `filters` (`created_after`, `created_before`, `policy_id`, `system_id`, `state`, `current_only`), `row_count` |
 | `compliance_remediation_execution_export.requested` | Operator downloads compliance remediation execution attempts over a bounded review window via `GET /compliance/exports/remediation-executions` | `compliance_remediation_execution_export` | `format` (`csv` / `json`), `filters` (`created_after`, `created_before`, `policy_id`, `system_id`, `state`), `row_count` |
 
-Scheduled report runs do NOT add a new audit-event action — the scheduler tick (apscheduler `report_schedules_due` job, every 5 minutes) invokes the same per-kind dispatcher used by the manual export routes, so the same `*_export.requested` audit events fire from the scheduled-firing path. The only persisted difference is the matching `report_runs` row, which is written with `triggered_by='system_scheduled'` (vs `'user'` for manual exports). Operators distinguish manual vs scheduled runs by reading the `triggered_by` column on `GET /reports/runs`. Schedule definitions live in the `report_schedules` table (admin/maintainer write, auditor read via `GET /reports/schedules`) with plain-language cadence (`daily` / `weekly` / `monthly`) — no cron expression ever reaches the wire per `feedback_no_cron.md`.
+Scheduled report runs do NOT add a new audit-event action: the scheduler tick (apscheduler `report_schedules_due` job, every 5 minutes) invokes the same per-kind dispatcher used by the manual export routes, so the same `*_export.requested` audit events fire from the scheduled-firing path. The only persisted difference is the matching `report_runs` row, which is written with `triggered_by='system_scheduled'` (vs `'user'` for manual exports). Operators distinguish manual vs scheduled runs by reading the `triggered_by` column on `GET /reports/runs`. Schedule definitions live in the `report_schedules` table (admin/maintainer write, auditor read via `GET /reports/schedules`) with plain-language cadence (`daily`, `weekly`, or `monthly`). No cron expression ever reaches the wire.
 
 Bounded review-window guard: `created_after`/`created_before` (and `started_after`/`started_before`) default to the last 30 days when both bounds are omitted and a single request cannot span more than `EXPORT_WINDOW_MAX_DAYS = 366` days. The remediation-request and patch-execution exports additionally cap a single response at `EXPORT_MAX_ROWS = 50_000`; oversized filters raise HTTP 422 with operator-readable text rather than truncate. The compliance evidence export is streamed (`yield_per`) and therefore not row-capped.
 
@@ -277,4 +289,4 @@ JSONL append at the configured path. One event per line. Receiver is expected to
 
 ## Versioning policy
 
-We bump `schema_version` only for breaking changes (field rename, field removal, semantic change to an existing field). Additive changes (new actions, new context keys) do NOT bump version — consumers must tolerate unknown fields.
+We bump `schema_version` only for breaking changes (field rename, field removal, semantic change to an existing field). Additive changes (new actions, new context keys) do NOT bump version, so consumers must tolerate unknown fields.

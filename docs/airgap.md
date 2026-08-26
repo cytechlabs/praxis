@@ -48,9 +48,9 @@ Every airgap feature answers "does this still work via
 export/import?" That's why:
 
 * `MirrorRepo` carries `source_mode ∈ upstream_sync | imported_offline`
-  from the mirror engine — the importer flips imported mirrors to
+  from the mirror engine; the importer flips imported mirrors to
   `imported_offline` and the scheduler skips them.
-* `MirrorSyncRun.run_kind ∈ sync | sign_only | import` — imported
+* `MirrorSyncRun.run_kind ∈ sync | sign_only | import`: imported
   rows are written as `run_kind='import' status='ok'` directly,
   never scheduler-owned.
 * Channels and profiles travel in the descriptor as denormalized
@@ -90,8 +90,8 @@ print(row.armored_public_key)
 ```
 
 Transport `exporter-pub.asc` to the airgap side (USB, secure email,
-out-of-band whatever). Don't put it in the bundle tar — that's a
-trust circular reference.
+out-of-band whatever). Don't put it in the bundle tar; that would be a
+circular trust reference.
 
 ### Airgap side: pin the bundle public key
 
@@ -107,7 +107,7 @@ Returns `{id, gpg_fingerprint, key_uid, added_at, deleted_at}`.
 `deleted_at: null` on a fresh pin.
 
 `POST /airgap/import-trust` is admin-only. The service derives the
-fingerprint via `gpg --import` + `--list-keys` — operators don't
+fingerprint via `gpg --import` and `--list-keys`, so operators don't
 supply a fingerprint string, only the armored bytes. Active
 fingerprint uniqueness is DB-enforced (partial unique index on
 `WHERE deleted_at IS NULL`).
@@ -170,13 +170,13 @@ mount the drive at a path under `PRAXIS_AIRGAP_IMPORT_STAGING`
 
 ## Pinned snapshots and historical bytes (1.0 policy)
 
-Praxis 1.0 stores mirror **bytes live-only** — there is no per-run historical
+Praxis stores mirror **bytes live-only**: there is no per-run historical
 byte store. This is a deliberate, bounded policy, not a gap to work around:
 
 - A mirror keeps exactly one materialized tree on disk (`<mirror>/live/`), the
-  last-promoted sync. Older sync runs are retained as **metadata** —
+  last-promoted sync. Older sync runs are retained as **metadata**:
   `mirror_sync_runs` rows plus their manifest/signature sidecars under
-  `snapshots/` — governed by the mirror's retention (`keep_count` /
+  `snapshots/`, governed by the mirror's retention (`keep_count` /
   `keep_within_days`). Retention **never** deletes `live/` or `work/` bytes.
 - A channel's **pin** (`pinned_run_id`) is a **manifest / tracking pin, not a
   byte freeze.** It records "this content state," but the bytes it points at only
@@ -198,8 +198,8 @@ To resolve a `historical_bytes_unavailable` refusal: export `--snapshot latest`,
 re-pin the channel to the current run, or re-sync/re-promote the desired content
 so it becomes live again. If your environment truly needs exact reproduction of
 arbitrary past states, keep the exported **bundle tars** (they are
-self-contained and re-importable) as your historical archive — that is the
-supported 1.0 mechanism for byte-exact history.
+self-contained and re-importable) as your historical archive. That is the
+supported mechanism for byte-exact history.
 
 ### Common export refusals
 
@@ -357,8 +357,8 @@ working as a fallback.
 ## Key rotation
 
 The bundle signing key isn't rotated automatically, but rotation is a
-first-class, operator-safe workflow — **no manual database edits.** Use the
-**Content → Airgap Keys** page, or the API directly. Rotation is an *immediate*
+first-class, operator-safe workflow with **no manual database edits.** Use the
+**Content > Airgap Keys** page, or the API directly. Rotation is an *immediate*
 model: the current active key is demoted to `rotating_out` (still valid for
 verifying bundles you already exported) and a fresh `active` key is generated in
 one step. Exactly one key is ever `active`.
@@ -375,7 +375,7 @@ one step. Exactly one key is ever `active`.
    Bundles exported *after* the rotation are signed by the **new** key, so the
    import-side instance must trust it first: distribute the new armored public
    key out-of-band and pin it with `POST /airgap/import-trust` (or the Import
-   Trust Pins section of the page). Keep the **old** pin in place too — the
+   Trust Pins section of the page). Keep the **old** pin in place too, because the
    importer accepts a bundle if any active pin verifies it, so both old and new
    bundles import cleanly during the overlap.
 
@@ -386,7 +386,7 @@ one step. Exactly one key is ever `active`.
 4. **(Connected side) Retire the old signing key** once no consumer needs to
    verify bundles it signed: `POST /airgap/signing-keys/{key_id}/retire`
    (admin), or the **Retire** button next to a `rotating_out` key. Retiring the
-   `active` key is refused — rotate first. Retirement is audited as
+   `active` key is refused; rotate first. Retirement is audited as
    `airgap.signing_key.retired`.
 
 Private key material and Vault paths never appear in any of these API responses
@@ -413,7 +413,7 @@ A previous import landed the prefixed slugs and they're still
 present (possibly soft-deleted, which still collides per the
 unique-slug constraint). Either soft-delete-then-physically-remove the
 existing rows in a follow-up cleanup, or re-export with a
-different `bundle_id` (Praxis assigns these as UUIDs — re-running
+different `bundle_id` (Praxis assigns these as UUIDs, so re-running
 the export on the connected side produces a fresh ID). v1
 intentionally does not auto-undelete imported entities to avoid
 accidental data churn.
@@ -450,25 +450,25 @@ Hosted CI doesn't have the backend Docker image, so
 sets `PRAXIS_REQUIRE_AIRGAP_TOOL_TESTS=1` so a future Dockerfile
 that drops `gnupg` fails loudly at module import. Don't add a
 unit test that fakes `mirror_gpg.verify_detached` and call it
-"real-gpg" — the real-gpg test deliberately uses the real binary
+"real-gpg": the real-gpg test deliberately uses the real binary
 so drift between unit-test fakes and the real verifier surfaces
 in CI.
 
 ## Reference
 
-* `app/services/airgap/planner.py` — export-side scope + diff
+* `app/services/airgap/planner.py`: export-side scope + diff
   validation.
-* `app/services/airgap/orchestrator.py` — export build + idempotent
+* `app/services/airgap/orchestrator.py`: export build + idempotent
   re-verification on `ok` rows.
-* `app/services/airgap/tar_assembler.py` — tar layout, deterministic
+* `app/services/airgap/tar_assembler.py`: tar layout, deterministic
   metadata, payload-index integrity check on write.
-* `app/services/airgap/importer.py` — import verify chain, parent
+* `app/services/airgap/importer.py`: import verify chain, parent
   chain walk, post-assembly manifest sha verification.
-* `app/services/airgap/import_trust_service.py` — operator-pinned
+* `app/services/airgap/import_trust_service.py`: operator-pinned
   bundle public keys.
-* `app/services/airgap/schema.py` — `BundleDescriptor` + canonical
+* `app/services/airgap/schema.py`: `BundleDescriptor` + canonical
   bytes serialization.
-* `app/cli/airgap.py` — read-only inspection / verify CLI.
+* `app/cli/airgap.py`: read-only inspection / verify CLI.
 
 End-to-end test: `tests/services/test_pra160_real_gpg_integration.py`
 exercises the full export → transport → pin → import flow with

@@ -4,7 +4,7 @@ description: Supported browsers, minimum viewport widths, and what degrades outs
 ---
 
 This document defines the official **operator browser** support boundary for the
-Praxis 1.0 web console — the browser and viewport an admin uses to *view* Praxis.
+Praxis web console: the browser and viewport an admin uses to *view* Praxis.
 
 > **Scope.** This is about the **console UI**, not the managed fleet (for the
 > Linux hosts Praxis manages, see [support-matrix.md](support-matrix.md)) and not
@@ -38,9 +38,9 @@ can all be present at once without collision.
 
 | Viewport width | Status | Behavior |
 |---|---|---|
-| **≥ 1280px** | **Supported** | Full console. This is the 1.0 promise. |
-| 1024–1279px (incl. tablet landscape) | **Not supported** | Renders the branded *"Optimized for desktop"* shell, not the console. Praxis *may* be usable in this band on a future release, but it is **not** part of the 1.0 support promise. |
-| < 1024px (phones, tablet portrait) | **Not supported** | Same branded shell. Praxis 1.0 is not a mobile product. |
+| **≥ 1280px** | **Supported** | Full console. This is the supported band. |
+| 1024–1279px (incl. tablet landscape) | **Not supported** | Renders the branded *"Optimized for desktop"* shell, not the console. This band is outside the support promise. |
+| < 1024px (phones, tablet portrait) | **Not supported** | Same branded shell. Praxis is not a mobile product. |
 
 ### The 1024px tablet-landscape caveat
 
@@ -71,8 +71,8 @@ instantly and deterministically.
 ## Loading & auth transitions
 
 While the console boots or resolves authentication, Praxis renders a shared
-**branded loading shell** (`BrandedLoadingScreen`) — the official wordmark plus
-the block-cursor motif on a full-viewport surface — rather than a blank page or a
+**branded loading shell** (`BrandedLoadingScreen`), the official wordmark plus
+the block-cursor motif on a full-viewport surface, rather than a blank page or a
 bare "Loading…" string. This reserves stable geometry so there is no black flash
 or layout jump between the shell and the resolved page.
 

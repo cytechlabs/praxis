@@ -19,7 +19,7 @@ of truth. Two consumers read it:
 1. The Alembic migration `pra156_distro_lifecycle` bulk-inserts the
    JSON contents at install time.
 2. `app.scripts.update_eol_data` upserts the JSON contents into a
-   running install — the operator-facing refresh path. Invoked via
+   running install, which is the operator-facing refresh path. Invoked via
    `docker compose exec backend python -m app.scripts.update_eol_data`.
 
 There is **no runtime fetch** from `endoflife.date` or any other
@@ -51,7 +51,7 @@ Each entry:
 | `as_of`        | ISO date when the entry was last verified                         |
 
 `(distro_id, release, support_kind)` is unique. A release may have
-both a `standard` row and an `esm` (or `extended`) row — Ubuntu LTS
+both a `standard` row and an `esm` (or `extended`) row. Ubuntu LTS
 releases are the most common example.
 
 The `LifecycleService.compute` path consumes
@@ -101,7 +101,7 @@ fleet dashboard's Unknown tile is actionable rather than opaque:
 | `freshness`            | Facts are stale (older than the staleness threshold) or the host has never reported facts | Refresh host facts / check enrollment and connectivity      |
 | `missing_distro_facts` | A facts row exists but reported no `distro_id` / `release`     | Re-collect facts; investigate a host whose `os-release` is unreadable |
 | `no_lifecycle_row`     | The host's `(distro_id, release)` has no matching seed row     | Add the pair to the seed (below) and re-run the refresh     |
-| `other`                | Defensive bucket for any unknown verdict without a recognized reason (normally 0) | — |
+| `other`                | Defensive bucket for any unknown verdict without a recognized reason (normally 0) | none |
 
 `sum(unknown_reasons.values()) == counts.unknown` by construction. The
 same three reasons appear on host detail's Lifecycle row for a single
@@ -110,7 +110,7 @@ host; the summary aggregates them fleet-wide.
 ## RHEL-family release matching
 
 Hosts in the RHEL family (`rhel`, `rocky`, `almalinux`) report
-`/etc/os-release` `VERSION_ID` with the minor included — e.g.
+`/etc/os-release` `VERSION_ID` with the minor included, for example
 `8.10`, `9.4`, `9.5`. The collectors persist that string verbatim,
 so `host_facts.distro_release` carries the minor.
 
@@ -118,7 +118,7 @@ The lifecycle lookup normalizes this: it tries the exact release
 first, then for RHEL-family distros falls back to the major-only
 release. So a seed entry of `(rhel, 9, standard)` covers every
 `9.x` host. Operators only need per-minor entries when a specific
-minor has a different EOL date — seed `(rhel, 9.4, standard)` to
+minor has a different EOL date, seed `(rhel, 9.4, standard)` to
 record that, and exact-match precedence will pick it up over the
 major row.
 

@@ -4,7 +4,7 @@ description: Take a consistent backup of a bundled deployment and restore it, in
 ---
 
 This document covers the **1.0 encrypted full-app-state backup/restore** path for a
-**bundled** Praxis deployment — the single-node shape where Praxis runs its own
+**bundled** Praxis deployment, the single-node shape where Praxis runs its own
 PostgreSQL, OpenBao/Vault, recordings, and mirror content under Docker Compose.
 
 > **Scope.** This is the minimum honest recovery layer for the bundled deployment,
@@ -21,11 +21,11 @@ persistent state:
 | Component | Source | How |
 | --- | --- | --- |
 | PostgreSQL app DB | `postgres_data` | the existing validated `scripts/backup.sh` (custom-format `pg_dump`, validated with `pg_restore --list`) |
-| OpenBao/Vault data | `vault_data` | read-only snapshot — KV secrets, PKI, broker cert, agent CA, backend token, SSH CA |
+| OpenBao/Vault data | `vault_data` | read-only snapshot: KV secrets, PKI, broker cert, agent CA, backend token, SSH CA |
 | Session recordings | `recordings_data` | read-only snapshot |
 | Mirror / repo content | `mirror_data` | read-only snapshot |
-| **Recovery material** | `vault_recovery` | **opt-in** (`--include-recovery`) — unseal keys + init root token |
-| Manifest | — | components, sizes, SHA-256 checksums, timestamps, image versions, restore instructions |
+| **Recovery material** | `vault_recovery` | **opt-in** (`--include-recovery`): unseal keys and init root token |
+| Manifest | none | components, sizes, SHA-256 checksums, timestamps, image versions, restore instructions |
 
 Not included (out of scope for 1.0): Caddy ACME material (`caddy_data`/`caddy_config`),
 Prometheus TSDB (`prometheus_data`, infra telemetry), and anything outside the bundled
@@ -47,7 +47,7 @@ A restored `vault_data` comes up **sealed**. A *working* restore therefore needs
 - supplied by the operator out of band (you kept `init-keys.json` somewhere safe).
 
 Without the unseal keys the restore populates everything else, but Vault stays sealed
-and the backend cannot reach its secrets — so it will not become healthy. The restore
+and the backend cannot reach its secrets, so it will not become healthy. The restore
 script warns loudly in that case.
 
 Because a bundle created with `--include-recovery` contains everything needed to
@@ -83,7 +83,7 @@ The bundle mixes two kinds of capture, and you should understand the difference:
 
 In practice this is fine for the 1.0 recovery target (OpenBao's file storage and the
 recordings/mirror trees tolerate a live tar), but for the **most conservative backup
-window** — no chance of a torn write — quiesce Praxis writes or take the stack offline
+window**, with no chance of a torn write, quiesce Praxis writes or take the stack offline
 before running `backup-bundle.sh`:
 
 ```bash
@@ -96,7 +96,7 @@ docker compose start backend agent-broker
 ## Taking a backup
 
 ```bash
-# Choose a strong passphrase and STORE IT SAFELY — it is required to restore.
+# Choose a strong passphrase and STORE IT SAFELY. It is required to restore.
 export PRAXIS_BACKUP_PASSPHRASE="$(openssl rand -base64 32)"
 
 # Full bundle including the unseal keys (recommended for true single-bundle DR):
@@ -107,7 +107,7 @@ scripts/backup-bundle.sh -o /path/to/off-host-staging
 ```
 
 Then **move the resulting `praxis-backup-<timestamp>.bundle.enc` (and its `.sha256`)
-off the host** — to encrypted object storage, a backup server, removable media, etc.
+off the host**: to encrypted object storage, a backup server, removable media, and so on.
 Praxis does not ship it anywhere.
 
 The daily `scripts/backup.sh` cron (PostgreSQL only) is unchanged and still runs; the
@@ -136,7 +136,7 @@ anything is applied to the target.
 (same compose files / image versions recorded in the manifest). Restoring into an
 external-Postgres or external-secrets shape is not a supported 1.0 path.
 
-**Downtime.** Plan for the stack to be unavailable for the whole restore — bringing up
+**Downtime.** Plan for the stack to be unavailable for the whole restore, because bringing up
 fresh volumes, extracting snapshots, `pg_restore`, and re-unsealing Vault. On a
 developer laptop the full smoke round-trip completes in a few minutes; production time
 is dominated by database and mirror size.

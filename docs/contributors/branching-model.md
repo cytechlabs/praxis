@@ -3,7 +3,7 @@
 Praxis uses a **trunk-based** model: one integration branch (`main`) plus frozen
 per-release branches (`release/X.Y`). The older GitFlow-style
 `feature → dev → main` flow (a permanent `dev` integration branch) has been
-retired — it added overhead without meaningful safety for a solo-maintainer
+retired because it added overhead without meaningful safety for a solo-maintainer
 workflow, and a long-lived divergent `dev` confuses PR-diff / security / quality
 tooling (DeepSource, Dependabot, and most reviewers assume a single canonical
 default branch).
@@ -36,7 +36,7 @@ Features and other release scope land on `main` through normal PRs. When the
 minor or major release is ready, merge a focused release-preparation PR into
 `main` that aligns versions and updates the changelog, upgrade notes, and
 release documentation. At ship time, cut a frozen release branch from that
-verified `main` commit, protect it, then tag from it. Tags — not branches —
+verified `main` commit, protect it, then tag from it. Tags, not branches,
 drive the publish/agent-release workflows
 (`publish.yml`, `agent-release.yml`), so those are unaffected by this model.
 
@@ -86,7 +86,7 @@ fix, backport, versioning, publication, and verification procedure.
 
 The repo-owned files above already describe the new model. The following steps
 change branch state and GitHub / third-party **settings** and are **not**
-performed by the implementation change — do them intentionally, in order, after
+performed by the implementation change; do them intentionally, in order, after
 the change is reviewed. None are reversible-by-accident, so verify each.
 
 - [ ] **Final `dev → main` merge.** Open a PR from `dev` to `main` (or fast-forward
@@ -108,7 +108,7 @@ the change is reviewed. None are reversible-by-accident, so verify each.
       (none is set today) and that update PRs open against `main`.
 - [ ] **Verify** the new model end to end: open a throwaway PR to `main` and
       confirm CI + DCO run; confirm no automation still expects `dev`.
-- [ ] **Delete `dev`** — only after all of the above verify clean.
+- [ ] **Delete `dev`**, only after all of the above verify clean.
 
 > Scope note: the public repository transfer to `cytechlabs/praxis` is a separate
 > effort and is **not** part of this cutover.

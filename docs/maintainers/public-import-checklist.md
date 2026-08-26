@@ -6,7 +6,7 @@ included, what stays private, how namespaces are normalized, and how to validate
 the tree before the first public commit.
 
 It is a **preparation and verification** guide. It does not itself create the
-public repository, rewrite history, or push anything — those are operator
+public repository, rewrite history, or push anything; those are operator
 actions taken deliberately once every check below passes.
 
 The read-only companion `scripts/check-public-import-readiness.sh` enforces the
@@ -15,7 +15,7 @@ machine-checkable parts of this document.
 ## Source
 
 - Import from the tagged release commit on `main` (or the corresponding
-  `release/X.Y` branch) — the same commit that is tagged for the release (see
+  `release/X.Y` branch), the same commit that is tagged for the release (see
   [release-checklist.md](release-checklist.md) and
   [branching-model.md](../contributors/branching-model.md)).
 - The public repository starts with a **fresh history**: the import is a clean
@@ -34,7 +34,7 @@ machine-checkable parts of this document.
 | `scripts/` | Operator + release/import helper scripts. |
 | `caddy/`, `vault/` | Proxy config and Vault bootstrap **config** (no secrets). |
 | `docker-compose.yml`, `docker-compose.prod.yml` | Deployment. |
-| `.env.example` | Template only — never a real `.env`. |
+| `.env.example` | Template only, never a real `.env`. |
 | `.github/` | CI, publish, and agent-release workflows. |
 | `package.json` | Build entry points. |
 | Top-level docs | `README.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, `LICENSE`, `NOTICE`. |
@@ -48,7 +48,7 @@ machine-checkable parts of this document.
 | `claude-codex/` | Internal review/handoff protocol notes. | git-ignored, untracked |
 | `project-docs/` | Internal dev fixtures and working notes. | git-ignored, untracked |
 | `.claude/`, `.secrets/`, memory files | Local tooling / secrets. | git-ignored |
-| `docs/dev-notes/` | Developer working notes (implementation-history tone). | **tracked — drop at export** |
+| `docs/dev-notes/` | Developer working notes (implementation-history tone). | **tracked, drop at export** |
 | `praxis-do-import.json` | Local provider import artifact. | untracked |
 | `.env`, `*.pem`, `*.key`, `*_rsa`, `ssh_host_*` | Secrets / key material. | git-ignored |
 | `*.log`, `test-results/` | Local run artifacts. | git-ignored |
@@ -57,7 +57,7 @@ machine-checkable parts of this document.
 the internal tree but must be dropped from the exported snapshot before the first
 public commit (it retains implementation-history wording by design and is not
 part of the product docs). It holds developer working notes and internal
-engineering references — the thin-agent notes, the backend test inventory, the
+engineering references: the thin-agent notes, the backend test inventory, the
 real-host access-control regression matrix, and the fleet-scope inventory.
 Because it is dropped at export, the public-tone checks (internal-process markers
 and `PRA-NNN`/"slice" wording) are **exempt** for `docs/dev-notes/`; the secret,
@@ -72,23 +72,23 @@ import. Only the loader boundary (`backend/app/ee/`) and the opt-in
 
 ## Public-doc classification
 
-The curated public narrative docs must read as product/operator documentation —
-no `PRA-NNN`, "slice", or internal-process wording. This is enforced by the
+The curated public narrative docs must read as product/operator documentation,
+with no `PRA-NNN`, "slice", or internal-process wording. This is enforced by the
 readiness checker.
 
 | Doc | Disposition |
 |---|---|
-| `README.md` | Keep — product/operator tone. |
-| `CHANGELOG.md`, `docs/upgrade-notes-1-0.md` | Keep — release docs. |
-| `docs/maintainers/*` | Keep — release and repository runbooks. |
-| `docs/agent-protocol.md`, `docs/airgap.md`, `docs/audit-schema.md` | Keep — scrubbed of issue/slice wording. |
-| `docs/compliance-map.md`, `docs/eol-data.md`, `docs/remediation-workflow.md` | Keep — scrubbed. |
-| `docs/production-hardening.md`, `docs/support-matrix.md`, `docs/oidc-setup.md` | Keep — scrubbed / already clean. |
-| `docs/demo-walkthrough-operator.md`, `docs/demo-walkthrough-auditor.md` | Keep — demo path. |
-| `agent/README.md`, `agent/packaging/README.md` | Keep — scrubbed / already clean. |
-| `backend/docs/*`, `frontend-next/docs/*` | Keep — developer reference; verified free of process wording. |
-| `docs/design/*` | Keep — design-system developer reference; scrubbed. |
-| `docs/dev-notes/*` | **Exclude** — developer working notes + internal engineering references (test inventory, real-host regression matrix, fleet-scope inventory). |
+| `README.md` | Keep: product/operator tone. |
+| `CHANGELOG.md`, `docs/upgrade-notes-1-0.md` | Keep: release docs. |
+| `docs/maintainers/*` | Keep: release and repository runbooks. |
+| `docs/agent-protocol.md`, `docs/airgap.md`, `docs/audit-schema.md` | Keep: scrubbed of issue/slice wording. |
+| `docs/compliance-map.md`, `docs/eol-data.md`, `docs/remediation-workflow.md` | Keep: scrubbed. |
+| `docs/production-hardening.md`, `docs/support-matrix.md`, `docs/oidc-setup.md` | Keep: scrubbed / already clean. |
+| `docs/demo-walkthrough-operator.md`, `docs/demo-walkthrough-auditor.md` | Keep: demo path. |
+| `agent/README.md`, `agent/packaging/README.md` | Keep: scrubbed / already clean. |
+| `backend/docs/*`, `frontend-next/docs/*` | Keep: developer reference; verified free of process wording. |
+| `docs/design/*` | Keep: design-system developer reference; scrubbed. |
+| `docs/dev-notes/*` | **Exclude**: developer working notes + internal engineering references (test inventory, real-host regression matrix, fleet-scope inventory). |
 
 ## Namespace normalization
 
@@ -115,7 +115,7 @@ Checks:
 ## Engineering-history references (accepted, non-blocking)
 
 Code, migrations, tests, and workflow YAML retain ordinary issue-tracker
-references as engineering history — these are **not** scrubbed and are **not**
+references as engineering history; these are **not** scrubbed and are **not**
 launch-blocking:
 
 - Migration and test **filenames** contain issue slugs (e.g. `..._pra159_...`);
@@ -165,5 +165,5 @@ readiness prep; run them only when cutting the public repo.
 4. Initialize the public repository from the snapshot as a single initial
    commit and push to `cytechlabs/praxis`.
 
-> This document and the readiness checker cover steps 1–3's verification. Step 4
+> This document and the readiness checker cover the verification for steps 1 to 3. Step 4
 > is a deliberate operator action outside this prep.
