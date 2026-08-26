@@ -20,14 +20,14 @@ All of these narrow materialized access through the atomic grant recompute
 point: it computes the set of `(user, system, login)` scopes that lost **active**
 (expiry-aware) access and, in the **same transaction** as the grant change
 (outbox), enqueues one `revocation_work` row per scope. If the narrowed grants
-commit, the matching cleanup work exists — a process restart never drops it.
+commit, the matching cleanup work exists, so a process restart never drops it.
 
 ## What is guaranteed, and when
 
 | Effect | Timing |
 |---|---|
-| **New authorization denied** | **Synchronous**, in the revoking request/transaction. This is the hard security boundary — grant state is the authority, and the decision denies expired/absent grants. A failed session-close or host reconcile **never rolls access back on**. |
-| **Reachable in-process session closed** | Best-effort **immediately**, before/with the response, via `session_service.close_session` + the runtime registry. Valid under the supported **single-worker** topology (`UVICORN_WORKERS=1` with interactive SSH). If the backend scales out, this becomes dispatched termination — see *Assumptions*. |
+| **New authorization denied** | **Synchronous**, in the revoking request/transaction. This is the hard security boundary: grant state is the authority, and the decision denies expired/absent grants. A failed session-close or host reconcile **never rolls access back on**. |
+| **Reachable in-process session closed** | Best-effort **immediately**, before/with the response, via `session_service.close_session` + the runtime registry. Valid under the supported **single-worker** topology (`UVICORN_WORKERS=1` with interactive SSH). If the backend scales out, this becomes dispatched termination (see *Assumptions*). |
 | **DB-only / cross-worker session closed** | By the **guarded scheduler drain** (`revocation_drain`, every 30 s, one worker per tick) within one scheduler interval. The drain re-derives desired state, so a session under **restored** access is left alone. |
 | **Reachable host cleanup** (stale principals, stale sudoers drop-ins, Praxis-owned accounts) | **Queued immediately**, applied by the drain via `fleet_reconciliation_service.reconcile_system`, and **retried with bounded backoff** until success or operator-visible failure. |
 | **Offline / unreachable host** | **Visibly pending/error/noncompliant** with `last_error`, `attempt_count`, `next_retry_at`; retried on reconnect. **No claim of synchronous host cleanup.** |
@@ -48,21 +48,19 @@ certificates**. On each managed host, sshd is configured
 `/etc/praxis/principals.d/<login>`. Reconciliation rewrites that file from the
 current active grants (`host_user_provisioning_service._principals_for`, which omits
 expired/removed grants), so **once host cleanup lands on a reachable host the revoked
-identity's principal is removed and its cert is rejected there** — enforced through
+identity's principal is removed and its cert is rejected there**, enforced through
 the AuthorizedPrincipals path, not merely local-account removal.
 
 The honest residual: **a revoked identity holding an unexpired cert who connects
 directly to an unreconciled or offline host, bypassing Praxis, may retain access
-until the cert's Vault max TTL.** In 1.0 that ceiling is **≤ 1 hour** (Vault role
+until the cert's Vault max TTL.** That ceiling is **1 hour or less** (Vault role
 `ssh-client-signer/roles/praxis-user` `max_ttl = 1h`; default
 `FleetRole.max_session_s = 3600`). Praxis 1.0 makes **no offline cert-revocation
-guarantee** — no fake CRL/OCSP.
+guarantee**: there is no CRL or OCSP responder to consult.
 
 - **Urgent containment** for that residual is **CA rotation / fleet-wide identity
-  reset** (invalidates all outstanding certs at once) — deliberately distinct from
+  reset** (invalidates all outstanding certs at once), deliberately distinct from
   normal per-identity revocation.
-- **Documented future close:** sshd KRL / `RevokedKeys` distribution over the
-  existing host-reconcile channel. Planned, not yet implemented.
 
 ## Assumptions and boundaries
 
@@ -81,7 +79,7 @@ guarantee** — no fake CRL/OCSP.
   closed to `HostUserState.state = "error"` so revocation retry/status surfaces the
   host. Archive, `userdel`, and marker-verification failures are real errors (no
   silent `|| true`). Praxis-namespaced artifacts (the principals file and any
-  `praxis-<login>` sudoers drop-in) are always safe to remove — that is cleanup, not
+  `praxis-<login>` sudoers drop-in) are always safe to remove; that is cleanup, not
   adoption.
   - **Upgrade residual:** hosts provisioned before the ownership marker existed
     have no marker. Reconcile fails those accounts closed (visible `error`) rather

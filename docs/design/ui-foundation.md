@@ -9,11 +9,11 @@ it is not a page-by-page rewrite.
 - **Signal Red `#CE1B2B`** is used for **only three things**: the PRAXIS brand,
   the **active navigation** state, and **destructive/critical** states. It is
   never a generic accent. (The retired `#DC2626` is gone.)
-- **Primary and secondary actions are neutral** (Ink/Paper) — never blue.
+- **Primary and secondary actions are neutral** (Ink/Paper), never blue.
 - **Ink `#141414`** and **Paper `#FAFAF8`** are the core neutrals.
 - **Links** are neutral underlined text with a Signal Red hover.
 - **Focus and selection are neutral**, never red.
-- **Cards/panels use neutral chrome** — no glow, no red top-edge gradient.
+- **Cards/panels use neutral chrome**: no glow, no red top-edge gradient.
 
 ## Semantic tokens
 
@@ -51,14 +51,14 @@ in `tailwind.config.ts`. Use the token utilities, not raw colors.
   pages still hardcode dark surfaces, so exposing a toggle now would ship a
   mixed/broken light app. The page sweeps migrate pages to tokens;
   the toggle lands once they do.
-- **Verify both modes** at `/design` — the showcase renders the tokens and
+- **Verify both modes** at `/design`, where the showcase renders the tokens and
   representative components in forced dark and light panels side by side.
 
 ## Brand assets
 
 Official assets live in `frontend-next/brand_gfx/`; the ones the app uses are
 copied into `frontend-next/public/` (favicons at the root, logos/app-icons under
-`public/brand/`). Do not hand-build the wordmark — use `BrandWordmark` /
+`public/brand/`). Do not hand-build the wordmark; use `BrandWordmark` /
 `BrandIcon` from `@/components/ui/BrandLogo`, which render the theme-appropriate
 official mark. Favicons, apple-touch icon, and the web manifest are wired in
 `src/pages/_document.tsx` + `public/manifest.webmanifest`.

@@ -79,7 +79,7 @@ If a secret has appeared anywhere in a report, rotate it. See
 ## Getting a diagnosis faster
 
 Say what you already ruled out. "Other hosts on the same credential work" or
-"this started after upgrading from 1.0.0 to 1.0.1" removes most of the search
+"this started after the last upgrade" removes most of the search
 space in one line.
 
 If it is a regression, the release you upgraded from is the single most useful

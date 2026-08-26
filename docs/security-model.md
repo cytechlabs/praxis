@@ -127,7 +127,7 @@ application services never hold operator recovery material:
 - **Runtime volume (`vault_data`, mounted read-only into backend + agent-broker).**
   Holds only what the app needs: the **scoped** backend service token
   (`backend-token`, limited to the KV/SSH/agent/broker paths its policy grants)
-  and **public** material — the SSH CA public key, the agent CA certificate, and
+  and **public** material: the SSH CA public key, the agent CA certificate, and
   the broker TLS files. No root token or unseal keys live here.
 - **Recovery volume (`vault_recovery`, mounted ONLY into the Vault container).**
   Holds the operator recovery material: the unseal keys and initial root token
@@ -175,7 +175,7 @@ unused.
   fleet-role API rejects raw sudoers snippets and privileged group requests.
   Privileged host work is performed only by **named, non-interactive Praxis
   automation** (patching, package jobs, host reconciliation) escalating through a
-  dedicated automation credential's sudo method — scoped to the workflow, audited,
+  dedicated automation credential's sudo method, scoped to the workflow, audited,
   and not reusable as an arbitrary root shell. Interactive root is **out-of-band**
   under your ops runbook, not a Praxis-issued grant.
 
@@ -188,12 +188,12 @@ unused.
   fleet role scoped to a group, and each fleet role carries an explicit set of
   allowed actions. Just-in-time access requests are approved by a different
   operator than the requester.
-- **Revocation is synchronous at the boundary, then reconciled.** Removing access —
-  binding delete/disable, JIT revoke/expiry, role removal, deactivation,
-  access-review revoke, or an emergency lock — denies new authorization
+- **Revocation is synchronous at the boundary, then reconciled.** Removing access
+  (binding delete or disable, JIT revoke or expiry, role removal, deactivation,
+  access-review revoke, or an emergency lock) denies new authorization
   synchronously (grant state is the authority), closes reachable sessions, and
   queues host cleanup through one common, retried, operator-visible path. Offline
-  hosts stay visibly pending, and an already-issued cert has a bounded ≤ 1 h
+  hosts stay visibly pending, and an already-issued cert has a bounded one-hour
   residual with no offline-revocation guarantee. See
   [Access revocation (1.0 SLA)](access-revocation.md).
 

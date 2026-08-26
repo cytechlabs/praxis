@@ -34,8 +34,8 @@ Out of scope for 1.0:
   control-plane host themselves).
 - Reboot/rollback of the control plane host OS.
 - OpenSCAP execution against the control plane.
-- Package-manager driven install (no `.deb`/`.rpm` for Praxis itself —
-  only container images on GHCR).
+- Package-manager driven install (no `.deb`/`.rpm` for Praxis itself, only
+  container images on GHCR).
 
 ## Supported Deployment Shapes
 
@@ -57,14 +57,14 @@ Reference: `docker-compose.yml`, `docker-compose.prod.yml`.
 
 Remove `COMPOSE_PROFILES=bundled` from `.env` and set `DATABASE_URL`,
 `VAULT_ADDR`, and `VAULT_TOKEN` to point at the operator's own
-infrastructure (an external OpenBao or HashiCorp Vault — the API is
+infrastructure (an external OpenBao or HashiCorp Vault, whose API is
 compatible). The `db`, `vault`, and `db_backup` services are all
 gated behind the same `bundled` profile, so disabling the profile
 turns off all three at once: the supported external path is
 **fully external** (operator-owned Postgres **and** operator-owned
 secrets service). External Postgres + bundled secrets, or bundled
 Postgres + external secrets, are **not** supported deployment shapes
-in 1.0 — those mixes require operator-authored compose changes that
+because those mixes require operator-authored compose changes that
 this repo does not ship or verify.
 
 Reference: `docker-compose.yml` (profile gating on `db`, `vault`,
@@ -80,7 +80,7 @@ Browser ingress is intentional and goes through Caddy only. Under the
 prod overlay the backend and frontend publish **no** direct host ports
 (`ports: !override []`); they are reachable only over the
 Docker networks that Caddy proxies to. This fails secure in Compose
-itself — a direct client cannot bypass Caddy/TLS — so `--profile proxy`
+itself, so a direct client cannot bypass Caddy or TLS, and `--profile proxy`
 is required for the public browser path. Running the prod overlay
 *without* `--profile proxy` yields a healthy but deliberately
 unreachable stack (useful for headless smokes / API-over-network use,
@@ -95,7 +95,7 @@ operator-facing single-line rationales.
 ## Fresh Install Path
 
 The published path (from `README.md`) is (`--profile proxy` starts Caddy, the
-browser ingress — backend/frontend publish no direct host ports, so omit it only
+browser ingress, because backend and frontend publish no direct host ports; omit it only
 for a headless / external-reverse-proxy deployment):
 
 ```bash
@@ -109,7 +109,7 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml \
     --profile bundled --profile proxy up -d
 ```
 
-Generate the required secrets by hand into `.env` — e.g.
+Generate the required secrets by hand into `.env`, for example
 `SECRET_KEY=$(openssl rand -hex 32)`, `POSTGRES_PASSWORD=$(openssl rand -hex 24)`,
 plus a strong `ADMIN_PASSWORD`. None of these have a default; no password ships
 in the source tree.
@@ -227,7 +227,7 @@ The migration story today:
   revision at the time this baseline was written is
   `20260520_0001_pra175_compliance_dispatch_details.py`. The
   current head should be confirmed with `alembic heads` rather than
-  read from this doc, because M19 will keep adding revisions.
+  read from this doc, because every release adds revisions.
 - `docker compose exec backend alembic upgrade head` applies migrations;
   `docker compose exec backend alembic downgrade -1` rolls back one. There is
   no scripted multi-revision rollback path.
@@ -236,9 +236,9 @@ The migration story today:
   startup path. This proves the migration chain reaches head **from
   empty**.
 - The upgrade smoke at `scripts/test-upgrade-smoke.sh`
-  proves the chain also converges on head from a representative
-  pre-M13 (revision `pra149_review`) and pre-M15 (revision
-  `pra156_lifecycle_notif_state`) production-shaped state.
+  proves the chain also converges on head from two representative
+  earlier production-shaped states (revisions `pra149_review` and
+  `pra156_lifecycle_notif_state`).
   Committed fixtures live under
   `backend/tests/fixtures/upgrade/pre_m13.sql` and `pre_m15.sql`;
   the script can regenerate them in place via
@@ -254,14 +254,14 @@ The migration story today:
 
 What is verified today:
 
-- Migration from a representative pre-M13 (revision `pra149_review`)
-  and pre-M15 (revision `pra156_lifecycle_notif_state`) database
-  snapshot through the current head, including the M13 thin-agent
-  identity columns, the M14 facts/lifecycle tables, and the M15
-  mirror/content schema. Verification runs via
+- Migration from two representative earlier database snapshots
+  (revisions `pra149_review` and `pra156_lifecycle_notif_state`)
+  through the current head, including the thin-agent identity
+  columns, the facts and lifecycle tables, and the mirror and
+  content schema. Verification runs via
   `scripts/test-upgrade-smoke.sh` against committed fixtures; it
-  is **not** in CI (same reason as the cold-rebuild gate — it is
-  slow and hostile to parallel pytest).
+  is **not** in CI, for the same reason as the cold-rebuild gate: it is
+  slow and hostile to parallel pytest.
 
 What is unverified today:
 
@@ -300,7 +300,7 @@ Migration-rollback posture for Praxis 1.0:
   dump is cleaned up and never leaves a final-looking `.dump` that
   restore selection could pick.
 - Retains backups for 30 days (`find ... -mtime +30 -exec rm`), scoped
-  to final `*.dump` files only — in-progress temp files never match.
+  to final `*.dump` files only, so in-progress temp files never match.
 - Has **no off-host destination**. The dump never leaves the docker
   host unless the operator copies it.
 
@@ -315,15 +315,15 @@ Restore path:
 - This picks the most recent dump, runs `pg_restore --clean
   --if-exists` against the live `praxis` database. There is no
   scripted point-in-time selection and no scripted post-restore
-  verification. Backups are integrity-checked at creation time —
+  verification. Backups are integrity-checked at creation time, because
   `backup.sh` validates each dump with `pg_restore --list` before
-  publishing it — but the restore itself is not
+  publishing it, but the restore itself is not
   independently verified.
 
 ### Full-app-state encrypted bundle
 
 `scripts/backup.sh` above covers **only PostgreSQL**. For full bundled-deployment
-recovery — after operator error, host loss, or volume corruption — use the encrypted
+recovery, after operator error, host loss, or volume corruption, use the encrypted
 **full-bundle** path, which wraps `scripts/backup.sh` and additionally captures
 `vault_data`, `recordings_data`, `mirror_data`, and (opt-in) the `vault_recovery`
 unseal keys, all encrypted under an operator passphrase with a checksummed manifest and
@@ -340,7 +340,7 @@ via `--include-recovery`, or supplied out of band). See
 handling (the secrets-volume separation is preserved), required downtime, supported target shape,
 and what is not covered in 1.0.
 
-What is **not** backed up by `scripts/backup.sh` (the DB-only cron path — all of these
+What is **not** backed up by `scripts/backup.sh` (the DB-only cron path; all of these
 ARE covered by `scripts/backup-bundle.sh` above, except Caddy/Prometheus):
 
 - The Vault `vault_data` **and** `vault_recovery` named volumes.
@@ -352,7 +352,7 @@ ARE covered by `scripts/backup-bundle.sh` above, except Caddy/Prometheus):
   (operator-only, mounted **only** into the Vault container)
   holds the unseal-key file (`/vault/recovery/init-keys.json`) and the
   init root token (`/vault/recovery/root-token`). Losing either volume is
-  fatal — see the Vault section.
+  fatal. See the Vault section.
 - Caddy `caddy_data` / `caddy_config` (ACME account keys and issued
   certificates if `acme` mode is used).
 - `recordings_data` (session recordings).
@@ -387,7 +387,7 @@ What is verified today:
 - **Praxis 1.0 produces the dump only on the shared
   `backup_data` Docker volume.** Copying the dump (and the
   `vault_data` / `vault_recovery` / `recordings_data` / `mirror_data`
-  volumes — `vault_recovery` holds the unseal keys needed to bring Vault
+  volumes, because `vault_recovery` holds the unseal keys needed to bring Vault
   back up) off-host is the operator's responsibility. The repo
   ships no off-host shipping automation.
 
@@ -515,7 +515,7 @@ runbook commands below use the `bao` CLI inside that container. What ships today
   live on `vault_recovery`, mounted only into the Vault container, so
   read access to the app-mounted `vault_data` volume (backend +
   agent-broker) yields only scoped service credentials and public cert
-  material — not root or unseal material.
+  material, never root or unseal material.
 
 Token rotation today:
 
@@ -541,7 +541,7 @@ What is **not** documented and **not** scripted:
   backend-service token, swap it onto the volume, restart backend"
   flow.
 - Recovery procedure if `init-keys.json` is lost. This case is fatal
-  for the data in that Vault — there is no key escrow.
+  for the data in that Vault, because there is no key escrow.
 
 Bundled-vs-external Vault support boundary:
 
@@ -697,7 +697,7 @@ policy paths the bundled `vault/scripts/init-vault.sh` provisions. The
 checklist below mirrors `init-vault.sh` so an operator can replay it
 against their service without reading the script. The commands are
 identical whether you drive them with `bao` (OpenBao) or `vault`
-(HashiCorp Vault) — the CLI and API are compatible; `vault` is shown here.
+(HashiCorp Vault): the CLI and API are compatible, and `vault` is shown here.
 
 **Required secrets-engine mounts:**
 
@@ -825,7 +825,7 @@ rewrite.
   regeneration ceremony (`vault operator generate-root`) using the
   threshold of unseal keys to mint a new root token.
 - **Losing `vault_data` AND `vault_recovery` off-host backups** is
-  terminal for the bundled deployment — the SSH CA private key,
+  terminal for the bundled deployment: the SSH CA private key,
   agent/broker PKI roots, and KV secrets (on `vault_data`) and the
   unseal keys (on `vault_recovery`) are gone. The supported recovery
   story is "restore both volumes from an off-host backup that captured
@@ -868,7 +868,7 @@ silently demote a production deployment to dev behavior).
 Each rejection raises `StartupValidationError` with the variable
 name and the corrective action:
 
-- **`ENVIRONMENT` outside `{development, production, test}`** —
+- **`ENVIRONMENT` outside `{development, production, test}`**:
   fails before any other check so a typo like `ENVIRONMENT=prod`
   is caught immediately.
 - **Missing, empty, or `postgres` bundled database password**:
@@ -882,12 +882,12 @@ name and the corrective action:
   retired default for deployments that assemble their own URL.
   External-Postgres operators set their own `DATABASE_URL` and
   are exempt everywhere.
-- **Empty `VAULT_TOKEN` with non-bundled `VAULT_ADDR`** —
+- **Empty `VAULT_TOKEN` with non-bundled `VAULT_ADDR`**:
   external-Vault deployments must supply a token. Bundled-Vault
   deployments read the token from the shared
   `/vault/data/backend-token` at runtime, so empty is correct
   there.
-- **Empty `ADMIN_PASSWORD` on a fresh deployment** — enforced
+- **Empty `ADMIN_PASSWORD` on a fresh deployment**: enforced
   inside `backend/scripts/create_admin_user.py` (which knows the
   current user count); in production with `user_count == 0` and
   empty `ADMIN_PASSWORD`, the script now raises instead of
@@ -906,7 +906,7 @@ candidates or explicit no-validate):
 - `CORS_ORIGINS` and `TRUSTED_HOSTS` have permissive defaults
   that are appropriate for dev but are not production-validated.
   Locking `TRUSTED_HOSTS` to a non-default value in production
-  is a future follow-up; see **Known Limitations & Future Work**
+  is an operator-side hardening step; see **Known limitations**
   below.
 - `SECRET_KEY` weak-value rejection lives in
   `backend/app/core/auth.py` (unchanged); the new
@@ -918,8 +918,8 @@ candidates or explicit no-validate):
 `UserResponse.email` as `EmailStr`. `EmailStr` requires
 `email-validator`, which rejects RFC 2606 reserved TLDs (`.invalid`,
 `.test`, …). An operator who set
-`ADMIN_EMAIL=admin@somecorp.invalid` — a defensible choice for
-internal-only deployments — saw every endpoint that returned
+`ADMIN_EMAIL=admin@somecorp.invalid`, a defensible choice for
+internal-only deployments, saw every endpoint that returned
 `UserResponse` 500 with a Pydantic `ValidationError` at
 response-model serialization time, including `/auth/me` and
 `GET /users`.
@@ -983,9 +983,9 @@ The bundled `db`, `vault`, and `db_backup` services share a single
 compose profile. The supported deployment shapes for the data tier
 are therefore exactly two:
 
-1. **Fully bundled** — bundled Postgres + bundled Vault + bundled
+1. **Fully bundled**: bundled Postgres + bundled Vault + bundled
    `db_backup` sidecar (`COMPOSE_PROFILES=bundled`).
-2. **Fully external** — operator-owned Postgres + operator-owned
+2. **Fully external**: operator-owned Postgres + operator-owned
    Vault, no bundled data-tier services running, no `db_backup`
    sidecar.
 
@@ -1019,7 +1019,7 @@ External Postgres (only as part of the fully-external shape):
 
 The operator-facing list of deployment shapes that are
 **explicitly out of scope for Praxis 1.0**. None of these are
-"we forgot to ship support" — each is an intentional boundary
+"we forgot to ship support"; each is an intentional boundary
 with a one-line rationale below. Operators who need any of these
 shapes today are running outside the supported deployment
 contract.
@@ -1031,8 +1031,8 @@ contract.
   definitions, no global / replicated mode stanzas, no
   swarm-routing mesh expectations.
 - **Kubernetes.** No manifests, helm charts, or kustomize
-  overlays ship in this repo for 1.0. A future release can introduce
-  them; nothing in 1.0 either ships or precludes that.
+  overlays ship in this repository, and nothing in the deployment
+  model precludes an operator writing their own.
 - **Multiple agent-broker instances / broker HA.** The agent
   broker holds the agent tunnel registry (`AgentRegistry`) and
   in-flight operation state (`OperationManager`) **in memory**,
@@ -1069,7 +1069,7 @@ contract.
 
 - **Off-host backup shipping automation.** `scripts/backup.sh`
   produces dumps on the shared `backup_data` volume only.
-  Copying dumps (and the other named volumes — `vault_data`,
+  Copying dumps (and the other named volumes `vault_data`,
   `vault_recovery`, `recordings_data`, `mirror_data`) off-host is
   operator-owned.
   See the **Backup / Restore Drill** section for the
@@ -1135,31 +1135,32 @@ Legend: **Verified** = exercised by an automated test/script in this repo;
 
 Verified by repo tests/scripts:
 
-- Dev cold rebuild (`down -v` -> `up --build` -> pytest) -- `scripts/test-cold-rebuild.sh`.
+- Dev cold rebuild (`down -v` -> `up --build` -> pytest) via
+  `scripts/test-cold-rebuild.sh`.
 - Prod-overlay fresh-install bring-up (bundled profile, locally built images;
-  waits for `/health`, exercises authenticated and RBAC-gated routes) --
+  waits for `/health`, exercises authenticated and RBAC-gated routes) via
   `scripts/test-fresh-install-smoke.sh`.
 - First-enrolled-host bootstrap (activation-token mint + redemption via
   `POST /agent/enroll` against a docker-side dummy host; asserts the System row
-  reaches `agent_status=active` with a Vault-signed cert serial) --
+  reaches `agent_status=active` with a Vault-signed cert serial) via
   `scripts/test-first-enrolled-host-smoke.sh`.
 - Alembic `upgrade head` from empty (cold-rebuild + CI) and from representative
-  earlier snapshots (`pre_m13.sql`, `pre_m15.sql`) --
+  earlier snapshots (`pre_m13.sql`, `pre_m15.sql`) via
   `scripts/test-upgrade-smoke.sh`.
 - Daily `pg_dump` via the `db_backup` sidecar + a `pg_restore` round-trip
-  (sentinel insert -> backup -> delete -> restore -> re-verify `/health`) --
+  (sentinel insert -> backup -> delete -> restore -> re-verify `/health`) via
   `scripts/test-backup-restore-smoke.sh`.
-- RPO/RTO targets -- see the RPO/RTO contract above (RPO ~ 24 h, RTO minutes to
+- RPO/RTO targets: see the RPO/RTO contract above (RPO ~ 24 h, RTO minutes to
   single-digit hours).
 - Startup validation: rejects missing/known-weak `SECRET_KEY`, empty
   `ADMIN_PASSWORD` in production, a missing/empty/default bundled database
   password, an empty `VAULT_TOKEN` in external mode, and unknown `ENVIRONMENT`
-  values -- `backend/app/core/startup_validation.py` (+ unit tests).
+  values, in `backend/app/core/startup_validation.py` (plus unit tests).
 - Bundled database credential contract: no password ships in the source; the
   bundled `db` entrypoint, the backend/broker startup preflight, and
   `scripts/backup.sh` each exit before doing useful work when it is missing,
   empty, or the retired default; and external `DATABASE_URL` mode renders and
-  runs without `POSTGRES_PASSWORD` --
+  runs without `POSTGRES_PASSWORD`, in
   `backend/tests/services/test_pra387_postgres_credential_contract.py`.
   `UserResponse` serializes reserved-TLD emails as `str` (input schemas keep
   `EmailStr`).
@@ -1181,60 +1182,60 @@ Unsupported for 1.0 (see **Unsupported Deployment Shapes**):
   Vault only).
 - Caddy `acme` TLS (needs live DNS + reachable :443).
 - Backup encryption at rest; embedded OpenSCAP runs.
-- Multi-revision Alembic downgrade -- the supported rollback is "restore the
+- Multi-revision Alembic downgrade; the supported rollback is "restore the
   pre-upgrade dump", not downgrade through Alembic.
 
-## Known Limitations & Future Work
+## Known limitations
 
 - `backend/app/api/routes/_assets/bootstrap.sh` uses a `curl --fail-with-body`
   flag pair that conflicts on curl 7.76+; the conflicting flag should be
   dropped.
 - `TRUSTED_HOSTS` (and optionally `CORS_ORIGINS`) are not production-validated
-  today — they carry permissive dev defaults. A startup-validation rule could
+  today; they carry permissive dev defaults. A startup-validation rule could
   require a non-default `TRUSTED_HOSTS` in production.
-- Optional automated coverage not yet present: a GHCR-pull install smoke, Caddy
-  `internal` / `byo` TLS smokes, and in-container Vault rotation dry-runs
+- Automated coverage does not include a GHCR-pull install smoke, Caddy
+  `internal` and `byo` TLS smokes, or in-container Vault rotation dry-runs
   against a throwaway smoke-Vault.
 
 ## References
 
-- `README.md` — public-facing install + deployment instructions.
-- `docker-compose.yml` — production-parity base services (prod images/
+- `README.md`: public-facing install + deployment instructions.
+- `docker-compose.yml`: production-parity base services (prod images/
   entrypoints), two-tier network, health checks.
-- `docker-compose.prod.yml` — prod overlay (pinned images, logging,
+- `docker-compose.prod.yml`: prod overlay (pinned images, logging,
   ENVIRONMENT=production, Caddy profile).
-- `caddy/Caddyfile` — TLS modes and edge headers.
-- `scripts/backup.sh` — daily pg_dump.
-- `scripts/test-cold-rebuild.sh` — from-scratch build + boot gate.
+- `caddy/Caddyfile`: TLS modes and edge headers.
+- `scripts/backup.sh`: daily pg_dump.
+- `scripts/test-cold-rebuild.sh`: from-scratch build + boot gate.
 - `scripts/test-fresh-install-smoke.sh`,
-  `scripts/fresh-install-smoke.override.yml` — hermetic prod-overlay
+  `scripts/fresh-install-smoke.override.yml`: hermetic prod-overlay
   bring-up smoke.
 - `scripts/test-upgrade-smoke.sh`,
   `backend/tests/fixtures/upgrade/pre_m13.sql`,
-  `backend/tests/fixtures/upgrade/pre_m15.sql` — upgrade smoke +
-  committed pre-M13/pre-M15 schema fixtures.
-- `scripts/test-backup-restore-smoke.sh` — backup/restore round-trip
+  `backend/tests/fixtures/upgrade/pre_m15.sql`: upgrade smoke +
+  committed earlier-schema fixtures.
+- `scripts/test-backup-restore-smoke.sh`: backup/restore round-trip
   smoke against the shipped backup path (no compose override).
 - `backend/app/core/startup_validation.py`,
-  `backend/tests/services/test_pra179_startup_validation.py` —
+  `backend/tests/services/test_pra179_startup_validation.py`:
   production env / startup fail-clear validator and its unit suite.
-- `backend/tests/api/test_pra179_user_response_reserved_tld.py` —
+- `backend/tests/api/test_pra179_user_response_reserved_tld.py`:
   regression test for the `UserResponse.email` / RFC 2606
   reserved-TLD serialization (input schemas keep `EmailStr`;
   response schemas loosened to `str`).
-- `scripts/test-first-enrolled-host-smoke.sh` —
+- `scripts/test-first-enrolled-host-smoke.sh`:
   first-enrolled-host redemption smoke. Spins up an ubuntu:22.04
   dummy host on the smoke project's `backend_net`, generates a
   CSR with openssl, redeems the activation token via
   `POST /agent/enroll`, and asserts the System row transitioned
   to `agent_status=active` with a Vault-signed cert serial.
 - `vault/config/vault.hcl`, `vault/scripts/init-vault.sh`,
-  `vault/scripts/startup.sh` — bundled Vault provisioning.
-- `backend/app/api/main.py`, `backend/app/core/auth.py` — startup
+  `vault/scripts/startup.sh`: bundled Vault provisioning.
+- `backend/app/api/main.py`, `backend/app/core/auth.py`: startup
   env validation today.
-- `backend/alembic/versions/` — single linear Alembic chain, M0
-  through the latest revision named in the Upgrade And Migration
-  Posture section above.
+- `backend/alembic/versions/`: a single linear Alembic chain from the
+  initial schema through the latest revision named in the Upgrade And
+  Migration Posture section above.
 - Operator commands are direct `docker compose ...` invocations
   (there is no root `Makefile`); see the README "Common
   operator commands" table.

@@ -96,9 +96,43 @@ rather than guessing.
 | `missing_sudo_method` | The credential does not declare how to escalate. Set one and re-dispatch. |
 | `unknown_sudo_method` | The escalation method is not recognised. Same fix. |
 | `window_missing`, `window_disabled`, `window_unusable` | A reboot could not be scheduled. It stays **pending** rather than failing. Fix the maintenance window and re-run scheduling; pending reboots dispatch on the next pass without rebuilding the plan. |
+| `reboot_evidence_unknown` | The host could not say whether it needs a reboot, so the row stays **pending** instead of reading as "not required". On an RPM host the usual cause is `needs-restarting` not being installed; otherwise the probe timed out, the transport failed, or the output was unusable. Fix that, then re-run the reboot reconcile for the execution. |
 
 Dispatch refusing is deliberate. It is better than running unprivileged and
 failing opaquely partway through a fleet.
+
+A pending row also holds back dependent waves. That is the point: a wave that
+cannot prove the previous one finished rebooting must not start.
+
+## The reboot queue says it is incomplete
+
+The plan or execution detail page shows a *Reboot queue incomplete* warning,
+and `summary.reconciliation.action_required` is true. The counts beside it are
+not a complete account of which hosts still need a reboot, so do not read them
+as "nothing outstanding".
+
+- `status: incomplete` means hosts finished patching without a queue row.
+- `status: failed` means a reconcile pass itself failed; `last_failure` carries
+  the reason.
+
+Re-run the reboot reconcile for that execution. A successful pass rebuilds the
+queue and clears the marker. Until it does, dependent waves stay blocked with
+the gate reason `reboot_reconcile_failed`.
+
+## The dashboard will not show a security count
+
+It shows `Not scanned`, `Scanning`, `Scan failed`, or `Partial scan` instead of
+a number. That is the intended behavior: a count, zero included, is only shown
+once every host in scope has a completed security scan behind it.
+
+| State | What to do |
+|---|---|
+| `Not scanned` | Run a security scan. An ordinary package scan does not classify security updates, so it never moves this state. |
+| `Scanning` | Wait. A scan still marked running after 30 minutes stops counting as in flight on its own. |
+| `Scan failed` | Read the failure reason shown with it, fix the host, and rescan. |
+| `Partial scan` | Some hosts in scope are not covered, or a scan could not use part of its result. Any number shown is a floor (`N+`), not a total. Rescan the uncovered hosts. |
+
+See [security updates](packages.md#security-updates) for how the states are derived.
 
 ## A host will not patch, and it is not an error
 

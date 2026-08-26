@@ -9,8 +9,9 @@
  * therefore cannot serve both. What is guaranteed instead, and checked here,
  * is stronger than "two directories exist":
  *
- *   determinism  rebuilding the bundled copy reproduces it byte for byte, so
- *                the committed output is exactly what the source produces;
+ *   determinism  rebuilding either output reproduces it byte for byte, so the
+ *                committed bundle is exactly what the source produces and two
+ *                machines publishing the same commit publish the same bytes;
  *   parity       the public and bundled outputs have the same routes, the same
  *                assets, and the same rendered text, differing only by the
  *                mount-point prefix.
@@ -114,40 +115,43 @@ function textOf(html) {
 }
 
 /**
- * Rebuilds the bundled documentation into a scratch directory and compares it
- * with the committed copy, so a non-reproducible build or a stale commit both
- * fail. The scratch directory is always removed.
+ * Rebuilds one variant into a scratch directory and compares it with the copy
+ * on disk, so a non-reproducible build and a stale output both fail. The
+ * scratch directory is always removed.
+ *
+ * Both variants are checked. The bundled copy is committed, so a stale one
+ * would ship inside the image; the public site is built by its host, so a
+ * non-reproducible one means two people publishing the same commit get
+ * different bytes. The same comparison catches both.
  */
-function checkDeterminism(committed) {
+function checkDeterminism(label, onDisk, buildOptions, regenerateCommand) {
   const problems = [];
   const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'praxis-docs-'));
-  const rebuiltDir = path.join(scratch, 'bundled');
+  const rebuiltDir = path.join(scratch, 'rebuilt');
 
   try {
-    buildDocs({ base: BUNDLED_BASE, outDir: rebuiltDir, quiet: true });
+    buildDocs({ ...buildOptions, outDir: rebuiltDir, quiet: true });
     const rebuilt = walk(rebuiltDir);
 
-    for (const rel of committed.keys()) {
+    for (const rel of onDisk.keys()) {
       if (!rebuilt.has(rel)) {
-        problems.push(`committed bundle has "${rel}", which a fresh build does not produce`);
+        problems.push(`${label} has "${rel}", which a fresh build does not produce`);
       }
     }
     for (const rel of rebuilt.keys()) {
-      if (!committed.has(rel)) {
-        problems.push(`a fresh build produces "${rel}", which the committed bundle is missing`);
+      if (!onDisk.has(rel)) {
+        problems.push(`a fresh build produces "${rel}", which ${label} is missing`);
       }
     }
-    for (const [rel, file] of committed) {
+    for (const [rel, file] of onDisk) {
       if (!rebuilt.has(rel)) continue;
       if (sha256(file) !== sha256(rebuilt.get(rel))) {
-        problems.push(`committed bundle differs from a fresh build at "${rel}"`);
+        problems.push(`${label} differs from a fresh build at "${rel}"`);
       }
     }
 
     if (problems.length > 0) {
-      problems.push(
-        'Regenerate with: node scripts/build-docs.mjs --bundled, then commit the result',
-      );
+      problems.push(`Regenerate with: ${regenerateCommand}`);
     }
   } finally {
     fs.rmSync(scratch, { recursive: true, force: true });
@@ -291,7 +295,12 @@ function main() {
   }
 
   const committed = walk(BUNDLED_OUT);
-  const problems = checkDeterminism(committed);
+  const problems = checkDeterminism(
+    'the committed bundle',
+    committed,
+    { base: BUNDLED_BASE },
+    'node scripts/build-docs.mjs --bundled, then commit the result',
+  );
 
   if (!fs.existsSync(PUBLIC_OUT)) {
     problems.push(
@@ -300,6 +309,15 @@ function main() {
   } else {
     const publicFiles = walk(PUBLIC_OUT);
     const bundledFiles = walk(BUNDLED_OUT);
+
+    problems.push(
+      ...checkDeterminism(
+        'the public site build',
+        publicFiles,
+        { base: '/', site: PUBLIC_SITE },
+        'node scripts/build-docs.mjs --public',
+      ),
+    );
 
     problems.push(...checkInventoryParity(publicFiles, bundledFiles));
 
@@ -318,7 +336,8 @@ function main() {
 
     if (problems.length === 0) {
       console.log(
-        `Bundled documentation OK: ${committed.size} files reproduce byte for byte, ` +
+        `Bundled documentation OK: ${committed.size} bundled and ${publicFiles.size} public ` +
+          'files reproduce byte for byte, ' +
           `${rendered.comparedPages} pages match the public site, ` +
           `${canonical.canonicals} public canonicals and ${sitemap.sitemapUrls.length} sitemap URLs use ${PUBLIC_SITE}, ` +
           'and the bundled copy carries neither.',

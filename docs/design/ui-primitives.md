@@ -2,7 +2,7 @@
 
 The shared frontend primitives that page sweeps build on, so pages migrate
 consistently instead of inventing feature-local UI. All primitives consume the
-semantic tokens (see `docs/design/ui-foundation.md`) — never raw `red-*`/`blue-*`.
+semantic tokens (see `docs/design/ui-foundation.md`), never raw `red-*`/`blue-*`.
 Import from `@/components/ui`.
 
 Live examples for every primitive, in **forced dark and forced light**, are at
@@ -12,7 +12,7 @@ Live examples for every primitive, in **forced dark and forced light**, are at
 ## Content rules (all primitives)
 
 - **Sentence case**, not Title Case. Use `humanizeStatus` / `humanizeLabel`
-  (`@/utils/humanize`) for any machine enum — don't hand-write `.replace(/_/g)`.
+  (`@/utils/humanize`) for any machine enum; don't hand-write `.replace(/_/g)`.
 - Operator-focused: compact, scannable, stable dimensions. **No nested cards**,
   no marketing/hero treatment, no decorative color.
 - Signal Red only for brand / active-nav / destructive. Neutral everywhere else.
@@ -22,14 +22,14 @@ Live examples for every primitive, in **forced dark and forced light**, are at
 Variants: `primary` (neutral action), `secondary` (neutral bordered; `outline` is
 a back-compat alias), `ghost`, `danger` (Signal Red), `link` (neutral underlined,
 red hover). Sizes `sm|md|lg`. `loading` shows a spinner and disables the button.
-`iconOnly` renders a square control — **an accessible name is required**
+`iconOnly` renders a square control, so **an accessible name is required**
 (`aria-label` or `title`); dev warns if missing.
 
 - **Do** put the primary action on the right in a `FormActions` row; use `danger`
   only for destructive actions.
 - **Don't** use `link` for a real action button, or two `primary` buttons in one
   group.
-- **Keyboard**: native `<button>` — Space/Enter activate; visible neutral focus ring.
+- **Keyboard**: native `<button>`, so Space/Enter activate; visible neutral focus ring.
 
 ## Badge / StatusBadge
 
@@ -50,7 +50,7 @@ Replaces hand-rolled `<table>`s. Props: `columns` (`{key, header, render?, align
 
 - **Overflow**: set `minWidth` (e.g. `min-w-[720px]`) so columns **scroll**
   horizontally at the desktop minimum instead of squishing.
-- Search/filters go in the `toolbar` slot — DataTable owns layout + states, the
+- Search/filters go in the `toolbar` slot; DataTable owns layout and states, the
   page owns filter logic.
 - **Keyboard**: with `onRowClick`, rows are focusable and Enter/Space activate;
   the selection/actions cells stop propagation so they don't trigger the row.
@@ -59,11 +59,11 @@ Replaces hand-rolled `<table>`s. Props: `columns` (`{key, header, render?, align
 
 ## Forms
 
-- `Input` (label/error/icon), `SearchInput`, `Select` — labelled, token-styled,
+- `Input` (label/error/icon), `SearchInput`, `Select`: labelled, token-styled,
   neutral focus, `aria-invalid`/`aria-describedby` on error.
-- `FormField` — wraps any control with a label, **required** marker, helper text,
+- `FormField`: wraps any control with a label, **required** marker, helper text,
   and error (error suppresses helper). Use for checkboxes/radios/custom controls.
-- `FormActions` — a right-aligned button row; put a `loading` submit `Button` for
+- `FormActions`: a right-aligned button row; put a `loading` submit `Button` for
   submitting feedback.
 
 ## Empty / Loading / Error / Not-found states
