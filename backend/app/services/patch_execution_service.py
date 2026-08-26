@@ -813,6 +813,10 @@ def _build_progress_summary(db: Session, execution_id: int) -> Dict[str, Any]:
         existing_summary.get("completed_wave_indexes") or []
     )
     preserved_threshold_pause = existing_summary.get("threshold_pause")
+    # A recorded reboot-reconcile failure describes work that did not
+    # happen, so it cannot be re-derived from host rows. It must
+    # survive a rebuild until a clean reconcile pass clears it.
+    preserved_reboot_reconciliation = existing_summary.get("reboot_reconciliation")
 
     rows: List[PatchUpdateExecutionHost] = (
         db.query(PatchUpdateExecutionHost)
@@ -874,7 +878,7 @@ def _build_progress_summary(db: Session, execution_id: int) -> Dict[str, Any]:
     for (outcome,) in pkg_rows:
         package_counts[outcome] = package_counts.get(outcome, 0) + 1
 
-    return {
+    summary: Dict[str, Any] = {
         "host_count": len(rows),
         "host_counts_by_state": host_counts,
         "selected_package_count": selected_total,
@@ -887,6 +891,9 @@ def _build_progress_summary(db: Session, execution_id: int) -> Dict[str, Any]:
         ),
         "threshold_pause": preserved_threshold_pause,
     }
+    if preserved_reboot_reconciliation is not None:
+        summary["reboot_reconciliation"] = preserved_reboot_reconciliation
+    return summary
 
 
 # ---------------------------------------------------------------------------

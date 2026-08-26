@@ -197,23 +197,72 @@ def emit_patch_reboot_required(
     execution_id: int,
     system_id: Optional[int],
     system_hostname: Optional[str],
+    evidence_unknown: bool = False,
 ) -> None:
     """Emit when a patch execution row materializes a ``pending``
     reboot for one host (i.e. the reboot reconcile gate added a row
-    that requires operator action)."""
+    that requires operator action).
+
+    ``evidence_unknown`` distinguishes a host queued because it was
+    observed to need a reboot from one queued because its state could
+    not be established. Both need operator action, but only the second
+    asks the operator to find out why the host could not answer.
+    """
     host_label = system_hostname or (
         f"system #{system_id}" if system_id is not None else "unknown host"
     )
+    if evidence_unknown:
+        title = f"Reboot state unknown: {host_label}"
+        message = (
+            f"Patch update execution #{execution_id} could not establish "
+            f"whether {host_label} needs a reboot. The host stays queued for "
+            "a reboot decision and dependent waves remain blocked until it "
+            "is resolved."
+        )
+    else:
+        title = f"Reboot required: {host_label}"
+        message = (
+            f"Patch update execution #{execution_id} requires a reboot on "
+            f"{host_label} for the patches to take effect."
+        )
     _safe_emit(
         db,
         event_type=EVENT_PATCH_REBOOT_REQUIRED,
-        title=f"Reboot required: {host_label}",
-        message=(
-            f"Patch update execution #{execution_id} requires a reboot on "
-            f"{host_label} for the patches to take effect."
-        ),
+        title=title,
+        message=message,
         severity="warning",
         system_id=system_id,
+    )
+
+
+def emit_patch_reboot_reconcile_failed(
+    db: Session,
+    *,
+    execution_id: int,
+    plan_id: Optional[int],
+    reason: Optional[str] = None,
+) -> None:
+    """Emit when the reboot queue for an execution could not be built.
+
+    A failed reconcile leaves the execution without a trustworthy
+    answer about which hosts still need rebooting, so it is reported
+    at ``error`` severity rather than left to a log line.
+    """
+    plan_label = f"plan #{plan_id}" if plan_id is not None else "unknown plan"
+    message = (
+        f"Patch update execution #{execution_id} ({plan_label}) could not "
+        "build its reboot queue, so outstanding reboots for this run are "
+        "unknown. Re-run the reboot reconcile for this execution."
+    )
+    detail = _safe_str(reason).strip()
+    if detail:
+        message += f" Reason: {detail}"
+    _safe_emit(
+        db,
+        event_type=EVENT_PATCH_REBOOT_REQUIRED,
+        title=f"Reboot queue incomplete: execution #{execution_id}",
+        message=message,
+        severity="error",
     )
 
 

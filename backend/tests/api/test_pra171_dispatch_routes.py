@@ -140,10 +140,23 @@ def _create_running_execution(authed_client, db, admin_user, host, policy):
 def patch_default_dispatch(monkeypatch):
     """Monkey-patch the dispatch service's default adapter so route
     tests never reach real SSH/agent transport. Returns a recorder
-    list the test can inspect."""
+    list of the package commands the test can inspect.
+
+    Reboot-required probes ride the same adapter after a host's package
+    work succeeds. They answer "no reboot needed" here and are kept out
+    of the recorder so it stays a record of package dispatches.
+    """
     calls = []
 
     def fake(db, system, cmd):  # pylint: disable=unused-argument
+        if "PRAXIS_REBOOT_PROBE" in " ".join(cmd):
+            return DispatchResult(
+                exit_code=0,
+                stdout="PRAXIS_REBOOT_PROBE=false",
+                stderr="",
+                duration_ms=5,
+                transport_name="fake",
+            )
         calls.append({"system_id": system.id, "cmd": cmd})
         return DispatchResult(
             exit_code=0,

@@ -45,6 +45,22 @@ export interface PackageUpdateItem {
   discovered_on: string;
 }
 
+/**
+ * One authoritative reboot-required observation taken after a package
+ * mutation succeeded. `value` is meaningful only when `outcome` is
+ * `success`; every other outcome means the host's reboot state could not
+ * be established, and is never a "no reboot needed" answer.
+ */
+export interface RebootEvidence {
+  value: boolean | null;
+  source: string;
+  outcome: string;
+  collected_at: string | null;
+  family?: string;
+  exit_code?: number | null;
+  detail?: string;
+}
+
 export interface ApplyUpdatesResult {
   system_id: number;
   hostname: string;
@@ -52,6 +68,10 @@ export interface ApplyUpdatesResult {
   packages_updated: number;
   applied_at?: string;
   message?: string;
+  /** Null when the observation did not conclude. Read with `reboot_evidence`. */
+  reboot_required?: boolean | null;
+  /** Absent when no package was actually changed, so no probe ran. */
+  reboot_evidence?: RebootEvidence;
 }
 
 export interface PackageHistoryItem {

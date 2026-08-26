@@ -1089,7 +1089,10 @@ def get_patch_update_plan_reboot_queue(
             completed_at=utc_iso(e.completed_at),
             summary=PatchUpdateExecutionRebootSummary(
                 **patch_reboot_service.build_reboot_summary(
-                    execution_summaries.get(e.id, [])
+                    execution_summaries.get(e.id, []),
+                    reconciliation=patch_reboot_service.evaluate_reconciliation(
+                        db, e.id
+                    ),
                 )
             ),
         )
