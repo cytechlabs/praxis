@@ -33,13 +33,20 @@ The decision logic:
   ``policy_never``.
 * Otherwise if the policy is ``always`` -> ``pending``, decision
   ``policy_always``.
-* Otherwise if the policy is ``if_required``:
-    * if ``host_facts.reboot_required`` is True -> ``pending``,
+* Otherwise if the policy is ``if_required``, the decision is made
+  from freshly collected authoritative evidence (see
+  ``reboot_evidence_service``), never from the stored inventory
+  fact:
+    * a fresh successful positive observation -> ``pending``,
       decision ``host_fact_reboot_required``.
-    * otherwise -> ``not_required``, decision
-      ``fact_not_required``. (Null facts are NOT treated as
-      requiring a reboot — silence is "no signal", not "yes". A
-      later slice may re-evaluate after refreshing facts.)
+    * a fresh successful negative observation -> ``not_required``,
+      decision ``fact_not_required``.
+    * anything else (missing, stale, unsupported, timed out,
+      malformed, or failed collection) -> ``pending``, decision
+      ``reboot_evidence_unknown``. Unknown evidence never becomes
+      ``not_required``: an unanswered question about whether a host
+      needs a reboot leaves the host in the queue for an operator,
+      and keeps dependent waves blocked.
 * If the policy snapshot is missing -> ``skipped``, decision
   ``policy_missing``. If the policy snapshot is present but the
   value is not one of {never, if_required, always} -> ``skipped``,
@@ -53,6 +60,13 @@ context is null. The detail key ``reboot_window_status`` carries
 can decide whether to fall back to maintenance-window context or
 refuse the queue entry; this slice never silently fails — missing
 window context is surfaced, never suppressed.
+
+Reconciliation failures are surfaced rather than only logged. A
+reconcile pass that raises records a structured failure marker on the
+parent execution, emits a failure audit, and notifies operators. The
+queue read reports the resulting coverage gap so an execution whose
+final wave never produced its reboot rows is visibly incomplete even
+when there is no later wave to block.
 """
 
 from __future__ import annotations
@@ -67,14 +81,16 @@ from sqlalchemy.orm import Session
 
 func_count = _sa_func.count
 
+from ..core.redaction import redact_text
 from ..db.models import (
-    HostFacts,
     MaintenanceWindow,
     PatchUpdateExecution,
     PatchUpdateExecutionHost,
     PatchUpdateExecutionReboot,
     PatchUpdatePlan,
+    System,
 )
+from . import reboot_evidence_service
 from .audit_event_service import safe_emit
 from .patch_execution_service import (
     EXECUTION_HOST_STATE_SUCCEEDED,
@@ -139,6 +155,14 @@ REBOOT_DECISION_POLICY_NEVER = "policy_never"
 REBOOT_DECISION_HOST_DID_NOT_SUCCEED = "host_did_not_succeed"
 REBOOT_DECISION_POLICY_INVALID = "policy_invalid"
 REBOOT_DECISION_POLICY_MISSING = "policy_missing"
+# ``if_required`` could not obtain a fresh authoritative answer for the
+# host. The row stays in the queue for an operator instead of claiming
+# no reboot is needed, and keeps dependent waves blocked.
+REBOOT_DECISION_EVIDENCE_UNKNOWN = "reboot_evidence_unknown"
+
+# Key under ``decision_details`` carrying the observation the decision
+# was made from: value, indicator, collection time, and probe outcome.
+EVIDENCE_DETAIL_KEY = "reboot_evidence"
 
 # Slice 2: scheduling-promotion outcomes, recorded under
 # ``decision_details.scheduling`` so the operator UI can render the
@@ -156,6 +180,23 @@ SCHEDULING_OUTCOME_WINDOW_UNUSABLE = "window_unusable"
 AUDIT_REBOOT_QUEUED = "patch_update_execution_reboot.queued"
 AUDIT_REBOOT_SCHEDULED = "patch_update_execution_reboot.scheduled"
 AUDIT_REBOOT_SKIPPED = "patch_update_execution_reboot.skipped"
+# Emitted with a failure outcome when a reconcile pass could not
+# complete. The reboot queue for that execution is not trustworthy
+# until the pass is re-run successfully.
+AUDIT_REBOOT_RECONCILE_FAILED = "patch_update_execution_reboot.reconcile_failed"
+
+# Key under ``PatchUpdateExecution.progress_summary`` carrying the last
+# reconcile outcome so a failure survives the request that hit it and
+# reaches the read API.
+RECONCILIATION_SUMMARY_KEY = "reboot_reconciliation"
+
+# Upper bound on the failure reason carried into the marker, the audit
+# context, and the notification body.
+MAX_RECONCILIATION_REASON_CHARS = 512
+
+RECONCILIATION_STATUS_OK = "ok"
+RECONCILIATION_STATUS_FAILED = "failed"
+RECONCILIATION_STATUS_INCOMPLETE = "incomplete"
 
 
 # ---------------------------------------------------------------------------
@@ -252,26 +293,24 @@ def _resolve_reboot_window_id(
     return value
 
 
-def _fact_reboot_required(
-    facts_by_system: Dict[int, Optional[bool]], system_id: Optional[int]
-) -> Optional[bool]:
-    if system_id is None:
-        return None
-    return facts_by_system.get(system_id)
-
-
 def _decide(
     *,
     host_state: str,
     policy_value: Optional[str],
-    reboot_required_fact: Optional[bool],
+    evidence: Optional[reboot_evidence_service.RebootEvidence],
 ) -> Tuple[str, str, Dict[str, Any]]:
     """Return ``(queue_state, decision_code, decision_extras)``.
 
     ``decision_extras`` is merged into the row's ``decision_details``
     JSONB alongside the caller-supplied policy/window context — it
-    carries only the decision-local context (e.g. the observed
-    host facts).
+    carries only the decision-local context (the observation the
+    decision was made from).
+
+    ``evidence`` is the freshly collected authoritative observation
+    for this host, or ``None`` when none could be obtained. Under
+    ``if_required`` only a conclusive observation decides the row:
+    a positive one queues a reboot, a negative one clears the host,
+    and anything else leaves the row queued as unknown.
     """
     if host_state != EXECUTION_HOST_STATE_SUCCEEDED:
         return (
@@ -305,41 +344,102 @@ def _decide(
         return (
             REBOOT_STATE_PENDING,
             REBOOT_DECISION_POLICY_ALWAYS,
-            {"reboot_required_fact": reboot_required_fact},
+            {"reboot_required_fact": _evidence_value(evidence)},
         )
 
     # if_required
-    if reboot_required_fact is True:
+    if evidence is not None and evidence.is_conclusive:
+        if evidence.value is True:
+            return (
+                REBOOT_STATE_PENDING,
+                REBOOT_DECISION_HOST_FACT_REBOOT_REQUIRED,
+                {"reboot_required_fact": True},
+            )
         return (
-            REBOOT_STATE_PENDING,
-            REBOOT_DECISION_HOST_FACT_REBOOT_REQUIRED,
-            {"reboot_required_fact": True},
+            REBOOT_STATE_NOT_REQUIRED,
+            REBOOT_DECISION_FACT_NOT_REQUIRED,
+            {"reboot_required_fact": False},
         )
+
     return (
-        REBOOT_STATE_NOT_REQUIRED,
-        REBOOT_DECISION_FACT_NOT_REQUIRED,
-        {"reboot_required_fact": reboot_required_fact},
+        REBOOT_STATE_PENDING,
+        REBOOT_DECISION_EVIDENCE_UNKNOWN,
+        {
+            "reboot_required_fact": None,
+            "evidence_outcome": (
+                evidence.outcome if evidence is not None else "not_collected"
+            ),
+        },
     )
 
 
-def _facts_by_system(db: Session, system_ids: List[int]) -> Dict[int, Optional[bool]]:
-    """Bulk-load ``host_facts.reboot_required`` for the given system
-    ids. Returns ``{system_id: reboot_required_bool_or_none}``; ids
-    without a HostFacts row are absent from the dict (the lookup
-    falls back to ``None``, treated as "no signal")."""
-    if not system_ids:
-        return {}
-    rows = (
-        db.query(HostFacts.system_id, HostFacts.reboot_required)
-        .filter(HostFacts.system_id.in_(system_ids))
-        .all()
-    )
-    return {sid: bool(rb) if rb is not None else None for sid, rb in rows}
+def _evidence_value(
+    evidence: Optional[reboot_evidence_service.RebootEvidence],
+) -> Optional[bool]:
+    """The observed value, or ``None`` when the observation did not
+    conclude. Never infers a value from an inconclusive outcome."""
+    if evidence is None or not evidence.is_conclusive:
+        return None
+    return evidence.value
 
 
 # ---------------------------------------------------------------------------
 # Public API — reconcile
 # ---------------------------------------------------------------------------
+
+
+def _existing_evidence(
+    row: Optional[PatchUpdateExecutionReboot],
+) -> Optional[reboot_evidence_service.RebootEvidence]:
+    """The observation a prior reconcile pass already recorded on
+    ``row``, or ``None`` when the row is new or carries none."""
+    if row is None:
+        return None
+    return reboot_evidence_service.evidence_from_dict(
+        (row.decision_details or {}).get(EVIDENCE_DETAIL_KEY)
+    )
+
+
+def _collect_host_evidence(
+    db: Session,
+    host: PatchUpdateExecutionHost,
+    existing_row: Optional[PatchUpdateExecutionReboot],
+    *,
+    now: datetime,
+    runner: reboot_evidence_service.ProbeRunner,
+) -> reboot_evidence_service.RebootEvidence:
+    """Return the observation the decision for ``host`` should use.
+
+    Reuses the observation already on the row when it is still fresh
+    for this host's completed package work, so repeated reconciles do
+    not re-probe a host that has already answered. Otherwise collects
+    a new one.
+
+    A host that never succeeded, or whose system row is gone, is
+    reported as not collected: there is no package mutation whose
+    effect a probe would be measuring.
+    """
+    if host.state != EXECUTION_HOST_STATE_SUCCEEDED:
+        return reboot_evidence_service.not_collected(
+            reason="host did not complete its package work", now=now
+        )
+    if host.system_id_snapshot is None:
+        return reboot_evidence_service.not_collected(
+            reason="execution host has no system reference", now=now
+        )
+
+    existing = _existing_evidence(existing_row)
+    if reboot_evidence_service.is_fresh(
+        existing, now=now, not_before=host.completed_at
+    ):
+        return existing
+
+    system = db.query(System).filter(System.id == host.system_id_snapshot).first()
+    if system is None:
+        return reboot_evidence_service.not_collected(
+            reason="system is no longer managed", now=now
+        )
+    return reboot_evidence_service.collect(db, system, runner=runner, now=now)
 
 
 def _reconcile_hosts_into_reboot_rows(
@@ -349,17 +449,22 @@ def _reconcile_hosts_into_reboot_rows(
     hosts: List[PatchUpdateExecutionHost],
     *,
     now: datetime,
+    evidence_runner: Optional[reboot_evidence_service.ProbeRunner] = None,
 ) -> List[PatchUpdateExecutionReboot]:
     """Shared per-host reconcile loop. Used by both the full
-    ``reconcile_reboot_queue`` (Slice 1) and the per-wave
-    ``reconcile_wave_reboots`` (Slice 5).
+    ``reconcile_reboot_queue`` and the per-wave
+    ``reconcile_wave_reboots``.
 
-    Refreshes the Slice-1 decision columns on existing rows
-    (matched by ``execution_host_id``) and creates new rows for
-    hosts that don't have one yet. Never overwrites
-    scheduling/runtime fields owned by later slices
+    Refreshes the decision columns on existing rows (matched by
+    ``execution_host_id``) and creates new rows for hosts that don't
+    have one yet. Never overwrites scheduling/runtime fields
     (``scheduled_for_at`` / ``started_at`` / ``completed_at`` /
     dispatch+verify columns).
+
+    Under ``if_required`` each succeeded host is observed directly
+    before its row is decided. ``evidence_runner`` lets a caller
+    supply the transport that carries the probe; the default rides
+    the same dispatch path the package command used.
     """
     policy_snapshot = dict(execution.policy_snapshot or {})
     policy_snapshot_value, policy_normalized = _resolve_policy(policy_snapshot)
@@ -367,13 +472,6 @@ def _reconcile_hosts_into_reboot_rows(
     reboot_window_id_snapshot = _resolve_reboot_window_id(execution, plan)
 
     host_ids = [h.id for h in hosts]
-    succeeded_system_ids = [
-        h.system_id_snapshot
-        for h in hosts
-        if h.state == EXECUTION_HOST_STATE_SUCCEEDED
-        and h.system_id_snapshot is not None
-    ]
-    facts_by_system = _facts_by_system(db, succeeded_system_ids)
 
     existing_rows: Dict[int, PatchUpdateExecutionReboot] = {}
     if host_ids:
@@ -387,17 +485,31 @@ def _reconcile_hosts_into_reboot_rows(
             .all()
         }
 
+    # Only ``if_required`` reads the host's answer. ``never`` and
+    # ``always`` decide from the policy alone, so probing would add
+    # host load without changing any row.
+    collects_evidence = policy_normalized == REBOOT_POLICY_IF_REQUIRED
+    runner = evidence_runner or reboot_evidence_service.dispatch_runner(db)
+
     results: List[PatchUpdateExecutionReboot] = []
 
     for host in hosts:
-        reboot_required_fact = _fact_reboot_required(
-            facts_by_system, host.system_id_snapshot
-        )
+        existing = existing_rows.get(host.id)
+        if collects_evidence:
+            evidence = _collect_host_evidence(
+                db, host, existing, now=now, runner=runner
+            )
+        else:
+            evidence = reboot_evidence_service.not_collected(
+                reason=f"reboot policy {policy_snapshot_value} does not "
+                "depend on host state",
+                now=now,
+            )
 
         state, decision_code, decision_extras = _decide(
             host_state=host.state,
             policy_value=policy_normalized,
-            reboot_required_fact=reboot_required_fact,
+            evidence=evidence,
         )
 
         # Distinguish missing vs invalid policy at the decision-code
@@ -408,16 +520,18 @@ def _reconcile_hosts_into_reboot_rows(
         if decision_code == REBOOT_DECISION_POLICY_MISSING and policy_raw is not None:
             decision_code = REBOOT_DECISION_POLICY_INVALID
 
+        reboot_required_fact = _evidence_value(evidence)
+
         decision_details: Dict[str, Any] = {
             "reboot_policy_raw": policy_raw,
             "reboot_window_status": (
                 "set" if reboot_window_id_snapshot is not None else "unset"
             ),
             "evaluated_at": utc_iso(now),
+            EVIDENCE_DETAIL_KEY: evidence.to_dict(),
         }
         decision_details.update(decision_extras)
 
-        existing = existing_rows.get(host.id)
         if existing is None:
             row = PatchUpdateExecutionReboot(
                 execution_id=execution.id,
@@ -436,6 +550,12 @@ def _reconcile_hosts_into_reboot_rows(
             db.add(row)
             results.append(row)
         else:
+            # Preserve any scheduling context a prior promote pass
+            # recorded; the decision refresh owns the decision keys
+            # only.
+            scheduling = (existing.decision_details or {}).get("scheduling")
+            if scheduling is not None:
+                decision_details["scheduling"] = scheduling
             existing.plan_id_snapshot = execution.plan_id
             existing.system_id_snapshot = host.system_id_snapshot
             existing.system_hostname_snapshot = host.system_hostname_snapshot
@@ -457,6 +577,7 @@ def reconcile_reboot_queue(
     execution_id: int,
     *,
     now: Optional[datetime] = None,
+    evidence_runner: Optional[reboot_evidence_service.ProbeRunner] = None,
 ) -> List[PatchUpdateExecutionReboot]:
     """Initialize or refresh the reboot queue for a terminal execution.
 
@@ -498,8 +619,12 @@ def reconcile_reboot_queue(
 
     current_now = now or datetime.utcnow()
     results = _reconcile_hosts_into_reboot_rows(
-        db, execution, plan, hosts, now=current_now
+        db, execution, plan, hosts, now=current_now, evidence_runner=evidence_runner
     )
+    # A pass that got this far rebuilt the rows it was asked for, so a
+    # marker left by an earlier failed pass no longer describes the
+    # queue and must not keep blocking dependent waves.
+    clear_reconciliation_failure(db, execution.id)
     db.commit()
     return results
 
@@ -510,6 +635,7 @@ def reconcile_wave_reboots(
     wave_index: int,
     *,
     now: Optional[datetime] = None,
+    evidence_runner: Optional[reboot_evidence_service.ProbeRunner] = None,
 ) -> List[PatchUpdateExecutionReboot]:
     """PRA-172 Slice 5: per-wave reboot queue reconcile.
 
@@ -562,8 +688,12 @@ def reconcile_wave_reboots(
 
     current_now = now or datetime.utcnow()
     results = _reconcile_hosts_into_reboot_rows(
-        db, execution, plan, hosts, now=current_now
+        db, execution, plan, hosts, now=current_now, evidence_runner=evidence_runner
     )
+    # A pass that got this far rebuilt the rows it was asked for, so a
+    # marker left by an earlier failed pass no longer describes the
+    # queue and must not keep blocking dependent waves.
+    clear_reconciliation_failure(db, execution.id)
     db.commit()
     return results
 
@@ -594,6 +724,10 @@ WAVE_GATE_REASON_REBOOT_FAILURES = "prior_wave_reboot_failures"
 # silent per-wave reconcile failure cannot let a dependent wave
 # proceed without proving the prior wave's reboot health.
 WAVE_GATE_REASON_REBOOT_ROWS_MISSING = "prior_wave_reboot_rows_missing"
+# A reconcile pass for this execution recorded a failure. Rows may all
+# be present and still not reflect the run, so no prior wave can be
+# treated as proven safe until a clean pass clears the marker.
+WAVE_GATE_REASON_RECONCILE_FAILED = "reboot_reconcile_failed"
 
 
 def is_wave_blocked_by_reboot_gate(
@@ -615,6 +749,10 @@ def is_wave_blocked_by_reboot_gate(
       queue rows (per-wave reconcile likely rolled back or
       never ran). Fail-closed so a silent reconcile failure
       cannot let a dependent wave dispatch package work.
+    * ``reboot_reconcile_failed``: a reconcile pass recorded a
+      failure for this execution. The rows that do exist cannot
+      be trusted to describe the run, so no prior wave counts as
+      proven safe until a clean pass clears the marker.
 
     Safe states: ``not_required`` / ``healthy`` / ``skipped``.
 
@@ -625,6 +763,22 @@ def is_wave_blocked_by_reboot_gate(
     if wave_index <= 0:
         # Wave 0 has no prior wave; nothing to gate.
         return None
+
+    # A reconcile pass that failed leaves the queue an unreliable
+    # account of the run, whatever rows happen to be present.
+    recorded_failure = (
+        db.query(PatchUpdateExecution.progress_summary)
+        .filter(PatchUpdateExecution.id == execution_id)
+        .scalar()
+    ) or {}
+    recorded_failure = recorded_failure.get(RECONCILIATION_SUMMARY_KEY)
+    if isinstance(recorded_failure, dict):
+        return {
+            "reason": WAVE_GATE_REASON_RECONCILE_FAILED,
+            "blocked_wave_index": wave_index,
+            "reconciliation_failure": recorded_failure,
+            "evaluated_at": utc_iso(datetime.utcnow()),
+        }
 
     # PRA-172 Slice 5a fail-closed coverage check: compare the
     # count of execution-host rows in each prior wave against the
@@ -735,6 +889,201 @@ def is_wave_blocked_by_reboot_gate(
 
 
 # ---------------------------------------------------------------------------
+# Reconciliation health
+#
+# A reconcile pass that never completed leaves an execution with fewer
+# reboot rows than it has hosts that finished their package work. The
+# dependent-wave gate catches that for every wave that has a successor;
+# the final wave has none, so the gap is reported on the read surface
+# instead of being visible only as a wave that never dispatched.
+# ---------------------------------------------------------------------------
+
+
+def _operator_safe_reason(reason: Optional[str]) -> str:
+    """Make a raised exception's text safe to persist and show.
+
+    The reason is whatever the failing call raised. A database error
+    embeds its connection URL, a transport error can echo remote output,
+    so the text is redacted before it reaches the execution row, the audit
+    context, or an operator notification, then bounded.
+    """
+    redacted = redact_text(reason or "")
+    return redacted[:MAX_RECONCILIATION_REASON_CHARS]
+
+
+def record_reconciliation_failure(
+    db: Session,
+    execution_id: int,
+    *,
+    reason: str,
+    phase: str,
+    wave_index: Optional[int] = None,
+    now: Optional[datetime] = None,
+) -> Optional[Dict[str, Any]]:
+    """Persist a reconcile failure on the execution and return it.
+
+    Written to ``progress_summary`` so the failure reaches the read
+    API and survives the request that hit it. Callers roll their
+    session back before recording, so the marker is the only pending
+    work this commit carries.
+
+    Returns ``None`` when the marker could not be written; recording a
+    failure must never raise over the failure it is describing.
+    """
+    marker = {
+        "status": RECONCILIATION_STATUS_FAILED,
+        "phase": phase,
+        "reason": _operator_safe_reason(reason),
+        "wave_index": wave_index,
+        "failed_at": utc_iso(now or datetime.utcnow()),
+    }
+    try:
+        execution = (
+            db.query(PatchUpdateExecution)
+            .filter(PatchUpdateExecution.id == execution_id)
+            .first()
+        )
+        if execution is None:
+            return None
+        summary = dict(execution.progress_summary or {})
+        summary[RECONCILIATION_SUMMARY_KEY] = marker
+        execution.progress_summary = summary
+        db.commit()
+    except Exception as exc:  # pylint: disable=broad-except
+        # Category only. The marker write is what failed, so there is no
+        # redacted copy of this text anywhere; logging it raw would be the
+        # one place a secret could still land.
+        logger.warning(
+            "could not record reboot reconciliation failure for execution=%d: %s",
+            execution_id,
+            type(exc).__name__,
+        )
+        try:
+            db.rollback()
+        except Exception:  # pylint: disable=broad-except
+            pass
+        return None
+    return marker
+
+
+def clear_reconciliation_failure(db: Session, execution_id: int) -> None:
+    """Drop a previously recorded failure marker after a clean pass.
+
+    Shares the caller's session: the successful pass that clears the
+    marker is the same unit of work that proved the queue is complete.
+    """
+    execution = (
+        db.query(PatchUpdateExecution)
+        .filter(PatchUpdateExecution.id == execution_id)
+        .first()
+    )
+    if execution is None:
+        return
+    summary = dict(execution.progress_summary or {})
+    if RECONCILIATION_SUMMARY_KEY not in summary:
+        return
+    summary.pop(RECONCILIATION_SUMMARY_KEY, None)
+    execution.progress_summary = summary
+
+
+def evaluate_reconciliation(db: Session, execution_id: int) -> Dict[str, Any]:
+    """Report whether the reboot queue for ``execution_id`` is complete.
+
+    ``status`` is:
+
+    * ``failed``: the last reconcile pass recorded a failure.
+    * ``incomplete``: hosts that finished their package work have no
+      reboot row, so the queue does not describe the whole run.
+    * ``ok``: every such host has a row and no failure is recorded.
+
+    ``action_required`` is true for anything but ``ok``: the queue
+    cannot be read as "no reboots outstanding" until the pass is
+    re-run successfully.
+    """
+    expected = (
+        db.query(func_count(PatchUpdateExecutionHost.id))
+        .filter(
+            PatchUpdateExecutionHost.execution_id == execution_id,
+            PatchUpdateExecutionHost.state == EXECUTION_HOST_STATE_SUCCEEDED,
+        )
+        .scalar()
+        or 0
+    )
+    covered = (
+        db.query(func_count(PatchUpdateExecutionReboot.id))
+        .join(
+            PatchUpdateExecutionHost,
+            PatchUpdateExecutionHost.id == PatchUpdateExecutionReboot.execution_host_id,
+        )
+        .filter(
+            PatchUpdateExecutionReboot.execution_id == execution_id,
+            PatchUpdateExecutionHost.state == EXECUTION_HOST_STATE_SUCCEEDED,
+        )
+        .scalar()
+        or 0
+    )
+    missing = max(int(expected) - int(covered), 0)
+
+    last_failure = (
+        db.query(PatchUpdateExecution.progress_summary)
+        .filter(PatchUpdateExecution.id == execution_id)
+        .scalar()
+    ) or {}
+    last_failure = last_failure.get(RECONCILIATION_SUMMARY_KEY)
+    if not isinstance(last_failure, dict):
+        last_failure = None
+
+    if last_failure is not None:
+        status = RECONCILIATION_STATUS_FAILED
+    elif missing:
+        status = RECONCILIATION_STATUS_INCOMPLETE
+    else:
+        status = RECONCILIATION_STATUS_OK
+
+    return {
+        "status": status,
+        "action_required": status != RECONCILIATION_STATUS_OK,
+        "succeeded_host_count": int(expected),
+        "reboot_row_count": int(covered),
+        "missing_row_count": missing,
+        "last_failure": last_failure,
+    }
+
+
+def _aggregate_reconciliation(blocks: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Roll several per-execution reports into one plan-level report.
+
+    The worst status wins so a plan cannot look healthy because most
+    of its executions are.
+    """
+    if not blocks:
+        return {
+            "status": RECONCILIATION_STATUS_OK,
+            "action_required": False,
+            "succeeded_host_count": 0,
+            "reboot_row_count": 0,
+            "missing_row_count": 0,
+            "execution_ids_action_required": [],
+        }
+    severity = {
+        RECONCILIATION_STATUS_OK: 0,
+        RECONCILIATION_STATUS_INCOMPLETE: 1,
+        RECONCILIATION_STATUS_FAILED: 2,
+    }
+    worst = max(blocks, key=lambda b: severity.get(b["status"], 0))["status"]
+    return {
+        "status": worst,
+        "action_required": worst != RECONCILIATION_STATUS_OK,
+        "succeeded_host_count": sum(b["succeeded_host_count"] for b in blocks),
+        "reboot_row_count": sum(b["reboot_row_count"] for b in blocks),
+        "missing_row_count": sum(b["missing_row_count"] for b in blocks),
+        "execution_ids_action_required": sorted(
+            b["execution_id"] for b in blocks if b["action_required"]
+        ),
+    }
+
+
+# ---------------------------------------------------------------------------
 # Public API — read
 # ---------------------------------------------------------------------------
 
@@ -769,15 +1118,19 @@ def list_reboot_rows_for_execution(
 
 def build_reboot_summary(
     rows: List[PatchUpdateExecutionReboot],
+    *,
+    reconciliation: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Return the canonical summary payload for a reboot-queue read.
 
     Stable ordering so polling responses don't diff-churn; every
-    Slice-1 state is included in ``state_counts`` even when zero so
-    the operator UI doesn't have to defensively check for missing
-    keys. The eight states reserved for later slices appear with
-    zero counts too — the contract is "all eight DB-valid states
-    are present in the rollup".
+    state is included in ``state_counts`` even when zero so the
+    operator UI doesn't have to defensively check for missing keys.
+
+    ``reconciliation`` carries the completeness report for the scope
+    being read (see :func:`evaluate_reconciliation`) so a caller
+    cannot read the counts as "nothing outstanding" while a reconcile
+    pass is known to have failed or to have left hosts uncovered.
     """
     state_counts: Dict[str, int] = {s: 0 for s in sorted(VALID_REBOOT_STATES)}
     decision_counts: Dict[str, int] = {}
@@ -790,6 +1143,7 @@ def build_reboot_summary(
         "row_count": len(rows),
         "state_counts": state_counts,
         "decision_counts": dict(sorted(decision_counts.items())),
+        "reconciliation": reconciliation,
     }
 
 
@@ -812,7 +1166,9 @@ def get_reboot_queue(
         )
         .all()
     )
-    summary = build_reboot_summary(rows)
+    summary = build_reboot_summary(
+        rows, reconciliation=evaluate_reconciliation(db, execution_id)
+    )
     return execution, rows, summary
 
 
@@ -851,7 +1207,7 @@ def get_plan_reboot_queue(db: Session, plan_id: int) -> Tuple[
         .all()
     )
     if not executions:
-        return plan, [], [], build_reboot_summary([])
+        return plan, [], [], build_reboot_summary([], reconciliation=None)
 
     execution_ids = [e.id for e in executions]
     rows: List[PatchUpdateExecutionReboot] = (
@@ -865,7 +1221,14 @@ def get_plan_reboot_queue(db: Session, plan_id: int) -> Tuple[
         )
         .all()
     )
-    aggregate_summary = build_reboot_summary(rows)
+    per_execution = []
+    for execution in executions:
+        block = evaluate_reconciliation(db, execution.id)
+        block["execution_id"] = execution.id
+        per_execution.append(block)
+    aggregate_summary = build_reboot_summary(
+        rows, reconciliation=_aggregate_reconciliation(per_execution)
+    )
     return plan, executions, rows, aggregate_summary
 
 
@@ -1035,6 +1398,9 @@ def _emit_reboot_audit(
         "reboot_policy_snapshot": row.reboot_policy_snapshot,
         "reboot_window_id_snapshot": row.reboot_window_id_snapshot,
         "scheduled_for_at": utc_iso(row.scheduled_for_at),
+        # The observation the decision was made from, so the audit
+        # record answers "why" without a follow-up query.
+        EVIDENCE_DETAIL_KEY: (row.decision_details or {}).get(EVIDENCE_DETAIL_KEY),
     }
     if extra:
         context.update(extra)
@@ -1111,6 +1477,7 @@ def auto_reconcile_on_terminal(
     actor_user_id: Optional[int],
     actor_username: Optional[str] = None,
     actor_ip: Optional[str] = None,
+    evidence_runner: Optional[reboot_evidence_service.ProbeRunner] = None,
 ) -> None:
     """Reconcile + promote a terminal execution's reboot queue.
 
@@ -1119,11 +1486,14 @@ def auto_reconcile_on_terminal(
     to have committed its terminal-state change before invoking
     this so the queue work that follows operates on stable state.
 
-    Best-effort: any internal exception is logged but does NOT
-    propagate, so a reboot-queue failure cannot retroactively
-    invalidate the just-committed terminal transition. On error
-    the session is rolled back to discard any partial queue work
-    (the caller's already-committed terminal state survives).
+    Best-effort: any internal exception does NOT propagate, so a
+    reboot-queue failure cannot retroactively invalidate the
+    just-committed terminal transition. On error the session is
+    rolled back to discard any partial queue work (the caller's
+    already-committed terminal state survives) and the failure is
+    recorded on the execution, audited, and notified. A failed pass
+    leaves the queue untrustworthy, which the read surface reports
+    and the dependent-wave gate honors; it is never only logged.
 
     After running, emits Slice 2 reboot-lifecycle audits for the
     rows that changed:
@@ -1169,7 +1539,7 @@ def auto_reconcile_on_terminal(
             .all()
         }
 
-        rows = reconcile_reboot_queue(db, execution_id)
+        rows = reconcile_reboot_queue(db, execution_id, evidence_runner=evidence_runner)
         promoted = promote_pending_to_scheduled(db, execution_id)
         db.commit()
 
@@ -1207,6 +1577,9 @@ def auto_reconcile_on_terminal(
                     execution_id=row.execution_id,
                     system_id=row.system_id_snapshot,
                     system_hostname=row.system_hostname_snapshot,
+                    evidence_unknown=(
+                        row.decision_code == REBOOT_DECISION_EVIDENCE_UNKNOWN
+                    ),
                 )
             elif newly_created and row.state == REBOOT_STATE_SKIPPED:
                 _emit_reboot_audit(
@@ -1225,12 +1598,92 @@ def auto_reconcile_on_terminal(
                     actor_ip=actor_ip,
                 )
     except Exception as exc:  # pylint: disable=broad-except
+        # Category only. The operator-safe reason is redacted and then
+        # recorded on the execution, audited, and notified below.
         logger.warning(
             "auto_reconcile_on_terminal failed for execution=%d: %s",
             execution_id,
-            exc,
+            type(exc).__name__,
         )
         try:
             db.rollback()
         except Exception:  # pylint: disable=broad-except
             pass
+        surface_reconciliation_failure(
+            db,
+            execution_id,
+            reason=str(exc),
+            phase="auto_reconcile",
+            actor_user_id=actor_user_id,
+            actor_username=actor_username,
+            actor_ip=actor_ip,
+        )
+
+
+def surface_reconciliation_failure(
+    db: Session,
+    execution_id: int,
+    *,
+    reason: str,
+    phase: str,
+    wave_index: Optional[int] = None,
+    actor_user_id: Optional[int] = None,
+    actor_username: Optional[str] = None,
+    actor_ip: Optional[str] = None,
+) -> None:
+    """Make one reconcile failure visible to operators.
+
+    Records the failure on the execution so the read API reports the
+    queue as untrustworthy, emits a failure audit, and raises an
+    operator notification. Every step is independently guarded: a
+    failure in one surface must not suppress the others, and none of
+    them may raise over the failure being reported.
+    """
+    safe_reason = _operator_safe_reason(reason)
+    marker = record_reconciliation_failure(
+        db, execution_id, reason=safe_reason, phase=phase, wave_index=wave_index
+    )
+    plan_id = None
+    try:
+        plan_id = (
+            db.query(PatchUpdateExecution.plan_id)
+            .filter(PatchUpdateExecution.id == execution_id)
+            .scalar()
+        )
+    except Exception:  # pylint: disable=broad-except
+        plan_id = None
+
+    safe_emit(
+        action=AUDIT_REBOOT_RECONCILE_FAILED,
+        outcome="failure",
+        actor_user_id=actor_user_id,
+        actor_username=actor_username,
+        actor_ip=actor_ip,
+        target_kind="patch_update_execution",
+        target_id=str(execution_id),
+        context={
+            "execution_id": execution_id,
+            "plan_id": plan_id,
+            "phase": phase,
+            "wave_index": wave_index,
+            "reason": safe_reason,
+            "recorded": marker is not None,
+        },
+    )
+
+    try:
+        from . import notification_events
+
+        notification_events.emit_patch_reboot_reconcile_failed(
+            db,
+            execution_id=execution_id,
+            plan_id=plan_id,
+            reason=safe_reason,
+        )
+    except Exception as exc:  # pylint: disable=broad-except
+        # Category only; the failure itself is already recorded and audited.
+        logger.warning(
+            "could not notify reboot reconciliation failure for execution=%d: %s",
+            execution_id,
+            type(exc).__name__,
+        )

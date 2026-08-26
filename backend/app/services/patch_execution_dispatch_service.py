@@ -648,12 +648,27 @@ def _emit_unrecorded_wave_completions(
                 "per-wave reboot reconcile failed for execution=%d wave=%d: %s",
                 execution.id,
                 wave_index,
-                exc,
+                type(exc).__name__,
             )
             try:
                 db.rollback()
             except Exception:  # pylint: disable=broad-except
                 pass
+            # The wave's reboot rows are missing or partial, so the
+            # gate will block the next wave. Report that to operators
+            # rather than leaving it to a log line.
+            from . import patch_reboot_service as _reboot
+
+            _reboot.surface_reconciliation_failure(
+                db,
+                execution.id,
+                reason=str(exc),
+                phase="wave_reconcile",
+                wave_index=wave_index,
+                actor_user_id=actor_user_id,
+                actor_username=actor_username,
+                actor_ip=actor_ip,
+            )
     return newly_completed
 
 
