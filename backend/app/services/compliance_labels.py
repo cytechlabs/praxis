@@ -84,9 +84,13 @@ _STATUS_LABELS = {
 
 # "facts simply not collected for this host yet" — actionable: run a scan.
 _AWAITING_SCAN_REASONS = frozenset({"no_host_facts_row", "fact_value_null"})
-# "Praxis does not collect the fact this check needs yet" — coverage gap, not a
-# host problem and not a broken app.
-_COVERAGE_PENDING_REASONS = frozenset({"fact_key_not_in_slice_2_schema"})
+# "Praxis does not collect the fact this check needs yet", or "the collector
+# ran on this host and could not establish a trustworthy value" is a coverage
+# gap either way, not a host problem and not a broken app. Re-scanning will
+# not clear it, so it must not read as awaiting_scan.
+_COVERAGE_PENDING_REASONS = frozenset(
+    {"fact_key_not_in_slice_2_schema", "fact_collection_unavailable"}
+)
 # defensive/unknown-kind reasons -> unsupported, not a scary generic error.
 _UNSUPPORTED_REASON_PREFIXES = (
     "unknown_kind:",
@@ -139,6 +143,9 @@ _VERDICT_REASON_LABELS = {
     "no_host_facts_row": "No host facts collected yet — run a scan on this host.",
     "fact_key_not_in_slice_2_schema": "This check needs a host fact Praxis doesn't collect yet.",
     "fact_value_null": "The host fact this check needs has no value yet.",
+    "fact_collection_unavailable": (
+        "This host could not report the fact this check needs."
+    ),
     "package_not_installed": "Package is not installed.",
     "package_installed": "Package is installed.",
     "installed_version_below_min": "Installed version is below the required minimum.",
