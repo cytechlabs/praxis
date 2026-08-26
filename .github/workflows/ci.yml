@@ -343,7 +343,7 @@ jobs:
         run: pip install "coverage==7.15.4"
 
       - name: Download the lane reports
-        uses: actions/download-artifact@v7.0.0
+        uses: actions/download-artifact@v8.0.1
         with:
           pattern: coverage-*
           path: coverage-artifacts
@@ -439,7 +439,7 @@ jobs:
 
     steps:
       - name: Download the validated reports
-        uses: actions/download-artifact@v7.0.0
+        uses: actions/download-artifact@v8.0.1
         with:
           name: coverage-reports
           path: coverage-reports
