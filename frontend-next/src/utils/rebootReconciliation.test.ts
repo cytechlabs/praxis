@@ -21,7 +21,7 @@ describe('rebootReconciliationNotice', () => {
 
   it('says nothing when the reconciliation block is absent', () => {
     expect(rebootReconciliationNotice(null)).toBeNull();
-    expect(rebootReconciliationNotice(undefined)).toBeNull();
+    expect(rebootReconciliationNotice()).toBeNull();
   });
 
   it('warns that the counts are incomplete when hosts have no queue row', () => {

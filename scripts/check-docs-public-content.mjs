@@ -129,7 +129,7 @@ const PROSE_CHECKS = [
  * fix; substituting a hyphen is not, which is why this is a gate and not a
  * formatter.
  */
-const PUNCTUATION_CHECKS = [{ name: 'em dash', pattern: /\u2014/g }];
+const PUNCTUATION_CHECKS = [{ name: 'em dash', pattern: /\u2014/gu }];
 
 /**
  * Checked against prose with inline code removed, because the Markdown

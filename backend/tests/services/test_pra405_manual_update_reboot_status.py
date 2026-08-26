@@ -313,8 +313,10 @@ def test_the_probe_runs_after_the_update_command(db, admin_user, host, monkeypat
     service.apply_updates(host.id, ["openssl"], user_id=admin_user.id)
 
     probe_index = next(
-        i for i, c in enumerate(ssh.commands) if "PRAXIS_REBOOT_PROBE" in c
+        (i for i, c in enumerate(ssh.commands) if "PRAXIS_REBOOT_PROBE" in c),
+        None,
     )
+    assert probe_index is not None, "the reboot probe must run after an update"
     assert probe_index > 0, "the observation must describe the post-update host"
 
 
