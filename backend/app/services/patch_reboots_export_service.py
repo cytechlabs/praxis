@@ -41,6 +41,9 @@ EXPORT_CSV_COLUMNS: Tuple[str, ...] = (
     "reboot_window_id_snapshot",
     "reboot_required_fact",
     "decision_code",
+    "reboot_evidence_source",
+    "reboot_evidence_outcome",
+    "reboot_evidence_collected_at",
     "scheduled_for_at",
     "started_at",
     "completed_at",
@@ -50,6 +53,23 @@ EXPORT_CSV_COLUMNS: Tuple[str, ...] = (
     "created_at",
     "updated_at",
 )
+
+
+def _reboot_evidence(row: PatchUpdateExecutionReboot) -> Dict[str, Any]:
+    """Flatten the observation the decision was made from.
+
+    Exported alongside ``reboot_required_fact`` so a reader can tell a
+    host that reported no reboot was needed apart from one that never
+    answered; both leave the value empty.
+    """
+    block = (row.decision_details or {}).get("reboot_evidence")
+    if not isinstance(block, dict):
+        block = {}
+    return {
+        "reboot_evidence_source": block.get("source"),
+        "reboot_evidence_outcome": block.get("outcome"),
+        "reboot_evidence_collected_at": block.get("collected_at"),
+    }
 
 
 def _reboot_row(row: PatchUpdateExecutionReboot) -> Dict[str, Any]:
@@ -66,6 +86,7 @@ def _reboot_row(row: PatchUpdateExecutionReboot) -> Dict[str, Any]:
         "reboot_window_id_snapshot": row.reboot_window_id_snapshot,
         "reboot_required_fact": row.reboot_required_fact,
         "decision_code": row.decision_code,
+        **_reboot_evidence(row),
         "scheduled_for_at": eh.utc_iso(row.scheduled_for_at),
         "started_at": eh.utc_iso(row.started_at),
         "completed_at": eh.utc_iso(row.completed_at),

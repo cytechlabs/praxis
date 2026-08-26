@@ -11,7 +11,9 @@ import {
   scanPackages,
   fetchPackages,
   PackageUpdateItem,
+  ApplyUpdatesResult,
 } from '@/services/packageService';
+import { notifyRebootStatus } from '@/utils/rebootStatus';
 import { ChevronUp, ChevronDown, Search, CheckCircle2, Download } from 'lucide-react';
 import Head from 'next/head';
 import { useFormatTimestamp } from '@/context/TimestampPreferencesContext';
@@ -174,6 +176,10 @@ const AvailableUpdates = () => {
     }
   };
 
+  const reportRebootStatus = (result: ApplyUpdatesResult) => {
+    notifyRebootStatus(result, toast);
+  };
+
   const handleUpdateAll = async () => {
     if (selectedSystem === 'all') return;
     const hostname = getSystemHostname(selectedSystem);
@@ -197,6 +203,7 @@ const AvailableUpdates = () => {
           const result = await applyUpdates(selectedSystem, packageNames);
           if (result.status === 'success') {
             toast.success(`Updated ${result.packages_updated} package(s) on ${result.hostname}`);
+            reportRebootStatus(result);
             if (heldCount > 0) {
               toast.info(`${heldCount} held package(s) skipped`);
             }
@@ -232,6 +239,7 @@ const AvailableUpdates = () => {
           const result = await applyUpdates(systemId, [packageName]);
           if (result.status === 'success' && result.packages_updated > 0) {
             toast.success(`Updated ${packageName} on ${result.hostname}`);
+            reportRebootStatus(result);
             loadUpdates();
           } else if (result.message) {
             toast.error(result.message);

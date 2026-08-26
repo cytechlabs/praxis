@@ -133,6 +133,47 @@ export interface PatchUpdateExecutionDetail extends PatchUpdateExecution {
   hosts: PatchUpdateExecutionHost[];
 }
 
+/**
+ * Whether the reboot queue actually describes the whole run.
+ *
+ * `incomplete` means hosts that finished their package work have no queue
+ * row; `failed` means a reconcile pass recorded a failure. In both cases
+ * the queue counts are not a complete account of what still has to reboot,
+ * so `action_required` is true.
+ */
+export type RebootReconciliationStatus = 'ok' | 'incomplete' | 'failed';
+
+export interface RebootReconciliationFailure {
+  status?: string;
+  phase?: string;
+  reason?: string;
+  wave_index?: number | null;
+  failed_at?: string;
+}
+
+export interface RebootReconciliation {
+  status: RebootReconciliationStatus;
+  action_required: boolean;
+  succeeded_host_count: number;
+  reboot_row_count: number;
+  missing_row_count: number;
+  last_failure?: RebootReconciliationFailure | null;
+}
+
+export interface RebootQueueSummary {
+  row_count: number;
+  state_counts: Record<string, number>;
+  decision_counts: Record<string, number>;
+  reconciliation: RebootReconciliation | null;
+}
+
+export interface RebootQueueRead {
+  execution_id: number;
+  execution_state: string;
+  plan_id: number;
+  summary: RebootQueueSummary;
+}
+
 // ---------------------------------------------------------------------------
 // Write shapes
 // ---------------------------------------------------------------------------
@@ -293,6 +334,19 @@ export async function getLatestExecutionForPlan(
     `/api/backend/patch/update-executions/by-plan/${planId}`,
   );
   await _expect(res, `get latest execution for plan ${planId} failed`);
+  return res.json();
+}
+
+/** Reads the reboot queue for one execution. The plan detail surface uses
+ * this only for the reconciliation health block, so that an incomplete or
+ * failed queue is visible to an operator rather than only in the API. */
+export async function getExecutionRebootQueue(
+  id: number,
+): Promise<RebootQueueRead> {
+  const res = await apiFetch(
+    `/api/backend/patch/update-executions/${id}/reboots`,
+  );
+  await _expect(res, `get reboot queue for execution ${id} failed`);
   return res.json();
 }
 

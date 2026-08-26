@@ -11,7 +11,9 @@ import {
   applyUpdates,
   fetchPackages,
   PackageUpdateItem,
+  ApplyUpdatesResult,
 } from '@/services/packageService';
+import { notifyRebootStatus } from '@/utils/rebootStatus';
 import { ShieldCheck, Download } from 'lucide-react';
 import Head from 'next/head';
 import { useFormatTimestamp } from '@/context/TimestampPreferencesContext';
@@ -149,6 +151,10 @@ const SecurityUpdates = () => {
     }
   };
 
+  const reportRebootStatus = (result: ApplyUpdatesResult) => {
+    notifyRebootStatus(result, toast);
+  };
+
   const handleApplyAll = async () => {
     if (selectedSystem === 'all') return;
     const hostname = getSystemHostname(selectedSystem);
@@ -174,6 +180,7 @@ const SecurityUpdates = () => {
             toast.success(
               `Applied ${result.packages_updated} security update(s) on ${result.hostname}`
             );
+            reportRebootStatus(result);
             if (heldCount > 0) {
               toast.info(`${heldCount} held package(s) skipped`);
             }
@@ -209,6 +216,7 @@ const SecurityUpdates = () => {
           const result = await applyUpdates(systemId, [packageName]);
           if (result.status === 'success') {
             toast.success(`Updated ${packageName} on ${result.hostname}`);
+            reportRebootStatus(result);
             loadUpdates();
           } else {
             toast.error(result.message || `Failed to update ${packageName}`);
