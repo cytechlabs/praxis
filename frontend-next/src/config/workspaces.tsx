@@ -61,7 +61,7 @@ export const WORKSPACES: Workspace[] = [
       { id: 'command-metrics', label: 'Command Metrics', path: '/ssh/command-metrics', icon: <BarChart2 size={sz} />, paid: true },
     ],
     actions: [
-      { id: 'register-system', label: 'Register System', path: '/system-management/register', icon: <PlusCircle size={sz} /> },
+      { id: 'add-system', label: 'Add System', path: '/system-management/onboard', icon: <PlusCircle size={sz} />, keywords: 'register onboard new host' },
       { id: 'command-execution', label: 'Run Command', path: '/ssh/command-execution', icon: <Terminal size={sz} />, keywords: 'ssh run execute' },
       { id: 'command-whitelist', label: 'Command Whitelist', path: '/ssh/command-whitelist', icon: <Shield size={sz} /> },
       { id: 'validation-rules', label: 'Validation Rules', path: '/ssh/validation-rules', icon: <AlertCircle size={sz} /> },

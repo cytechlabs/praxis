@@ -85,6 +85,7 @@ from app.api.routes import (
     mirrors_router,
     notification_preferences_router,
     notifications_router,
+    onboarding_router,
     package_reports_router,
     packages_router,
     patch_advisories_router,
@@ -407,6 +408,9 @@ def create_app() -> FastAPI:
         tags=["system-compare"],
     )
     app_instance.include_router(systems_router, prefix="/systems", tags=["systems"])
+    app_instance.include_router(
+        onboarding_router, prefix="/onboarding", tags=["onboarding"]
+    )
     # PRA-155 #2b-b: facts router mounts inside /systems so endpoints
     # land at /systems/{id}/facts/* alongside the rest of the system
     # CRUD surface.

@@ -103,7 +103,7 @@ const HealthBanner: React.FC<HealthBannerProps> = ({
         : 'Register your first Linux system to start monitoring.',
       href: totalSystems > 0
         ? '/system-management/all-systems'
-        : '/system-management/register',
+        : '/system-management/onboard',
       cta: totalSystems > 0 ? 'View fleet' : 'Register a system',
     };
   }

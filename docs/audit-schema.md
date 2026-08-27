@@ -127,6 +127,27 @@ single user actor at the mint point; that host access is audited via its parent
 (with `target.id` = vault path), `system` (for `ssh.user_cert.sign` when the
 target system is known; otherwise `ssh_user_cert`), or `ssh_ca`.
 
+### Guided system onboarding
+
+A setup holds no secret and creates nothing until it finishes, so these events
+record decisions and outcomes rather than state changes. `target.kind` is
+`onboarding_draft` and `target.id` is the setup's opaque handle, except on a
+successful finish, where the target is the host that now exists.
+
+| `action` | When | `outcome` | `context` |
+| --- | --- | --- | --- |
+| `onboarding.draft.create` | An operator opens a guided setup | `success` | none |
+| `onboarding.draft.cancel` | An operator abandons a setup | `success` | none |
+| `onboarding.verify` | A verification run completes | `success` when verified, else `failure` | `reason_code`, `checks` (per-check `check` / `status` / `reason_code`) |
+| `onboarding.host_key.decision` | An operator approves or rejects an offered host key | `success` on approval, `denied` on rejection | `decision`, `fingerprint`, `key_type` |
+| `onboarding.verify.skipped` | An operator explicitly declines verification | `success` | none |
+| `onboarding.discover` | Discovery completes | `success` | `support_mapping`, `package_family` |
+| `onboarding.finish` | Finalization is attempted | `success`, `failure`, or `denied` | on success `hostname`, `status`, `verification_skipped`, `host_key_decision`; otherwise `code` |
+
+Verification context carries reason codes only. The transport and library text
+behind a failure is never recorded, so an audit row cannot leak a path, a key,
+or an internal hostname.
+
 ### Airgap signing keys and import trust
 
 Airgap bundle signing-key and import trust-pin lifecycle events carry only public

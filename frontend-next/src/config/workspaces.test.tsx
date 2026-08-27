@@ -10,7 +10,7 @@ import {
 // discoverible via Ctrl+K (PALETTE_DESTINATIONS) — the route audit, enforced.
 const REQUIRED_ROUTES = [
   '/fleet-dashboard', '/system-management/all-systems', '/system-management/system-groups',
-  '/system-management/smart-groups', '/system-management/register',
+  '/system-management/smart-groups', '/system-management/onboard',
   '/credentials/all', '/credentials/add', '/system-management/vault-management', '/ssh-security',
   '/access/active-sessions', '/access/session-locks', '/access/session-approvals',
   '/access/access-reviews', '/recordings', '/access-requests', '/audit',

@@ -54,6 +54,12 @@ from .compliance_models import (  # noqa: F401; pylint: disable=unused-import
     ComplianceRemediationRequest,
 )
 
+# Import the guided onboarding draft model so Base.metadata picks it up for
+# create_all() / alembic autogenerate.
+from .onboarding_models import (  # noqa: F401; pylint: disable=unused-import
+    SystemOnboardingDraft,
+)
+
 # Import report-run + schedule models (PRA-178 Slice 2 + Slice 5) so
 # Base.metadata picks them up for create_all() / alembic autogenerate.
 from .report_models import (  # noqa: F401; pylint: disable=unused-import
@@ -231,7 +237,9 @@ class System(Base):  # pylint: disable=too-few-public-methods
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     hostname = Column(String(255), unique=True, nullable=False, index=True)
-    ip_address = Column(INET, nullable=False)
+    # Unique in the database, not only in the route: duplicate-IP rejection is
+    # an invariant two concurrent registrations must not be able to race past.
+    ip_address = Column(INET, nullable=False, unique=True)
     distro_id = Column(Integer, ForeignKey("distros.id"), nullable=False, index=True)
     os_version = Column(String(50), nullable=False, index=True)
     last_audited = Column(DateTime, nullable=True)
@@ -286,6 +294,7 @@ class System(Base):  # pylint: disable=too-few-public-methods
     registered_at = Column(DateTime, default=datetime.utcnow)
     registered_by = Column(Integer, ForeignKey("user.id"))
     update_policy = Column(String(50))
+    description = Column(Text, nullable=True)
     last_successful_update = Column(DateTime)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
