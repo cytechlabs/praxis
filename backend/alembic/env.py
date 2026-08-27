@@ -9,9 +9,12 @@ from sqlalchemy import engine_from_config, pool
 # access to the values within the .ini file in use.
 config = context.config
 
-# Interpret the config file for Python logging.
+# Interpret the config file for Python logging. Migrations also run in-process,
+# where application loggers already exist, and fileConfig disables every logger
+# the ini file does not name unless told otherwise. Leaving that default in place
+# would silently mute the application's own loggers for the rest of the process.
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 # Add the app directory to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
