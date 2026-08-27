@@ -92,7 +92,7 @@ const DriftPage: React.FC = () => {
           title="No systems enrolled"
           description="Register a system to see how it compares against your baselines."
           action={
-            <Link href="/system-management/register">
+            <Link href="/system-management/onboard">
               <Button variant="secondary" size="sm">Register a system</Button>
             </Link>
           }

@@ -254,6 +254,16 @@ class SchedulerService:
                 replace_existing=True,
             )
 
+            # Guided onboarding drafts: expire, release stale finalization
+            # leases, and prune old rows so the table stays bounded.
+            self.scheduler.add_job(
+                self._run_onboarding_draft_sweep,
+                trigger=IntervalTrigger(minutes=5),
+                id="onboarding_draft_sweep",
+                name="Onboarding draft sweeper",
+                replace_existing=True,
+            )
+
             # PRA-147: session approval expiration sweeper (every 60s)
             self.scheduler.add_job(
                 self._run_session_approval_expiration,
@@ -514,6 +524,27 @@ class SchedulerService:
                 logger.info("session approval expiration: %d expired", n)
         except Exception as e:  # pylint: disable=broad-except
             logger.error("Session approval expiration sweep failed: %s", e)
+
+    @_guarded("onboarding_draft_sweep")
+    def _run_onboarding_draft_sweep(self):
+        """Expire, release and prune guided onboarding drafts."""
+        from ..db.session import SessionLocal
+        from .onboarding_draft_service import sweep_drafts
+
+        db = SessionLocal()
+        try:
+            counts = sweep_drafts(db)
+            if any(counts.values()):
+                logger.info(
+                    "onboarding draft sweep: released=%d expired=%d pruned=%d",
+                    counts["released"],
+                    counts["expired"],
+                    counts["pruned"],
+                )
+        except Exception as e:  # pylint: disable=broad-except
+            logger.error("Onboarding draft sweep failed: %s", e)
+        finally:
+            db.close()
 
     @_guarded("recording_retention")
     def _run_recording_retention(self):

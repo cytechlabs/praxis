@@ -18,6 +18,7 @@ import pytest
 from app.core.auth import get_password_hash
 from app.db.models import Credential, Group, System, User
 from app.db.ssh_security_models import SSHSecurityPolicy
+from tests.conftest import unique_test_ip
 
 _BACKEND_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT_PATH = _BACKEND_ROOT / "scripts" / "seed_ssh_security_policy.py"
@@ -77,7 +78,7 @@ def _make_system(db, seed_distro, *, policy_id: int | None = None) -> System:
     db.flush()
     system = System(
         hostname=f"seed-policy-{tag}.example.com",
-        ip_address="10.9.1.1",
+        ip_address=unique_test_ip(),
         distro_id=seed_distro.id,
         os_version="22.04",
         status="Active",

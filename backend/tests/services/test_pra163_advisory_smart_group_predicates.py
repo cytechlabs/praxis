@@ -63,6 +63,7 @@ from app.services.smart_group_service import (
     compute_advisory_index,
     rule_references_advisory,
 )
+from tests.conftest import unique_test_ip
 
 # -- Fixtures ---------------------------------------------------------------
 
@@ -101,7 +102,7 @@ def _make_host(
 ):
     s = System(
         hostname=hostname,
-        ip_address="10.0.0.43",
+        ip_address=unique_test_ip(),
         distro_id=seed_distro.id,
         os_version="22.04",
         status="Active",

@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from app.db.models import ActivationToken, Credential, Group, System, Tag
+from tests.conftest import unique_test_ip
 
 
 @pytest.fixture
@@ -29,7 +30,7 @@ def _make_system(db, group, seed_distro, hostname: str) -> System:
     db.flush()
     s = System(
         hostname=hostname,
-        ip_address="10.0.0.1",
+        ip_address=unique_test_ip(),
         distro_id=seed_distro.id,
         os_version="22.04",
         status="Active",
