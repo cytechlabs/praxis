@@ -72,6 +72,7 @@ from app.services.patch_advisory_service import (
     normalize_redhat_updateinfo,
     normalize_ubuntu_usn,
 )
+from tests.conftest import unique_test_ip
 
 # -- Pure helpers: _release_matches --------------------------------------
 
@@ -183,7 +184,7 @@ def _make_host(
 ):
     s = System(
         hostname=hostname,
-        ip_address="10.0.0.42",
+        ip_address=unique_test_ip(),
         distro_id=seed_distro.id,
         os_version="22.04",
         status="Active",

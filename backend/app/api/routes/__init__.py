@@ -57,6 +57,7 @@ from .mirror_upstream_keys import router as mirror_upstream_keys_router
 from .mirrors import router as mirrors_router
 from .notification_preferences import router as notification_preferences_router
 from .notifications import router as notifications_router
+from .onboarding import router as onboarding_router
 from .package_reports import router as package_reports_router
 from .packages import router as packages_router
 from .patch_advisories import router as patch_advisories_router
@@ -87,6 +88,7 @@ from .vault import router as vault_router
 from .views import router as views_router
 
 __all__ = [
+    "onboarding_router",
     "app_settings_router",
     "activity_feed_router",
     "airgap_router",

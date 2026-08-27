@@ -169,6 +169,7 @@ SCHEDULER_JOB_KEYS: Dict[str, SchedulerJobSpec] = {
     "lifecycle_emitter": SchedulerJobSpec(key=17, period_seconds=24 * 60 * 60),
     "report_schedules_due": SchedulerJobSpec(key=18, period_seconds=5 * 60),
     "revocation_drain": SchedulerJobSpec(key=19, period_seconds=30),
+    "onboarding_draft_sweep": SchedulerJobSpec(key=20, period_seconds=5 * 60),
 }
 
 

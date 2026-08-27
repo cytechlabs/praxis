@@ -14,6 +14,7 @@ const ROLE_ROUTES: { prefix: string; roles: string[] }[] = [
   { prefix: '/credentials/add', roles: ['admin', 'maintainer'] },
   { prefix: '/credentials/edit', roles: ['admin', 'maintainer'] },
   { prefix: '/system-management/register', roles: ['admin', 'maintainer'] },
+  { prefix: '/system-management/onboard', roles: ['admin', 'maintainer'] },
   { prefix: '/system-management/edit', roles: ['admin', 'maintainer'] },
   { prefix: '/system-management/vault-management', roles: ['admin', 'maintainer'] },
   { prefix: '/ssh/command-execution', roles: ['admin', 'maintainer'] },

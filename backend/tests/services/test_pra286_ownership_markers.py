@@ -22,6 +22,7 @@ from app.db.access_models import HostUserState
 from app.db.models import Credential, Group, System
 from app.services import host_user_provisioning_service as prov
 from app.services.ssh_service import SSHService
+from tests.conftest import unique_test_ip
 
 # ---------------------------------------------------- fixtures / helpers
 
@@ -38,7 +39,7 @@ def system(db, seed_distro):
     db.flush()
     s = System(
         hostname="pra286-host",
-        ip_address="10.86.0.1",
+        ip_address=unique_test_ip(),
         distro_id=seed_distro.id,
         os_version="22.04",
         status="Active",
