@@ -75,6 +75,19 @@ be able to read it, and the supported way back is to restore the backup you took
 before the upgrade. That is why proving the restore is step one rather than
 step four.
 
+### Schema changes that refuse to reverse
+
+Some migrations decline to undo themselves rather than destroy data. The 1.0.1
+migration that adds host descriptions is one: its downgrade aborts with an
+explanatory message if any host has a description stored, because dropping the
+column would discard text an operator typed. Clear those descriptions
+deliberately if you intend to lose them, then run the downgrade again. The
+migration changes nothing when it refuses.
+
+The same migration also adds a uniqueness constraint on host addresses, and it
+refuses to apply while duplicate addresses exist, naming the addresses and the
+hosts using them. Resolve those hosts and re-run it.
+
 Never roll back by deleting the newer version from the registry. Deletion breaks
 anyone who pinned that digest and destroys the record of what shipped. Deploy
 forward instead.

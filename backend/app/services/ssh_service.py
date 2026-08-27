@@ -211,6 +211,81 @@ def record_transport_success(db: Session, system: System) -> None:
 record_transport_reachable = record_transport_success
 
 
+def host_key_fingerprint(key: paramiko.PKey) -> str:
+    """SHA-256 fingerprint of an offered host key, hex encoded.
+
+    One definition, so every surface that shows or compares a fingerprint is
+    comparing the same bytes.
+    """
+    return hashlib.sha256(key.asbytes()).hexdigest()
+
+
+def persist_verified_host_key(
+    db: Session,
+    *,
+    system: System,
+    key_type: str,
+    public_key: str,
+    fingerprint: str,
+    display_host: Optional[str] = None,
+    commit: bool = True,
+) -> SSHHostKey:
+    """Record ``system``'s verified host key, or confirm the stored one matches.
+
+    The single writer for a *trusted* ``ssh_host_keys`` row. Trust-on-first-use
+    during a connection and promotion of a key an operator approved during
+    guided onboarding both land here, so the changed-key rule is written once:
+    a stored key that does not match what is being presented is refused, never
+    overwritten. Re-trusting is a deliberate act through SSH Security.
+
+    ``commit`` defaults to ``True`` because a connection must not proceed on a
+    key that is only pending in a session: the row has to be durable before the
+    handshake it authorizes completes. A caller that is already inside a
+    transaction the key belongs to passes ``commit=False``, and the row then
+    lives or dies with that transaction. The write is always flushed either
+    way, so a database error surfaces here rather than at some later commit.
+    """
+    name = display_host or system.hostname
+    existing_key = (
+        db.query(SSHHostKey).filter(SSHHostKey.system_id == system.id).first()
+    )
+
+    if existing_key:
+        if existing_key.public_key != public_key:
+            raise SSHConnectionError(
+                f"Host key MISMATCH for {name}. "
+                f"Stored fingerprint: {existing_key.fingerprint[:16]}… "
+                f"Server offered: {fingerprint[:16]}… "
+                "Review and delete the stored key in SSH Security > Host Keys to re-trust."
+            )
+        existing_key.last_seen = datetime.utcnow()
+        db.flush()
+        if commit:
+            db.commit()
+        return existing_key
+
+    host_key = SSHHostKey(
+        system_id=system.id,
+        hostname=system.hostname,
+        key_type=key_type,
+        public_key=public_key,
+        fingerprint=fingerprint,
+        verified=True,
+        first_seen=datetime.utcnow(),
+        last_seen=datetime.utcnow(),
+    )
+    db.add(host_key)
+    db.flush()
+    if commit:
+        db.commit()
+    logger.info(
+        "Trusted host key recorded for %s (fingerprint=%s)",
+        system.hostname,
+        fingerprint[:16],
+    )
+    return host_key
+
+
 class HostKeyPromptPolicy(paramiko.MissingHostKeyPolicy):
     """TOFU (trust-on-first-use) host key policy (PRA-119).
 
@@ -228,47 +303,13 @@ class HostKeyPromptPolicy(paramiko.MissingHostKeyPolicy):
 
     def missing_host_key(self, client, hostname, key):
         key_type = key.get_name()
-        public_key = key.get_base64()
-        fingerprint = hashlib.sha256(key.asbytes()).hexdigest()
-
-        existing_key = (
-            self.db.query(SSHHostKey)
-            .filter(SSHHostKey.system_id == self.system.id)
-            .first()
-        )
-
-        if existing_key:
-            # Should be rare — normally the known key is pre-loaded before
-            # connect(). If we end up here, the key changed; reject for safety.
-            if existing_key.public_key != public_key:
-                raise SSHConnectionError(
-                    f"Host key MISMATCH for {hostname}. "
-                    f"Stored fingerprint: {existing_key.fingerprint[:16]}… "
-                    f"Server offered: {fingerprint[:16]}… "
-                    "Review and delete the stored key in SSH Security > Host Keys to re-trust."
-                )
-            existing_key.last_seen = datetime.utcnow()
-            self.db.commit()
-            client.get_host_keys().add(hostname, key_type, key)
-            return
-
-        # TOFU — capture and trust on first use
-        host_key = SSHHostKey(
-            system_id=self.system.id,
-            hostname=self.system.hostname,
+        persist_verified_host_key(
+            self.db,
+            system=self.system,
             key_type=key_type,
-            public_key=public_key,
-            fingerprint=fingerprint,
-            verified=True,
-            first_seen=datetime.utcnow(),
-            last_seen=datetime.utcnow(),
-        )
-        self.db.add(host_key)
-        self.db.commit()
-        logger.info(
-            "TOFU: captured host key for %s (fingerprint=%s)",
-            self.system.hostname,
-            fingerprint[:16],
+            public_key=key.get_base64(),
+            fingerprint=host_key_fingerprint(key),
+            display_host=hostname,
         )
         # Register with client so paramiko completes the handshake
         client.get_host_keys().add(hostname, key_type, key)
@@ -868,7 +909,7 @@ class SSHService:  # pylint: disable=too-many-instance-attributes
                 return
             key_type = server_key.get_name()
             public_key = server_key.get_base64()
-            fingerprint = hashlib.sha256(server_key.asbytes()).hexdigest()
+            fingerprint = host_key_fingerprint(server_key)
 
             existing_key = self._get_known_hosts_for_system(system.id)
 

@@ -32,6 +32,7 @@ from ...services import license_service
 from ...services.access_authorization_service import scope_query_by_system
 from ...services.notification_service import create_notification
 from ...services.system_audit_service import record_audit, snapshot_system
+from ...services.system_tag_service import set_system_tags
 
 router = APIRouter()
 
@@ -61,6 +62,33 @@ class SystemCreate(BaseModel):
         None, description="Environment (Production, Staging, Development)"
     )  # pylint: disable=line-too-long
     tags: Optional[List[str]] = Field(None, description="System tags or labels")
+    ssh_port: Optional[int] = Field(None, description="SSH port (defaults to 22)")
+    ssh_security_policy_id: Optional[int] = Field(
+        None, description="SSH security policy; the Default policy when omitted"
+    )
+
+    @validator("ssh_port", pre=True)
+    def validate_ssh_port(cls, v):  # pylint: disable=no-self-argument
+        """Bound the SSH port. ``pre=True`` with an explicit bool guard, since
+        bool is an int subclass and ``True`` would otherwise pass as port 1."""
+        if v is None:
+            return v
+        if isinstance(v, bool) or not isinstance(v, int):
+            raise ValueError("ssh_port must be an integer")
+        if not 1 <= v <= 65535:
+            raise ValueError("ssh_port must be 1..65535")
+        return v
+
+    @validator("ssh_security_policy_id", pre=True)
+    def validate_ssh_security_policy_id(cls, v):  # pylint: disable=no-self-argument
+        """Reject a non-integer policy reference before it reaches a query."""
+        if v is None:
+            return v
+        if isinstance(v, bool) or not isinstance(v, int):
+            raise ValueError("ssh_security_policy_id must be an integer")
+        if v < 1:
+            raise ValueError("ssh_security_policy_id must be positive")
+        return v
 
     @validator("hostname")
     def validate_hostname(cls, v):  # pylint: disable=no-self-argument
@@ -153,6 +181,77 @@ class CredentialResponse(BaseModel):
     id: int
     name: str
     type: str
+
+
+DEFAULT_SSH_PORT = 22
+
+
+def _supplied(payload: SystemCreate) -> set:
+    """The field names the caller actually sent.
+
+    Registration and update share one request model, so "not sent" and "sent as
+    null" have to stay distinguishable. Omitting a field means leave whatever is
+    stored alone; sending null means clear it. Collapsing the two would make an
+    old client that never knew about a field silently erase it.
+    """
+    return set(payload.model_fields_set)
+
+
+def _resolve_requested_policy(db: Session, payload: SystemCreate):
+    """The SSH policy a request asks for, or the Default policy.
+
+    An explicit null is honoured as "no named policy", which the connection
+    path treats as verification required. There is therefore no way to use this
+    field to weaken host-key verification.
+    """
+    if "ssh_security_policy_id" in _supplied(payload):
+        if payload.ssh_security_policy_id is None:
+            return None
+        return (
+            db.query(SSHSecurityPolicy)
+            .filter(SSHSecurityPolicy.id == payload.ssh_security_policy_id)
+            .first()
+        )
+    return (
+        db.query(SSHSecurityPolicy).filter(SSHSecurityPolicy.name == "Default").first()
+    )
+
+
+def _apply_optional_updates(
+    db: Session, db_system: System, payload: SystemCreate, current_user: User
+) -> None:
+    """Apply the optional fields that carry omission-versus-null semantics.
+
+    Description, tags, environment, SSH port and SSH policy are all optional and
+    all now persisted. Each is written only when the caller sent it, so existing
+    integrations that post the historical field set keep behaving exactly as
+    they did.
+    """
+    supplied = _supplied(payload)
+
+    if "description" in supplied:
+        db_system.description = payload.description
+
+    if "ssh_security_policy_id" in supplied:
+        policy = _resolve_requested_policy(db, payload)
+        db_system.ssh_security_policy_id = policy.id if policy else None
+
+    if "tags" in supplied:
+        # An explicit list is a replacement; null clears every tag.
+        set_system_tags(db, db_system, payload.tags or [], created_by=current_user.id)
+
+    if "environment" in supplied or "ssh_port" in supplied:
+        metadata = (
+            db.query(SystemMetadata)
+            .filter(SystemMetadata.system_id == db_system.id)
+            .first()
+        )
+        if metadata is not None:
+            if "environment" in supplied:
+                metadata.environment_type = payload.environment
+            if "ssh_port" in supplied:
+                metadata.ssh_port = payload.ssh_port or DEFAULT_SSH_PORT
+            metadata.updated_at = datetime.utcnow()
 
 
 @router.get("/eol-status")
@@ -296,15 +395,13 @@ async def add_system(
             existing_system.group_id = system.group_id
             existing_system.credentials_id = system.credentials_id
             existing_system.update_policy = system.update_policy
-            # PRA-119: re-attach the default policy if none was set previously
+            _apply_optional_updates(db, existing_system, system, current_user)
+            # PRA-119: re-attach a policy if none was set previously, so a
+            # re-registered host is never left without one.
             if existing_system.ssh_security_policy_id is None:
-                _default_policy = (
-                    db.query(SSHSecurityPolicy)
-                    .filter(SSHSecurityPolicy.name == "Default")
-                    .first()
-                )
-                if _default_policy:
-                    existing_system.ssh_security_policy_id = _default_policy.id
+                _reattached = _resolve_requested_policy(db, system)
+                if _reattached:
+                    existing_system.ssh_security_policy_id = _reattached.id
             existing_system.registered_at = datetime.utcnow()
             existing_system.registered_by = current_user.id
             existing_system.updated_at = datetime.utcnow()
@@ -347,12 +444,12 @@ async def add_system(
         # Get the OS version from the distro
         selected_distro = db.query(Distro).filter(Distro.id == system.distro_id).first()
 
-        # PRA-119: attach the default SSH security policy (enforces host key verification)
-        default_policy = (
-            db.query(SSHSecurityPolicy)
-            .filter(SSHSecurityPolicy.name == "Default")
-            .first()
-        )
+        # PRA-119: a system carries an SSH security policy so host-key
+        # verification is enforced. An explicitly chosen policy is honoured;
+        # otherwise the Default policy is attached. A policy that cannot be
+        # resolved leaves the relationship unset, which the connection path
+        # reads as verification required, never as an opt-out.
+        selected_policy = _resolve_requested_policy(db, system)
 
         # PRA-133: enforce the edition host cap before creating a NEW managed
         # host. Re-registering a decommissioned row (handled above) reuses the
@@ -369,8 +466,9 @@ async def add_system(
             status=system.status,
             group_id=system.group_id,
             credentials_id=system.credentials_id,
-            ssh_security_policy_id=default_policy.id if default_policy else None,
+            ssh_security_policy_id=selected_policy.id if selected_policy else None,
             update_policy=system.update_policy,
+            description=system.description,
             registered_at=datetime.utcnow(),
             registered_by=current_user.id,
             created_at=datetime.utcnow(),
@@ -385,7 +483,7 @@ async def add_system(
             system_id=db_system.id,
             environment_type=system.environment or "Production",
             owner_contact=current_user.email,
-            ssh_port=22,  # Default SSH port
+            ssh_port=system.ssh_port or DEFAULT_SSH_PORT,
             connection_status="Pending",
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow(),
@@ -393,6 +491,9 @@ async def add_system(
 
         db.add(system_metadata)
         db.flush()
+
+        if system.tags:
+            set_system_tags(db, db_system, system.tags, created_by=current_user.id)
 
         record_audit(
             db,
@@ -851,13 +952,15 @@ async def update_system(
                     new_value=new_val,
                 )
 
-        # Update system metadata if it exists
+        # Update system metadata if it exists. Only an environment the caller
+        # actually sent is written, so omitting the field leaves the stored
+        # value alone rather than clearing it.
         metadata = (
             db.query(SystemMetadata)
             .filter(SystemMetadata.system_id == system_id)
             .first()
         )
-        if metadata and system.environment:
+        if metadata and "environment" in _supplied(system):
             if metadata.environment_type != system.environment:
                 record_audit(
                     db,
@@ -868,8 +971,8 @@ async def update_system(
                     old_value=metadata.environment_type,
                     new_value=system.environment,
                 )
-            metadata.environment_type = system.environment
-            metadata.updated_at = datetime.utcnow()
+
+        _apply_optional_updates(db, db_system, system, current_user)
 
         db.commit()
         db.refresh(db_system)
@@ -892,6 +995,7 @@ async def update_system(
             "os_version": db_system.os_version,
             "registered_at": db_system.registered_at,
             "update_policy": db_system.update_policy,
+            "description": db_system.description,
             "group": {
                 "id": group.id,
                 "name": group.name,

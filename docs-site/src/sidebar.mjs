@@ -51,6 +51,7 @@ export const sidebar = [
   {
     label: 'How-to guides',
     items: [
+      { slug: 'guide-add-first-system' },
       { slug: 'guide-critical-updates' },
       { slug: 'guide-patch-windows' },
       { slug: 'guide-rollback' },

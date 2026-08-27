@@ -29,6 +29,7 @@ from app.services.mirror_signing_key_service import (
     RotationNotFound,
     vault_path_for,
 )
+from tests.conftest import unique_test_ip
 
 _ACTIVE_FPR = "ABCDEF0123456789ABCDEF0123456789ABCDEF01"
 _PENDING_FPR = "B" * 40
@@ -93,7 +94,7 @@ def _make_host(db, seed_distro, hostname: str) -> System:
     db.flush()
     h = System(
         hostname=hostname,
-        ip_address="10.0.0.1",
+        ip_address=unique_test_ip(),
         distro_id=seed_distro.id,
         os_version="22.04",
         status="Active",

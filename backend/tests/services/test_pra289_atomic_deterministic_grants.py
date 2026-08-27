@@ -23,6 +23,7 @@ from app.db.models import Credential, Group, System
 from app.services import access_authorization_service as authz
 from app.services import access_binding_service as abs_svc
 from app.services import fleet_reconciliation_service as frs
+from tests.conftest import unique_test_ip
 
 # --------------------------------------------------------------------- helpers
 
@@ -50,7 +51,7 @@ def cred(db):
 def _system(db, seed_distro, group, cred, hostname):
     s = System(
         hostname=hostname,
-        ip_address="10.89.0.1",
+        ip_address=unique_test_ip(),
         distro_id=seed_distro.id,
         os_version="22.04",
         status="Active",

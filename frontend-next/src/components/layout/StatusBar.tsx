@@ -15,6 +15,7 @@ const pathLabels: Record<string, string> = {
   'all-systems': 'All Systems',
   'system-groups': 'System Groups',
   'register': 'Register System',
+  'onboard': 'Add System',
   'vault-management': 'Vault Management',
   'system': 'System Details',
   'edit': 'Edit',

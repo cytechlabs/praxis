@@ -10,6 +10,7 @@ Provides:
 - `mock_vault`: monkeypatched VaultService so tests never touch real Vault
 """
 
+import itertools
 import os
 from typing import Any, Dict, Generator, Iterator
 from unittest.mock import MagicMock
@@ -259,6 +260,9 @@ def mock_vault(monkeypatch) -> MagicMock:
         "app.api.routes.credentials.VaultService",
         "app.api.routes.ssh_identity.VaultService",
         "app.services.ssh_service.VaultService",
+        # Guided onboarding preflight reads the credential secret to
+        # authenticate against a host that is not managed yet.
+        "app.services.onboarding_preflight_service.VaultService",
         # PRA-158 #1: signing-key service hits Vault for armored
         # private+public storage. Tests get the in-memory store.
         "app.services.mirror_signing_key_service.VaultService",
@@ -275,6 +279,23 @@ def mock_vault(monkeypatch) -> MagicMock:
             pass
 
     return mock_cls
+
+
+# ── Test host addressing ───────────────────────────────────────────────
+
+_TEST_IP_COUNTER = itertools.count(1)
+
+
+def unique_test_ip() -> str:
+    """A distinct address for a test-created system.
+
+    ``systems.ip_address`` is unique in the database, so a fixture that builds
+    more than one host needs a different address for each. Tests that care
+    about a specific address still pass their own; this is for the many that
+    only need *an* address.
+    """
+    n = next(_TEST_IP_COUNTER)
+    return f"10.200.{(n // 254) % 254}.{(n % 254) + 1}"
 
 
 # ── Seed-data fixtures ─────────────────────────────────────────────────

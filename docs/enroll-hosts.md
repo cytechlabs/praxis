@@ -14,20 +14,29 @@ cannot reach inbound.
 
 ## Register a host over SSH
 
-Open **Operate > Register System** and provide:
+Open **Operate > Add System**. The guided setup connects to the host, proves the
+credential works, and reads what the host is, before anything is written to the
+inventory. You give the address and the credential; Praxis works out the
+distribution, and the group and SSH policy default to All Systems and the
+Default policy.
 
-- **Hostname** that resolves from the control plane, or an IP address.
-- **IP address**, unique across the fleet.
-- **Distribution and version**, from the list.
-- **Group**. Every host belongs to exactly one static group.
-- **Credential**, the account Praxis connects as.
+A host that cannot be reached, or whose credential is refused, is reported with
+a specific reason rather than saved as an unreachable record. Nothing is created
+and no licence capacity is used until the last step succeeds.
 
-Praxis runs a connectivity test as part of registration. A failure is shown
-inline with the SSH error; fix the credential or name resolution and retry
-rather than saving a host you cannot reach.
+Host keys are approved explicitly. On first contact the offered fingerprint is
+shown for you to compare against the host, and it is pinned for the rest of the
+setup; a key that changes mid-setup stops it.
 
-After registration the host appears under **Operate > All Systems** and the first
-inventory scan begins.
+You may proceed without verifying. The host is then added as **Inactive** with a
+**Pending** connection state, which is an accurate record of a host Praxis has
+never reached, not a working one.
+
+For the full walkthrough, including every verification reason code, see
+[add your first system](guide-add-first-system.md).
+
+After the setup finishes the host appears under **Operate > All Systems** and the
+first inventory scan begins.
 
 ### Add many hosts
 

@@ -623,7 +623,7 @@ const AllSystems = () => {
                   Import Systems
                 </Button>
               )}
-              <Button variant="primary" onClick={() => router.push('/system-management/register')}>
+              <Button variant="primary" onClick={() => router.push('/system-management/onboard')}>
                 Register New System
               </Button>
               <HelpLink slug="fleet-and-hosts" />

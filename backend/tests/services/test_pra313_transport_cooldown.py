@@ -32,6 +32,7 @@ from app.services.ssh_service import (
     record_transport_reachable,
     record_transport_success,
 )
+from tests.conftest import unique_test_ip
 
 # --------------------------------------------------------------------- fixtures
 
@@ -59,7 +60,7 @@ def cred(db):
 def _system(db, seed_distro, group, cred, hostname, *, status="Active"):
     s = System(
         hostname=hostname,
-        ip_address="10.113.0.1",
+        ip_address=unique_test_ip(),
         distro_id=seed_distro.id,
         os_version="22.04",
         status=status,
