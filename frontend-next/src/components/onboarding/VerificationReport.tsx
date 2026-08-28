@@ -130,6 +130,36 @@ const HostKeyDecision: React.FC<{
 };
 
 /**
+ * Everything the operator needs in order to judge an offered key: what it
+ * claims to be, the fingerprint to compare against, and the decision itself.
+ */
+const HostKeyDetails: React.FC<{
+  fingerprint: string;
+  keyType: string | null;
+  decision: HostKeyDecisionState;
+  busy: boolean;
+  onDecide: (accept: boolean) => void;
+}> = ({ fingerprint, keyType, decision, busy, onDecide }) => (
+  <div className="min-w-0 flex-1">
+    <h3 className="text-sm font-medium text-content">
+      Confirm this host&apos;s identity
+    </h3>
+    <p className="mt-1 text-xs text-content-muted">
+      Praxis has not seen this host before. Check that the fingerprint below
+      matches the host you mean to manage. If it does not, stop: something
+      else may be answering at this address.
+    </p>
+    <dl className="mt-3 space-y-1">
+      <KeyFact term="Key type">{keyType ?? 'unknown'}</KeyFact>
+      <KeyFact term="SHA-256 fingerprint" breakAll>
+        {fingerprint}
+      </KeyFact>
+    </dl>
+    <HostKeyDecision decision={decision} busy={busy} onDecide={onDecide} />
+  </div>
+);
+
+/**
  * The host key an unknown host offered, shown for an explicit decision.
  *
  * Approval is a deliberate act: the fingerprint is displayed in full and broken
@@ -146,23 +176,13 @@ export const HostKeyReview: React.FC<{
   <div className="rounded-md border border-warning/40 bg-warning/10 p-4">
     <div className="flex gap-3">
       <AlertTriangle size={16} className="mt-0.5 shrink-0 text-warning" aria-hidden="true" />
-      <div className="min-w-0 flex-1">
-        <h3 className="text-sm font-medium text-content">
-          Confirm this host&apos;s identity
-        </h3>
-        <p className="mt-1 text-xs text-content-muted">
-          Praxis has not seen this host before. Check that the fingerprint below
-          matches the host you mean to manage. If it does not, stop: something
-          else may be answering at this address.
-        </p>
-        <dl className="mt-3 space-y-1">
-          <KeyFact term="Key type">{keyType ?? 'unknown'}</KeyFact>
-          <KeyFact term="SHA-256 fingerprint" breakAll>
-            {fingerprint}
-          </KeyFact>
-        </dl>
-        <HostKeyDecision decision={decision} busy={busy} onDecide={onDecide} />
-      </div>
+      <HostKeyDetails
+        fingerprint={fingerprint}
+        keyType={keyType}
+        decision={decision}
+        busy={busy}
+        onDecide={onDecide}
+      />
     </div>
   </div>
 );

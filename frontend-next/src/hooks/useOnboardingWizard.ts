@@ -131,48 +131,49 @@ export function useOnboardingWizard() {
   // Start or resume. A draft id in the URL is resumed; otherwise a new one is
   // opened and the id put in the URL so a reload does not start over.
   useEffect(() => {
-    if (!router.isReady || !canWrite) return;
     let cancelled = false;
 
-    (async () => {
-      setLoading(true);
-      try {
-        const existing = typeof router.query.draft === 'string' ? router.query.draft : null;
-        const result = existing
-          ? await fetchDraft(existing)
-          : await createDraft();
-        if (cancelled) return;
+    if (router.isReady && canWrite) {
+      (async () => {
+        setLoading(true);
+        try {
+          const existing = typeof router.query.draft === 'string' ? router.query.draft : null;
+          const result = existing
+            ? await fetchDraft(existing)
+            : await createDraft();
+          if (cancelled) return;
 
-        applyDraft(result.draft);
-        setCapabilities(result.capabilities);
-        advance(result.draft.current_step);
+          applyDraft(result.draft);
+          setCapabilities(result.capabilities);
+          advance(result.draft.current_step);
 
-        if (!existing) {
-          const query = { ...router.query, draft: result.draft.id };
-          router.replace({ pathname: router.pathname, query }, undefined, {
-            shallow: true,
-          });
-        }
+          if (!existing) {
+            const query = { ...router.query, draft: result.draft.id };
+            router.replace({ pathname: router.pathname, query }, undefined, {
+              shallow: true,
+            });
+          }
 
-        const [creds, orgs] = await Promise.all([
-          fetchCredentialOptions(),
-          fetchOrganizationOptions(),
-        ]);
-        if (cancelled) return;
-        setCredentialOptions(creds);
-        setOrganizationOptions(orgs);
-        if (!result.draft.ssh_security_policy && creds.default_ssh_security_policy_id) {
-          setPolicyId(String(creds.default_ssh_security_policy_id));
+          const [creds, orgs] = await Promise.all([
+            fetchCredentialOptions(),
+            fetchOrganizationOptions(),
+          ]);
+          if (cancelled) return;
+          setCredentialOptions(creds);
+          setOrganizationOptions(orgs);
+          if (!result.draft.ssh_security_policy && creds.default_ssh_security_policy_id) {
+            setPolicyId(String(creds.default_ssh_security_policy_id));
+          }
+          if (!result.draft.organization.group_id && orgs.default_group_id) {
+            setGroupId(String(orgs.default_group_id));
+          }
+        } catch (err) {
+          if (!cancelled) handleError(err);
+        } finally {
+          if (!cancelled) setLoading(false);
         }
-        if (!result.draft.organization.group_id && orgs.default_group_id) {
-          setGroupId(String(orgs.default_group_id));
-        }
-      } catch (err) {
-        if (!cancelled) handleError(err);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
+      })();
+    }
 
     return () => {
       cancelled = true;
@@ -186,13 +187,16 @@ export function useOnboardingWizard() {
   // be redone, but silently discarding a verified host key is worth a prompt.
   useEffect(() => {
     const inProgress = draft && !completed && step !== 'connect';
-    if (!inProgress) return;
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
       event.preventDefault();
       event.returnValue = '';
     };
-    window.addEventListener('beforeunload', onBeforeUnload);
-    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+    if (inProgress) {
+      window.addEventListener('beforeunload', onBeforeUnload);
+    }
+    return () => {
+      window.removeEventListener('beforeunload', onBeforeUnload);
+    };
   }, [draft, completed, step]);
 
   const run = useCallback(
@@ -359,7 +363,7 @@ export function useOnboardingWizard() {
 
   useEffect(() => {
     if (step === 'confirm' && draft && !confirmation) {
-      void loadConfirmation();
+      loadConfirmation();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, draft?.id]);
