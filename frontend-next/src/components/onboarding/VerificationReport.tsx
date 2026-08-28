@@ -69,6 +69,21 @@ const VerificationReport: React.FC<{
   );
 };
 
+const KeyFact: React.FC<{
+  term: string;
+  breakAll?: boolean;
+  children: React.ReactNode;
+}> = ({ term, breakAll = false, children }) => (
+  <div>
+    <dt className="text-[11px] uppercase tracking-wider text-content-subtle">
+      {term}
+    </dt>
+    <dd className={`font-mono text-xs text-content${breakAll ? ' break-all' : ''}`}>
+      {children}
+    </dd>
+  </div>
+);
+
 /**
  * The host key an unknown host offered, shown for an explicit decision.
  *
@@ -96,18 +111,10 @@ export const HostKeyReview: React.FC<{
           else may be answering at this address.
         </p>
         <dl className="mt-3 space-y-1">
-          <div>
-            <dt className="text-[11px] uppercase tracking-wider text-content-subtle">
-              Key type
-            </dt>
-            <dd className="font-mono text-xs text-content">{keyType ?? 'unknown'}</dd>
-          </div>
-          <div>
-            <dt className="text-[11px] uppercase tracking-wider text-content-subtle">
-              SHA-256 fingerprint
-            </dt>
-            <dd className="font-mono text-xs text-content break-all">{fingerprint}</dd>
-          </div>
+          <KeyFact term="Key type">{keyType ?? 'unknown'}</KeyFact>
+          <KeyFact term="SHA-256 fingerprint" breakAll>
+            {fingerprint}
+          </KeyFact>
         </dl>
         {decision === 'trusted' ? (
           <p className="mt-3 text-xs text-success">You approved this key.</p>
