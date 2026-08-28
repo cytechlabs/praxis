@@ -1,8 +1,14 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { OnboardingError } from './onboardingService';
-import * as onboarding from './onboardingService';
+import {
+  OnboardingError,
+  createDraft,
+  fetchDraft,
+  runDiscovery,
+  saveAuthentication,
+  saveConnection,
+} from './onboardingService';
 
 /**
  * The wizard branches on the backend's structured code, never on message text.
@@ -33,7 +39,7 @@ describe('PRA-414 onboarding service error handling', () => {
       detail: { code: 'draft_expired', message: 'This setup expired.' },
     });
 
-    await expect(onboarding.fetchDraft('abc')).rejects.toMatchObject({
+    await expect(fetchDraft('abc')).rejects.toMatchObject({
       code: 'draft_expired',
       message: 'This setup expired.',
     });
@@ -57,7 +63,7 @@ describe('PRA-414 onboarding service error handling', () => {
     });
 
     try {
-      await onboarding.runDiscovery('abc');
+      await runDiscovery('abc');
       throw new Error('should have rejected');
     } catch (err) {
       const error = err as OnboardingError;
@@ -70,14 +76,14 @@ describe('PRA-414 onboarding service error handling', () => {
   it('still yields a usable error when the body carries no code', async () => {
     respond(500, { detail: 'Internal Server Error' });
 
-    await expect(onboarding.createDraft()).rejects.toMatchObject({
+    await expect(createDraft()).rejects.toMatchObject({
       code: 'request_failed',
     });
   });
 
   it('sends the version it read so a stale write is refused server-side', async () => {
     respond(200, { draft: {} });
-    await onboarding.saveConnection(
+    await saveConnection(
       'abc',
       { address: '10.0.0.1', ssh_port: 22 },
       7,
@@ -90,7 +96,7 @@ describe('PRA-414 onboarding service error handling', () => {
 
   it('never puts a secret in a draft write', async () => {
     respond(200, { draft: {} });
-    await onboarding.saveAuthentication('abc', { credential_id: 4 }, 1);
+    await saveAuthentication('abc', { credential_id: 4 }, 1);
     const [, init] = fetchMock.mock.calls[0];
     const body = JSON.parse(init.body);
     // Only a reference travels; the secret stays in the secrets service.

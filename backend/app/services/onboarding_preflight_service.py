@@ -447,19 +447,12 @@ def package_manager_for(package_family: Optional[str]) -> Optional[str]:
     return _PACKAGE_MANAGER.get(package_family)
 
 
-def run_preflight(
-    db: Session, target: PreflightTarget, *, collect_identity: bool = True
-) -> PreflightResult:
-    """Connect, verify, and optionally read identity, persisting nothing.
+def _check_address(result: PreflightResult, target: PreflightTarget) -> bool:
+    """Re-validate the address. True when the sequence may continue.
 
-    Returns a result whose checks are always populated up to the point of
-    failure. A failure stops the sequence: there is no useful sudo answer for a
-    host that refused the password.
+    Already schema-validated, re-checked here because a draft may have been
+    created before a DNS change.
     """
-    result = PreflightResult()
-
-    # 1. Address. Already schema-validated, re-checked here because a draft may
-    # have been created before a DNS change.
     try:
         schemas.validate_address(target.address)
     except ValueError:
@@ -470,15 +463,21 @@ def run_preflight(
                 schemas.REASON_ADDRESS_INVALID,
             )
         )
-        return result
+        return False
     result.checks.append(
         schemas.serialize_check(
             schemas.CHECK_ADDRESS, schemas.STATUS_PASS, schemas.REASON_VERIFIED
         )
     )
+    return True
 
-    # 2. Network reachability, on a raw socket so an unreachable host is
-    # distinguishable from one that never answers.
+
+def _check_network(
+    result: PreflightResult, target: PreflightTarget
+) -> Optional[socket.socket]:
+    """Open the raw socket, so an unreachable host is distinguishable from one
+    that never answers. Returns the socket, or ``None`` when the check failed.
+    """
     try:
         sock, resolved_ip = _open_socket(target.address, target.ssh_port)
         result.resolved_ip = resolved_ip
@@ -488,193 +487,284 @@ def run_preflight(
                 schemas.CHECK_NETWORK, schemas.STATUS_FAIL, exc.reason_code
             )
         )
-        return result
+        return None
     result.checks.append(
         schemas.serialize_check(
             schemas.CHECK_NETWORK, schemas.STATUS_PASS, schemas.REASON_VERIFIED
         )
     )
+    return sock
 
+
+def _start_transport(
+    result: PreflightResult, target: PreflightTarget, sock: socket.socket
+) -> Tuple[Optional[paramiko.Transport], bool]:
+    """Complete the key exchange without authenticating, so the host key is
+    available for the operator to review before any secret is offered.
+
+    Returns ``(transport, started)``. The transport is returned even when the
+    handshake fails so the caller's cleanup still closes it; it is ``None`` only
+    when the transport could not be constructed at all.
+    """
     transport: Optional[paramiko.Transport] = None
     try:
-        # 3. Handshake and host identity. start_client() completes the key
-        # exchange without authenticating, so the host key is available for the
-        # operator to review before any secret is offered.
         disabled_algorithms = build_disabled_algorithms(target.policy)
-        try:
-            transport = paramiko.Transport(
-                sock, disabled_algorithms=disabled_algorithms
-            )
-            transport.banner_timeout = HANDSHAKE_TIMEOUT_SECONDS
-            transport.handshake_timeout = HANDSHAKE_TIMEOUT_SECONDS
-            transport.start_client(timeout=HANDSHAKE_TIMEOUT_SECONDS)
-        except paramiko.SSHException as exc:
-            result.checks.append(
-                schemas.serialize_check(
-                    schemas.CHECK_HOST_IDENTITY,
-                    schemas.STATUS_FAIL,
-                    schemas.REASON_SSH_POLICY_REJECTED,
-                )
-            )
-            logger.info("preflight handshake rejected: %s", type(exc).__name__)
-            return result
-        except OSError:
-            result.checks.append(
-                schemas.serialize_check(
-                    schemas.CHECK_HOST_IDENTITY,
-                    schemas.STATUS_FAIL,
-                    schemas.REASON_NETWORK_UNREACHABLE,
-                )
-            )
-            return result
-
-        server_key = transport.get_remote_server_key()
-        offered = OfferedHostKey(
-            key_type=server_key.get_name(),
-            public_key=server_key.get_base64(),
-            fingerprint=host_key_fingerprint(server_key),
-        )
-        result.offered_host_key = offered
-
-        if target.require_host_key_verification:
-            if target.pinned_public_key is None:
-                # Nothing approved yet. The key is reported for an explicit
-                # decision; the draft advances no further on this run.
-                result.checks.append(
-                    schemas.serialize_check(
-                        schemas.CHECK_HOST_IDENTITY,
-                        schemas.STATUS_FAIL,
-                        schemas.REASON_HOST_KEY_UNKNOWN,
-                    )
-                )
-                return result
-            if target.pinned_public_key != offered.public_key:
-                # Fail closed. The approved key is the only key this draft may
-                # continue with.
-                result.checks.append(
-                    schemas.serialize_check(
-                        schemas.CHECK_HOST_IDENTITY,
-                        schemas.STATUS_FAIL,
-                        schemas.REASON_HOST_KEY_MISMATCH,
-                    )
-                )
-                return result
-
+        transport = paramiko.Transport(sock, disabled_algorithms=disabled_algorithms)
+        transport.banner_timeout = HANDSHAKE_TIMEOUT_SECONDS
+        transport.handshake_timeout = HANDSHAKE_TIMEOUT_SECONDS
+        transport.start_client(timeout=HANDSHAKE_TIMEOUT_SECONDS)
+    except paramiko.SSHException as exc:
         result.checks.append(
             schemas.serialize_check(
                 schemas.CHECK_HOST_IDENTITY,
-                schemas.STATUS_PASS,
-                schemas.REASON_VERIFIED,
+                schemas.STATUS_FAIL,
+                schemas.REASON_SSH_POLICY_REJECTED,
             )
         )
+        logger.info("preflight handshake rejected: %s", type(exc).__name__)
+        return transport, False
+    except OSError:
+        result.checks.append(
+            schemas.serialize_check(
+                schemas.CHECK_HOST_IDENTITY,
+                schemas.STATUS_FAIL,
+                schemas.REASON_NETWORK_UNREACHABLE,
+            )
+        )
+        return transport, False
+    return transport, True
 
-        # 4. Authentication with the stored credential.
-        try:
-            secret = VaultService(db).read_secret(target.credential.vault_path) or {}
-        except Exception as exc:  # pylint: disable=broad-except
-            logger.warning(
-                "preflight could not read credential secret: %s", type(exc).__name__
-            )
-            secret = {}
-        if not secret:
-            result.checks.append(
-                schemas.serialize_check(
-                    schemas.CHECK_AUTHENTICATION,
-                    schemas.STATUS_FAIL,
-                    schemas.REASON_AUTHENTICATION_FAILED,
-                )
-            )
-            return result
 
-        try:
-            _authenticate(transport, target.credential, secret, target.policy)
-        except PreflightError as exc:
+def _check_host_identity(
+    result: PreflightResult,
+    target: PreflightTarget,
+    transport: paramiko.Transport,
+) -> bool:
+    """Record the offered key and decide whether it may be continued with."""
+    server_key = transport.get_remote_server_key()
+    offered = OfferedHostKey(
+        key_type=server_key.get_name(),
+        public_key=server_key.get_base64(),
+        fingerprint=host_key_fingerprint(server_key),
+    )
+    result.offered_host_key = offered
+
+    if target.require_host_key_verification:
+        if target.pinned_public_key is None:
+            # Nothing approved yet. The key is reported for an explicit
+            # decision; the draft advances no further on this run.
             result.checks.append(
                 schemas.serialize_check(
-                    schemas.CHECK_AUTHENTICATION, schemas.STATUS_FAIL, exc.reason_code
-                )
-            )
-            return result
-        if not transport.is_authenticated():
-            result.checks.append(
-                schemas.serialize_check(
-                    schemas.CHECK_AUTHENTICATION,
+                    schemas.CHECK_HOST_IDENTITY,
                     schemas.STATUS_FAIL,
-                    schemas.REASON_AUTHENTICATION_FAILED,
+                    schemas.REASON_HOST_KEY_UNKNOWN,
                 )
             )
-            return result
+            return False
+        if target.pinned_public_key != offered.public_key:
+            # Fail closed. The approved key is the only key this draft may
+            # continue with.
+            result.checks.append(
+                schemas.serialize_check(
+                    schemas.CHECK_HOST_IDENTITY,
+                    schemas.STATUS_FAIL,
+                    schemas.REASON_HOST_KEY_MISMATCH,
+                )
+            )
+            return False
+
+    result.checks.append(
+        schemas.serialize_check(
+            schemas.CHECK_HOST_IDENTITY,
+            schemas.STATUS_PASS,
+            schemas.REASON_VERIFIED,
+        )
+    )
+    return True
+
+
+def _check_authentication(
+    db: Session,
+    result: PreflightResult,
+    target: PreflightTarget,
+    transport: paramiko.Transport,
+) -> Optional[Dict[str, Any]]:
+    """Authenticate with the stored credential.
+
+    Returns the credential secret so later stages can reuse it, or ``None``
+    when the check failed.
+    """
+    try:
+        secret = VaultService(db).read_secret(target.credential.vault_path) or {}
+    except Exception as exc:  # pylint: disable=broad-except
+        logger.warning(
+            "preflight could not read credential secret: %s", type(exc).__name__
+        )
+        secret = {}
+    if not secret:
         result.checks.append(
             schemas.serialize_check(
                 schemas.CHECK_AUTHENTICATION,
-                schemas.STATUS_PASS,
-                schemas.REASON_VERIFIED,
+                schemas.STATUS_FAIL,
+                schemas.REASON_AUTHENTICATION_FAILED,
             )
         )
+        return None
 
-        # 5. A bounded, non-privileged command. Authenticating proves the
-        # account exists; this proves it can actually do anything.
-        try:
-            exit_status, stdout, _stderr = _run_command(transport, _ECHO_COMMAND)
-        except (paramiko.SSHException, OSError, socket.timeout):
-            result.checks.append(
-                schemas.serialize_check(
-                    schemas.CHECK_COMMAND,
-                    schemas.STATUS_FAIL,
-                    schemas.REASON_COMMAND_FAILED,
-                )
-            )
-            return result
-        if exit_status != 0 or _ECHO_EXPECTED not in stdout:
-            result.checks.append(
-                schemas.serialize_check(
-                    schemas.CHECK_COMMAND,
-                    schemas.STATUS_FAIL,
-                    schemas.REASON_COMMAND_FAILED,
-                )
-            )
-            return result
+    try:
+        _authenticate(transport, target.credential, secret, target.policy)
+    except PreflightError as exc:
         result.checks.append(
             schemas.serialize_check(
-                schemas.CHECK_COMMAND, schemas.STATUS_PASS, schemas.REASON_VERIFIED
+                schemas.CHECK_AUTHENTICATION, schemas.STATUS_FAIL, exc.reason_code
+            )
+        )
+        return None
+    if not transport.is_authenticated():
+        result.checks.append(
+            schemas.serialize_check(
+                schemas.CHECK_AUTHENTICATION,
+                schemas.STATUS_FAIL,
+                schemas.REASON_AUTHENTICATION_FAILED,
+            )
+        )
+        return None
+    result.checks.append(
+        schemas.serialize_check(
+            schemas.CHECK_AUTHENTICATION,
+            schemas.STATUS_PASS,
+            schemas.REASON_VERIFIED,
+        )
+    )
+    return secret
+
+
+def _check_command(result: PreflightResult, transport: paramiko.Transport) -> bool:
+    """Run a bounded, non-privileged command.
+
+    Authenticating proves the account exists; this proves it can actually do
+    anything.
+    """
+    try:
+        exit_status, stdout, _stderr = _run_command(transport, _ECHO_COMMAND)
+    except (paramiko.SSHException, OSError):
+        result.checks.append(
+            schemas.serialize_check(
+                schemas.CHECK_COMMAND,
+                schemas.STATUS_FAIL,
+                schemas.REASON_COMMAND_FAILED,
+            )
+        )
+        return False
+    if exit_status != 0 or _ECHO_EXPECTED not in stdout:
+        result.checks.append(
+            schemas.serialize_check(
+                schemas.CHECK_COMMAND,
+                schemas.STATUS_FAIL,
+                schemas.REASON_COMMAND_FAILED,
+            )
+        )
+        return False
+    result.checks.append(
+        schemas.serialize_check(
+            schemas.CHECK_COMMAND, schemas.STATUS_PASS, schemas.REASON_VERIFIED
+        )
+    )
+    return True
+
+
+def _check_sudo(
+    result: PreflightResult,
+    target: PreflightTarget,
+    transport: paramiko.Transport,
+    secret: Dict[str, Any],
+) -> None:
+    """Elevation, reported on its own so a host that is fine except for sudo
+    reads that way instead of failing wholesale.
+    """
+    try:
+        result.checks.append(_probe_sudo(transport, target.credential, secret))
+    except (paramiko.SSHException, OSError):
+        result.checks.append(
+            schemas.serialize_check(
+                schemas.CHECK_SUDO,
+                schemas.STATUS_FAIL,
+                schemas.REASON_SUDO_UNAVAILABLE,
             )
         )
 
-        # 6. Elevation, reported on its own so a host that is fine except for
-        # sudo reads that way instead of failing wholesale.
-        try:
-            result.checks.append(_probe_sudo(transport, target.credential, secret))
-        except (paramiko.SSHException, OSError, socket.timeout):
-            result.checks.append(
-                schemas.serialize_check(
-                    schemas.CHECK_SUDO,
-                    schemas.STATUS_FAIL,
-                    schemas.REASON_SUDO_UNAVAILABLE,
-                )
-            )
 
-        # Identity, on the same authenticated transport, so discovery does not
-        # pay for a second connection.
+def _collect_identity(result: PreflightResult, transport: paramiko.Transport) -> None:
+    """Read identity on the same authenticated transport, so discovery does not
+    pay for a second connection.
+    """
+    try:
+        _status, stdout, _err = _run_command(transport, _IDENTITY_COMMAND)
+        identity, os_release = _parse_identity(stdout)
+        result.identity = identity
+        result.os_release = os_release
+    except (paramiko.SSHException, OSError):
+        logger.info("preflight identity probe did not complete")
+
+
+def _close_quietly(
+    transport: Optional[paramiko.Transport], sock: socket.socket
+) -> None:
+    """Release the transport and socket whatever the outcome was."""
+    if transport is not None:
+        try:
+            transport.close()
+        except Exception:  # pylint: disable=broad-except
+            pass
+    try:
+        sock.close()
+    except OSError:
+        pass
+
+
+def run_preflight(
+    db: Session, target: PreflightTarget, *, collect_identity: bool = True
+) -> PreflightResult:
+    """Connect, verify, and optionally read identity, persisting nothing.
+
+    Returns a result whose checks are always populated up to the point of
+    failure. A failure stops the sequence: there is no useful sudo answer for a
+    host that refused the password. The stages run in a fixed order on one
+    connection, and the transport and socket are released whatever happens.
+    """
+    result = PreflightResult()
+
+    if not _check_address(result, target):
+        return result
+
+    sock = _check_network(result, target)
+    if sock is None:
+        return result
+
+    transport: Optional[paramiko.Transport] = None
+    try:
+        transport, started = _start_transport(result, target, sock)
+        if not started:
+            return result
+
+        if not _check_host_identity(result, target, transport):
+            return result
+
+        secret = _check_authentication(db, result, target, transport)
+        if secret is None:
+            return result
+
+        if not _check_command(result, transport):
+            return result
+
+        _check_sudo(result, target, transport, secret)
+
         if collect_identity:
-            try:
-                _status, stdout, _err = _run_command(transport, _IDENTITY_COMMAND)
-                identity, os_release = _parse_identity(stdout)
-                result.identity = identity
-                result.os_release = os_release
-            except (paramiko.SSHException, OSError, socket.timeout):
-                logger.info("preflight identity probe did not complete")
+            _collect_identity(result, transport)
 
         return result
     finally:
-        if transport is not None:
-            try:
-                transport.close()
-            except Exception:  # pylint: disable=broad-except
-                pass
-        try:
-            sock.close()
-        except OSError:
-            pass
+        _close_quietly(transport, sock)
 
 
 def utcnow_iso() -> str:

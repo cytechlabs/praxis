@@ -141,8 +141,7 @@ def stub_preflight(monkeypatch):
     def _run(db, target, *, collect_identity=True):
         state["calls"] += 1
         state["last_target"] = target
-        result = state["result"]
-        return result() if callable(result) else result
+        return state["result"]
 
     monkeypatch.setattr(preflight, "run_preflight", _run)
     return state
