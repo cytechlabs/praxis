@@ -648,27 +648,17 @@ def _validate_references(
     return credential, group, policy, distro
 
 
-def finalize_draft(
-    db: Session, draft: SystemOnboardingDraft, user: User, *, finalize_token: str
-) -> Tuple[System, bool]:
-    """Create the managed host this draft describes.
+def _assert_finalizable(
+    db: Session,
+    draft: SystemOnboardingDraft,
+    user: User,
+    finalize_token: str,
+) -> Tuple[bool, Any, Any, Any, Any]:
+    """Recheck everything that could have changed since Confirm.
 
-    Returns ``(system, created)``. ``created`` is ``False`` when the draft had
-    already finished, which is what makes a repeated Finish safe: the operator
-    gets the same host back rather than a second one.
-
-    Caller must hold the finalization claim. Everything that could have changed
-    since Confirm is rechecked here, and the capacity gate runs immediately
-    before the insert, so a draft can never reserve a license seat it does not
-    use.
+    Returns ``(verified, credential, group, policy, distro)``. Raises
+    ``DraftError`` with the operator-facing code for the first failed gate.
     """
-    if draft.finalized_system_id:
-        existing = (
-            db.query(System).filter(System.id == draft.finalized_system_id).first()
-        )
-        if existing is not None:
-            return existing, False
-
     if not _verify_finalize_token(draft, finalize_token):
         raise DraftError(
             "replay_rejected",
@@ -702,6 +692,13 @@ def finalize_draft(
             status_code=409,
         )
 
+    return verified, credential, group, policy, distro
+
+
+def _resolve_target_identity(
+    db: Session, draft: SystemOnboardingDraft
+) -> Tuple[str, str]:
+    """Resolve the hostname and address, refusing a duplicate of either."""
     hostname = resolve_hostname(draft)
     if not hostname:
         raise DraftError(
@@ -730,23 +727,25 @@ def finalize_draft(
             f"({duplicate.hostname}).",
             status_code=409,
         )
+    return hostname, ip_address
 
-    if distro is None:
-        raise DraftError(
-            "distro_required",
-            "Confirm this host's distribution before finishing.",
-            status_code=409,
-        )
 
-    # Capacity is checked here and nowhere earlier, so an abandoned draft never
-    # holds a seat.
-    license_service.assert_can_add_host(db, actor_user_id=user.id)
-
+def _build_system(
+    draft: SystemOnboardingDraft,
+    user: User,
+    *,
+    verified: bool,
+    hostname: str,
+    ip_address: str,
+    group: Any,
+    credential: Any,
+    policy: Any,
+    distro: Any,
+    now: datetime,
+) -> System:
+    """The managed host row this draft describes, not yet added to the session."""
     organization = draft.organization or {}
-    connection = draft.connection or {}
-    now = _now()
-
-    system = System(
+    return System(
         hostname=hostname,
         ip_address=ip_address,
         distro_id=distro.id,
@@ -763,60 +762,137 @@ def finalize_draft(
         created_at=now,
         updated_at=now,
     )
+
+
+def _persist_system_rows(
+    db: Session,
+    draft: SystemOnboardingDraft,
+    system: System,
+    user: User,
+    *,
+    verified: bool,
+    now: datetime,
+) -> None:
+    """Write metadata, tags, the audit row and the approved host key.
+
+    Runs inside the caller's transaction, after ``system`` has been flushed so
+    its id exists.
+    """
+    organization = draft.organization or {}
+    connection = draft.connection or {}
+
+    metadata = SystemMetadata(
+        system_id=system.id,
+        environment_type=organization.get("environment") or "Production",
+        owner_contact=user.email,
+        ssh_port=connection.get("ssh_port") or schemas.DEFAULT_SSH_PORT,
+        cpu_arch=(draft.discovery or {}).get("architecture"),
+        connection_status="connected" if verified else "Pending",
+        last_connection=now if verified else None,
+        created_at=now,
+        updated_at=now,
+    )
+    db.add(metadata)
+
+    set_system_tags(db, system, organization.get("tags") or [], created_by=user.id)
+
+    record_audit(
+        db,
+        system_id=system.id,
+        user_id=user.id,
+        operation="create",
+        audit_type="system",
+        old_value=None,
+        new_value=snapshot_system(system),
+    )
+
+    # The approved key is written through the shared host-key writer, inside
+    # this transaction rather than after it. A host that requires host-key
+    # verification must not be able to exist without the exact key the
+    # operator approved: the two are one fact, so they commit together or
+    # not at all. ``commit=False`` keeps the row bound to this transaction;
+    # the helper still flushes, so a write failure surfaces here.
+    if draft.host_key_public and draft.host_key_decision == HOST_KEY_TRUSTED:
+        persist_verified_host_key(
+            db,
+            system=system,
+            key_type=draft.host_key_type or "",
+            public_key=draft.host_key_public,
+            fingerprint=draft.host_key_fingerprint or "",
+            commit=False,
+        )
+
+
+def _mark_draft_completed(
+    draft: SystemOnboardingDraft, system: System, now: datetime
+) -> None:
+    """Retire the draft against the host it produced."""
+    draft.status = DRAFT_STATUS_COMPLETED
+    draft.finalized_system_id = system.id
+    draft.completed_at = now
+    draft.finalizing_since = None
+    draft.finalize_token_hash = None
+    draft.current_step = "finish"
+    draft.updated_at = now
+
+
+def finalize_draft(
+    db: Session, draft: SystemOnboardingDraft, user: User, *, finalize_token: str
+) -> Tuple[System, bool]:
+    """Create the managed host this draft describes.
+
+    Returns ``(system, created)``. ``created`` is ``False`` when the draft had
+    already finished, which is what makes a repeated Finish safe: the operator
+    gets the same host back rather than a second one.
+
+    Caller must hold the finalization claim. Everything that could have changed
+    since Confirm is rechecked here, and the capacity gate runs immediately
+    before the insert, so a draft can never reserve a license seat it does not
+    use. The host, its metadata, tags, audit row, approved host key and the
+    draft's own retirement all commit together or not at all.
+    """
+    if draft.finalized_system_id:
+        existing = (
+            db.query(System).filter(System.id == draft.finalized_system_id).first()
+        )
+        if existing is not None:
+            return existing, False
+
+    verified, credential, group, policy, distro = _assert_finalizable(
+        db, draft, user, finalize_token
+    )
+    hostname, ip_address = _resolve_target_identity(db, draft)
+
+    if distro is None:
+        raise DraftError(
+            "distro_required",
+            "Confirm this host's distribution before finishing.",
+            status_code=409,
+        )
+
+    # Capacity is checked here and nowhere earlier, so an abandoned draft never
+    # holds a seat.
+    license_service.assert_can_add_host(db, actor_user_id=user.id)
+
+    now = _now()
+    system = _build_system(
+        draft,
+        user,
+        verified=verified,
+        hostname=hostname,
+        ip_address=ip_address,
+        group=group,
+        credential=credential,
+        policy=policy,
+        distro=distro,
+        now=now,
+    )
     db.add(system)
 
     try:
         db.flush()
-
-        metadata = SystemMetadata(
-            system_id=system.id,
-            environment_type=organization.get("environment") or "Production",
-            owner_contact=user.email,
-            ssh_port=connection.get("ssh_port") or schemas.DEFAULT_SSH_PORT,
-            cpu_arch=(draft.discovery or {}).get("architecture"),
-            connection_status="connected" if verified else "Pending",
-            last_connection=now if verified else None,
-            created_at=now,
-            updated_at=now,
-        )
-        db.add(metadata)
-
-        set_system_tags(db, system, organization.get("tags") or [], created_by=user.id)
-
-        record_audit(
-            db,
-            system_id=system.id,
-            user_id=user.id,
-            operation="create",
-            audit_type="system",
-            old_value=None,
-            new_value=snapshot_system(system),
-        )
-
-        # The approved key is written through the shared host-key writer, inside
-        # this transaction rather than after it. A host that requires host-key
-        # verification must not be able to exist without the exact key the
-        # operator approved: the two are one fact, so they commit together or
-        # not at all. ``commit=False`` keeps the row bound to this transaction;
-        # the helper still flushes, so a write failure surfaces here.
-        if draft.host_key_public and draft.host_key_decision == HOST_KEY_TRUSTED:
-            persist_verified_host_key(
-                db,
-                system=system,
-                key_type=draft.host_key_type or "",
-                public_key=draft.host_key_public,
-                fingerprint=draft.host_key_fingerprint or "",
-                commit=False,
-            )
-
-        draft.status = DRAFT_STATUS_COMPLETED
-        draft.finalized_system_id = system.id
-        draft.completed_at = now
-        draft.finalizing_since = None
-        draft.finalize_token_hash = None
-        draft.current_step = "finish"
-        draft.updated_at = now
-
+        _persist_system_rows(db, draft, system, user, verified=verified, now=now)
+        _mark_draft_completed(draft, system, now)
         db.commit()
     except IntegrityError as exc:
         db.rollback()

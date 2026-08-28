@@ -463,8 +463,6 @@ class TestFinalizationSuccess:
         assert metadata.environment_type == "Staging"
         assert metadata.cpu_arch == "x86_64"
 
-        from app.db.models import Tag, system_tag
-
         rows = db.execute(
             system_tag.select().where(system_tag.c.system_id == system.id)
         ).fetchall()

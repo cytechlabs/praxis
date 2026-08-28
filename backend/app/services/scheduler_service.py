@@ -528,7 +528,6 @@ class SchedulerService:
     @_guarded("onboarding_draft_sweep")
     def _run_onboarding_draft_sweep(self):
         """Expire, release and prune guided onboarding drafts."""
-        from ..db.session import SessionLocal
         from .onboarding_draft_service import sweep_drafts
 
         db = SessionLocal()

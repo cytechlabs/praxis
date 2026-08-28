@@ -311,6 +311,99 @@ async def get_eol_status(
     }
 
 
+def _assert_references_exist(db: Session, system: SystemCreate) -> None:
+    """Reject a registration that names a distro, group or credential that is
+    not there, before anything is written."""
+    if not db.query(Distro).filter(Distro.id == system.distro_id).first():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Distribution with ID {system.distro_id} not found",
+        )
+    if not db.query(Group).filter(Group.id == system.group_id).first():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Group with ID {system.group_id} not found",
+        )
+    if not db.query(Credential).filter(Credential.id == system.credentials_id).first():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Credential with ID {system.credentials_id} not found",
+        )
+
+
+def _reregister_decommissioned(
+    db: Session,
+    existing_system: System,
+    system: SystemCreate,
+    current_user: User,
+) -> Dict[str, Any]:
+    """Bring a decommissioned row back into service rather than creating a
+    second host for the same machine.
+    """
+    # PRA-133: reactivating a decommissioned row moves it from
+    # not-counted (Decommissioned is excluded from the active count) to a
+    # counted status, so it increases active managed hosts by one. Gate
+    # it on the cap exactly like a brand-new host; the create route only
+    # accepts Active/Inactive/Maintenance, all of which count.
+    license_service.assert_can_add_host(db, actor_user_id=current_user.id)
+
+    # Get the OS version from the distro
+    selected_distro = db.query(Distro).filter(Distro.id == system.distro_id).first()
+
+    # Update the existing system instead of creating a new one
+    existing_system.distro_id = system.distro_id
+    existing_system.os_version = selected_distro.version  # Use version from the distro
+    existing_system.status = system.status
+    existing_system.group_id = system.group_id
+    existing_system.credentials_id = system.credentials_id
+    existing_system.update_policy = system.update_policy
+    _apply_optional_updates(db, existing_system, system, current_user)
+    # PRA-119: re-attach a policy if none was set previously, so a
+    # re-registered host is never left without one.
+    if existing_system.ssh_security_policy_id is None:
+        _reattached = _resolve_requested_policy(db, system)
+        if _reattached:
+            existing_system.ssh_security_policy_id = _reattached.id
+    existing_system.registered_at = datetime.utcnow()
+    existing_system.registered_by = current_user.id
+    existing_system.updated_at = datetime.utcnow()
+
+    record_audit(
+        db,
+        system_id=existing_system.id,
+        user_id=current_user.id,
+        operation="create",
+        audit_type="lifecycle",
+        old_value="Decommissioned",
+        new_value=snapshot_system(existing_system),
+    )
+
+    db.commit()
+    db.refresh(existing_system)
+
+    return {
+        "id": existing_system.id,
+        "hostname": existing_system.hostname,
+        "ip_address": str(existing_system.ip_address),
+        "status": existing_system.status,
+        "registered_at": existing_system.registered_at,
+        "message": "System successfully re-registered",
+    }
+
+
+def _raise_duplicate_conflict(existing_system: System, system: SystemCreate) -> None:
+    """Name whichever of hostname or address the caller collided on."""
+    if existing_system.hostname == system.hostname:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"A system with hostname '{system.hostname}' already exists",
+        )
+    raise HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail=f"A system with IP address '{system.ip_address}' already exists",
+    )
+
+
 @router.post(
     "/add-system", response_model=SystemResponse, status_code=status.HTTP_201_CREATED
 )
@@ -335,28 +428,7 @@ async def add_system(
     - Registration confirmation
     """
     # Validate referenced entities exist
-    distro = db.query(Distro).filter(Distro.id == system.distro_id).first()
-    if not distro:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Distribution with ID {system.distro_id} not found",
-        )
-
-    group = db.query(Group).filter(Group.id == system.group_id).first()
-    if not group:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Group with ID {system.group_id} not found",
-        )
-
-    credential = (
-        db.query(Credential).filter(Credential.id == system.credentials_id).first()
-    )
-    if not credential:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Credential with ID {system.credentials_id} not found",
-        )
+    _assert_references_exist(db, system)
 
     # Duplicate detection - check if system with same hostname or IP already exists
     existing_system = (
@@ -374,71 +446,10 @@ async def add_system(
     if existing_system:
         # If system is marked as decommissioned, allow re-registration
         if existing_system.status == "Decommissioned":
-            # PRA-133: reactivating a decommissioned row moves it from
-            # not-counted (Decommissioned is excluded from the active count) to a
-            # counted status, so it increases active managed hosts by one. Gate
-            # it on the cap exactly like a brand-new host; the create route only
-            # accepts Active/Inactive/Maintenance, all of which count.
-            license_service.assert_can_add_host(db, actor_user_id=current_user.id)
-
-            # Get the OS version from the distro
-            selected_distro = (
-                db.query(Distro).filter(Distro.id == system.distro_id).first()
-            )
-
-            # Update the existing system instead of creating a new one
-            existing_system.distro_id = system.distro_id
-            existing_system.os_version = (
-                selected_distro.version
-            )  # Use version from the distro
-            existing_system.status = system.status
-            existing_system.group_id = system.group_id
-            existing_system.credentials_id = system.credentials_id
-            existing_system.update_policy = system.update_policy
-            _apply_optional_updates(db, existing_system, system, current_user)
-            # PRA-119: re-attach a policy if none was set previously, so a
-            # re-registered host is never left without one.
-            if existing_system.ssh_security_policy_id is None:
-                _reattached = _resolve_requested_policy(db, system)
-                if _reattached:
-                    existing_system.ssh_security_policy_id = _reattached.id
-            existing_system.registered_at = datetime.utcnow()
-            existing_system.registered_by = current_user.id
-            existing_system.updated_at = datetime.utcnow()
-
-            record_audit(
-                db,
-                system_id=existing_system.id,
-                user_id=current_user.id,
-                operation="create",
-                audit_type="lifecycle",
-                old_value="Decommissioned",
-                new_value=snapshot_system(existing_system),
-            )
-
-            db.commit()
-            db.refresh(existing_system)
-
-            return {
-                "id": existing_system.id,
-                "hostname": existing_system.hostname,
-                "ip_address": str(existing_system.ip_address),
-                "status": existing_system.status,
-                "registered_at": existing_system.registered_at,
-                "message": "System successfully re-registered",
-            }
+            return _reregister_decommissioned(db, existing_system, system, current_user)
 
         # Determine if it's a hostname or IP conflict
-        if existing_system.hostname == system.hostname:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=f"A system with hostname '{system.hostname}' already exists",
-            )
-
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"A system with IP address '{system.ip_address}' already exists",
-        )
+        _raise_duplicate_conflict(existing_system, system)
 
     try:
         # Get the OS version from the distro
@@ -960,17 +971,20 @@ async def update_system(
             .filter(SystemMetadata.system_id == system_id)
             .first()
         )
-        if metadata and "environment" in _supplied(system):
-            if metadata.environment_type != system.environment:
-                record_audit(
-                    db,
-                    system_id=db_system.id,
-                    user_id=current_user.id,
-                    operation="update",
-                    audit_type="environment",
-                    old_value=metadata.environment_type,
-                    new_value=system.environment,
-                )
+        if (
+            metadata
+            and "environment" in _supplied(system)
+            and metadata.environment_type != system.environment
+        ):
+            record_audit(
+                db,
+                system_id=db_system.id,
+                user_id=current_user.id,
+                operation="update",
+                audit_type="environment",
+                old_value=metadata.environment_type,
+                new_value=system.environment,
+            )
 
         _apply_optional_updates(db, db_system, system, current_user)
 
