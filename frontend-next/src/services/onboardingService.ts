@@ -167,11 +167,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!response.ok) {
     const detail = (body as { detail?: unknown }).detail;
     if (detail && typeof detail === 'object' && 'code' in (detail as object)) {
-      const d = detail as Record<string, unknown>;
+      const detailRecord = detail as Record<string, unknown>;
       throw new OnboardingError(
-        String(d.code),
-        String(d.message ?? 'This step could not be completed.'),
-        d,
+        String(detailRecord.code),
+        String(
+          detailRecord.message ?? 'This step could not be completed.',
+        ),
+        detailRecord,
       );
     }
     throw new OnboardingError('request_failed', formatApiError(body, 'This step could not be completed.'));

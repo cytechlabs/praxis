@@ -443,6 +443,67 @@ def _build_target(
     )
 
 
+def _host_key_changes(
+    draft: SystemOnboardingDraft,
+    target: preflight.PreflightTarget,
+    offered: preflight.OfferedHostKey,
+) -> Dict[str, Any]:
+    """How the key a host just offered changes the draft's pinned key.
+
+    An approval only survives while the host keeps offering the same key, and a
+    policy that does not require verification records that plainly rather than
+    implying the operator made a decision.
+    """
+    if (
+        draft.host_key_decision == HOST_KEY_TRUSTED
+        and draft.host_key_public
+        and draft.host_key_public != offered.public_key
+    ):
+        # Approved key no longer matches. The approval does not carry over.
+        return {"host_key_decision": HOST_KEY_REJECTED}
+    if draft.host_key_decision == HOST_KEY_TRUSTED:
+        return {}
+
+    changes: Dict[str, Any] = {
+        "host_key_type": offered.key_type,
+        "host_key_public": offered.public_key,
+        "host_key_fingerprint": offered.fingerprint,
+    }
+    if not target.require_host_key_verification:
+        # The operator's own policy waives review; record that plainly
+        # rather than pretending a decision was made.
+        changes["host_key_decision"] = HOST_KEY_TRUSTED
+    return changes
+
+
+def _verification_changes(
+    draft: SystemOnboardingDraft,
+    target: preflight.PreflightTarget,
+    result: preflight.PreflightResult,
+) -> Dict[str, Any]:
+    """The draft fields one verification run updates."""
+    offered = result.offered_host_key
+    changes: Dict[str, Any] = {
+        "verification": schemas.serialize_verification(
+            result.checks,
+            verified=result.verified,
+            completed_at=preflight.utcnow_iso(),
+            host_key_fingerprint=offered.fingerprint if offered else None,
+            host_key_type=offered.key_type if offered else None,
+        ),
+        "verification_skipped": False,
+    }
+
+    if offered is not None:
+        changes.update(_host_key_changes(draft, target, offered))
+
+    connection = dict(draft.connection or {})
+    if result.resolved_ip:
+        connection["resolved_ip"] = result.resolved_ip
+    changes["connection"] = connection
+    return changes
+
+
 @router.post("/drafts/{public_id}/verify")
 async def verify_draft(
     public_id: str,
@@ -460,48 +521,7 @@ async def verify_draft(
         raise _fail(exc) from exc
 
     result = preflight.run_preflight(db, target)
-
-    connection = dict(draft.connection or {})
-    changes: Dict[str, Any] = {
-        "verification": schemas.serialize_verification(
-            result.checks,
-            verified=result.verified,
-            completed_at=preflight.utcnow_iso(),
-            host_key_fingerprint=(
-                result.offered_host_key.fingerprint if result.offered_host_key else None
-            ),
-            host_key_type=(
-                result.offered_host_key.key_type if result.offered_host_key else None
-            ),
-        ),
-        "verification_skipped": False,
-    }
-
-    if result.offered_host_key is not None:
-        offered = result.offered_host_key
-        if (
-            draft.host_key_decision == HOST_KEY_TRUSTED
-            and draft.host_key_public
-            and draft.host_key_public != offered.public_key
-        ):
-            # Approved key no longer matches. The approval does not carry over.
-            changes["host_key_decision"] = HOST_KEY_REJECTED
-        elif draft.host_key_decision != HOST_KEY_TRUSTED:
-            changes.update(
-                {
-                    "host_key_type": offered.key_type,
-                    "host_key_public": offered.public_key,
-                    "host_key_fingerprint": offered.fingerprint,
-                }
-            )
-            if not target.require_host_key_verification:
-                # The operator's own policy waives review; record that plainly
-                # rather than pretending a decision was made.
-                changes["host_key_decision"] = HOST_KEY_TRUSTED
-
-    if result.resolved_ip:
-        connection["resolved_ip"] = result.resolved_ip
-    changes["connection"] = connection
+    changes = _verification_changes(draft, target, result)
 
     try:
         draft = drafts.apply_step(
