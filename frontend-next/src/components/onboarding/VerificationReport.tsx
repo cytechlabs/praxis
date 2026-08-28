@@ -84,6 +84,51 @@ const KeyFact: React.FC<{
   </div>
 );
 
+type HostKeyDecisionState = 'pending' | 'trusted' | 'rejected';
+
+/**
+ * What the operator can still do about the offered key.
+ *
+ * A decision that has been made is reported and closed; only a pending key
+ * offers the two choices, and neither is pre-selected.
+ */
+const HostKeyDecision: React.FC<{
+  decision: HostKeyDecisionState;
+  busy: boolean;
+  onDecide: (accept: boolean) => void;
+}> = ({ decision, busy, onDecide }) => {
+  if (decision === 'trusted') {
+    return <p className="mt-3 text-xs text-success">You approved this key.</p>;
+  }
+  if (decision === 'rejected') {
+    return (
+      <p className="mt-3 text-xs text-danger">
+        You rejected this key. Nothing was added.
+      </p>
+    );
+  }
+  return (
+    <div className="mt-3 flex flex-wrap gap-2">
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => onDecide(true)}
+        className="rounded-md border border-border bg-action px-3 py-1.5 text-xs text-action-fg hover:bg-action-hover disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring"
+      >
+        This fingerprint is correct
+      </button>
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => onDecide(false)}
+        className="rounded-md border border-border bg-action-secondary px-3 py-1.5 text-xs text-content hover:border-border-strong disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring"
+      >
+        It does not match
+      </button>
+    </div>
+  );
+};
+
 /**
  * The host key an unknown host offered, shown for an explicit decision.
  *
@@ -94,7 +139,7 @@ const KeyFact: React.FC<{
 export const HostKeyReview: React.FC<{
   fingerprint: string;
   keyType: string | null;
-  decision: 'pending' | 'trusted' | 'rejected';
+  decision: HostKeyDecisionState;
   busy: boolean;
   onDecide: (accept: boolean) => void;
 }> = ({ fingerprint, keyType, decision, busy, onDecide }) => (
@@ -116,32 +161,7 @@ export const HostKeyReview: React.FC<{
             {fingerprint}
           </KeyFact>
         </dl>
-        {decision === 'trusted' ? (
-          <p className="mt-3 text-xs text-success">You approved this key.</p>
-        ) : decision === 'rejected' ? (
-          <p className="mt-3 text-xs text-danger">
-            You rejected this key. Nothing was added.
-          </p>
-        ) : (
-          <div className="mt-3 flex flex-wrap gap-2">
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => onDecide(true)}
-              className="rounded-md border border-border bg-action px-3 py-1.5 text-xs text-action-fg hover:bg-action-hover disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring"
-            >
-              This fingerprint is correct
-            </button>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => onDecide(false)}
-              className="rounded-md border border-border bg-action-secondary px-3 py-1.5 text-xs text-content hover:border-border-strong disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-focusring"
-            >
-              It does not match
-            </button>
-          </div>
-        )}
+        <HostKeyDecision decision={decision} busy={busy} onDecide={onDecide} />
       </div>
     </div>
   </div>
