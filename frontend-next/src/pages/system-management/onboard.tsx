@@ -17,7 +17,7 @@ import {
   OrganizeStep,
   VerifyStep,
 } from '@/components/onboarding/OnboardingSteps';
-import { Button, Card, CardBody, PageHeader } from '@/components/ui';
+import { Card, CardBody, PageHeader } from '@/components/ui';
 import { useOnboardingWizard } from '@/hooks/useOnboardingWizard';
 
 /**
