@@ -7,13 +7,17 @@
 # PRA-321 (Python 3.14 runtime cutover; evaluated in PRA-319, unblocked by PRA-320's
 # broker mTLS fix): pydantic is 2.12.0 (pulls pydantic-core 2.41.1, the first line with
 # a CPython 3.14 wheel) so the backend runs on the Python 3.14 runtime. That was the
-# ONLY web-stack pin change required: fastapi 0.109.0 / starlette 0.35.1 /
-# uvicorn 0.27.0 / pydantic-settings 2.1.0 / httpx 0.26.0 are all unchanged and
-# compatible (v1-style @validator still works across the whole pydantic 2.x line).
+# ONLY web-stack pin change the interpreter move required: fastapi / starlette 0.35.1 /
+# uvicorn 0.27.0 / pydantic-settings 2.1.0 / httpx 0.26.0 stay on the same lines and
+# are compatible (v1-style @validator still works across the whole pydantic 2.x line).
 # Everything installs from wheels on 3.14 (no source builds).
 
 # Core
-fastapi==0.109.0
+# 0.109.1 is the first release whose declared dependency floor is
+# python-multipart>=0.0.7, the version that replaced the backtracking Content-Type
+# option-header regex (CVE-2024-24762). Starlette runs that parser on every form
+# and multipart request, so do not pin below this release.
+fastapi==0.109.1
 uvicorn==0.27.0
 websockets==12.0
 sqlalchemy==2.0.51
