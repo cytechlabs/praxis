@@ -461,11 +461,7 @@ export const OrganizeStep: React.FC<{
 export const ConfirmStep: React.FC<{
   draft: Draft | null;
   confirmation: ConfirmResponse | null;
-  hostname: string;
-  environment: string;
-  description: string;
-  tags: string[];
-}> = ({ draft, confirmation, hostname, environment, description, tags }) => (
+}> = ({ draft, confirmation }) => (
     <div className="space-y-4">
       {confirmation ? (
         <>
@@ -555,10 +551,9 @@ export const ConfirmStep: React.FC<{
 
 export const FinishStep: React.FC<{
   completed: CompletedSystem;
-  hostname: string;
   restart: () => void;
   router: NextRouter;
-}> = ({ completed, hostname, restart, router }) => (
+}> = ({ completed, restart, router }) => (
     <div className="space-y-4">
       <p className="text-sm text-content">
         <strong>{completed.hostname}</strong> was added as{' '}
