@@ -17,6 +17,26 @@ Praxis ships with a layered SSH security posture. Every layer is optional indivi
 
 Every system is assigned a policy (the "Default" policy is seeded at first boot). Edit a system to assign a stricter policy for sensitive hosts.
 
+## Negotiated algorithms
+
+A policy's cipher, MAC, and key-exchange allow-lists **narrow** what Praxis will negotiate. They can never widen it: an algorithm Praxis does not support stays unsupported no matter what a policy lists. A list that names nothing supported is reported as such, naming what it allowed and what is available, rather than failing later as an unreachable host.
+
+These are refused on every connection, including guided onboarding preflight and hosts with no policy assigned:
+
+| Refused | Why |
+|---|---|
+| DSA (`ssh-dss`) keys and host keys | Obsolete; OpenSSH disables it by default |
+| RSA signatures over SHA-1 (the `ssh-rsa` signature algorithm) | Forgeable hash; OpenSSH 8.8 dropped it from the defaults |
+| SHA-1 key exchange (`diffie-hellman-group1-sha1`, `-group14-sha1`, `-group-exchange-sha1`) | Obsolete |
+| GSSAPI/Kerberos key exchange (`gss-*`) | Not used by Praxis |
+
+**RSA keys are unaffected.** An RSA key is stored, offered, and pinned under the name `ssh-rsa`, because that is what RSA key *material* is called on the wire. It is signed with `rsa-sha2-512` or `rsa-sha2-256`, never SHA-1, and the same holds for the user certificates Praxis mints. There is nothing to convert.
+
+Two consequences are worth knowing before you enroll:
+
+- A host that offers **only** a SHA-1 key exchange, or only a DSA or `ssh-rsa` host key, cannot be reached. Every supported release in [the support matrix](support-matrix.md) offers modern algorithms out of the box; re-enable SHA-1 on the host and you have not made Praxis accept it.
+- A host key already pinned as `ssh-dss` is refused with a message naming the type. Delete it under `Secure > SSH Security > Host Keys` and re-trust the host, which pins its modern key instead. Ed25519, ECDSA and RSA host keys are all pinned normally, so this affects DSA alone.
+
 ## Host key TOFU
 
 Trust-on-first-use means Praxis records a system's SSH host key on the first successful connection and verifies it on every subsequent one. If the key changes you get a `host_key_changed` event - this is usually fine (OS reinstall, key rotation) but sometimes it isn't (MitM, impersonation).

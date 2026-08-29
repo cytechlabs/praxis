@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import io
 import os
-import re
 import socket
 import time
 
@@ -53,7 +52,7 @@ from app.services.ssh_identity_service import (  # noqa: E402
 )
 from app.services.ssh_service import (  # noqa: E402
     CertificateSSHClient,
-    openssh_supports_rsa_sha2_certificates,
+    load_pinned_host_key,
 )
 
 BOOTSTRAP_LOGIN = "praxis"
@@ -581,10 +580,11 @@ def test_install_and_reload_work_for_a_root_credential_without_sudo(target):
 
 # --------------------------------------- RSA certificate authentication, live
 #
-# The reported Ubuntu 26.04 failure. Paramiko's legacy-server heuristic misreads
-# an "OpenSSH_10" banner as OpenSSH 1.x and forces the SHA-1 certificate
-# algorithm, which those servers dropped from their defaults. This proves an RSA
-# certificate is actually accepted, and names the algorithm that was agreed.
+# Proves against a real sshd that an RSA certificate is accepted and names the
+# signature algorithm that was actually agreed. Supported servers dropped the
+# SHA-1 "ssh-rsa" family from their default PubkeyAcceptedAlgorithms, so a
+# certificate offered under it is never evaluated; only a live handshake shows
+# which one the two sides settled on.
 #
 # The certificate authority here is generated inside the target, so the proof
 # needs no Vault: what is under test is the algorithm negotiation, not minting.
@@ -592,9 +592,7 @@ def test_install_and_reload_work_for_a_root_credential_without_sudo(target):
 _TEST_CA = "/tmp/pra413-ca"
 _TEST_USER_KEY = "/tmp/pra413-user"
 
-# Paramiko's own legacy-server test, reproduced so the assertions can state
-# exactly which servers the workaround has to cover.
-_PARAMIKO_LEGACY_OPENSSH = re.compile(r"-OpenSSH_(?:[1-6]|7\.[0-7])")
+_RETIRED_ALGORITHMS = ("ssh-rsa", "ssh-rsa-cert-v01@openssh.com", "ssh-dss")
 
 
 def _remote_banner(target) -> str:
@@ -664,10 +662,71 @@ def certificate_trust(target, session):
         _run(session, build_sshd_reload_command())
 
 
+# ------------------------------------------- pinned host keys, live
+#
+# ``ssh-keygen -A`` gives each target the host key set a real install has, so
+# what the daemon offers here is what trust-on-first-use would capture in the
+# field. Reading it back is what proves a pinned key can be verified again on
+# the next connection.
+
+
+def _offered_host_key(target, key_algorithms=None):
+    """Connect far enough to read the host key the daemon presents."""
+    client = CertificateSSHClient()
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    kwargs = {}
+    if key_algorithms is not None:
+        offered = set(paramiko.Transport._key_info) - set(key_algorithms)
+        kwargs["disabled_algorithms"] = {"keys": sorted(offered)}
+    try:
+        client.connect(
+            hostname=target["host"],
+            port=target["port"],
+            username=BOOTSTRAP_LOGIN,
+            password=BOOTSTRAP_PASSWORD,
+            allow_agent=False,
+            look_for_keys=False,
+            timeout=20,
+            **kwargs,
+        )
+        return client.get_transport().get_remote_server_key()
+    finally:
+        client.close()
+
+
+@pytest.mark.parametrize(
+    "key_algorithms,expected",
+    [
+        (["ecdsa-sha2-nistp256"], "ecdsa-sha2-nistp256"),
+        (["ssh-ed25519"], "ssh-ed25519"),
+        (["rsa-sha2-512", "rsa-sha2-256"], "ssh-rsa"),
+    ],
+    ids=["ecdsa", "ed25519", "rsa"],
+)
+def test_a_host_key_a_real_sshd_offers_can_be_pinned(target, key_algorithms, expected):
+    """Capture and re-read agree against a live daemon, per algorithm.
+
+    The RSA case is the one worth stating: the daemon and Praxis agree an
+    ``rsa-sha2-*`` host key algorithm, and the key that arrives is still named
+    ``ssh-rsa`` because that is what the material is called. Pinning has to
+    accept that name without accepting the SHA-1 signature algorithm sharing
+    it.
+    """
+    offered = _offered_host_key(target, key_algorithms)
+    assert offered.get_name() == expected
+
+    reloaded = load_pinned_host_key(
+        offered.get_name(), offered.get_base64(), hostname=target["host"]
+    )
+
+    assert reloaded.asbytes() == offered.asbytes()
+    assert reloaded == offered
+
+
 def test_rsa_certificate_authenticates_under_an_rsa_sha2_algorithm(
     target, certificate_trust
 ):
-    """The headline fix: an RSA certificate is accepted, under RSA-SHA2."""
+    """The headline contract: an RSA certificate is accepted, under RSA-SHA2."""
     client = CertificateSSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     try:
@@ -684,7 +743,7 @@ def test_rsa_certificate_authenticates_under_an_rsa_sha2_algorithm(
         agreed = transport._agreed_pubkey_algorithm
         assert agreed.startswith("rsa-sha2-"), agreed
         assert agreed.endswith("-cert-v01@openssh.com"), agreed
-        # The real banner is left intact for anything else that reads it.
+        # The peer's real banner is read, not substituted.
         assert "OpenSSH" in transport.remote_version
         _, stdout, _ = client.exec_command("echo cert_ok", timeout=30)
         assert stdout.read().decode().strip() == "cert_ok"
@@ -692,37 +751,44 @@ def test_rsa_certificate_authenticates_under_an_rsa_sha2_algorithm(
         client.close()
 
 
-def test_stock_paramiko_client_shows_why_the_fix_is_needed(target, certificate_trust):
-    """On a banner paramiko misreads, the unpatched client cannot authenticate.
+def test_the_live_handshake_agrees_no_retired_algorithm(target, certificate_trust):
+    """What a real sshd and Praxis settle on, end to end.
 
-    On a host it reads correctly the stock client already works, so this asserts
-    per family rather than assuming one outcome for both.
+    A mocked negotiation can only show what Praxis offers. This shows what was
+    agreed with a live daemon: no SHA-1 signature, no SHA-1 key exchange.
     """
-    banner = _remote_banner(target)
-    misread = _PARAMIKO_LEGACY_OPENSSH.search(banner) is not None
-    assert openssh_supports_rsa_sha2_certificates(banner) is True, banner
-
-    client = paramiko.SSHClient()
+    client = CertificateSSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     try:
-        try:
-            client.connect(
-                hostname=target["host"],
-                port=target["port"],
-                username=BOOTSTRAP_LOGIN,
-                pkey=certificate_trust,
-                allow_agent=False,
-                look_for_keys=False,
-                timeout=20,
-            )
-        except paramiko.AuthenticationException:
-            assert (
-                misread
-            ), f"stock paramiko failed on a banner it reads correctly: {banner}"
-            return
-        assert not misread, f"stock paramiko succeeded on a misread banner: {banner}"
-        agreed = client.get_transport()._agreed_pubkey_algorithm
-        assert agreed.startswith("rsa-sha2-"), agreed
+        client.connect(
+            hostname=target["host"],
+            port=target["port"],
+            username=BOOTSTRAP_LOGIN,
+            pkey=certificate_trust,
+            allow_agent=False,
+            look_for_keys=False,
+            timeout=20,
+        )
+        transport = client.get_transport()
+
+        # Retained from the negotiation: the signature algorithm the daemon
+        # accepted, and the host key algorithm it was identified under.
+        assert transport._agreed_pubkey_algorithm not in _RETIRED_ALGORITHMS
+        assert transport._agreed_pubkey_algorithm.startswith("rsa-sha2-")
+        assert transport.host_key_type not in _RETIRED_ALGORITHMS
+        assert not transport.host_key_type.endswith("-sha1")
+
+        # Paramiko discards the key exchange engine once the exchange is done,
+        # so the agreed name is not readable afterwards. What is readable is
+        # the proposal, and a completed handshake means the daemon chose from
+        # it: offering no SHA-1 and no GSSAPI group is therefore proof that
+        # neither was agreed.
+        assert transport.is_active()
+        for name in transport.preferred_kex:
+            assert not name.endswith("-sha1"), name
+            assert not name.startswith("gss-"), name
+        for name in transport.preferred_pubkeys + transport.preferred_keys:
+            assert name not in _RETIRED_ALGORITHMS, name
     finally:
         client.close()
 

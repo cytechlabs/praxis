@@ -78,6 +78,19 @@ Work through it in this order:
 4. **Certificate trust.** If certificate trust was deployed and the signing CA
    has since been rotated, the host needs trust redeployed. Password
    authentication keeps working meanwhile.
+5. **Algorithms.** A host that offers only SHA-1 key exchange, or only a DSA
+   or `ssh-rsa` host key, is refused before authentication. Ed25519, ECDSA and
+   RSA host keys are pinned normally, so a host key error naming one of those
+   is about the stored key, not the algorithm: the message says whether the
+   key could not be read or no longer matches. Delete the stored key under
+   **Secure > SSH Security > Host Keys** and re-trust the host. Check the
+   system's SSH policy too: an allow-list naming nothing Praxis supports is
+   reported by name. See
+   [negotiated algorithms](ssh-and-security.md#negotiated-algorithms).
+
+   Never work around a host key error by turning off
+   `require_host_key_verification`. That accepts whatever key the host
+   presents, which is the failure the check exists to catch.
 
 ## A host registers but never inventories
 

@@ -105,16 +105,38 @@ as SSH errors, which sends people to the wrong place.</p>
 under <strong>Settings > Connection Settings</strong>.</p>
 <p>Work through it in this order:</p>
 <ol>
-<li><strong>Name resolution and routing</strong> from the control plane, not from your laptop.</li>
-<li><strong>The credential.</strong> Rotating a secret out of band under a linked credential
-will do this. Test the credential from its detail page.</li>
-<li><strong>Host key changes.</strong> A changed host key blocks connections under a <code>strict</code>
+<li>
+<p><strong>Name resolution and routing</strong> from the control plane, not from your laptop.</p>
+</li>
+<li>
+<p><strong>The credential.</strong> Rotating a secret out of band under a linked credential
+will do this. Test the credential from its detail page.</p>
+</li>
+<li>
+<p><strong>Host key changes.</strong> A changed host key blocks connections under a <code>strict</code>
 or <code>tofu</code> policy. Review it under <strong>Secure > SSH Security</strong> and approve
 it if the change was legitimate, such as a rebuild. Do not approve one you
-cannot explain.</li>
-<li><strong>Certificate trust.</strong> If certificate trust was deployed and the signing CA
+cannot explain.</p>
+</li>
+<li>
+<p><strong>Certificate trust.</strong> If certificate trust was deployed and the signing CA
 has since been rotated, the host needs trust redeployed. Password
-authentication keeps working meanwhile.</li>
+authentication keeps working meanwhile.</p>
+</li>
+<li>
+<p><strong>Algorithms.</strong> A host that offers only SHA-1 key exchange, or only a DSA
+or <code>ssh-rsa</code> host key, is refused before authentication. Ed25519, ECDSA and
+RSA host keys are pinned normally, so a host key error naming one of those
+is about the stored key, not the algorithm: the message says whether the
+key could not be read or no longer matches. Delete the stored key under
+<strong>Secure > SSH Security > Host Keys</strong> and re-trust the host. Check the
+system’s SSH policy too: an allow-list naming nothing Praxis supports is
+reported by name. See
+<a href="/help/ssh-and-security#negotiated-algorithms">negotiated algorithms</a>.</p>
+<p>Never work around a host key error by turning off
+<code>require_host_key_verification</code>. That accepts whatever key the host
+presents, which is the failure the check exists to catch.</p>
+</li>
 </ol>
 <h2 id="a-host-registers-but-never-inventories">A host registers but never inventories</h2>
 <p>Usually escalation rather than connectivity. Package scanning needs to run, and
