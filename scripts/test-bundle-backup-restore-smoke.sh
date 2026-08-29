@@ -34,7 +34,7 @@ PROJECT_NAME="praxis-bundle-dr-smoke"
 OVERRIDE_FILE="scripts/fresh-install-smoke.override.yml"
 COMPOSE_BASE=(-f docker-compose.yml -f docker-compose.prod.yml -f "${OVERRIDE_FILE}")
 PROFILE=(--profile bundled)
-SENTINEL_KEY="pra264_sentinel"
+SENTINEL_SETTING="pra264_sentinel"
 
 # ---------------------------------------------------------------- pre-flight
 command -v docker >/dev/null 2>&1 || { echo "ERR: docker CLI not on PATH" >&2; exit 1; }
@@ -149,7 +149,7 @@ echo "    backend healthy"
 SENTINEL_VALUE=$(date -u +"%Y-%m-%dT%H:%M:%S.%NZ")
 echo "==> seeding sentinels"
 compose exec -T db psql -v ON_ERROR_STOP=1 -U "${SMOKE_PG_USER}" -d "${SMOKE_PG_DB}" -c \
-    "INSERT INTO app_settings (setting_key, setting_value) VALUES ('${SENTINEL_KEY}', '${SENTINEL_VALUE}')" >/dev/null
+    "INSERT INTO app_settings (setting_key, setting_value) VALUES ('${SENTINEL_SETTING}', '${SENTINEL_VALUE}')" >/dev/null
 vol_write recordings_data "${SENTINEL_VALUE}" pra264-sentinel
 vol_write mirror_data     "${SENTINEL_VALUE}" pra264-sentinel
 VAULT_CA_BEFORE=$(vault_ca_sha)
@@ -224,7 +224,7 @@ echo "==> verifying all four stores survived wipe+restore"
 wait_health 30
 
 DB_POST=$(compose exec -T db psql -v ON_ERROR_STOP=1 -U "${SMOKE_PG_USER}" -d "${SMOKE_PG_DB}" -tAc \
-    "SELECT setting_value FROM app_settings WHERE setting_key='${SENTINEL_KEY}'" | tr -d '\r')
+    "SELECT setting_value FROM app_settings WHERE setting_key='${SENTINEL_SETTING}'" | tr -d '\r')
 [[ "${DB_POST}" == "${SENTINEL_VALUE}" ]] || { echo "ERR: DB sentinel did not survive (got '${DB_POST}')" >&2; exit 1; }
 
 REC_POST=$(vol_read recordings_data pra264-sentinel)

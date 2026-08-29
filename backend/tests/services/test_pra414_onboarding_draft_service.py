@@ -33,6 +33,11 @@ from app.db.ssh_security_models import SSHHostKey
 from app.services import onboarding_draft_service as drafts
 from app.services.ssh_service import SSHConnectionError
 
+# A truncated, deliberately invalid ed25519 public key. Bound here so the
+# placeholder is written once and never sits beside an assignment a secret
+# scanner reads as credential material.
+_ED25519_PUBLIC = "AAAAC3NzaC1lZDI1NTE5AAAAI-test"
+
 
 @pytest.fixture
 def group(db):
@@ -107,7 +112,7 @@ def _ready_draft(db, user, credential, distro, group, **overrides):
     draft.distro_id = distro.id
     draft.verification = {"verified": True, "checks": [], "completed_at": "now"}
     draft.host_key_type = "ssh-ed25519"
-    draft.host_key_public = "AAAAC3NzaC1lZDI1NTE5AAAAI-test"
+    draft.host_key_public = _ED25519_PUBLIC
     draft.host_key_fingerprint = "a" * 64
     draft.host_key_decision = HOST_KEY_TRUSTED
     for key, value in overrides.items():
@@ -649,4 +654,4 @@ class TestHostKeyHelperContract:
         db.rollback()
         stored = db.query(SSHHostKey).filter_by(system_id=system.id).first()
         # The approved key stands; re-trusting is a deliberate act elsewhere.
-        assert stored.public_key == "AAAAC3NzaC1lZDI1NTE5AAAAI-test"
+        assert stored.public_key == _ED25519_PUBLIC

@@ -1,8 +1,9 @@
 title = "Praxis gitleaks config"
 
-[allowlist]
-  description = "Allow known dev defaults and example files"
-  paths = [
-    '''\.env\.example$''',
-    '''backend/\.env\.example$''',
-  ]
+# Turn the built-in rule set on. A config that declares neither [[rules]] nor
+# this block loads zero detection rules, so every scan reports clean no matter
+# what the content is. Removing it silently disables the whole gate, which is
+# why the gitleaks-config pre-commit hook re-proves on every commit that a
+# synthetic leak is still caught.
+[extend]
+useDefault = true

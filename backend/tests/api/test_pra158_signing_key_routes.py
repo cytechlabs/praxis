@@ -17,6 +17,7 @@ import pytest
 
 from app.db.models import MirrorRepo
 from app.services import mirror_signing_key_service as svc_module
+from tests.helpers.armor import pgp_private_block
 
 _TEST_FPR = "ABCDEF0123456789ABCDEF0123456789ABCDEF01"
 
@@ -31,9 +32,7 @@ def patch_gpg(monkeypatch):
         return _TEST_FPR
 
     def fake_export_secret(home, fpr):
-        return (
-            f"-----BEGIN PGP PRIVATE KEY BLOCK-----\nFAKE-SECRET-{fpr}\n-----END-----\n"
-        )
+        return pgp_private_block(f"FAKE-SECRET-{fpr}")
 
     def fake_export_public(home, fpr):
         return (

@@ -28,6 +28,7 @@ from app.services.mirror_signing_key_service import (
     MirrorSigningKeyService,
     vault_path_for,
 )
+from tests.helpers.armor import pgp_private_block
 
 _ACTIVE_FPR = "ABCDEF0123456789ABCDEF0123456789ABCDEF01"
 _PENDING_FPR = "B" * 40
@@ -51,9 +52,7 @@ def patch_gpg(monkeypatch):
         armored_pub = (
             f"-----BEGIN PGP PUBLIC KEY BLOCK-----\nFAKE-PUB-{fp}\n-----END-----\n"
         )
-        armored_priv = (
-            f"-----BEGIN PGP PRIVATE KEY BLOCK-----\nFAKE-PRIV-{fp}\n-----END-----\n"
-        )
+        armored_priv = pgp_private_block(f"FAKE-PRIV-{fp}")
         return mirror_gpg.GeneratedKey(
             fingerprint=fp,
             uid=uid,

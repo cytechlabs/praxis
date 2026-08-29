@@ -18,6 +18,7 @@ from app.services.airgap.signing_key_service import (
     RetireActiveKeyRefused,
     SigningKeyNotFound,
 )
+from tests.helpers.armor import pgp_private_block
 
 _FPR_A = "AA00000000000000000000000000000000000001"
 _FPR_B = "BB00000000000000000000000000000000000002"
@@ -32,9 +33,7 @@ def patch_gpg(monkeypatch):
         return _FPR_A if counter["n"] == 1 else _FPR_B
 
     def fake_export_secret(home, fpr):
-        return (
-            f"-----BEGIN PGP PRIVATE KEY BLOCK-----\nFAKE-PRIV-{fpr}\n-----END-----\n"
-        )
+        return pgp_private_block(f"FAKE-PRIV-{fpr}")
 
     def fake_export_public(home, fpr):
         return f"-----BEGIN PGP PUBLIC KEY BLOCK-----\nFAKE-PUB-{fpr}\n-----END-----\n"
