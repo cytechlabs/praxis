@@ -16,6 +16,11 @@ from app.core.log_buffer import install_log_buffer
 from app.db.access_models import AuditEvent
 from app.services import diagnostics_service as diag
 
+# The log record below is deliberately credential-shaped. This value is held
+# apart from the key that gives it its shape so no token-shaped literal sits
+# contiguously in the source.
+_COMPOUND_VALUE = "abcdef123456"
+
 EXPECTED_FILES = {
     "manifest.json",
     "version.json",
@@ -121,7 +126,7 @@ def test_compound_and_quoted_secrets_in_logs_are_redacted(db, client, admin_user
     """
     install_log_buffer()
     logging.getLogger("pra369.test").error(
-        "compound-redaction-boundary-marker agent_token=abcdef123456 "
+        f"compound-redaction-boundary-marker agent_token={_COMPOUND_VALUE} "
         "totp_secret=JBSWY3DPEHPK3PXP "
         "my_password=hunter2 mapping={'token': 'abc123def'} "
         'quoted password="spaced secret value" host=db'
@@ -136,7 +141,7 @@ def test_compound_and_quoted_secrets_in_logs_are_redacted(db, client, admin_user
     # unrelated log line happening to contain a common word.
     assert "compound-redaction-boundary-marker" in logs
     for raw in (
-        "abcdef123456",
+        _COMPOUND_VALUE,
         "JBSWY3DPEHPK3PXP",
         "hunter2",
         "abc123def",

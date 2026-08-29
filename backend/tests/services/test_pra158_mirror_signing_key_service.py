@@ -19,6 +19,7 @@ from app.services.mirror_signing_key_service import (
     MirrorSigningKeyService,
     vault_path_for,
 )
+from tests.helpers.armor import pgp_private_block
 
 # A predictable 40-char hex "fingerprint" for tests; differs from any
 # real GPG output so cross-talk between tests is obvious.
@@ -43,9 +44,7 @@ def patch_gpg(monkeypatch):
         return fpr
 
     def fake_export_secret(home, fpr):
-        return (
-            f"-----BEGIN PGP PRIVATE KEY BLOCK-----\nFAKE-SECRET-{fpr}\n-----END-----\n"
-        )
+        return pgp_private_block(f"FAKE-SECRET-{fpr}")
 
     def fake_export_public(home, fpr):
         return (

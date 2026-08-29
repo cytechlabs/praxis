@@ -35,6 +35,7 @@ from app.db.models import (
 )
 from app.services import security_scan_status_service as provenance
 from app.services.package_service import PackageService
+from tests.helpers.armor import openssh_private_block
 
 # --------------------------------------------------------------- fixtures
 
@@ -437,45 +438,53 @@ def test_sanitize_detail_flattens_and_bounds_failure_text():
 
 
 # Sentinels shaped like the credential material an SSH or package-manager
-# failure can drag into an exception string. Each is a literal that must not
-# survive to a dashboard reader.
-SECRET_SENTINELS = [
+# failure can drag into an exception string. None may survive to a dashboard
+# reader.
+#
+# Each message is held as a template and joined to its sentinel below, so the
+# sentinel is written once and no credential-shaped literal sits contiguously
+# in the source for a secret scanner to read as real material.
+_SENTINEL_TEMPLATES = [
     (
         "sudo password assignment",
-        "sudo: a password is required: password=Sentinel-PW-8f2c1d9a4b7e",
+        "sudo: a password is required: password={secret}",
         "Sentinel-PW-8f2c1d9a4b7e",
     ),
     (
         "authorization header",
-        'curl -H "Authorization: Bearer SentinelBearer8f2c1d9a4b7e" https://repo',
+        'curl -H "Authorization: Bearer {secret}" https://repo',
         "SentinelBearer8f2c1d9a4b7e",
     ),
     (
         "vault service token",
-        "vault read failed: token s.SentinelVaultToken8f2c1d9a4b7e rejected",
+        "vault read failed: token {secret} rejected",
         "s.SentinelVaultToken8f2c1d9a4b7e",
     ),
     (
         "license or access JWT",
-        "refresh rejected: eyJhbGciOiJIUzI1NiJ9.SentinelJwtBody8f2c.SentinelJwtSig4b7e",
+        "refresh rejected: eyJhbGciOiJIUzI1NiJ9.{secret}.SentinelJwtSig4b7e",
         "SentinelJwtBody8f2c",
     ),
     (
         "repository URL with inline credentials",
-        "dnf: cannot open https://mirroruser:SentinelDsnPw8f2c1d9a@repo.internal/os",
+        "dnf: cannot open https://mirroruser:{secret}@repo.internal/os",
         "SentinelDsnPw8f2c1d9a",
     ),
     (
         "api key assignment",
-        'repo config invalid: api_key: "SentinelApiKey8f2c1d9a4b7e"',
+        'repo config invalid: api_key: "{secret}"',
         "SentinelApiKey8f2c1d9a4b7e",
     ),
     (
         "private key block",
-        "agent key rejected:\n-----BEGIN OPENSSH PRIVATE KEY-----\n"
-        "SentinelPrivateKeyBody8f2c\n-----END OPENSSH PRIVATE KEY-----",
+        "agent key rejected:\n" + openssh_private_block("{secret}"),
         "SentinelPrivateKeyBody8f2c",
     ),
+]
+
+SECRET_SENTINELS = [
+    (label, template.format(secret=secret), secret)
+    for label, template, secret in _SENTINEL_TEMPLATES
 ]
 
 
@@ -540,14 +549,14 @@ def test_sanitize_detail_redacts_a_secret_that_straddles_the_length_bound():
     half by truncation alone, leaving a usable prefix on screen. Redaction
     runs first, on the text as recorded, so nothing of it remains.
     """
-    secret = "SentinelStraddle8f2c1d9a4b7e6053f1a2b3c4d5e6f708"
-    message = f"{'scan failed: ' * 14}password={secret} trailing context"
-    assert message.index(secret) < provenance.FAILURE_DETAIL_MAX_CHARS
-    assert message.index(secret) + len(secret) > provenance.FAILURE_DETAIL_MAX_CHARS
+    sentinel = "SentinelStraddle8f2c1d9a4b7e6053f1a2b3c4d5e6f708"
+    message = f"{'scan failed: ' * 14}password={sentinel} trailing context"
+    assert message.index(sentinel) < provenance.FAILURE_DETAIL_MAX_CHARS
+    assert message.index(sentinel) + len(sentinel) > provenance.FAILURE_DETAIL_MAX_CHARS
 
     detail = provenance.sanitize_detail(message)
-    assert secret not in detail
-    assert secret[:16] not in detail
+    assert sentinel not in detail
+    assert sentinel[:16] not in detail
     assert len(detail) <= provenance.FAILURE_DETAIL_MAX_CHARS
 
 

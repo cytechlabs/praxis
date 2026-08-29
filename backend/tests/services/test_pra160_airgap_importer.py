@@ -37,6 +37,7 @@ from app.services.airgap.importer import (
     TarPathOutsideStaging,
 )
 from app.services.airgap.orchestrator import AirgapExportOrchestrator
+from tests.helpers.armor import pgp_private_block
 
 _FPR = "AB00000000000000000000000000000000000001"
 
@@ -65,9 +66,7 @@ def patch_gpg(monkeypatch):
         return _FPR
 
     def fake_export_secret(home, fpr):
-        return (
-            f"-----BEGIN PGP PRIVATE KEY BLOCK-----\nFAKE-PRIV-{fpr}\n-----END-----\n"
-        )
+        return pgp_private_block(f"FAKE-PRIV-{fpr}")
 
     def fake_export_public(home, fpr):
         return f"-----BEGIN PGP PUBLIC KEY BLOCK-----\nFAKE-PUB-{fpr}\n-----END-----\n"
