@@ -162,7 +162,7 @@ def test_required_with_verified_key_uses_reject_and_loads_both_names(
 
 def test_unsupported_stored_key_type_fails_closed(db, seed_distro, admin_user):
     system = _mk_system(db, seed_distro, admin_user, require=True)
-    _store_key(db, system, key_type="ecdsa-sha2-nistp256")
+    _store_key(db, system, key_type="ssh-dss")
     client = _mock_client()
     with pytest.raises(SSHConnectionError):
         configure_host_key_policy(client, db, system)
@@ -205,7 +205,7 @@ def test_missing_policy_unsupported_stored_key_fails_closed(
     db, seed_distro, admin_user
 ):
     system = _mk_system(db, seed_distro, admin_user, require=None)
-    _store_key(db, system, key_type="ecdsa-sha2-nistp256")
+    _store_key(db, system, key_type="ssh-dss")
     client = _mock_client()
     with pytest.raises(SSHConnectionError):
         configure_host_key_policy(client, db, system)
@@ -305,7 +305,7 @@ def test_file_transfer_unsupported_key_fails_closed(
     db, seed_distro, admin_user, monkeypatch
 ):
     system = _mk_system(db, seed_distro, admin_user, require=True)
-    _store_key(db, system, key_type="ecdsa-sha2-nistp256")
+    _store_key(db, system, key_type="ssh-dss")
     spy = _SpyClient()
     monkeypatch.setattr(fts, "_mint_cert_for", lambda *a, **k: MagicMock())
     monkeypatch.setattr(fts, "CertificateSSHClient", lambda: spy)

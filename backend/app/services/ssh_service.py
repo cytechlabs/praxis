@@ -315,6 +315,87 @@ class HostKeyPromptPolicy(paramiko.MissingHostKeyPolicy):
         client.get_host_keys().add(hostname, key_type, key)
 
 
+# Host key types a pinned ``ssh_host_keys`` row may carry. These are the
+# algorithms OpenSSH offers a client by default, so a host key captured on
+# first use is always one of them.
+#
+# ``ssh-rsa`` appears here as the name of RSA key *material*, which is what a
+# host key blob is labelled with even when the handshake agreed
+# ``rsa-sha2-512``. It is not the retired SHA-1 signature algorithm of the same
+# name. DSA is absent: it has no reader and is refused.
+_PINNABLE_HOST_KEY_TYPES = (
+    "ssh-ed25519",
+    "ecdsa-sha2-nistp256",
+    "ecdsa-sha2-nistp384",
+    "ecdsa-sha2-nistp521",
+    "ssh-rsa",
+)
+
+_PINNABLE_HOST_KEY_SUMMARY = "Ed25519, ECDSA (nistp256/384/521) and RSA host keys"
+
+
+def load_pinned_host_key(
+    key_type: str, public_key: str, *, hostname: str
+) -> paramiko.PKey:
+    """Read a stored host key, or raise :class:`SSHConnectionError`.
+
+    The single reader for a pinned ``ssh_host_keys`` row, so every path that
+    verifies a host against its stored key accepts the same algorithms and
+    refuses the same way. Failure is always closed: a type Praxis does not pin,
+    a body that will not parse, and a row whose recorded type disagrees with
+    its own key material all raise rather than fall back to trusting whatever
+    the host offers.
+
+    The curve of an ECDSA key is carried in the key material itself and is
+    checked against the recorded type, so a row cannot claim one curve and pin
+    another.
+
+    Errors name the host, the type and what to do about it, and carry no parser
+    output.
+    """
+    if key_type not in _PINNABLE_HOST_KEY_TYPES:
+        logger.warning(
+            "Unsupported pinned host key type for %s: %s", hostname, key_type
+        )
+        raise SSHConnectionError(
+            f"Unsupported host key type for {hostname}: {key_type}. Praxis "
+            f"pins {_PINNABLE_HOST_KEY_SUMMARY}. Delete the stored key in "
+            "SSH Security > Host Keys and re-trust the host."
+        )
+
+    try:
+        key = paramiko.PKey.from_type_string(key_type, base64.b64decode(public_key))
+    except Exception as exc:  # pylint: disable=broad-except
+        # A truncated body, a wrong-algorithm body and a corrupt point all
+        # surface as different exceptions from the crypto library underneath,
+        # and none of their messages belongs in an operator-facing error.
+        logger.warning(
+            "Stored host key for %s did not parse (%s)", hostname, type(exc).__name__
+        )
+        raise SSHConnectionError(
+            f"The stored {key_type} host key for {hostname} could not be read. "
+            "Delete it in SSH Security > Host Keys and re-trust the host."
+        ) from exc
+
+    if key.get_name() != key_type:
+        # Paramiko selects the reader from the requested type but then takes
+        # the algorithm and curve from the body, so a row that disagrees with
+        # its own material would otherwise pin something other than what was
+        # approved.
+        logger.warning(
+            "Stored host key for %s is recorded as %s but carries %s",
+            hostname,
+            key_type,
+            key.get_name(),
+        )
+        raise SSHConnectionError(
+            f"The stored host key for {hostname} is recorded as {key_type} but "
+            f"its key material is {key.get_name()}. Delete it in "
+            "SSH Security > Host Keys and re-trust the host."
+        )
+    return key
+
+
 def configure_host_key_policy(
     client: paramiko.SSHClient, db: Session, system: System
 ) -> None:
@@ -328,8 +409,9 @@ def configure_host_key_policy(
 
     - verification required + a verified key is stored -> ``RejectPolicy`` and
       preload the key for both hostname and IP (paramiko then rejects any
-      mismatch/unknown key); an unsupported stored key type fails closed with
-      :class:`SSHConnectionError`.
+      mismatch/unknown key). Ed25519, ECDSA and RSA host keys are all pinned;
+      a stored key that cannot be read, or whose type Praxis does not pin,
+      fails closed through :func:`load_pinned_host_key`.
     - verification required + no verified key -> :class:`HostKeyPromptPolicy`
       (trust-on-first-use, capturing and verifying the first key).
     - verification explicitly disabled on a *persisted* policy -> ``AutoAddPolicy``
@@ -359,22 +441,18 @@ def configure_host_key_policy(
         # Reject anything that doesn't match the preloaded verified key.
         client.set_missing_host_key_policy(paramiko.RejectPolicy())
         try:
-            key_data = base64.b64decode(known_host.public_key)
-            if known_host.key_type == "ssh-rsa":
-                key = paramiko.RSAKey(data=key_data)
-            elif known_host.key_type == "ssh-ed25519":
-                key = paramiko.Ed25519Key(data=key_data)
-            elif known_host.key_type == "ssh-dss":
-                key = paramiko.DSSKey(data=key_data)
-            else:
-                logger.warning("Unsupported key type: %s", known_host.key_type)
-                raise SSHConnectionError(
-                    f"Unsupported host key type: {known_host.key_type}"
-                )
-
+            key = load_pinned_host_key(
+                known_host.key_type,
+                known_host.public_key,
+                hostname=system.hostname,
+            )
             client.get_host_keys().add(system.hostname, known_host.key_type, key)
             client.get_host_keys().add(system.ip_address, known_host.key_type, key)
             logger.info("Added verified host key for %s", system.hostname)
+        except SSHConnectionError:
+            # Already a sanitized, actionable refusal. Wrapping it again would
+            # bury the reason the key was rejected.
+            raise
         except Exception as e:
             logger.error("Error loading host key for %s: %s", system.hostname, str(e))
             raise SSHConnectionError(
@@ -401,10 +479,9 @@ def configure_host_key_policy(
 # --------------------------------------------------------------------------- #
 
 # Tried in order. Ed25519 and ECDSA reject a key of the wrong algorithm and RSA
-# is last, so the first parser that succeeds owns the key. DSA is deliberately
-# absent: it is obsolete, OpenSSH refuses it by default, and paramiko's DSSKey
-# accepts an RSA key without checking the embedded algorithm name, so including
-# it would let it claim keys it does not own.
+# is last, so the first parser that succeeds owns the key. DSA has no reader
+# here and none is available: it is obsolete, OpenSSH refuses it by default,
+# and a stored DSA key is rejected by envelope before it reaches these parsers.
 _CREDENTIAL_KEY_CLASSES = (
     paramiko.Ed25519Key,
     paramiko.ECDSAKey,
@@ -642,74 +719,156 @@ def load_credential_private_key(
     )
 
 
-# Peer banner version parsing for the certificate-algorithm workaround below.
-_OPENSSH_BANNER = re.compile(r"-OpenSSH_(\d+)(?:\.(\d+))?")
+# --------------------------------------------------------------------------- #
+# Retired SSH algorithms                                                      #
+#                                                                             #
+# DSA keys, RSA signatures over SHA-1, SHA-1 key exchange and GSSAPI key      #
+# exchange are refused outright. The transport library no longer offers any   #
+# of them, so this floor changes nothing today; it is stated here so the      #
+# refusal is a property of Praxis rather than of a dependency pin, and so a   #
+# library that started offering them again could not quietly re-enable them   #
+# on a live fleet.                                                            #
+#                                                                             #
+# The names are the ones used on the wire. ``ssh-rsa`` appears here as a      #
+# *signature and host-key algorithm*, which is the SHA-1 one. It is not the   #
+# same thing as RSA key material serialized under the name ``ssh-rsa``, which #
+# stays fully supported and signs with RSA-SHA2.                              #
+# --------------------------------------------------------------------------- #
 
-# OpenSSH gained RSA-SHA2 signature support for certificates in 7.8.
-_FIRST_RSA_SHA2_CERT_OPENSSH = (7, 8)
+_RETIRED_ALGORITHMS: Dict[str, Tuple[str, ...]] = {
+    "keys": (
+        "ssh-rsa",
+        "ssh-rsa-cert-v01@openssh.com",
+        "ssh-dss",
+        "ssh-dss-cert-v01@openssh.com",
+    ),
+    "pubkeys": (
+        "ssh-rsa",
+        "ssh-rsa-cert-v01@openssh.com",
+        "ssh-dss",
+        "ssh-dss-cert-v01@openssh.com",
+    ),
+    "kex": (
+        "diffie-hellman-group1-sha1",
+        "diffie-hellman-group14-sha1",
+        "diffie-hellman-group-exchange-sha1",
+        "gss-group1-sha1-toWM5Slw5Ew8Mqkay+al2g==",
+        "gss-group14-sha1-toWM5Slw5Ew8Mqkay+al2g==",
+        "gss-gex-sha1-toWM5Slw5Ew8Mqkay+al2g==",
+    ),
+}
 
-# Banner presented to Paramiko's legacy-server heuristic while a certificate is
-# being offered to a server we have positively identified as modern. It only has
-# to be a version that heuristic does not treat as ancient.
-_MODERN_OPENSSH_BANNER = "SSH-2.0-OpenSSH_8.0"
 
+def harden_disabled_algorithms(
+    disabled: Optional[Dict[str, List[str]]] = None,
+) -> Dict[str, List[str]]:
+    """Merge the retired-algorithm floor into a ``disabled_algorithms`` dict.
 
-def openssh_supports_rsa_sha2_certificates(remote_version: Optional[str]) -> bool:
-    """True when the peer banner is an OpenSSH new enough for RSA-SHA2 certs.
-
-    Anything that is not an OpenSSH banner returns False, so a non-OpenSSH peer
-    keeps Paramiko's own handling untouched.
+    Returns a new dict; the caller's is never mutated. A policy allow-list can
+    only ever narrow what is negotiated further, so the floor cannot be widened
+    from configuration.
     """
-    if not remote_version:
-        return False
-    match = _OPENSSH_BANNER.search(remote_version)
-    if not match:
-        return False
-    major = int(match.group(1))
-    minor = int(match.group(2) or 0)
-    return (major, minor) >= _FIRST_RSA_SHA2_CERT_OPENSSH
+    hardened: Dict[str, List[str]] = {
+        key: list(values) for key, values in (disabled or {}).items()
+    }
+    for key, retired in _RETIRED_ALGORITHMS.items():
+        existing = hardened.setdefault(key, [])
+        existing.extend(name for name in retired if name not in existing)
+    return hardened
 
 
-def _offers_certificate(pkey) -> bool:
-    """True when this key would be presented as an OpenSSH certificate."""
-    return getattr(pkey, "public_blob", None) is not None
+def supported_algorithms() -> Dict[str, Tuple[str, ...]]:
+    """The cipher, MAC and key-exchange names the transport library offers.
+
+    A policy allow-list is translated by subtracting from these, so this is the
+    universe an operator's list is matched against. The probe transport exists
+    only to read the tables and is closed before returning.
+    """
+    probe = paramiko.Transport(socket.socket())
+    try:
+        options = probe.get_security_options()
+        return {
+            "ciphers": tuple(options.ciphers),
+            "macs": tuple(options.digests),
+            "kex": tuple(options.kex),
+        }
+    finally:
+        try:
+            probe.close()
+        except Exception:  # pylint: disable=broad-except
+            pass
+
+
+# How each allow-list dimension is named in an operator-facing message.
+_DIMENSION_NAMES = {
+    "ciphers": "ciphers",
+    "macs": "MACs",
+    "kex": "key exchange algorithms",
+}
+
+
+def disabled_from_allowlists(
+    *,
+    allowed_ciphers: Optional[str],
+    allowed_macs: Optional[str],
+    allowed_kex: Optional[str],
+) -> Dict[str, List[str]]:
+    """Translate policy allow-lists into paramiko's ``disabled_algorithms``.
+
+    Paramiko takes the negative of an allow-list, so each list becomes every
+    supported name it does not contain. An empty or missing list means the
+    policy does not constrain that dimension. The retired-algorithm floor is
+    always applied, so the result is never empty and never permissive.
+
+    The dict has to be handed to ``connect()`` or ``Transport()``; it cannot be
+    applied once the handshake has started.
+    """
+
+    def _diff(allowed_csv: Optional[str], supported: Tuple[str, ...]) -> List[str]:
+        if not allowed_csv:
+            return []
+        allowed = {a.strip() for a in allowed_csv.split(",") if a.strip()}
+        return [name for name in supported if name not in allowed]
+
+    supported = supported_algorithms()
+    disabled: Dict[str, List[str]] = {}
+    for key, allowed_csv in (
+        ("ciphers", allowed_ciphers),
+        ("macs", allowed_macs),
+        ("kex", allowed_kex),
+    ):
+        excluded = _diff(allowed_csv, supported[key])
+        if allowed_csv and len(excluded) == len(supported[key]):
+            # The allow-list named nothing that can be negotiated, usually
+            # because everything on it has been retired. Say so here rather
+            # than let the handshake fail on an empty proposal, which reads as
+            # an unreachable host.
+            raise SSHConnectionError(
+                f"The SSH policy allows no supported {_DIMENSION_NAMES[key]}. "
+                f"Allowed: {allowed_csv}. Supported: {', '.join(supported[key])}."
+            )
+        if excluded:
+            disabled[key] = excluded
+    return harden_disabled_algorithms(disabled)
 
 
 class CertificateSSHClient(paramiko.SSHClient):
-    r"""Client that lets a modern OpenSSH negotiate an RSA-SHA2 certificate.
+    """The SSH client every Praxis connection is made with.
 
-    Paramiko forces the SHA-1 ``ssh-rsa-cert-v01@openssh.com`` algorithm for any
-    certificate whenever the peer banner matches its legacy-server test,
-    ``-OpenSSH_(?:[1-6]|7\.[0-7])``. That pattern has no digit boundary, so the
-    leading "1" of ``OpenSSH_10`` matches ``[1-6]`` and every OpenSSH 10 host is
-    treated as if it were OpenSSH 1.x. Those servers dropped SHA-1 from their
-    default ``PubkeyAcceptedAlgorithms`` years ago, so sshd answers "signature
-    algorithm ssh-rsa-cert-v01@openssh.com not in PubkeyAcceptedAlgorithms" and
-    never evaluates the certificate at all.
-
-    While a certificate is being offered to a server whose banner we have
-    positively identified as OpenSSH 7.8 or newer, the banner Paramiko's
-    heuristic reads is replaced with one it does not treat as ancient, and
-    restored immediately afterwards. Paramiko then runs its normal negotiation
-    and agrees on ``rsa-sha2-512-cert-v01@openssh.com``. Nothing else about
-    authentication changes: password auth, plain public keys, and genuinely old
-    servers all take the untouched path.
+    Command execution, browser sessions and file transfer all authenticate with
+    a signed user certificate carried on an RSA key, and all of them reach the
+    host through this class. It applies the retired-algorithm floor to every
+    connection, including the ones whose caller passes no algorithm policy of
+    its own, so a certificate can only ever be signed under RSA-SHA2 and no
+    connection can fall back to SHA-1 key exchange. A caller's own
+    ``disabled_algorithms`` is honored and extended, never replaced.
     """
 
-    def _auth(self, username, password, pkey, *args, **kwargs):
-        transport = getattr(self, "_transport", None)
-        remote_version = getattr(transport, "remote_version", None)
-        if not (
-            _offers_certificate(pkey)
-            and openssh_supports_rsa_sha2_certificates(remote_version)
-        ):
-            return super()._auth(username, password, pkey, *args, **kwargs)
-
-        transport.remote_version = _MODERN_OPENSSH_BANNER
-        try:
-            return super()._auth(username, password, pkey, *args, **kwargs)
-        finally:
-            transport.remote_version = remote_version
+    def connect(self, *args, **kwargs):
+        kwargs["disabled_algorithms"] = harden_disabled_algorithms(
+            kwargs.get("disabled_algorithms")
+        )
+        return super().connect(*args, **kwargs)
 
 
 class SSHService:  # pylint: disable=too-many-instance-attributes
@@ -972,46 +1131,21 @@ class SSHService:  # pylint: disable=too-many-instance-attributes
         except Exception as e:  # pylint: disable=broad-except
             logger.error("Failed to fire host_key_changed notification: %s", e)
 
-    def _build_disabled_algorithms(
-        self, system: System
-    ) -> Optional[Dict[str, List[str]]]:
-        """Translate the system's SSH policy allow-lists into paramiko's
-        `disabled_algorithms` dict, which must be set pre-handshake via
-        `client.connect(disabled_algorithms=...)`.
+    def _build_disabled_algorithms(self, system: System) -> Dict[str, List[str]]:
+        """The system's algorithm policy, as paramiko's ``disabled_algorithms``.
 
-        Paramiko supports disabling by three keys: ciphers, macs, kex.
-        For each policy allow-list, we disable every supported algorithm
-        not present in the allow-list.
+        A system without a policy still gets the retired-algorithm floor, so
+        absent configuration is never more permissive than configured
+        configuration.
         """
-        if not system.ssh_security_policy:
-            return None
-
         policy = system.ssh_security_policy
-        disabled: Dict[str, List[str]] = {}
-
-        def _diff(allowed_csv: Optional[str], supported: List[str]) -> List[str]:
-            if not allowed_csv:
-                return []
-            allowed = {a.strip() for a in allowed_csv.split(",") if a.strip()}
-            return [s for s in supported if s not in allowed]
-
-        sec_opts = paramiko.Transport(socket.socket()).get_security_options()
-        try:
-            ciphers_disabled = _diff(policy.allowed_ciphers, list(sec_opts.ciphers))
-            macs_disabled = _diff(policy.allowed_macs, list(sec_opts.digests))
-            kex_disabled = _diff(policy.allowed_kex, list(sec_opts.kex))
-        finally:
-            # Transport built on a fresh socket just to enumerate options;
-            # no handshake happened, but close defensively.
-            pass
-
-        if ciphers_disabled:
-            disabled["ciphers"] = ciphers_disabled
-        if macs_disabled:
-            disabled["macs"] = macs_disabled
-        if kex_disabled:
-            disabled["kex"] = kex_disabled
-        return disabled or None
+        if policy is None:
+            return harden_disabled_algorithms()
+        return disabled_from_allowlists(
+            allowed_ciphers=policy.allowed_ciphers,
+            allowed_macs=policy.allowed_macs,
+            allowed_kex=policy.allowed_kex,
+        )
 
     def _on_connected(
         self, system: System, client: paramiko.SSHClient, username: str
@@ -1251,9 +1385,6 @@ class SSHService:  # pylint: disable=too-many-instance-attributes
         attempts Vault CA-signed cert auth first, falling back to the stored
         credential on any failure (PRA-44).
         """
-        # CertificateSSHClient only differs from paramiko's client when a
-        # certificate is offered to a modern OpenSSH; every other auth path is
-        # unchanged.
         client = CertificateSSHClient()
 
         # Configure host key policy based on security settings (shared with

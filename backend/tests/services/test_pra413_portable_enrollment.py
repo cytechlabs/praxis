@@ -19,7 +19,6 @@ from __future__ import annotations
 
 import logging
 import os
-import re
 import shlex
 import subprocess
 
@@ -50,7 +49,6 @@ from app.services.ssh_service import (
     CertificateSSHClient,
     SSHConnectionError,
     SSHService,
-    openssh_supports_rsa_sha2_certificates,
 )
 
 CA_KEY_BODY = "ssh-ed25519 AAAATESTCAMATERIAL test@praxis"
@@ -1227,104 +1225,67 @@ def test_rollback_copies_are_discarded_only_after_the_commit_lands(
 
 
 # ------------------------------------- RSA-SHA2 certificate algorithm agreement
+#
+# Enrollment proves the broker works by authenticating with an RSA certificate.
+# The signature algorithm that certificate is signed under has to be RSA-SHA2:
+# supported servers dropped SHA-1 from their default PubkeyAcceptedAlgorithms,
+# and Praxis retired it outright.
 
 
-@pytest.mark.parametrize(
-    "banner,modern",
-    [
-        ("SSH-2.0-OpenSSH_10.2p1 Ubuntu-2ubuntu3.5", True),
-        ("SSH-2.0-OpenSSH_9.9p1", True),
-        ("SSH-2.0-OpenSSH_8.9p1 Ubuntu-3", True),
-        ("SSH-2.0-OpenSSH_7.8", True),
-        ("SSH-2.0-OpenSSH_7.7", False),
-        ("SSH-2.0-OpenSSH_6.6.1p1", False),
-        ("SSH-2.0-dropbear_2020.81", False),
-        ("", False),
-        (None, False),
-    ],
-)
-def test_openssh_version_detection(banner, modern):
-    """OpenSSH 10 must not be mistaken for OpenSSH 1, which is the whole bug."""
-    assert openssh_supports_rsa_sha2_certificates(banner) is modern
-
-
-class _FakeTransport:
-    def __init__(self, remote_version):
-        self.remote_version = remote_version
-
-
-def _record_auth_banner(monkeypatch):
+def _connect_kwargs(monkeypatch):
+    """Capture what the shared client hands paramiko's own ``connect``."""
     seen = {}
 
-    def _super_auth(self, username, password, pkey, *args, **kwargs):  # noqa: ARG001
-        seen["banner"] = self._transport.remote_version
-        return []
+    def _super_connect(self, *args, **kwargs):  # noqa: ARG001
+        seen.update(kwargs)
 
-    monkeypatch.setattr(paramiko.SSHClient, "_auth", _super_auth)
+    monkeypatch.setattr(paramiko.SSHClient, "connect", _super_connect)
     return seen
 
 
-def _certificate_key():
-    key = paramiko.RSAKey.generate(1024)
-    key.public_blob = object()
-    return key
+def test_certificate_client_cannot_negotiate_a_sha1_rsa_signature(monkeypatch):
+    """The retired algorithms are refused even when the caller names none."""
+    seen = _connect_kwargs(monkeypatch)
+    CertificateSSHClient().connect(hostname="host", username="praxis")
+
+    disabled = seen["disabled_algorithms"]
+    assert "ssh-rsa" in disabled["pubkeys"]
+    assert "ssh-rsa" in disabled["keys"]
+    assert "ssh-dss" in disabled["pubkeys"]
+    assert "diffie-hellman-group14-sha1" in disabled["kex"]
+    assert "gss-group1-sha1-toWM5Slw5Ew8Mqkay+al2g==" in disabled["kex"]
 
 
-# Paramiko's own legacy-server test. Reproduced so the test states the exact
-# invariant the workaround exists for.
-_PARAMIKO_LEGACY_OPENSSH = re.compile(r"-OpenSSH_(?:[1-6]|7\.[0-7])")
+def test_certificate_client_extends_a_callers_own_policy(monkeypatch):
+    """A policy narrows negotiation further; it never replaces the floor."""
+    seen = _connect_kwargs(monkeypatch)
+    CertificateSSHClient().connect(
+        hostname="host",
+        username="praxis",
+        disabled_algorithms={
+            "kex": ["diffie-hellman-group16-sha512"],
+            "ciphers": ["3des-cbc"],
+        },
+    )
+
+    disabled = seen["disabled_algorithms"]
+    assert disabled["ciphers"] == ["3des-cbc"]
+    assert "diffie-hellman-group16-sha512" in disabled["kex"]
+    assert "diffie-hellman-group14-sha1" in disabled["kex"]
+    assert "ssh-rsa" in disabled["pubkeys"]
 
 
-def test_certificate_client_hides_the_misread_banner_for_certificates(monkeypatch):
-    banner = "SSH-2.0-OpenSSH_10.2p1 Ubuntu-2ubuntu3.5"
-    # The premise: paramiko misreads this modern server as an ancient one.
-    assert _PARAMIKO_LEGACY_OPENSSH.search(banner) is not None
+def test_rsa_certificate_key_material_is_still_named_ssh_rsa():
+    """An RSA key serializes as ``ssh-rsa``; that is material, not a signature.
 
-    seen = _record_auth_banner(monkeypatch)
-    client = CertificateSSHClient()
-    client._transport = _FakeTransport(banner)
-
-    client._auth("praxis", None, _certificate_key())
-
-    # What paramiko's heuristic sees no longer trips it, so it negotiates
-    # rsa-sha2-* and appends the certificate suffix itself.
-    assert _PARAMIKO_LEGACY_OPENSSH.search(seen["banner"]) is None
-    # And the real banner is put back for everything else that reads it.
-    assert client._transport.remote_version == banner
-
-
-def test_certificate_client_leaves_genuinely_old_servers_alone(monkeypatch):
-    seen = _record_auth_banner(monkeypatch)
-    client = CertificateSSHClient()
-    client._transport = _FakeTransport("SSH-2.0-OpenSSH_7.4")
-
-    client._auth("praxis", None, _certificate_key())
-
-    assert seen["banner"] == "SSH-2.0-OpenSSH_7.4"
-
-
-def test_certificate_client_leaves_non_certificate_auth_alone(monkeypatch):
-    seen = _record_auth_banner(monkeypatch)
-    client = CertificateSSHClient()
-    client._transport = _FakeTransport("SSH-2.0-OpenSSH_10.2p1")
-
-    client._auth("praxis", "secret", None)
-
-    assert seen["banner"] == "SSH-2.0-OpenSSH_10.2p1"
-
-
-def test_certificate_client_restores_the_banner_when_auth_raises(monkeypatch):
-    def _super_auth(self, *args, **kwargs):  # noqa: ARG001
-        raise paramiko.AuthenticationException("Authentication failed.")
-
-    monkeypatch.setattr(paramiko.SSHClient, "_auth", _super_auth)
-    client = CertificateSSHClient()
-    client._transport = _FakeTransport("SSH-2.0-OpenSSH_10.2p1")
-
-    with pytest.raises(paramiko.AuthenticationException):
-        client._auth("praxis", None, _certificate_key())
-
-    assert client._transport.remote_version == "SSH-2.0-OpenSSH_10.2p1"
+    Enrollment hands this exact line to the secrets service for signing, so
+    refusing it would break certificate auth outright.
+    """
+    key = paramiko.RSAKey.generate(2048)
+    assert key.get_name() == "ssh-rsa"
+    assert f"{key.get_name()} {key.get_base64()}".startswith("ssh-rsa AAAA")
+    # The same name cannot be used as a signature algorithm.
+    assert "ssh-rsa" not in paramiko.RSAKey.HASHES
 
 
 # --------------------------------- the certificate-only connection never falls back

@@ -42,7 +42,14 @@ from sqlalchemy.orm import Session
 from ..api.schemas import onboarding as schemas
 from ..db.models import Credential
 from ..db.ssh_security_models import SSHSecurityPolicy
-from .ssh_service import SSHKeyError, host_key_fingerprint, load_credential_private_key
+from .ssh_service import (
+    SSHConnectionError,
+    SSHKeyError,
+    disabled_from_allowlists,
+    harden_disabled_algorithms,
+    host_key_fingerprint,
+    load_credential_private_key,
+)
 from .vault_service import VaultService
 
 logger = logging.getLogger(__name__)
@@ -185,42 +192,22 @@ def policy_requires_host_key_verification(policy: Optional[SSHSecurityPolicy]) -
 
 def build_disabled_algorithms(
     policy: Optional[SSHSecurityPolicy],
-) -> Optional[Dict[str, List[str]]]:
+) -> Dict[str, List[str]]:
     """Translate a policy's allow-lists into paramiko's pre-handshake dict.
 
     Same translation ``SSHService`` applies to a managed host, expressed against
     a policy rather than a system, so preflight negotiates exactly what the
-    host will negotiate once it is managed.
+    host will negotiate once it is managed. A draft with no policy attached
+    still gets the retired-algorithm floor: preflight is the first handshake
+    with an unmanaged host and must not be the most permissive one.
     """
     if policy is None:
-        return None
-
-    def _diff(allowed_csv: Optional[str], supported: List[str]) -> List[str]:
-        if not allowed_csv:
-            return []
-        allowed = {a.strip() for a in allowed_csv.split(",") if a.strip()}
-        return [s for s in supported if s not in allowed]
-
-    probe = paramiko.Transport(socket.socket())
-    try:
-        sec_opts = probe.get_security_options()
-        disabled: Dict[str, List[str]] = {}
-        ciphers = _diff(policy.allowed_ciphers, list(sec_opts.ciphers))
-        macs = _diff(policy.allowed_macs, list(sec_opts.digests))
-        kex = _diff(policy.allowed_kex, list(sec_opts.kex))
-    finally:
-        try:
-            probe.close()
-        except Exception:  # pylint: disable=broad-except
-            pass
-
-    if ciphers:
-        disabled["ciphers"] = ciphers
-    if macs:
-        disabled["macs"] = macs
-    if kex:
-        disabled["kex"] = kex
-    return disabled or None
+        return harden_disabled_algorithms()
+    return disabled_from_allowlists(
+        allowed_ciphers=policy.allowed_ciphers,
+        allowed_macs=policy.allowed_macs,
+        allowed_kex=policy.allowed_kex,
+    )
 
 
 def _resolve(address: str, port: int) -> List[Tuple[Any, ...]]:
@@ -513,6 +500,18 @@ def _start_transport(
         transport.banner_timeout = HANDSHAKE_TIMEOUT_SECONDS
         transport.handshake_timeout = HANDSHAKE_TIMEOUT_SECONDS
         transport.start_client(timeout=HANDSHAKE_TIMEOUT_SECONDS)
+    except SSHConnectionError as exc:
+        # The policy itself leaves nothing negotiable, so no handshake is
+        # attempted. That is a policy rejection, not an unreachable host.
+        result.checks.append(
+            schemas.serialize_check(
+                schemas.CHECK_HOST_IDENTITY,
+                schemas.STATUS_FAIL,
+                schemas.REASON_SSH_POLICY_REJECTED,
+            )
+        )
+        logger.info("preflight policy allows nothing negotiable: %s", exc)
+        return transport, False
     except paramiko.SSHException as exc:
         result.checks.append(
             schemas.serialize_check(
