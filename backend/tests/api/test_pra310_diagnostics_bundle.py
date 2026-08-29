@@ -126,10 +126,11 @@ def test_compound_and_quoted_secrets_in_logs_are_redacted(db, client, admin_user
     """
     install_log_buffer()
     logging.getLogger("pra369.test").error(
-        f"compound-redaction-boundary-marker agent_token={_COMPOUND_VALUE} "
+        "compound-redaction-boundary-marker agent_token=%s "
         "totp_secret=JBSWY3DPEHPK3PXP "
         "my_password=hunter2 mapping={'token': 'abc123def'} "
-        'quoted password="spaced secret value" host=db'
+        'quoted password="spaced secret value" host=db',
+        _COMPOUND_VALUE,
     )
     _login(client, admin_user)
     res = client.post("/diagnostics/bundle?time_range=24h")
