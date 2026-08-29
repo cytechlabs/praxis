@@ -125,7 +125,8 @@ class TestPolicyReadingFailsClosed:
         assert "diffie-hellman-group14-sha1" in disabled["kex"]
         assert "gss-gex-sha1-toWM5Slw5Ew8Mqkay+al2g==" in disabled["kex"]
 
-    def test_a_policy_cannot_re_enable_a_retired_algorithm(self):
+    @staticmethod
+    def test_a_policy_cannot_re_enable_a_retired_algorithm():
         """An allow-list narrows negotiation; it can never widen it."""
         policy = SSHSecurityPolicy(
             name="legacy",
@@ -269,6 +270,18 @@ def _private_key_pem(kind: str) -> str:
     ).decode()
 
 
+def _dsa_pem_envelope() -> str:
+    """A DSA PEM envelope carrying no key material.
+
+    The credential loader decides a stored key's format from the envelope
+    alone, so a format refusal needs the marker lines and nothing between
+    them. Assembling them here keeps a key-shaped block out of the source.
+    """
+    dashes = "-" * 5
+    marker = "DSA PRIVATE KEY"
+    return f"{dashes}BEGIN {marker}{dashes}\n{dashes}END {marker}{dashes}\n"
+
+
 class TestCredentialKeyFormats:
     """Verification must accept the key types operators actually generate."""
 
@@ -284,7 +297,8 @@ class TestCredentialKeyFormats:
         transport.auth_publickey.assert_called_once()
         assert transport.auth_publickey.call_args[0][0] == "praxis"
 
-    def test_an_unusable_key_maps_to_key_type_unsupported(self):
+    @staticmethod
+    def test_an_unusable_key_maps_to_key_type_unsupported():
         credential = Credential(
             name="key-bad", auth_method="ssh_key", username="praxis"
         )
@@ -292,12 +306,14 @@ class TestCredentialKeyFormats:
             preflight._authenticate(
                 MagicMock(),
                 credential,
-                {
-                    "ssh_key": "-----BEGIN DSA PRIVATE KEY-----\nx\n-----END DSA PRIVATE KEY-----"
-                },
+                {"ssh_key": _dsa_pem_envelope()},
                 None,
             )
         assert excinfo.value.reason_code == schemas.REASON_KEY_TYPE_UNSUPPORTED
+        # Every unusable key maps to this one code, so the cause is what shows
+        # the DSA format branch was reached rather than a body that failed to
+        # parse for some unrelated reason.
+        assert "DSA format" in str(excinfo.value.__cause__)
 
     def test_a_rejected_key_maps_to_authentication_failed(self):
         credential = Credential(
