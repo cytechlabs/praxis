@@ -113,8 +113,30 @@ class TestPolicyReadingFailsClosed:
         assert "aes256-ctr" not in disabled.get("ciphers", [])
         assert "hmac-sha2-512" not in disabled.get("macs", [])
 
-    def test_no_policy_disables_nothing(self):
-        assert preflight.build_disabled_algorithms(None) is None
+    def test_no_policy_still_refuses_the_retired_algorithms(self):
+        """Preflight is the first handshake with an unmanaged host.
+
+        A draft with no policy attached must not negotiate more than a managed
+        host would, so the retired algorithms are refused with or without one.
+        """
+        disabled = preflight.build_disabled_algorithms(None)
+        assert "ssh-rsa" in disabled["pubkeys"]
+        assert "ssh-dss" in disabled["keys"]
+        assert "diffie-hellman-group14-sha1" in disabled["kex"]
+        assert "gss-gex-sha1-toWM5Slw5Ew8Mqkay+al2g==" in disabled["kex"]
+
+    def test_a_policy_cannot_re_enable_a_retired_algorithm(self):
+        """An allow-list narrows negotiation; it can never widen it."""
+        policy = SSHSecurityPolicy(
+            name="legacy",
+            allowed_ciphers="aes256-ctr",
+            allowed_macs="hmac-sha2-512",
+            allowed_kex="diffie-hellman-group14-sha1,diffie-hellman-group14-sha256",
+        )
+        disabled = preflight.build_disabled_algorithms(policy)
+        assert "diffie-hellman-group14-sha1" in disabled["kex"]
+        assert "diffie-hellman-group14-sha256" not in disabled["kex"]
+        assert "ssh-rsa" in disabled["pubkeys"]
 
 
 class TestVerifiedSemantics:

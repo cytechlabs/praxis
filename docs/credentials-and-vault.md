@@ -36,7 +36,9 @@ Praxis reads Ed25519, ECDSA (nistp256, nistp384, nistp521), and RSA private keys
 
 Strength is checked against the key's own algorithm. RSA keys must be at least 2048 bits, and an SSH security policy's minimum key size raises that floor for the systems it covers - see [ssh-and-security.md](ssh-and-security.md). Ed25519 and ECDSA carry their strength in the algorithm and curve, so the RSA size rule is not applied to them.
 
-Three formats are rejected outright, with an error naming the format: DSA keys, PKCS#8 containers (`BEGIN PRIVATE KEY`), and PuTTY `.ppk` files. Convert a PuTTY key first with `puttygen mykey.ppk -O private-openssh-new -o mykey`.
+Three formats are rejected outright, with an error naming the format: DSA keys, PKCS#8 containers (`BEGIN PRIVATE KEY`), and PuTTY `.ppk` files. Convert a PuTTY key first with `puttygen mykey.ppk -O private-openssh-new -o mykey`. DSA is refused for the algorithm, not the envelope, and cannot be enabled - see [negotiated algorithms](ssh-and-security.md#negotiated-algorithms).
+
+A stored RSA key is used exactly as it is. Its serialized name is `ssh-rsa`, which is what RSA key material is called on the wire, and Praxis signs with it using `rsa-sha2-512` or `rsa-sha2-256`. Nothing needs regenerating or converting.
 
 An encrypted key is usable only when its passphrase is stored under `ssh_passphrase` in the same secret. Without it the connection fails and says so; Praxis never falls back to another authentication method to work around an unusable key.
 

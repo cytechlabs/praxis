@@ -40,8 +40,7 @@ from app.services import session_runtime as runtime_registry
 from app.services import session_service as ss
 from app.services.ssh_service import CertificateSSHClient
 
-# A current Ubuntu server. Paramiko's legacy test is ``-OpenSSH_(?:[1-6]|7\\.[0-7])``
-# and the leading "1" of "10" matches ``[1-6]``, which is the whole defect.
+# A current Ubuntu server, and the banner shape a two-digit major version has.
 OPENSSH_10_BANNER = "SSH-2.0-OpenSSH_10.0p2 Ubuntu-3ubuntu1"
 
 # What a modern OpenSSH advertises in ``server-sig-algs``. The SHA-1 "ssh-rsa"
@@ -85,12 +84,7 @@ class _NegotiatingTransport:
 
 
 def _install_real_negotiation(monkeypatch):
-    """Let paramiko decide the algorithm instead of the test asserting it.
-
-    Replaces only the base-class ``_auth`` -- the certificate client keeps its
-    own override, so the banner it presents is the one paramiko negotiates
-    against.
-    """
+    """Let paramiko decide the algorithm instead of the test asserting it."""
 
     def _auth(self, username, password, pkey, *args, **kwargs):  # noqa: ARG001
         handler = AuthHandler(self._transport)
@@ -385,36 +379,48 @@ def test_file_transfer_builds_the_certificate_client_and_negotiates_rsa_sha2(
 
 
 @pytest.mark.parametrize(
-    "client_cls, expected",
-    [
-        (_LoopbackPlainClient, SHA1_CERT_ALGORITHM),
-        (_LoopbackCertificateClient, RSA_SHA2_CERT_ALGORITHM),
-    ],
+    "client_cls", [_LoopbackPlainClient, _LoopbackCertificateClient]
 )
-def test_only_the_certificate_client_survives_the_openssh_10_banner(
-    client_cls, expected, monkeypatch
+@pytest.mark.parametrize(
+    "banner", [OPENSSH_10_BANNER, "SSH-2.0-OpenSSH_7.4", "SSH-2.0-dropbear_2020.81"]
+)
+def test_the_sha1_certificate_algorithm_can_never_be_agreed(
+    client_cls, banner, monkeypatch
 ):
-    """States the regression directly: paramiko's own client still fails."""
+    """No banner and no client reaches the SHA-1 certificate algorithm.
+
+    The peer's version is not consulted: the SHA-1 algorithm is not among the
+    algorithms that can be offered, so it cannot be the outcome of negotiation
+    for any host at all.
+    """
     _install_real_negotiation(monkeypatch)
-    client = client_cls()
+    client = client_cls(banner=banner)
     key = paramiko.RSAKey.generate(2048)
     key.public_blob = SimpleNamespace(key_type=RSA_CERT_KEY_TYPE)
 
     client.connect(username="svc", pkey=key)
 
-    assert client.negotiated == expected
+    assert client.negotiated == RSA_SHA2_CERT_ALGORITHM
+    assert client.negotiated != SHA1_CERT_ALGORITHM
 
 
-def test_genuinely_old_servers_still_get_the_sha1_certificate_algorithm(monkeypatch):
-    """The workaround must not change how a real OpenSSH 7.4 is handled."""
+def test_a_host_offering_only_sha1_fails_closed_rather_than_downgrading(monkeypatch):
+    """A server that will only take SHA-1 gets no certificate, not a SHA-1 one."""
     _install_real_negotiation(monkeypatch)
-    client = _LoopbackCertificateClient(banner="SSH-2.0-OpenSSH_7.4")
+    client = _LoopbackCertificateClient()
     key = paramiko.RSAKey.generate(2048)
     key.public_blob = SimpleNamespace(key_type=RSA_CERT_KEY_TYPE)
+    real_init = _NegotiatingTransport.__init__
 
-    client.connect(username="svc", pkey=key)
+    def _only_sha1(self, remote_version):
+        real_init(self, remote_version)
+        self.server_extensions = {"server-sig-algs": b"ssh-ed25519,ssh-rsa"}
 
-    assert client.negotiated == SHA1_CERT_ALGORITHM
+    monkeypatch.setattr(_NegotiatingTransport, "__init__", _only_sha1)
+
+    with pytest.raises(paramiko.AuthenticationException):
+        client.connect(username="svc", pkey=key)
+    assert client.negotiated is None
 
 
 # --------------------------------------------- surrounding contracts unchanged
