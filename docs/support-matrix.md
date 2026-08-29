@@ -50,6 +50,34 @@ rollback with the structured error `unsupported_package_family`.
 | `aarch64` / `arm64` | Supported | Agent ships an arm64 build (CI cross-compiles both). |
 | other (armv7, ppc64le, s390x, riscv64) | Unsupported | No agent build is published; not validated. |
 
+## SSH requirements
+
+Every supported target is reached over SSH by default, so the algorithms its
+`sshd` offers are part of the support boundary. Praxis negotiates modern
+algorithms only:
+
+| Dimension | Praxis accepts |
+|---|---|
+| Host keys | `ssh-ed25519`, ECDSA (`nistp256`/`384`/`521`), RSA under `rsa-sha2-512` / `rsa-sha2-256` |
+| Pinned host keys | Every host key type above. An RSA host key is pinned under the name its material carries, `ssh-rsa`, whichever RSA-SHA2 algorithm the handshake agreed |
+| Public-key signatures | `ssh-ed25519`, ECDSA, `rsa-sha2-512`, `rsa-sha2-256` |
+| Key exchange | `curve25519-sha256@libssh.org`, `ecdh-sha2-nistp256/384/521`, `diffie-hellman-group16-sha512`, `diffie-hellman-group-exchange-sha256`, `diffie-hellman-group14-sha256` |
+
+Whatever host key a supported host presents is captured on first use and
+verified on every connection afterwards, so host-key verification stays on for
+every target in this matrix.
+
+DSA, RSA signatures over SHA-1, SHA-1 key exchange, and GSSAPI key exchange are
+refused and cannot be re-enabled from a policy. See
+[negotiated algorithms](ssh-and-security.md#negotiated-algorithms).
+
+Every distribution in the Supported and Best-effort tiers below ships an
+`sshd` whose defaults satisfy this. A host reachable only over SHA-1 key
+exchange or a DSA host key is outside the boundary regardless of its
+distribution, and so is an OpenSSH older than 7.8 where certificate
+authentication is used, because those releases cannot sign a certificate with
+anything but SHA-1.
+
 ## Distro / release matrix
 
 Dates are standard upstream EOL from the hand-maintained
