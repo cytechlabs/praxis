@@ -20,6 +20,7 @@ from app.services import mirror_disk
 from app.services import mirror_signing_key_service as svc_module
 from app.services.mirror_gpg import gpg_available
 from app.services.mirror_sync import SyncResult
+from tests.helpers.armor import pgp_private_block
 
 skip_without_gpg = pytest.mark.skipif(
     not gpg_available(),
@@ -43,7 +44,7 @@ def patch_gpg(monkeypatch):
         return _TEST_FPR
 
     def fake_export_secret(home, fpr):
-        return f"-----BEGIN PGP PRIVATE KEY BLOCK-----\nFAKE-{fpr}\n-----END-----\n"
+        return pgp_private_block(f"FAKE-{fpr}")
 
     def fake_export_public(home, fpr):
         return f"-----BEGIN PGP PUBLIC KEY BLOCK-----\nFAKE-{fpr}\n-----END-----\n"

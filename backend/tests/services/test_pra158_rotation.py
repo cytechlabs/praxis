@@ -30,6 +30,7 @@ from app.services.mirror_signing_key_service import (
     vault_path_for,
 )
 from tests.conftest import unique_test_ip
+from tests.helpers.armor import pgp_private_block
 
 _ACTIVE_FPR = "ABCDEF0123456789ABCDEF0123456789ABCDEF01"
 _PENDING_FPR = "B" * 40
@@ -48,7 +49,7 @@ def patch_gpg(monkeypatch):
         return next(fingerprints)
 
     def fake_export_secret(home, fpr):
-        return f"-----BEGIN PGP PRIVATE KEY BLOCK-----\nFAKE-{fpr}\n-----END-----\n"
+        return pgp_private_block(f"FAKE-{fpr}")
 
     def fake_export_public(home, fpr):
         return f"-----BEGIN PGP PUBLIC KEY BLOCK-----\nFAKE-{fpr}\n-----END-----\n"

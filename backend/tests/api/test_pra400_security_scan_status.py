@@ -276,7 +276,7 @@ def test_dashboard_never_serves_credential_material_in_failure_context(
     the one field, so a secret cannot arrive through some other key either.
     """
     a, b = hosts
-    secret = "SentinelApiSecret8f2c1d9a4b7e"
+    sentinel = "SentinelApiSecret8f2c1d9a4b7e"
     _record_scan(
         db,
         admin_user,
@@ -291,12 +291,12 @@ def test_dashboard_never_serves_credential_material_in_failure_context(
         b,
         provenance.RESULT_FAILURE,
         error_message=(
-            f"dnf failed: cannot open https://mirroruser:{secret}@repo.internal/os"
+            f"dnf failed: cannot open https://mirroruser:{sentinel}@repo.internal/os"
         ),
     )
 
     body = authed_client.get("/fleet/dashboard").json()
-    assert secret not in json.dumps(body)
+    assert sentinel not in json.dumps(body)
 
     posture = body["security_posture"]
     assert posture["state"] == provenance.STATE_FAILED
@@ -420,13 +420,13 @@ def test_single_host_scan_failure_never_persists_credential_material(
     """
     host = _mk_system(db, seed_distro, group, cred, "pra400-api-secret", "10.41.2.1")
     db.commit()
-    secret = "SentinelSshPw8f2c1d9a4b7e"
+    sentinel = "SentinelSshPw8f2c1d9a4b7e"
 
     from app.services.ssh_service import SSHConnectionError
 
     def fake_exec(self, system_id, command, timeout=60):
         raise SSHConnectionError(
-            f"ssh handshake failed: password={secret} for user deploy"
+            f"ssh handshake failed: password={sentinel} for user deploy"
         )
 
     monkeypatch.setattr(
@@ -438,7 +438,7 @@ def test_single_host_scan_failure_never_persists_credential_material(
 
     recorded = captured_ops["results"][0]
     assert recorded["status"] == provenance.RESULT_FAILURE
-    assert secret not in recorded["message"]
+    assert sentinel not in recorded["message"]
     assert "redacted" in recorded["message"]
     # The non-secret diagnostic survives, or the row is worthless.
     assert "handshake failed" in recorded["message"]
@@ -451,7 +451,7 @@ def test_single_host_partial_scan_message_is_redacted_before_recording(
     host = _mk_system(db, rocky_distro, group, cred, "pra400-api-partial", "10.41.2.2")
     db.add(Package(system_id=host.id, name="openssl", installed_version="1.0"))
     db.commit()
-    secret = "SentinelAdvisoryToken8f2c1d9a"
+    sentinel = "SentinelAdvisoryToken8f2c1d9a"
 
     monkeypatch.setattr(
         "app.services.package_service.PackageService.scan_security_updates",
@@ -462,7 +462,7 @@ def test_single_host_partial_scan_message_is_redacted_before_recording(
             "scan_state": provenance.STATE_PARTIAL,
             "updates_available": 1,
             "message": (
-                f"Security scan incomplete: advisory feed rejected token={secret}"
+                f"Security scan incomplete: advisory feed rejected token={sentinel}"
             ),
         },
     )
@@ -472,7 +472,7 @@ def test_single_host_partial_scan_message_is_redacted_before_recording(
 
     recorded = captured_ops["results"][0]
     assert recorded["status"] == provenance.RESULT_PARTIAL
-    assert secret not in recorded["message"]
+    assert sentinel not in recorded["message"]
     assert "redacted" in recorded["message"]
     assert "Security scan incomplete" in recorded["message"]
 
@@ -483,7 +483,7 @@ def test_cohort_security_scan_redacts_recorded_host_messages(
     """Cohort security scans redact per-host messages on the same boundary."""
     host = _mk_system(db, seed_distro, group, cred, "pra400-api-cohort", "10.41.2.3")
     db.commit()
-    secret = "SentinelCohortPw8f2c1d9a"
+    sentinel = "SentinelCohortPw8f2c1d9a"
 
     monkeypatch.setattr(
         "app.services.package_service.PackageService.scan_security_updates",
@@ -492,7 +492,7 @@ def test_cohort_security_scan_redacts_recorded_host_messages(
             "hostname": host.hostname,
             "status": "error",
             "scan_state": provenance.STATE_FAILED,
-            "message": f"Failed to scan security updates: password={secret}",
+            "message": f"Failed to scan security updates: password={sentinel}",
         },
     )
 
@@ -504,7 +504,7 @@ def test_cohort_security_scan_redacts_recorded_host_messages(
 
     recorded = captured_ops["results"][0]
     assert recorded["status"] == provenance.RESULT_FAILURE
-    assert secret not in recorded["message"]
+    assert sentinel not in recorded["message"]
     assert "redacted" in recorded["message"]
 
 
