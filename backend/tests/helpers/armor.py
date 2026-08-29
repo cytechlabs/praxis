@@ -11,7 +11,9 @@ site while no contiguous header remains in source.
 from __future__ import annotations
 
 _DASHES = "-" * 5
-_PRIVATE_KEY = "PRIVATE KEY"
+# Joined at import time: spelled out, the marker is itself what a secret
+# scanner looks for, and this module exists to keep that shape out of source.
+_PRIVATE_KEY = " ".join(("PRIVATE", "KEY"))
 
 
 def pgp_private_block(body: str) -> str:
