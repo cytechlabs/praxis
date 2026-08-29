@@ -14,6 +14,16 @@ repos:
     rev: v8.21.2
     hooks:
     -   id: gitleaks
+    # Reuses the pinned environment above, so the contract check runs the same
+    # binary the staged-secret scan does. A gitleaks config that stops
+    # extending the built-in rules loads none, and the scan above then passes
+    # everything; this hook is what makes that failure visible.
+    -   id: gitleaks
+        alias: gitleaks-config
+        name: Verify the gitleaks config detects secrets
+        entry: scripts/check-gitleaks-config.sh
+        pass_filenames: false
+        always_run: true
 
 -   repo: https://github.com/psf/black
     rev: 23.12.1

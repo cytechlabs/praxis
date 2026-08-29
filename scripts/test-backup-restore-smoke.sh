@@ -86,7 +86,7 @@ COMPOSE_BASE=(
     -f "${OVERRIDE_FILE}"
 )
 COMPOSE_PROFILE_ARGS=(--profile bundled)
-SENTINEL_KEY="pra179_sentinel"
+SENTINEL_SETTING="pra179_sentinel"
 
 # ---------------------------------------------------------------- pre-flight
 
@@ -220,11 +220,11 @@ echo "    backend healthy"
 # Not a secret; not PII. Captured so we can assert exact-string return
 # after restore.
 SENTINEL_VALUE=$(date -u +"%Y-%m-%dT%H:%M:%S.%NZ")
-echo "==> inserting sentinel app_settings(${SENTINEL_KEY}) = '${SENTINEL_VALUE}'"
+echo "==> inserting sentinel app_settings(${SENTINEL_SETTING}) = '${SENTINEL_VALUE}'"
 compose exec -T db psql -v ON_ERROR_STOP=1 -U postgres -d praxis -c \
-    "INSERT INTO app_settings (setting_key, setting_value) VALUES ('${SENTINEL_KEY}', '${SENTINEL_VALUE}')" >/dev/null
+    "INSERT INTO app_settings (setting_key, setting_value) VALUES ('${SENTINEL_SETTING}', '${SENTINEL_VALUE}')" >/dev/null
 ACTUAL=$(compose exec -T db psql -v ON_ERROR_STOP=1 -U postgres -d praxis -tAc \
-    "SELECT setting_value FROM app_settings WHERE setting_key='${SENTINEL_KEY}'")
+    "SELECT setting_value FROM app_settings WHERE setting_key='${SENTINEL_SETTING}'")
 if [[ "${ACTUAL}" != "${SENTINEL_VALUE}" ]]; then
     echo "==> sentinel read-back mismatch: got '${ACTUAL}'" >&2
     exit 1
@@ -266,9 +266,9 @@ echo "    produced dump ${LATEST_DUMP} (${DUMP_SIZE} bytes)"
 
 echo "==> deleting sentinel (proves restore actually restores)"
 compose exec -T db psql -v ON_ERROR_STOP=1 -U postgres -d praxis -c \
-    "DELETE FROM app_settings WHERE setting_key='${SENTINEL_KEY}'" >/dev/null
+    "DELETE FROM app_settings WHERE setting_key='${SENTINEL_SETTING}'" >/dev/null
 REMAINING=$(compose exec -T db psql -v ON_ERROR_STOP=1 -U postgres -d praxis -tAc \
-    "SELECT COUNT(*) FROM app_settings WHERE setting_key='${SENTINEL_KEY}'")
+    "SELECT COUNT(*) FROM app_settings WHERE setting_key='${SENTINEL_SETTING}'")
 if [[ "${REMAINING}" != "0" ]]; then
     echo "==> sentinel still present after delete (count=${REMAINING})" >&2
     exit 1
@@ -290,7 +290,7 @@ compose exec -T db sh -c \
 
 echo "==> verifying sentinel returned"
 POST=$(compose exec -T db psql -v ON_ERROR_STOP=1 -U postgres -d praxis -tAc \
-    "SELECT setting_value FROM app_settings WHERE setting_key='${SENTINEL_KEY}'")
+    "SELECT setting_value FROM app_settings WHERE setting_key='${SENTINEL_SETTING}'")
 if [[ "${POST}" != "${SENTINEL_VALUE}" ]]; then
     echo "==> sentinel did NOT return correctly after restore" >&2
     echo "    expected: ${SENTINEL_VALUE}" >&2
