@@ -30,6 +30,7 @@ from app.services.ssh_service import (
     SSHConnectionError,
     SSHKeyError,
     SSHService,
+    _describe_private_key,
     configure_host_key_policy,
     disabled_from_allowlists,
     harden_disabled_algorithms,
@@ -54,13 +55,6 @@ RETIRED_KEX = (
     "gss-group14-sha1-toWM5Slw5Ew8Mqkay+al2g==",
     "gss-gex-sha1-toWM5Slw5Ew8Mqkay+al2g==",
 )
-
-# An OpenSSH DSA private key, generated once for this test. It carries no
-# access to anything: it exists to be rejected.
-DSA_PRIVATE_KEY = """-----BEGIN DSA PRIVATE KEY-----
-MIIBuwIBAAKBgQD3yWfHM9U0RQmQ2gN6TF1YMc0Z1nq8bDCFBBVzTQvnLWCLXwUq
------END DSA PRIVATE KEY-----
-"""
 
 
 # ------------------------------------------------ the library itself
@@ -556,15 +550,49 @@ def test_capture_and_re_read_agree_for_every_host_key_algorithm():
     assert "ssh-ed25519" in _PINNABLE_HOST_KEY_TYPES
 
 
-def test_a_stored_dsa_credential_key_is_refused_by_format(db):
+def _pem_envelope(label: str) -> str:
+    """A PEM envelope for ``label``, carrying no key material.
+
+    The credential loader decides a stored key's format from the envelope
+    alone, so a format rejection needs the marker lines and nothing between
+    them. Assembling them here keeps a key-shaped block out of the source.
+    """
+    dashes = "-" * 5
+    marker = f"{label} PRIVATE KEY"
+    return f"{dashes}BEGIN {marker}{dashes}\n{dashes}END {marker}{dashes}\n"
+
+
+def test_a_stored_dsa_credential_key_is_refused_by_format():
+    """DSA is refused on the format it declares, before anything is parsed."""
+    envelope = _pem_envelope("DSA")
+    # The envelope classifies as an unusable DSA key, so the refusal below is
+    # the DSA branch rather than an unreadable body failing earlier.
+    assert _describe_private_key(envelope) == ("DSA", False, False)
+
     with pytest.raises(SSHKeyError) as excinfo:
-        load_credential_private_key(DSA_PRIVATE_KEY)
+        load_credential_private_key(envelope)
 
     message = str(excinfo.value)
     assert "DSA format" in message
+    # The operator is told what to store instead.
     assert "Ed25519, ECDSA" in message
-    # No part of the key body reaches the operator-facing error.
-    assert "MIIBuwIBAAKBgQD" not in message
+    # None of the submitted text is quoted back.
+    assert "BEGIN" not in message
+    assert "-" * 5 not in message
+
+
+def test_an_empty_body_alone_is_not_a_dsa_rejection():
+    """The same empty body under a supported label is a different refusal.
+
+    Paired with the test above, this is what shows the DSA rejection follows
+    the format the envelope declares and not an unparsable body.
+    """
+    with pytest.raises(SSHKeyError) as excinfo:
+        load_credential_private_key(_pem_envelope("RSA"))
+
+    message = str(excinfo.value)
+    assert "could not be read" in message
+    assert "DSA format" not in message
 
 
 def test_a_minted_certificate_key_serializes_as_ssh_rsa():
