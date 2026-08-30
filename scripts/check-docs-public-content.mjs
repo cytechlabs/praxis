@@ -634,23 +634,13 @@ function selfTest() {
 
 /* ------------------------------------------------------------------ */
 
-function main() {
-  if (process.argv.includes('--self-test')) {
-    selfTest();
-    return;
-  }
+function writeInventory(slugs) {
+  fs.writeFileSync(INVENTORY, `${JSON.stringify({ routes: slugs }, null, 2)}\n`);
+  console.log(`Wrote ${slugs.length} routes to ${path.relative(REPO, INVENTORY)}.`);
+}
 
-  const slugs = listPublishedSlugs();
-
-  if (process.argv.includes('--write')) {
-    fs.writeFileSync(INVENTORY, `${JSON.stringify({ routes: slugs }, null, 2)}\n`);
-    console.log(`Wrote ${slugs.length} routes to ${path.relative(REPO, INVENTORY)}.`);
-    return;
-  }
-
-  const problems = [];
-
-  // 1. Reviewed inventory.
+// 1. Reviewed inventory.
+function checkInventory(slugs, problems) {
   if (!fs.existsSync(INVENTORY)) {
     console.error(
       `Missing ${path.relative(REPO, INVENTORY)}. ` +
@@ -670,16 +660,20 @@ function main() {
       problems.push(`the inventory lists "${slug}", which no longer publishes`);
     }
   }
+}
 
-  // 2. Sidebar reachability.
+// 2. Sidebar reachability.
+function checkSidebarReachability(slugs, problems) {
   const listed = sidebarSlugs(sidebar);
   for (const slug of slugs) {
     if (!listed.has(slug) && !UNLISTED_BY_DESIGN.has(slug)) {
       problems.push(`docs/${slug}.md publishes but no sidebar group lists it`);
     }
   }
+}
 
-  // 3 and 4. Source hygiene.
+// 3 and 4. Source hygiene.
+function checkSourceHygiene(slugs, problems) {
   for (const slug of slugs) {
     const file = path.join(DOCS_DIR, `${slug}.md`);
     const raw = fs.readFileSync(file, 'utf8');
@@ -712,7 +706,9 @@ function main() {
       );
     }
   }
+}
 
+function checkLegacyNonAsciiAllowance(slugs, problems) {
   for (const stale of LEGACY_NON_ASCII) {
     if (!slugs.includes(stale)) {
       problems.push(`LEGACY_NON_ASCII lists "${stale}", which is no longer published; remove the entry`);
@@ -726,23 +722,24 @@ function main() {
       problems.push(`LEGACY_NON_ASCII lists "${stale}", which is now pure ASCII; remove the entry`);
     }
   }
+}
 
-  // 5. Punctuation across every authored documentation source, published or
-  //    not. The routed pages above are already covered; this reaches the
-  //    maintainer, contributor, design, and audit material that is deliberately
-  //    unrouted but still shipped in the repository.
+// 5. Punctuation across every authored documentation source, published or
+//    not. The routed pages above are already covered; this reaches the
+//    maintainer, contributor, design, and audit material that is deliberately
+//    unrouted but still shipped in the repository.
+function scanAuthoredSources(problems) {
   let sourcesScanned = 0;
   for (const rel of trackedDocumentationSources()) {
     sourcesScanned += 1;
     scan(PUNCTUATION_CHECKS, fs.readFileSync(path.join(REPO, rel), 'utf8'), rel, problems);
   }
+  return sourcesScanned;
+}
 
-  if (sourcesScanned === 0) {
-    problems.push('no authored documentation sources were found; the punctuation sweep did nothing');
-  }
-
-  // 6. The same secret and punctuation checks over everything either build
-  //    emits, and the route boundary as it exists on disk.
+// 6. The same secret and punctuation checks over everything either build
+//    emits, and the route boundary as it exists on disk.
+function scanEmittedPayloads(problems) {
   let payloadsScanned = 0;
   for (const [label, dist] of [
     ['public site', PUBLIC_OUT],
@@ -763,7 +760,10 @@ function main() {
       }
     }
   }
+  return payloadsScanned;
+}
 
+function reportProblems(problems, slugs, sourcesScanned, payloadsScanned) {
   if (problems.length > 0) {
     console.error(`Public content check failed (${problems.length} problems):\n`);
     for (const problem of problems.slice(0, 40)) console.error(`  ${problem}`);
@@ -776,6 +776,40 @@ function main() {
       `reviewed inventory; ${sourcesScanned} authored documentation sources and ` +
       `${payloadsScanned} emitted payloads scanned.`,
   );
+}
+
+function verifyPublishedContent(slugs) {
+  const problems = [];
+
+  checkInventory(slugs, problems);
+  checkSidebarReachability(slugs, problems);
+  checkSourceHygiene(slugs, problems);
+  checkLegacyNonAsciiAllowance(slugs, problems);
+
+  const sourcesScanned = scanAuthoredSources(problems);
+  if (sourcesScanned === 0) {
+    problems.push('no authored documentation sources were found; the punctuation sweep did nothing');
+  }
+
+  const payloadsScanned = scanEmittedPayloads(problems);
+
+  reportProblems(problems, slugs, sourcesScanned, payloadsScanned);
+}
+
+function main() {
+  if (process.argv.includes('--self-test')) {
+    selfTest();
+    return;
+  }
+
+  const slugs = listPublishedSlugs();
+
+  if (process.argv.includes('--write')) {
+    writeInventory(slugs);
+    return;
+  }
+
+  verifyPublishedContent(slugs);
 }
 
 main();

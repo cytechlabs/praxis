@@ -669,6 +669,342 @@ const EXECUTION_HOST_STATE_BADGE: Record<
   canceled: 'neutral',
 };
 
+// The execution status, progress, and per-host detail. Extracted verbatim so
+// ExecutionPanel stays a small container around the execution lifecycle; the
+// markup, strings, classes and conditions are unchanged.
+const ExecutionSummary: React.FC<{
+  execution: PatchUpdateExecutionDetail;
+  reportError: (label: string, e: unknown) => void;
+}> = ({ execution, reportError }) => {
+  const formatTimestamp = useFormatTimestamp();
+  const { canWrite } = useAuth();
+  return (
+  <div className="space-y-2">
+    <div className="flex flex-wrap items-center gap-3 text-xs">
+      <Badge variant={EXECUTION_STATE_BADGE[execution.state]}>
+        {humanizeStatus(execution.state)}
+      </Badge>
+      <span className="text-praxis-text-muted">
+        Started {formatTimestamp(execution.started_at)} · max parallel{' '}
+        {execution.max_parallel_per_wave}
+        {execution.failure_threshold_percent !== null
+          ? ` · failure threshold ${execution.failure_threshold_percent}%`
+          : ''}
+      </span>
+      {/* PRA-178 Slice 4: per-execution exports for the reboot
+          queue and rollback dispatch runs. Gated on the same
+          canWrite predicate Slice 1a uses so read-only / auditor
+          users never see a button that would 403 on click
+          (PRA-178 Slice 4a fix to the P1 review finding). */}
+      {canWrite ? (
+        <>
+          <ExportButton
+            endpoint={`/api/backend/patch/update-executions/${execution.id}/reboots/export`}
+            filename={`patch-reboots-execution-${execution.id}`}
+            label="Export reboots"
+          />
+          <ExportButton
+            endpoint={`/api/backend/patch/update-executions/${execution.id}/rollback/export`}
+            filename={`patch-rollback-execution-${execution.id}`}
+            label="Export rollback"
+          />
+        </>
+      ) : (
+        <span
+          className="text-[11px] text-praxis-text-muted"
+          title="Bulk export requires the admin or maintainer role."
+          data-testid="patch-execution-exports-rbac-required"
+        >
+          Export requires admin or maintainer
+        </span>
+      )}
+      {execution.completed_at && (
+        <span className="text-praxis-text-muted">
+          Completed {formatTimestamp(execution.completed_at)}
+        </span>
+      )}
+      {execution.pause_reason && (
+        <span className="text-amber-700">
+          Paused: {execution.pause_reason}
+        </span>
+      )}
+      {execution.cancel_reason && (
+        <span className="text-red-700">
+          Canceled: {execution.cancel_reason}
+        </span>
+      )}
+    </div>
+    {execution.progress.threshold_pause && (
+      <div className="rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900">
+        <strong>Auto-paused: failure threshold exceeded.</strong>{' '}
+        {execution.progress.threshold_pause.failed_terminal_hosts} of{' '}
+        {execution.progress.threshold_pause.terminal_hosts} terminal hosts
+        failed (
+        {execution.progress.threshold_pause.failure_percent}% &gt;{' '}
+        {execution.progress.threshold_pause.failure_threshold_percent}%
+        threshold). Resume to retry the remaining pending hosts, or cancel
+        the execution.
+      </div>
+    )}
+    {execution.progress.completed_wave_indexes &&
+      execution.progress.completed_wave_indexes.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 text-xs">
+          <span className="text-praxis-text-muted">Completed waves:</span>
+          {execution.progress.completed_wave_indexes.map((w) => (
+            <Badge key={w} variant="success">
+              wave {w}
+            </Badge>
+          ))}
+        </div>
+      )}
+    <div className="flex flex-wrap gap-1.5 text-xs">
+      <span className="text-praxis-text-muted">Hosts:</span>
+      {(Object.keys(execution.progress.host_counts_by_state) as ExecutionHostState[])
+        .filter((s) => execution.progress.host_counts_by_state[s] > 0)
+        .map((s) => (
+          <Badge key={s} variant={EXECUTION_HOST_STATE_BADGE[s]}>
+            {s}: {execution.progress.host_counts_by_state[s]}
+          </Badge>
+        ))}
+      <span className="text-praxis-text-muted">
+        · {execution.progress.selected_package_count} selected packages
+      </span>
+    </div>
+    {execution.progress.package_outcome_counts &&
+      Object.values(execution.progress.package_outcome_counts).some((n) => n > 0) && (
+        <div className="flex flex-wrap gap-1.5 text-xs">
+          <span className="text-praxis-text-muted">Package outcomes:</span>
+          {(Object.entries(execution.progress.package_outcome_counts) as [
+            PackageOutcome,
+            number,
+          ][])
+            .filter(([, n]) => n > 0)
+            .map(([outcome, n]) => (
+              <Badge
+                key={outcome}
+                variant={
+                  outcome === 'succeeded'
+                    ? 'success'
+                    : outcome === 'failed'
+                      ? 'danger'
+                      : outcome === 'skipped'
+                        ? 'warning'
+                        : 'neutral'
+                }
+              >
+                {outcome}: {n}
+              </Badge>
+            ))}
+        </div>
+      )}
+    {execution.progress.waves.length > 0 && (
+      <div className="overflow-auto rounded-md border border-praxis-border">
+        <table className="min-w-full text-xs">
+          <thead className="bg-praxis-surface text-praxis-text-muted">
+            <tr>
+              <th className="px-2 py-1 text-left font-medium">Wave</th>
+              <th className="px-2 py-1 text-left font-medium">Hosts</th>
+              <th className="px-2 py-1 text-left font-medium">Selected packages</th>
+              <th className="px-2 py-1 text-left font-medium">By state</th>
+            </tr>
+          </thead>
+          <tbody>
+            {execution.progress.waves.map((w) => (
+              <tr key={w.wave_index} className="border-t border-praxis-border">
+                <td className="px-2 py-1 font-mono">{w.wave_index}</td>
+                <td className="px-2 py-1">{w.host_count}</td>
+                <td className="px-2 py-1">{w.selected_package_count}</td>
+                <td className="px-2 py-1">
+                  <div className="flex flex-wrap gap-1">
+                    {(Object.keys(w.host_counts_by_state) as ExecutionHostState[])
+                      .filter((s) => w.host_counts_by_state[s] > 0)
+                      .map((s) => (
+                        <Badge key={s} variant={EXECUTION_HOST_STATE_BADGE[s]}>
+                          {s}: {w.host_counts_by_state[s]}
+                        </Badge>
+                      ))}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+    {execution.hosts.length > 0 && (
+      <div className="overflow-auto rounded-md border border-praxis-border">
+        <table className="min-w-full text-xs">
+          <thead className="bg-praxis-surface text-praxis-text-muted">
+            <tr>
+              <th className="px-2 py-1 w-6"></th>
+              <th className="px-2 py-1 text-left font-medium">Wave</th>
+              <th className="px-2 py-1 text-left font-medium">Host</th>
+              <th className="px-2 py-1 text-left font-medium">State</th>
+              <th className="px-2 py-1 text-left font-medium">Packages</th>
+              <th className="px-2 py-1 text-left font-medium">Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            {execution.hosts.map((h) => (
+              <ExecutionHostRow
+                key={h.id}
+                executionId={execution.id}
+                host={h}
+                reportError={reportError}
+              />
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+  </div>
+  );
+};
+
+// The execution action controls. Extracted so ExecutionPanel reads as the
+// execution surface rather than the surface plus its whole toolbar; every
+// button, guard, string and class is unchanged.
+const ExecutionActions: React.FC<{
+  plan: PatchUpdatePlanDetail;
+  execution: PatchUpdateExecutionDetail | null;
+  canStart: boolean;
+  busy: boolean;
+  setBusy: (value: boolean) => void;
+  guarded: (label: string, op: () => Promise<unknown>) => Promise<void>;
+  refreshExecution: () => Promise<void>;
+  planRefresh: () => Promise<void>;
+  reportError: (label: string, e: unknown) => void;
+}> = ({
+  plan,
+  execution,
+  canStart,
+  busy,
+  setBusy,
+  guarded,
+  refreshExecution,
+  planRefresh,
+  reportError,
+}) => (
+  <div className="flex flex-wrap gap-1.5">
+    {canStart && (
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() =>
+          guarded('Execution started', () =>
+            startPatchUpdateExecution({ plan_id: plan.id }),
+          )
+        }
+        className="inline-flex items-center rounded-md bg-praxis-primary px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+      >
+        Start execution
+      </button>
+    )}
+    {execution && execution.state === 'running' && (
+      <>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={async () => {
+            setBusy(true);
+            try {
+              const result = await dispatchNextPatchUpdateExecution(
+                execution.id,
+              );
+              if (result.no_pending) {
+                toast.success('No pending hosts left to dispatch.');
+              } else {
+                toast.success(
+                  `Dispatched ${result.dispatched_count} host(s) - ${result.succeeded_count} ok, ${result.failed_count} failed.`,
+                );
+              }
+              await Promise.all([refreshExecution(), planRefresh()]);
+            } catch (e) {
+              reportError('Dispatch next', e);
+            } finally {
+              setBusy(false);
+            }
+          }}
+          className="inline-flex items-center rounded-md bg-praxis-primary px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+        >
+          Dispatch next batch
+        </button>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() =>
+            guarded('Execution paused', () =>
+              pausePatchUpdateExecution(execution.id),
+            )
+          }
+          className="inline-flex items-center rounded-md border border-praxis-border bg-praxis-surface px-2 py-1 text-xs disabled:opacity-50"
+        >
+          Pause
+        </button>
+      </>
+    )}
+    {execution && execution.state === 'paused' && (
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() =>
+          guarded('Execution resumed', () =>
+            resumePatchUpdateExecution(execution.id),
+          )
+        }
+        className="inline-flex items-center rounded-md border border-praxis-border bg-praxis-surface px-2 py-1 text-xs disabled:opacity-50"
+      >
+        Resume
+      </button>
+    )}
+    {execution && ['pending', 'running', 'paused'].includes(execution.state) && (
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() =>
+          guarded('Execution canceled', () =>
+            cancelPatchUpdateExecution(execution.id),
+          )
+        }
+        className="inline-flex items-center rounded-md border border-red-300 bg-red-50 px-2 py-1 text-xs text-red-800 disabled:opacity-50"
+      >
+        Cancel
+      </button>
+    )}
+    <button
+      type="button"
+      disabled={busy}
+      onClick={() => refreshExecution()}
+      className="inline-flex items-center gap-1 rounded-md border border-praxis-border bg-praxis-surface px-2 py-1 text-xs disabled:opacity-50"
+    >
+      <RefreshCcw size={12} />
+      Refresh
+    </button>
+  </div>
+);
+
+// The reboot queue is read only for its reconciliation health. A queue that
+// could not be built is an operator-actionable state, so it must reach this
+// surface rather than living in the API alone. A failed read is not reported
+// as an error: it must not turn loading an execution into a failure.
+function useRebootReconciliation() {
+  const [reconciliation, setReconciliation] =
+    useState<RebootReconciliation | null>(null);
+
+  const load = useCallback(async (executionId: number) => {
+    try {
+      const queue = await getExecutionRebootQueue(executionId);
+      setReconciliation(queue.summary?.reconciliation ?? null);
+    } catch {
+      setReconciliation(null);
+    }
+  }, []);
+
+  const clear = useCallback(() => setReconciliation(null), []);
+
+  return { reconciliation, load, clear };
+}
+
 const ExecutionPanel: React.FC<{
   plan: PatchUpdatePlanDetail;
   planRefresh: () => Promise<void>;
@@ -681,35 +1017,28 @@ const ExecutionPanel: React.FC<{
   );
   const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [rebootReconciliation, setRebootReconciliation] =
-    useState<RebootReconciliation | null>(null);
+  const {
+    reconciliation: rebootReconciliation,
+    load: loadRebootReconciliation,
+    clear: clearRebootReconciliation,
+  } = useRebootReconciliation();
 
   const refreshExecution = useCallback(async () => {
     try {
       const data = await getLatestExecutionForPlan(plan.id);
       setExecution(data);
-      // The reboot queue is read only for its reconciliation health. A
-      // queue that could not be built is an operator-actionable state, so
-      // it must reach this surface rather than living in the API alone. A
-      // failed read is not reported as an error: it must not turn loading
-      // an execution into a failure.
-      try {
-        const queue = await getExecutionRebootQueue(data.id);
-        setRebootReconciliation(queue.summary?.reconciliation ?? null);
-      } catch {
-        setRebootReconciliation(null);
-      }
+      await loadRebootReconciliation(data.id);
     } catch (e) {
       if (e instanceof PatchUpdateExecutionApiError && e.status === 404) {
         setExecution(null);
-        setRebootReconciliation(null);
+        clearRebootReconciliation();
       } else {
         reportError('Load execution', e);
       }
     } finally {
       setLoaded(true);
     }
-  }, [plan.id, reportError]);
+  }, [plan.id, reportError, loadRebootReconciliation, clearRebootReconciliation]);
 
   useEffect(() => {
     refreshExecution();
@@ -736,102 +1065,17 @@ const ExecutionPanel: React.FC<{
     <section className="rounded-md border border-praxis-border bg-praxis-surface p-4 space-y-3">
       <div className="flex items-start justify-between gap-3">
         <h2 className="text-sm font-semibold">Execution</h2>
-        <div className="flex flex-wrap gap-1.5">
-          {canStart && (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() =>
-                guarded('Execution started', () =>
-                  startPatchUpdateExecution({ plan_id: plan.id }),
-                )
-              }
-              className="inline-flex items-center rounded-md bg-praxis-primary px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
-            >
-              Start execution
-            </button>
-          )}
-          {execution && execution.state === 'running' && (
-            <>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={async () => {
-                  setBusy(true);
-                  try {
-                    const result = await dispatchNextPatchUpdateExecution(
-                      execution.id,
-                    );
-                    if (result.no_pending) {
-                      toast.success('No pending hosts left to dispatch.');
-                    } else {
-                      toast.success(
-                        `Dispatched ${result.dispatched_count} host(s) - ${result.succeeded_count} ok, ${result.failed_count} failed.`,
-                      );
-                    }
-                    await Promise.all([refreshExecution(), planRefresh()]);
-                  } catch (e) {
-                    reportError('Dispatch next', e);
-                  } finally {
-                    setBusy(false);
-                  }
-                }}
-                className="inline-flex items-center rounded-md bg-praxis-primary px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
-              >
-                Dispatch next batch
-              </button>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() =>
-                  guarded('Execution paused', () =>
-                    pausePatchUpdateExecution(execution.id),
-                  )
-                }
-                className="inline-flex items-center rounded-md border border-praxis-border bg-praxis-surface px-2 py-1 text-xs disabled:opacity-50"
-              >
-                Pause
-              </button>
-            </>
-          )}
-          {execution && execution.state === 'paused' && (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() =>
-                guarded('Execution resumed', () =>
-                  resumePatchUpdateExecution(execution.id),
-                )
-              }
-              className="inline-flex items-center rounded-md border border-praxis-border bg-praxis-surface px-2 py-1 text-xs disabled:opacity-50"
-            >
-              Resume
-            </button>
-          )}
-          {execution && ['pending', 'running', 'paused'].includes(execution.state) && (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() =>
-                guarded('Execution canceled', () =>
-                  cancelPatchUpdateExecution(execution.id),
-                )
-              }
-              className="inline-flex items-center rounded-md border border-red-300 bg-red-50 px-2 py-1 text-xs text-red-800 disabled:opacity-50"
-            >
-              Cancel
-            </button>
-          )}
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => refreshExecution()}
-            className="inline-flex items-center gap-1 rounded-md border border-praxis-border bg-praxis-surface px-2 py-1 text-xs disabled:opacity-50"
-          >
-            <RefreshCcw size={12} />
-            Refresh
-          </button>
-        </div>
+        <ExecutionActions
+          plan={plan}
+          execution={execution}
+          canStart={canStart}
+          busy={busy}
+          setBusy={setBusy}
+          guarded={guarded}
+          refreshExecution={refreshExecution}
+          planRefresh={planRefresh}
+          reportError={reportError}
+        />
       </div>
 
       {!loaded && (
@@ -853,185 +1097,7 @@ const ExecutionPanel: React.FC<{
       )}
 
       {execution && (
-        <div className="space-y-2">
-          <div className="flex flex-wrap items-center gap-3 text-xs">
-            <Badge variant={EXECUTION_STATE_BADGE[execution.state]}>
-              {humanizeStatus(execution.state)}
-            </Badge>
-            <span className="text-praxis-text-muted">
-              Started {formatTimestamp(execution.started_at)} · max parallel{' '}
-              {execution.max_parallel_per_wave}
-              {execution.failure_threshold_percent !== null
-                ? ` · failure threshold ${execution.failure_threshold_percent}%`
-                : ''}
-            </span>
-            {/* PRA-178 Slice 4: per-execution exports for the reboot
-                queue and rollback dispatch runs. Gated on the same
-                canWrite predicate Slice 1a uses so read-only / auditor
-                users never see a button that would 403 on click
-                (PRA-178 Slice 4a fix to the P1 review finding). */}
-            {canWrite ? (
-              <>
-                <ExportButton
-                  endpoint={`/api/backend/patch/update-executions/${execution.id}/reboots/export`}
-                  filename={`patch-reboots-execution-${execution.id}`}
-                  label="Export reboots"
-                />
-                <ExportButton
-                  endpoint={`/api/backend/patch/update-executions/${execution.id}/rollback/export`}
-                  filename={`patch-rollback-execution-${execution.id}`}
-                  label="Export rollback"
-                />
-              </>
-            ) : (
-              <span
-                className="text-[11px] text-praxis-text-muted"
-                title="Bulk export requires the admin or maintainer role."
-                data-testid="patch-execution-exports-rbac-required"
-              >
-                Export requires admin or maintainer
-              </span>
-            )}
-            {execution.completed_at && (
-              <span className="text-praxis-text-muted">
-                Completed {formatTimestamp(execution.completed_at)}
-              </span>
-            )}
-            {execution.pause_reason && (
-              <span className="text-amber-700">
-                Paused: {execution.pause_reason}
-              </span>
-            )}
-            {execution.cancel_reason && (
-              <span className="text-red-700">
-                Canceled: {execution.cancel_reason}
-              </span>
-            )}
-          </div>
-          {execution.progress.threshold_pause && (
-            <div className="rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900">
-              <strong>Auto-paused: failure threshold exceeded.</strong>{' '}
-              {execution.progress.threshold_pause.failed_terminal_hosts} of{' '}
-              {execution.progress.threshold_pause.terminal_hosts} terminal hosts
-              failed (
-              {execution.progress.threshold_pause.failure_percent}% &gt;{' '}
-              {execution.progress.threshold_pause.failure_threshold_percent}%
-              threshold). Resume to retry the remaining pending hosts, or cancel
-              the execution.
-            </div>
-          )}
-          {execution.progress.completed_wave_indexes &&
-            execution.progress.completed_wave_indexes.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 text-xs">
-                <span className="text-praxis-text-muted">Completed waves:</span>
-                {execution.progress.completed_wave_indexes.map((w) => (
-                  <Badge key={w} variant="success">
-                    wave {w}
-                  </Badge>
-                ))}
-              </div>
-            )}
-          <div className="flex flex-wrap gap-1.5 text-xs">
-            <span className="text-praxis-text-muted">Hosts:</span>
-            {(Object.keys(execution.progress.host_counts_by_state) as ExecutionHostState[])
-              .filter((s) => execution.progress.host_counts_by_state[s] > 0)
-              .map((s) => (
-                <Badge key={s} variant={EXECUTION_HOST_STATE_BADGE[s]}>
-                  {s}: {execution.progress.host_counts_by_state[s]}
-                </Badge>
-              ))}
-            <span className="text-praxis-text-muted">
-              · {execution.progress.selected_package_count} selected packages
-            </span>
-          </div>
-          {execution.progress.package_outcome_counts &&
-            Object.values(execution.progress.package_outcome_counts).some((n) => n > 0) && (
-              <div className="flex flex-wrap gap-1.5 text-xs">
-                <span className="text-praxis-text-muted">Package outcomes:</span>
-                {(Object.entries(execution.progress.package_outcome_counts) as [
-                  PackageOutcome,
-                  number,
-                ][])
-                  .filter(([, n]) => n > 0)
-                  .map(([outcome, n]) => (
-                    <Badge
-                      key={outcome}
-                      variant={
-                        outcome === 'succeeded'
-                          ? 'success'
-                          : outcome === 'failed'
-                            ? 'danger'
-                            : outcome === 'skipped'
-                              ? 'warning'
-                              : 'neutral'
-                      }
-                    >
-                      {outcome}: {n}
-                    </Badge>
-                  ))}
-              </div>
-            )}
-          {execution.progress.waves.length > 0 && (
-            <div className="overflow-auto rounded-md border border-praxis-border">
-              <table className="min-w-full text-xs">
-                <thead className="bg-praxis-surface text-praxis-text-muted">
-                  <tr>
-                    <th className="px-2 py-1 text-left font-medium">Wave</th>
-                    <th className="px-2 py-1 text-left font-medium">Hosts</th>
-                    <th className="px-2 py-1 text-left font-medium">Selected packages</th>
-                    <th className="px-2 py-1 text-left font-medium">By state</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {execution.progress.waves.map((w) => (
-                    <tr key={w.wave_index} className="border-t border-praxis-border">
-                      <td className="px-2 py-1 font-mono">{w.wave_index}</td>
-                      <td className="px-2 py-1">{w.host_count}</td>
-                      <td className="px-2 py-1">{w.selected_package_count}</td>
-                      <td className="px-2 py-1">
-                        <div className="flex flex-wrap gap-1">
-                          {(Object.keys(w.host_counts_by_state) as ExecutionHostState[])
-                            .filter((s) => w.host_counts_by_state[s] > 0)
-                            .map((s) => (
-                              <Badge key={s} variant={EXECUTION_HOST_STATE_BADGE[s]}>
-                                {s}: {w.host_counts_by_state[s]}
-                              </Badge>
-                            ))}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-          {execution.hosts.length > 0 && (
-            <div className="overflow-auto rounded-md border border-praxis-border">
-              <table className="min-w-full text-xs">
-                <thead className="bg-praxis-surface text-praxis-text-muted">
-                  <tr>
-                    <th className="px-2 py-1 w-6"></th>
-                    <th className="px-2 py-1 text-left font-medium">Wave</th>
-                    <th className="px-2 py-1 text-left font-medium">Host</th>
-                    <th className="px-2 py-1 text-left font-medium">State</th>
-                    <th className="px-2 py-1 text-left font-medium">Packages</th>
-                    <th className="px-2 py-1 text-left font-medium">Notes</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {execution.hosts.map((h) => (
-                    <ExecutionHostRow
-                      key={h.id}
-                      executionId={execution.id}
-                      host={h}
-                      reportError={reportError}
-                    />
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+        <ExecutionSummary execution={execution} reportError={reportError} />
       )}
       {/* PRA-173 closeout: rollback lifecycle panel. Renders only
           once an execution exists (i.e. there's something to roll

@@ -42,6 +42,44 @@ const statusBarColors: Record<string, string> = {
   Unreachable: 'bg-red-500',
 };
 
+// The security-posture tile. A security count is shown only when a completed
+// security scan established it; otherwise the tile names the state, because a
+// numeric zero would claim a question that was never asked.
+const SecurityPostureTile: React.FC<{
+  posture: FleetDashboard['security_posture'];
+}> = ({ posture }) => {
+  const securityDisplay = describeSecurityPosture(posture);
+  return (
+    <div className="text-center">
+      <div
+        className={`font-bold tabular-nums ${securityDisplay.showsCount ? 'text-2xl' : 'text-base pt-1.5'} ${securityToneClass[securityDisplay.tone]}`}
+        data-testid="security-tile-value"
+      >
+        {securityDisplay.value}
+      </div>
+      <div className="text-xs text-content-subtle mt-1">
+        {securityDisplay.showsCount ? 'Systems with Security Updates' : 'Security Scan Status'}
+      </div>
+    </div>
+  );
+};
+
+// Scan coverage for the security tile, plus the last successful scan when one
+// exists.
+const SecurityPostureCoverage: React.FC<{
+  posture: FleetDashboard['security_posture'];
+}> = ({ posture }) => {
+  const formatTimestamp = useFormatTimestamp();
+  return (
+    <div className="text-xs text-content-subtle mb-3">
+      {posture.coverage_detail}
+      {posture.last_successful_scan_at
+        ? ` Last successful scan: ${formatTimestamp(posture.last_successful_scan_at)}.`
+        : ''}
+    </div>
+  );
+};
+
 const FleetDashboardPage = () => {
   const formatTimestamp = useFormatTimestamp();
   const [data, setData] = useState<FleetDashboard | null>(null);
@@ -161,7 +199,6 @@ const FleetDashboardPage = () => {
   }
 
   const totalSystems = Object.values(data.status_counts).reduce((a, b) => a + b, 0);
-  const securityDisplay = describeSecurityPosture(data.security_posture);
   const upToDatePct = data.patch_compliance.total > 0
     ? Math.round((data.patch_compliance.up_to_date / data.patch_compliance.total) * 100)
     : 0;
@@ -287,27 +324,9 @@ const FleetDashboardPage = () => {
                 <div className="text-2xl font-bold text-orange-400 tabular-nums">{data.patch_compliance.with_updates}</div>
                 <div className="text-xs text-content-subtle mt-1">Systems with Updates</div>
               </div>
-              <div className="text-center">
-                {/* A security count is shown only when a completed security scan
-                    established it; otherwise the tile names the state, because a
-                    numeric zero would claim a question that was never asked. */}
-                <div
-                  className={`font-bold tabular-nums ${securityDisplay.showsCount ? 'text-2xl' : 'text-base pt-1.5'} ${securityToneClass[securityDisplay.tone]}`}
-                  data-testid="security-tile-value"
-                >
-                  {securityDisplay.value}
-                </div>
-                <div className="text-xs text-content-subtle mt-1">
-                  {securityDisplay.showsCount ? 'Systems with Security Updates' : 'Security Scan Status'}
-                </div>
-              </div>
+              <SecurityPostureTile posture={data.security_posture} />
             </div>
-            <div className="text-xs text-content-subtle mb-3">
-              {data.security_posture.coverage_detail}
-              {data.security_posture.last_successful_scan_at
-                ? ` Last successful scan: ${formatTimestamp(data.security_posture.last_successful_scan_at)}.`
-                : ''}
-            </div>
+            <SecurityPostureCoverage posture={data.security_posture} />
             <div className="w-full h-2 bg-surface-overlay rounded-full overflow-hidden flex">
               <div className="h-2 bg-emerald-500 transition-all duration-500" style={{ width: `${upToDatePct}%` }} />
               <div className="h-2 bg-orange-500 transition-all duration-500" style={{ width: `${100 - upToDatePct}%` }} />

@@ -103,6 +103,8 @@ for name, text in (
 
 
 def _run(cmd, cwd, env=None):
+    # check=False on purpose: every caller inspects returncode itself, and the
+    # build probe tolerates a non-zero exit when no local build backend exists.
     return subprocess.run(
         [str(part) for part in cmd],
         cwd=str(cwd),
@@ -110,6 +112,7 @@ def _run(cmd, cwd, env=None):
         capture_output=True,
         text=True,
         timeout=600,
+        check=False,
     )
 
 

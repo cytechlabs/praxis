@@ -153,16 +153,7 @@ func collectFacts(
 		"collected_at":   time.Now().UTC().Format(time.RFC3339),
 	}
 
-	if model, cores, err := c.cpuModelAndCores(); err != nil {
-		partial = append(partial, probeError("cpu", err))
-	} else {
-		if model != "" {
-			out["cpu_model"] = model
-		}
-		if cores > 0 {
-			out["cpu_cores"] = cores
-		}
-	}
+	partial = append(partial, collectCPU(c, out)...)
 
 	if ram, err := c.ramTotalBytes(); err != nil {
 		partial = append(partial, probeError("ram_total_bytes", err))
@@ -176,16 +167,7 @@ func collectFacts(
 		out["kernel_version"] = kv
 	}
 
-	if id, rel, err := c.distro(); err != nil {
-		partial = append(partial, probeError("distro", err))
-	} else {
-		if id != "" {
-			out["distro_id"] = id
-		}
-		if rel != "" {
-			out["distro_release"] = rel
-		}
-	}
+	partial = append(partial, collectDistro(c, out)...)
 
 	if up, err := c.uptimeSeconds(); err != nil {
 		partial = append(partial, probeError("uptime_seconds", err))
@@ -203,16 +185,7 @@ func collectFacts(
 		out["reboot_required"] = rr
 	}
 
-	if pm, ver, err := c.packageManager(); err != nil {
-		partial = append(partial, probeError("package_manager", err))
-	} else {
-		if pm != "" {
-			out["package_manager"] = pm
-		}
-		if ver != "" {
-			out["package_manager_version"] = ver
-		}
-	}
+	partial = append(partial, collectPackageManager(c, out)...)
 
 	if v, err := c.virtualization(); err != nil {
 		partial = append(partial, probeError("virtualization", err))
@@ -220,30 +193,7 @@ func collectFacts(
 		out["virtualization"] = v
 	}
 
-	// SSH server baseline. Only values we can prove are effective are
-	// emitted; anything else stays absent and records why under the key
-	// it concerns, so downstream evaluation can tell "not collected yet"
-	// from "this collection could not establish it".
-	if ssh, err := c.sshBaseline(); err != nil {
-		// Whole-probe failure: neither setting was established, so the
-		// note is filed against the probe rather than one payload key.
-		partial = append(partial, probeError(sshBaselineProbeKey, err))
-	} else {
-		if ssh.PermitRootLogin != "" {
-			out[sshPermitRootLoginKey] = ssh.PermitRootLogin
-		}
-		if ssh.PasswordAuthentication != "" {
-			out[sshPasswordAuthKey] = ssh.PasswordAuthentication
-		}
-		for _, key := range sshBaselinePayloadKeys {
-			if reason, gap := ssh.Coverage[key]; gap {
-				partial = append(partial, map[string]any{
-					"key":   key,
-					"error": reason,
-				})
-			}
-		}
-	}
+	partial = append(partial, collectSSHBaseline(c, out)...)
 
 	if d, err := c.disks(); err != nil {
 		partial = append(partial, probeError("disks", err))
@@ -251,27 +201,111 @@ func collectFacts(
 		out["disks"] = d
 	}
 
-	if provider, md, err := c.cloudMetadata(ctx); err != nil {
-		// Non-cloud hosts time out here on the link-local IP. That's
-		// expected, not an error worth surfacing — but we still want
-		// chronic IMDS misconfig (e.g. cloud host with v1 disabled)
-		// to be visible. The partial entry is enough; backend audit
-		// will show the pattern across hosts.
-		partial = append(partial, probeError("cloud_metadata", err))
-	} else {
-		if provider != "" {
-			out["cloud_provider"] = provider
-		}
-		if len(md) > 0 {
-			out["cloud_instance_metadata"] = md
-		}
-	}
+	partial = append(partial, collectCloudMetadata(ctx, c, out)...)
 
 	return out, partial
 }
 
 func probeError(key string, err error) map[string]any {
 	return map[string]any{"key": key, "error": err.Error()}
+}
+
+// The probe helpers below each own one independent fact family. They write the
+// keys they can establish into out and return the partial-error entries for
+// what they could not, so collectFacts stays an ordered list of probes and the
+// per-probe branching lives with the probe it describes. Order, keys, reason
+// codes, and absence semantics are exactly what the inline blocks produced.
+
+func collectCPU(c factsCollector, out map[string]any) []map[string]any {
+	model, cores, err := c.cpuModelAndCores()
+	if err != nil {
+		return []map[string]any{probeError("cpu", err)}
+	}
+	if model != "" {
+		out["cpu_model"] = model
+	}
+	if cores > 0 {
+		out["cpu_cores"] = cores
+	}
+	return nil
+}
+
+func collectDistro(c factsCollector, out map[string]any) []map[string]any {
+	id, rel, err := c.distro()
+	if err != nil {
+		return []map[string]any{probeError("distro", err)}
+	}
+	if id != "" {
+		out["distro_id"] = id
+	}
+	if rel != "" {
+		out["distro_release"] = rel
+	}
+	return nil
+}
+
+func collectPackageManager(c factsCollector, out map[string]any) []map[string]any {
+	pm, ver, err := c.packageManager()
+	if err != nil {
+		return []map[string]any{probeError("package_manager", err)}
+	}
+	if pm != "" {
+		out["package_manager"] = pm
+	}
+	if ver != "" {
+		out["package_manager_version"] = ver
+	}
+	return nil
+}
+
+// collectSSHBaseline reports the SSH server baseline. Only values we can prove
+// are effective are emitted; anything else stays absent and records why under
+// the key it concerns, so downstream evaluation can tell "not collected yet"
+// from "this collection could not establish it".
+func collectSSHBaseline(c factsCollector, out map[string]any) []map[string]any {
+	ssh, err := c.sshBaseline()
+	if err != nil {
+		// Whole-probe failure: neither setting was established, so the
+		// note is filed against the probe rather than one payload key.
+		return []map[string]any{probeError(sshBaselineProbeKey, err)}
+	}
+	if ssh.PermitRootLogin != "" {
+		out[sshPermitRootLoginKey] = ssh.PermitRootLogin
+	}
+	if ssh.PasswordAuthentication != "" {
+		out[sshPasswordAuthKey] = ssh.PasswordAuthentication
+	}
+	var partial []map[string]any
+	for _, key := range sshBaselinePayloadKeys {
+		if reason, gap := ssh.Coverage[key]; gap {
+			partial = append(partial, map[string]any{
+				"key":   key,
+				"error": reason,
+			})
+		}
+	}
+	return partial
+}
+
+func collectCloudMetadata(
+	ctx context.Context, c factsCollector, out map[string]any,
+) []map[string]any {
+	provider, md, err := c.cloudMetadata(ctx)
+	if err != nil {
+		// Non-cloud hosts time out here on the link-local IP. That's
+		// expected, not an error worth surfacing — but we still want
+		// chronic IMDS misconfig (e.g. cloud host with v1 disabled)
+		// to be visible. The partial entry is enough; backend audit
+		// will show the pattern across hosts.
+		return []map[string]any{probeError("cloud_metadata", err)}
+	}
+	if provider != "" {
+		out["cloud_provider"] = provider
+	}
+	if len(md) > 0 {
+		out["cloud_instance_metadata"] = md
+	}
+	return nil
 }
 
 // ---------------------------------------------------------------- collectors

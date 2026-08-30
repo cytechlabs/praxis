@@ -195,6 +195,87 @@ func TestCollectFactsBestEffortFailures(t *testing.T) {
 	}
 }
 
+func TestCollectFactsPartialErrorOrderMatchesProbeOrder(t *testing.T) {
+	// The probe blocks were extracted into per-family helpers. Ordering is the
+	// property that refactor could silently break: partial_errors is a slice,
+	// so a reordered probe changes what an operator reads first. Every probe
+	// fails here, so the slice must list them in exactly collection order.
+	c := &fakeFactsCollector{
+		cpuErr:    errors.New("cpu"),
+		ramErr:    errors.New("ram"),
+		kernelErr: errors.New("kernel"),
+		distroErr: errors.New("distro"),
+		uptimeErr: errors.New("uptime"),
+		rebootErr: errors.New("reboot"),
+		pmErr:     errors.New("pm"),
+		virtErr:   errors.New("virt"),
+		sshErr:    errors.New("ssh"),
+		disksErr:  errors.New("disks"),
+		cloudErr:  errors.New("cloud"),
+	}
+	_, partial := collectFacts(context.Background(), c)
+
+	want := []string{
+		"cpu",
+		"ram_total_bytes",
+		"kernel_version",
+		"distro",
+		"uptime_seconds",
+		"reboot_required",
+		"package_manager",
+		"virtualization",
+		sshBaselineProbeKey,
+		"disks",
+		"cloud_metadata",
+	}
+	if len(partial) != len(want) {
+		t.Fatalf("partial_errors has %d entries, want %d: %v", len(partial), len(want), partial)
+	}
+	for i, key := range want {
+		got, _ := partial[i]["key"].(string)
+		if got != key {
+			t.Errorf("partial_errors[%d] key=%q want %q", i, got, key)
+		}
+	}
+}
+
+func TestCollectFactsSSHCoverageGapsKeepTheirPosition(t *testing.T) {
+	// A resolved SSH probe that could not establish one setting reports the
+	// gap under the payload key it concerns, and those entries have to stay
+	// between the virtualization and disks probes.
+	c := &fakeFactsCollector{
+		virtErr: errors.New("virt"),
+		ssh: sshBaseline{
+			PermitRootLogin: "no",
+			Coverage: map[string]string{
+				sshPasswordAuthKey: "overridable",
+			},
+		},
+		disksErr: errors.New("disks"),
+	}
+	facts, partial := collectFacts(context.Background(), c)
+
+	if facts[sshPermitRootLoginKey] != "no" {
+		t.Errorf("%s=%v want \"no\"", sshPermitRootLoginKey, facts[sshPermitRootLoginKey])
+	}
+	if _, present := facts[sshPasswordAuthKey]; present {
+		t.Errorf("%s must stay absent when coverage reports a gap", sshPasswordAuthKey)
+	}
+	want := []string{"virtualization", sshPasswordAuthKey, "disks"}
+	if len(partial) != len(want) {
+		t.Fatalf("partial_errors has %d entries, want %d: %v", len(partial), len(want), partial)
+	}
+	for i, key := range want {
+		got, _ := partial[i]["key"].(string)
+		if got != key {
+			t.Errorf("partial_errors[%d] key=%q want %q", i, got, key)
+		}
+	}
+	if reason, _ := partial[1]["error"].(string); reason != "overridable" {
+		t.Errorf("coverage reason=%q want %q", reason, "overridable")
+	}
+}
+
 func TestCollectFactsCloudFieldsAllowlistedOnly(t *testing.T) {
 	// The collector returns a sanitized map (cloud sanitizer also
 	// runs server-side, but the agent should never EMIT credential

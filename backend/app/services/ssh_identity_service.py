@@ -806,8 +806,9 @@ class SSHIdentityService:
             "reload_mechanism": mechanism,
         }
 
+    @staticmethod
     def run_step(
-        self, client, command: str, description: str, raise_on_fail: bool = True
+        client, command: str, description: str, raise_on_fail: bool = True
     ) -> Dict[str, Any]:
         """Run one enrollment step over SSH.
 
