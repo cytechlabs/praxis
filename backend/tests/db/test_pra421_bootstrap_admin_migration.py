@@ -65,9 +65,13 @@ def test_the_marker_is_unique(engine):
 
 def test_the_record_outlives_the_account_it_describes(engine):
     foreign_keys = inspect(engine).get_foreign_keys(TABLE)
-    reference = next(
+    matches = [
         fk for fk in foreign_keys if fk["constrained_columns"] == ["bootstrap_user_id"]
-    )
+    ]
+    assert (
+        len(matches) == 1
+    ), f"expected exactly one bootstrap_user_id foreign key, found {len(matches)}"
+    reference = matches[0]
     assert reference["referred_table"] == "user"
     # Deleting the administrator must null the reference, never remove the row
     # that says this installation was initialized.
