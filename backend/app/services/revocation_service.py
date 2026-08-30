@@ -272,9 +272,16 @@ def _finalize(
 
 
 def _emit_result(item: RevocationWork) -> None:
+    """Audit one work item's terminal outcome.
+
+    A host-scoped item reconverges access on one named host and names it. A
+    user-scoped session sweep carries no ``system_id`` at all, so it stays
+    hostless rather than being attributed to a host it never touched.
+    """
     safe_emit(
         action="revocation.reconcile",
         outcome="success" if item.status == "completed" else "failure",
+        target_system_id=item.system_id,
         target_kind="revocation_work",
         target_id=str(item.id),
         context={
