@@ -1390,6 +1390,7 @@ def _emit_applicable_recomputed(
         actor_user_id=actor_user_id,
         actor_username=actor_username,
         actor_ip=actor_ip,
+        target_system_id=system_id,
         target_kind="system",
         target_id=str(system_id),
         context={
