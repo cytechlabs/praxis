@@ -18,6 +18,29 @@ Sign in at your `PUBLIC_BASE_URL` with the `ADMIN_PASSWORD` you configured
 before first boot. A fresh production deployment fails closed when that value
 is empty; Praxis does not generate the password or write it to the backend log.
 
+## Clear `ADMIN_PASSWORD` once you are in
+
+`ADMIN_PASSWORD` and `ADMIN_USERNAME` are first-run inputs, not settings the
+deployment keeps applying. A deployment records that it has been initialized,
+and later restarts read that record rather than the environment: an
+administrator you deactivate, rename, or delete stays that way, and changing
+`ADMIN_USERNAME` does not create a second one.
+
+Remove `ADMIN_PASSWORD` from `.env` once you have signed in. The value is spent
+at that point, and leaving it in place only matters if you ever roll back to a
+release that still treated it as desired state.
+
+The one state this leaves without a way in is deleting every user. Recovering
+from that is deliberate and local to the host running the stack:
+
+```sh
+docker compose exec backend python /app/scripts/reset_bootstrap_admin.py
+```
+
+It refuses while any user still exists, and it creates nothing itself: it clears
+the record so the next restart provisions the administrator from `.env` the way
+a first boot does. Set `ADMIN_PASSWORD` again before that restart.
+
 ## Rotate the bootstrap password immediately
 
 Change it under **Settings > Account > Change Password**. Leaving the seeded
