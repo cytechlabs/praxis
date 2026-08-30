@@ -234,7 +234,8 @@ def test_serve_credential_events_record_their_credential_context(
 class _NoTransport:
     name = "ssh"
 
-    async def run(self, *args, **kwargs):  # pragma: no cover - must not run
+    @staticmethod
+    async def run(*args, **kwargs):  # pragma: no cover - must not run
         raise AssertionError("refused apply must not reach the host")
 
 
