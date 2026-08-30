@@ -252,10 +252,20 @@ def _emit(
     action: str,
     profile: ContentProfile,
     context: dict,
+    target_system_id: Optional[int] = None,
 ) -> None:
+    """Emit a content-profile mutation event.
+
+    ``target_system_id`` is passed only by a caller whose mutation is about one
+    named host: a direct host subscription. A group or smart-group subscription
+    resolves to a membership that changes over time and has no single subject,
+    so those callers leave it unset rather than picking one host out of a set.
+    The caller states this explicitly; it is never read back out of ``context``.
+    """
     audit_event_service.emit(
         db,
         action=action,
+        target_system_id=target_system_id,
         target_kind="content_profile",
         target_id=str(profile.id),
         context={"profile_slug": profile.slug, **context},
@@ -587,6 +597,7 @@ async def remove_host_subscription(
         db,
         action="content_profile.subscription_removed",
         profile=profile,
+        target_system_id=host_id,
         context={
             "scope_kind": "host",
             "scope_id": host_id,
@@ -781,6 +792,7 @@ def _add_subscription(
         db,
         action="content_profile.subscription_added",
         profile=profile,
+        target_system_id=scope_id if scope_kind == "host" else None,
         context={
             "scope_kind": scope_kind,
             "scope_id": scope_id,

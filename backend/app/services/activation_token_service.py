@@ -153,6 +153,11 @@ def emit_audit(
     point the request transaction is already durable, so the additional
     commit inside ``emit`` just commits the audit row alone — same
     session-reuse pattern access_request_service uses.
+
+    A token is bound to one host at issue time and ``target_system_id`` on the
+    model is not nullable, so every event in the token's lifecycle is about
+    that host and names it. The target stays the token itself, which is what
+    the action acts on.
     """
     context = {
         "name": token.name,
@@ -174,6 +179,7 @@ def emit_audit(
             action=action,
             outcome=outcome,
             actor_user_id=actor_user_id,
+            target_system_id=token.target_system_id,
             target_kind="activation_token",
             target_id=str(token.id) if token.id is not None else None,
             context=context,
