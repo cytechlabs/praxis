@@ -488,7 +488,8 @@ class TestHostKeyIsAtomicWithTheHost:
     thing with it.
     """
 
-    def _counts(self, db):
+    @staticmethod
+    def _counts(db):
         return {
             "systems": db.query(System).count(),
             "metadata": db.query(SystemMetadata).count(),

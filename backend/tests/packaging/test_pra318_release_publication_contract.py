@@ -494,8 +494,12 @@ def test_readiness_check_accepts_mirrors_that_match_the_agent_version(tmp_path):
         "test_pra374_agent_artifact_redirects.py",
         "test_pra154_bootstrap_e2e.py",
     ):
-        line = next(row for row in result.stdout.splitlines() if mirror in row)
-        assert "OK" in line, line
+        rows = [row for row in result.stdout.splitlines() if mirror in row]
+        assert len(rows) == 1, (
+            f"expected exactly one readiness line naming {mirror}, "
+            f"found {len(rows)}:\n{result.stdout}"
+        )
+        assert "OK" in rows[0], rows[0]
 
 
 def test_readiness_check_fails_a_mirror_left_on_the_previous_version(tmp_path):
@@ -514,11 +518,16 @@ def test_readiness_check_fails_a_mirror_left_on_the_previous_version(tmp_path):
     result = _readiness(tree, version)
 
     assert result.returncode != 0
-    line = next(
+    rows = [
         row
         for row in result.stdout.splitlines()
         if "test_pra374_agent_artifact_redirects.py" in row
+    ]
+    assert len(rows) == 1, (
+        "expected exactly one readiness line naming the stale mirror, "
+        f"found {len(rows)}:\n{result.stdout}"
     )
+    line = rows[0]
     assert "FAIL" in line, line
     assert "v0.0.1" in line, line
 

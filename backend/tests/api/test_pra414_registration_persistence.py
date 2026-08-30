@@ -197,7 +197,8 @@ class TestOmissionVersusNullOnUpdate:
             "distro_id": distro.id,
         }
 
-    def _put(self, authed_client, existing, **overrides):
+    @staticmethod
+    def _put(authed_client, existing, **overrides):
         body = {
             "hostname": "upd-01",
             "ip_address": "10.44.1.10",

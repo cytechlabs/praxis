@@ -1030,7 +1030,8 @@ class SSHService:  # pylint: disable=too-many-instance-attributes
         self._on_connected(system, client, principal)
         return True
 
-    def validate_ssh_key(self, ssh_key: str, passphrase: Optional[str] = None) -> bool:
+    @staticmethod
+    def validate_ssh_key(ssh_key: str, passphrase: Optional[str] = None) -> bool:
         """True when ``ssh_key`` is a usable credential private key.
 
         Applies the same format and algorithm-appropriate strength rules as the
@@ -1131,7 +1132,8 @@ class SSHService:  # pylint: disable=too-many-instance-attributes
         except Exception as e:  # pylint: disable=broad-except
             logger.error("Failed to fire host_key_changed notification: %s", e)
 
-    def _build_disabled_algorithms(self, system: System) -> Dict[str, List[str]]:
+    @staticmethod
+    def _build_disabled_algorithms(system: System) -> Dict[str, List[str]]:
         """The system's algorithm policy, as paramiko's ``disabled_algorithms``.
 
         A system without a policy still gets the retired-algorithm floor, so
