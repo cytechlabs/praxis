@@ -219,7 +219,12 @@ def client(db, mock_vault) -> Iterator[TestClient]:
         yield db
 
     app.dependency_overrides[get_db] = override_get_db
-    with TestClient(app) as c:
+    # Present a real peer address. Under a served deployment ``request.client``
+    # is always the connection peer uvicorn resolved, and routes persist it into
+    # ``inet`` columns and audit ``actor_ip``. The test client's default host is
+    # the literal ``testclient``, which is not an address and fails on insert, so
+    # loopback is the faithful stand-in.
+    with TestClient(app, client=("127.0.0.1", 50000)) as c:
         yield c
     app.dependency_overrides.clear()
 

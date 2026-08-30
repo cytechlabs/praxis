@@ -7,17 +7,28 @@
 # PRA-321 (Python 3.14 runtime cutover; evaluated in PRA-319, unblocked by PRA-320's
 # broker mTLS fix): pydantic is 2.12.0 (pulls pydantic-core 2.41.1, the first line with
 # a CPython 3.14 wheel) so the backend runs on the Python 3.14 runtime. That was the
-# ONLY web-stack pin change the interpreter move required: fastapi / starlette 0.35.1 /
-# uvicorn 0.27.0 / pydantic-settings 2.1.0 / httpx 0.26.0 stay on the same lines and
-# are compatible (v1-style @validator still works across the whole pydantic 2.x line).
+# ONLY web-stack pin change the interpreter move required: uvicorn 0.27.0 /
+# pydantic-settings 2.1.0 / httpx 0.26.0 stay on the same lines and are compatible
+# (v1-style @validator still works across the whole pydantic 2.x line).
 # Everything installs from wheels on 3.14 (no source builds).
 
 # Core
-# 0.109.1 is the first release whose declared dependency floor is
-# python-multipart>=0.0.7, the version that replaced the backtracking Content-Type
-# option-header regex (CVE-2024-24762). Starlette runs that parser on every form
-# and multipart request, so do not pin below this release.
-fastapi==0.109.1
+# Starlette parses every form and multipart request, and that parser has carried a
+# run of denial-of-service advisories: non-file multipart parts buffered without a
+# size bound (CVE-2024-47874, fixed in 0.40.0), the spool-to-disk rollover of a
+# large upload run as a blocking write on the event loop (CVE-2025-54121, fixed in
+# 0.47.2), and request.form()'s field-count and field-size limits silently ignored
+# for application/x-www-form-urlencoded (CVE-2026-54283, fixed in 1.3.1).
+# POST /auth/login reaches that parser unauthenticated, and ahead of the route's
+# own rate limit, so do not pin starlette below 1.3.1.
+#
+# 0.137.0 is the smallest fastapi release that both admits starlette 1.3.1 and was
+# cut after it shipped. Its declared python-multipart floor is >=0.0.18, which
+# keeps the linear Content-Type option-header parser (CVE-2024-24762) in place.
+fastapi==0.137.0
+# fastapi declares starlette>=0.46.0 with no upper bound, so this pin is what makes
+# the resolved framework version deterministic instead of whatever is newest.
+starlette==1.3.1
 uvicorn==0.27.0
 websockets==12.0
 sqlalchemy==2.0.51
@@ -27,9 +38,9 @@ pydantic-settings==2.1.0
 python-jose[cryptography]==3.5.0
 passlib[bcrypt]==1.7.4
 bcrypt==3.2.0
-# Form/upload parsing behind Starlette. Starlette 0.35.1 imports the legacy
-# top-level ``multipart`` module, which this line still ships as a shim over the
-# renamed ``python_multipart`` package, so the framework pins stay put.
+# Form/upload parsing behind Starlette, which imports the renamed
+# ``python_multipart`` package and falls back to the legacy top-level ``multipart``
+# module. This line ships both, so either import path resolves.
 python-multipart==0.0.32
 psycopg2-binary==2.9.12
 python-dotenv==1.2.2
