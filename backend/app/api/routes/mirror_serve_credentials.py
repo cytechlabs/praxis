@@ -127,6 +127,7 @@ async def issue_credential(
     audit_event_service.emit(
         db,
         action="mirror_serve_credential.issued",
+        target_system_id=system_id,
         target_kind="system",
         target_id=str(system_id),
         context={
@@ -206,6 +207,7 @@ async def revoke_credential(
     audit_event_service.emit(
         db,
         action="mirror_serve_credential.revoked",
+        target_system_id=system_id,
         target_kind="system",
         target_id=str(system_id),
         context={

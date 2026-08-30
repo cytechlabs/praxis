@@ -121,7 +121,14 @@ def _emit_failure(
 ) -> None:
     """Failure-path audit. We have no token row to anchor target_id to
     when the reason is invalid_token, so target_id stays None and any
-    parseable prefix lands in context. Plaintext is never persisted."""
+    parseable prefix lands in context. Plaintext is never persisted.
+
+    No host is named either. The only system id available here is the one
+    the unauthenticated request asked for, and the request has failed, so
+    attributing the event to that host would let any caller write into the
+    history of a host it never proved a claim to. The requested id stays in
+    context, where it reads as what was attempted rather than what happened
+    to a host."""
     context: Dict[str, Any] = {"reason": reason}
     prefix = svc.parse_token_prefix(plaintext_attempt)
     if prefix is not None:
@@ -153,7 +160,13 @@ def _emit_success(
 ) -> None:
     """Post-commit success audit. actor_user_id is None: bootstrap has
     no Praxis user principal. Token identity belongs in context, not in
-    actor_username (that field has historically meant a real user)."""
+    actor_username (that field has historically meant a real user).
+
+    The target stays the activation token, which is what was redeemed, but
+    a successful redemption is also the moment one host joins the fleet, so
+    the event names that host in ``target_system_id`` and shows up in its
+    history. That host is ``result.system``, the row the redemption resolved
+    and bound under the token lock, never the caller-supplied id."""
     cert = result.cert
     expires = cert.get("expires_at")
     expires_str = expires if isinstance(expires, str) else expires.isoformat() + "Z"
@@ -177,6 +190,7 @@ def _emit_success(
             action="activation_token.redeem",
             outcome="success",
             actor_user_id=None,
+            target_system_id=result.system.id,
             target_kind="activation_token",
             target_id=str(result.token.id),
             context=context,

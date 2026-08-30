@@ -549,6 +549,7 @@ def _emit_outcome(
     audit_event_service.emit(
         db,
         action=action,
+        target_system_id=host.id,
         target_kind="system",
         target_id=str(host.id),
         context={
