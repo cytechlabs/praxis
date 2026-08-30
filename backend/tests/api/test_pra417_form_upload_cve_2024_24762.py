@@ -34,8 +34,10 @@ from typing import Optional, Tuple
 
 import pytest
 
-# The exact symbol starlette.formparsers imports for every form request.
-from multipart.multipart import parse_options_header
+# The exact symbol starlette.formparsers imports for every form request. It
+# prefers the renamed package and falls back to the legacy top-level ``multipart``
+# module, which re-exports the same function.
+from python_multipart.multipart import parse_options_header
 
 from app.api.routes import file_transfer as file_transfer_route
 
