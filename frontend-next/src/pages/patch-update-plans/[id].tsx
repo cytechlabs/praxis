@@ -669,6 +669,128 @@ const EXECUTION_HOST_STATE_BADGE: Record<
   canceled: 'neutral',
 };
 
+const ExecutionHostRow: React.FC<{
+  executionId: number;
+  host: PatchUpdateExecutionDetail['hosts'][number];
+  reportError: (label: string, e: unknown) => void;
+}> = ({ executionId, host, reportError }) => {
+  const [expanded, setExpanded] = useState(false);
+  const [drillLoaded, setDrillLoaded] = useState(false);
+  const [drillBusy, setDrillBusy] = useState(false);
+  const [packages, setPackages] = useState<ExecutionHostPackage[]>([]);
+
+  const toggleExpanded = useCallback(async () => {
+    const next = !expanded;
+    setExpanded(next);
+    if (!next || drillLoaded || drillBusy) return;
+    setDrillBusy(true);
+    try {
+      const rows = await listExecutionHostPackages(executionId, host.id);
+      setPackages(rows);
+      setDrillLoaded(true);
+    } catch (e) {
+      reportError('Load host packages', e);
+    } finally {
+      setDrillBusy(false);
+    }
+  }, [expanded, drillLoaded, drillBusy, executionId, host.id, reportError]);
+
+  const errorDetails = host.error_details as Record<string, unknown> | null;
+  const stderrSummary =
+    typeof errorDetails?.stderr === 'string'
+      ? (errorDetails.stderr as string).slice(0, 200)
+      : null;
+
+  return (
+    <>
+      <tr className="border-t border-praxis-border align-top">
+        <td className="px-2 py-1">
+          <button
+            type="button"
+            onClick={toggleExpanded}
+            aria-expanded={expanded}
+            className="text-praxis-text-muted"
+          >
+            {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+          </button>
+        </td>
+        <td className="px-2 py-1 font-mono">{host.wave_index}</td>
+        <td className="px-2 py-1">
+          {host.system_hostname_snapshot || `system #${host.system_id_snapshot ?? '?'}`}
+        </td>
+        <td className="px-2 py-1">
+          <Badge variant={EXECUTION_HOST_STATE_BADGE[host.state]}>{humanizeStatus(host.state)}</Badge>
+        </td>
+        <td className="px-2 py-1">{host.selected_package_count}</td>
+        <td className="px-2 py-1 text-praxis-text-muted">
+          {stderrSummary || (host.skip_reasons.length > 0
+            ? host.skip_reasons.map((r) => r.code).join(', ')
+            : '-')}
+        </td>
+      </tr>
+      {expanded && (
+        <tr className="border-t border-praxis-border bg-praxis-bg/30">
+          <td></td>
+          <td colSpan={5} className="px-2 py-2 space-y-2">
+            {drillBusy && <LoadingState label="Loading" />}
+            {drillLoaded && packages.length === 0 && (
+              <div className="text-praxis-text-muted">
+                No package result rows yet for this host. The dispatcher writes
+                them when a batch is processed.
+              </div>
+            )}
+            {drillLoaded && packages.length > 0 && (
+              <table className="min-w-full text-xs">
+                <thead className="text-praxis-text-muted">
+                  <tr>
+                    <th className="px-2 py-1 text-left font-medium">Package</th>
+                    <th className="px-2 py-1 text-left font-medium">Requested</th>
+                    <th className="px-2 py-1 text-left font-medium">Before</th>
+                    <th className="px-2 py-1 text-left font-medium">After</th>
+                    <th className="px-2 py-1 text-left font-medium">Outcome</th>
+                    <th className="px-2 py-1 text-left font-medium">Error</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {packages.map((p) => (
+                    <tr key={p.id} className="border-t border-praxis-border">
+                      <td className="px-2 py-1 font-mono">{p.package_name}</td>
+                      <td className="px-2 py-1">{p.requested_version_snapshot ?? '-'}</td>
+                      <td className="px-2 py-1">{p.installed_version_before ?? '-'}</td>
+                      <td className="px-2 py-1">{p.installed_version_after ?? '-'}</td>
+                      <td className="px-2 py-1">
+                        <Badge
+                          variant={
+                            p.outcome === 'succeeded'
+                              ? 'success'
+                              : p.outcome === 'failed'
+                                ? 'danger'
+                                : p.outcome === 'skipped'
+                                  ? 'warning'
+                                  : 'neutral'
+                          }
+                        >
+                          {p.outcome}
+                        </Badge>
+                      </td>
+                      <td className="px-2 py-1 text-praxis-text-muted">
+                        {p.error_code ?? '-'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+            {errorDetails && (
+              <ExecutionHostErrorDetails details={errorDetails} />
+            )}
+          </td>
+        </tr>
+      )}
+    </>
+  );
+};
+
 // The execution status, progress, and per-host detail. Extracted verbatim so
 // ExecutionPanel stays a small container around the execution lifecycle; the
 // markup, strings, classes and conditions are unchanged.
@@ -1010,8 +1132,6 @@ const ExecutionPanel: React.FC<{
   planRefresh: () => Promise<void>;
   reportError: (label: string, e: unknown) => void;
 }> = ({ plan, planRefresh, reportError }) => {
-  const formatTimestamp = useFormatTimestamp();
-  const { canWrite } = useAuth();
   const [execution, setExecution] = useState<PatchUpdateExecutionDetail | null>(
     null,
   );
@@ -1113,128 +1233,6 @@ const ExecutionPanel: React.FC<{
         reportError={reportError}
       />
     </section>
-  );
-};
-
-const ExecutionHostRow: React.FC<{
-  executionId: number;
-  host: PatchUpdateExecutionDetail['hosts'][number];
-  reportError: (label: string, e: unknown) => void;
-}> = ({ executionId, host, reportError }) => {
-  const [expanded, setExpanded] = useState(false);
-  const [drillLoaded, setDrillLoaded] = useState(false);
-  const [drillBusy, setDrillBusy] = useState(false);
-  const [packages, setPackages] = useState<ExecutionHostPackage[]>([]);
-
-  const toggleExpanded = useCallback(async () => {
-    const next = !expanded;
-    setExpanded(next);
-    if (!next || drillLoaded || drillBusy) return;
-    setDrillBusy(true);
-    try {
-      const rows = await listExecutionHostPackages(executionId, host.id);
-      setPackages(rows);
-      setDrillLoaded(true);
-    } catch (e) {
-      reportError('Load host packages', e);
-    } finally {
-      setDrillBusy(false);
-    }
-  }, [expanded, drillLoaded, drillBusy, executionId, host.id, reportError]);
-
-  const errorDetails = host.error_details as Record<string, unknown> | null;
-  const stderrSummary =
-    typeof errorDetails?.stderr === 'string'
-      ? (errorDetails.stderr as string).slice(0, 200)
-      : null;
-
-  return (
-    <>
-      <tr className="border-t border-praxis-border align-top">
-        <td className="px-2 py-1">
-          <button
-            type="button"
-            onClick={toggleExpanded}
-            aria-expanded={expanded}
-            className="text-praxis-text-muted"
-          >
-            {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-          </button>
-        </td>
-        <td className="px-2 py-1 font-mono">{host.wave_index}</td>
-        <td className="px-2 py-1">
-          {host.system_hostname_snapshot || `system #${host.system_id_snapshot ?? '?'}`}
-        </td>
-        <td className="px-2 py-1">
-          <Badge variant={EXECUTION_HOST_STATE_BADGE[host.state]}>{humanizeStatus(host.state)}</Badge>
-        </td>
-        <td className="px-2 py-1">{host.selected_package_count}</td>
-        <td className="px-2 py-1 text-praxis-text-muted">
-          {stderrSummary || (host.skip_reasons.length > 0
-            ? host.skip_reasons.map((r) => r.code).join(', ')
-            : '-')}
-        </td>
-      </tr>
-      {expanded && (
-        <tr className="border-t border-praxis-border bg-praxis-bg/30">
-          <td></td>
-          <td colSpan={5} className="px-2 py-2 space-y-2">
-            {drillBusy && <LoadingState label="Loading" />}
-            {drillLoaded && packages.length === 0 && (
-              <div className="text-praxis-text-muted">
-                No package result rows yet for this host. The dispatcher writes
-                them when a batch is processed.
-              </div>
-            )}
-            {drillLoaded && packages.length > 0 && (
-              <table className="min-w-full text-xs">
-                <thead className="text-praxis-text-muted">
-                  <tr>
-                    <th className="px-2 py-1 text-left font-medium">Package</th>
-                    <th className="px-2 py-1 text-left font-medium">Requested</th>
-                    <th className="px-2 py-1 text-left font-medium">Before</th>
-                    <th className="px-2 py-1 text-left font-medium">After</th>
-                    <th className="px-2 py-1 text-left font-medium">Outcome</th>
-                    <th className="px-2 py-1 text-left font-medium">Error</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {packages.map((p) => (
-                    <tr key={p.id} className="border-t border-praxis-border">
-                      <td className="px-2 py-1 font-mono">{p.package_name}</td>
-                      <td className="px-2 py-1">{p.requested_version_snapshot ?? '-'}</td>
-                      <td className="px-2 py-1">{p.installed_version_before ?? '-'}</td>
-                      <td className="px-2 py-1">{p.installed_version_after ?? '-'}</td>
-                      <td className="px-2 py-1">
-                        <Badge
-                          variant={
-                            p.outcome === 'succeeded'
-                              ? 'success'
-                              : p.outcome === 'failed'
-                                ? 'danger'
-                                : p.outcome === 'skipped'
-                                  ? 'warning'
-                                  : 'neutral'
-                          }
-                        >
-                          {p.outcome}
-                        </Badge>
-                      </td>
-                      <td className="px-2 py-1 text-praxis-text-muted">
-                        {p.error_code ?? '-'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-            {errorDetails && (
-              <ExecutionHostErrorDetails details={errorDetails} />
-            )}
-          </td>
-        </tr>
-      )}
-    </>
   );
 };
 
