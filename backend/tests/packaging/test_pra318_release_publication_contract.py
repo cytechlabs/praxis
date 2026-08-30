@@ -439,6 +439,90 @@ def test_readiness_check_requires_the_release_publication_surface():
     assert ".github/workflows/publish.yml" in text
 
 
+def _tracked_tree(dest: Path) -> Path:
+    """Copy the working tree's tracked files so the readiness script can run
+    against a modified version of them without touching the repository."""
+    listed = subprocess.run(
+        ["git", "ls-files", "-z"],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+    for name in listed.split("\0"):
+        if not name:
+            continue
+        source = REPO_ROOT / name
+        if not source.is_file():
+            continue
+        target = dest / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, target)
+    return dest
+
+
+def _readiness(tree: Path, version: str) -> subprocess.CompletedProcess:
+    return subprocess.run(
+        ["bash", "scripts/check-release-readiness.sh", version],
+        cwd=tree,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+def test_readiness_check_covers_the_test_modules_that_mirror_the_version():
+    """Those modules restate the released version instead of importing it, so
+    nothing else notices when one of them is left behind by a version bump."""
+    text = READINESS.read_text(encoding="utf-8")
+    for mirror in (
+        "backend/tests/api/test_agent_bootstrap_routes.py",
+        "backend/tests/api/test_pra374_agent_artifact_redirects.py",
+        "backend/tests/api/test_pra154_bootstrap_e2e.py",
+    ):
+        assert mirror in text, mirror
+
+
+def test_readiness_check_accepts_mirrors_that_match_the_agent_version(tmp_path):
+    tree = _tracked_tree(tmp_path / "tree")
+    version = (tree / "agent" / "VERSION").read_text(encoding="utf-8").strip()
+
+    result = _readiness(tree, version)
+
+    for mirror in (
+        "test_agent_bootstrap_routes.py",
+        "test_pra374_agent_artifact_redirects.py",
+        "test_pra154_bootstrap_e2e.py",
+    ):
+        line = next(row for row in result.stdout.splitlines() if mirror in row)
+        assert "OK" in line, line
+
+
+def test_readiness_check_fails_a_mirror_left_on_the_previous_version(tmp_path):
+    """The whole point of the check: a bump that moves the product surfaces and
+    forgets a test mirror has to be caught before the tag, not by the suite."""
+    tree = _tracked_tree(tmp_path / "tree")
+    version = (tree / "agent" / "VERSION").read_text(encoding="utf-8").strip()
+    stale = tree / "backend/tests/api/test_pra374_agent_artifact_redirects.py"
+    body = stale.read_text(encoding="utf-8")
+    current = f'_RELEASE_VERSION = "v{version}"'
+    assert current in body, "mirror no longer states the version this way"
+    stale.write_text(
+        body.replace(current, '_RELEASE_VERSION = "v0.0.1"'), encoding="utf-8"
+    )
+
+    result = _readiness(tree, version)
+
+    assert result.returncode != 0
+    line = next(
+        row
+        for row in result.stdout.splitlines()
+        if "test_pra374_agent_artifact_redirects.py" in row
+    )
+    assert "FAIL" in line, line
+    assert "v0.0.1" in line, line
+
+
 def test_publish_workflow_runs_the_readiness_check_before_building():
     """Package metadata that disagrees with the tag would name every artifact
     for a version that was never released."""

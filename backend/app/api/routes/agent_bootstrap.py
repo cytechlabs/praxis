@@ -139,7 +139,7 @@ _ALLOWED_FILENAMES = frozenset({"agent.tar.gz", "agent.tar.gz.sha256"})
 # constant is its mirror for the deployed backend, which does not ship the
 # agent source tree. ``scripts/check-release-readiness.sh`` fails the
 # release if the two drift apart.
-_DEFAULT_RELEASE_VERSION = "v1.0.0"
+_DEFAULT_RELEASE_VERSION = "v1.0.1"
 
 # An operator may pin a different published agent release without
 # rebuilding the image. Only an exact immutable version is accepted:

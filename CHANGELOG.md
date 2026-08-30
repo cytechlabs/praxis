@@ -10,6 +10,98 @@ released under the `vX.Y.Z` tag (images `ghcr.io/cytechlabs/praxis-backend` and
 `agent-vX.Y.Z` tag. See [docs/maintainers/release-checklist.md](docs/maintainers/release-checklist.md)
 for the release runbook.
 
+## 1.0.1 - maintenance release
+
+A maintenance release for the 1.0 line. It corrects host-facing defects found
+after 1.0.0, closes framework and SSH dependency advisories, and adds a guided
+flow for adding the first system. Every change landed on `main` first and was
+cherry-picked onto `release/1.0`.
+
+### Security
+
+- FastAPI and Starlette move to releases whose form and multipart parsers are
+  not affected by the advisories that applied to the 1.0.0 pins, and the login
+  route bounds oversized password candidates.
+- SSH connections refuse DSA keys, RSA signatures over SHA-1, SHA-1 key
+  exchange, and GSSAPI, on every path including browser sessions and file
+  transfer. RSA key material is unaffected and is signed with RSA-SHA2.
+- Browser terminal sessions and SFTP negotiate RSA-SHA2 certificates against
+  OpenSSH 10 hosts instead of failing authentication.
+- Secret scanning detects again: the repository gitleaks configuration loads
+  the pinned built-in rule set, and a pre-commit contract fails the commit if
+  it ever stops doing so.
+
+### Correctness
+
+- Security scans on RPM-family hosts parse advisory output with its own
+  parser, so a host with listed advisories no longer reports zero.
+- The fleet dashboard tells apart a fleet that was never security-scanned from
+  one scanned with no findings.
+- Compliance orders Debian and RPM package versions by their own grammars
+  rather than by PEP 440.
+- Per-host audit history is complete again: an event about one host names it,
+  and an event spanning a set of hosts records every host it affects.
+- A patch execution with no dispatchable package work is refused instead of
+  being recorded as a successful run that installed nothing.
+- Reboot evidence is collected fresh after patching and fails closed when it
+  cannot be established.
+- Stored SSH credential keys load for Ed25519, ECDSA, and RSA in both the
+  OpenSSH container and the older PEM envelopes.
+- Access Broker enrollment works on minimal Debian and EL hosts, including
+  those without systemd.
+- A command policy entry an administrator deleted stays deleted across
+  restarts, and the bootstrap administrator is provisioned once per
+  installation rather than recreated on every boot.
+- Application loggers stay enabled through in-process migrations.
+
+### Added
+
+- A guided flow for adding the first system: connect, authenticate, verify,
+  discover, organize, confirm, finish. Nothing permanent is created until the
+  final step, host keys are approved explicitly, and a host that cannot be
+  reached leaves no record and consumes no licence capacity. This is the one
+  approved feature exception in the 1.0 line.
+
+### Packaging and operations
+
+- The production backend image is pinned to Python 3.14.7.
+- The backend runtime shell assets ship in the installed wheel and source
+  distribution.
+- Native select controls are readable in both themes.
+- Documentation describes the current release only, and CI publishes
+  multi-language test coverage.
+
+### Upgrade notes
+
+`systems.ip_address` gains a uniqueness constraint. The upgrade refuses to run
+while duplicate addresses exist and names them rather than merging them; see
+[docs/upgrade-notes-1-0.md](docs/upgrade-notes-1-0.md) for the remediation.
+
+### Accepted security findings
+
+The backend image scan for this release reports no CRITICAL findings and two
+HIGH findings, both accepted under the CRITICAL-blocks, HIGH-report-only policy
+in
+[docs/maintainers/dependency-security-policy.md](docs/maintainers/dependency-security-policy.md).
+Neither is suppressed, ignored, or reclassified, and no scanner gate was
+changed:
+
+- `CVE-2025-47273`, setuptools 70.3.0, fixed in 78.1.1
+- `GHSA-6v7p-g79w-8964`, msgpack 1.1.2, fixed in 1.2.1
+
+Both are base-image or transitive packages rather than declared Praxis
+dependencies, so neither is pinned in `backend/requirements.txt`. They are
+deferred to dependency and image maintenance and are expected to clear when the
+base image advances.
+
+The reachable Starlette form-parsing advisories that applied to the 1.0.0 pins
+are fixed in this release, not accepted.
+
+### Known limitations
+
+Unchanged from 1.0.0; see
+[docs/upgrade-notes-1-0.md](docs/upgrade-notes-1-0.md).
+
 ## 1.0.0 — first stable release
 
 The 1.0 line is the first supported, self-hostable release of Praxis: a

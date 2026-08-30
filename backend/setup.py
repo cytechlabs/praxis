@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 
 setup(
     name="app",
-    version="1.0.0",
+    version="1.0.1",
     packages=find_packages(),
     # Runtime shell assets executed by the backend. They are declared here
     # so the wheel and the source distribution carry the same files an

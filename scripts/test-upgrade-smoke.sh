@@ -39,20 +39,31 @@
 #         Default. Run the smoke against every fixture in
 #         ``backend/tests/fixtures/upgrade/*.sql``.
 #
-#     scripts/test-upgrade-smoke.sh --regenerate
+#     scripts/test-upgrade-smoke.sh --regenerate [name]
 #         Regenerate the committed fixtures from the current state of
 #         the Alembic chain. Brings up a throwaway project, runs
 #         ``alembic upgrade <target>`` for each target revision below,
-#         dumps with ``pg_dump --no-owner --no-acl``, writes to
+#         applies ``<name>.seed.sql`` when that target ships operator
+#         data, dumps with ``pg_dump --no-owner --no-acl``, writes to
 #         ``backend/tests/fixtures/upgrade/<name>.sql``, tears down.
+#         Pass a fixture name to regenerate only that one.
 #         Run this whenever the Alembic chain or the target revisions
 #         change; the committed fixtures are otherwise static.
 #
-# Target revisions (chosen because they are the last revision before
-# the M13 thin-agent / M15 mirror schema land):
+# A ``<name>.seed.sql`` beside a dump is the operator history that dump
+# carries. ``v1_0_0`` ships one because the 1.0.1 migrations backfill history
+# a released database already holds: a schema-only fixture proves the chain
+# applies, and proves nothing about what the backfills read. Its dump is
+# additionally checked for content after the upgrade, not only for the
+# migration having run.
+#
+# Target revisions. The first two are the last revision before the M13
+# thin-agent / M15 mirror schema land; the third is the schema a supported
+# release actually shipped, which is the upgrade a patch release has to prove:
 #
 #     pre_m13  = pra149_review                  (last pre-M13)
 #     pre_m15  = pra156_lifecycle_notif_state   (last pre-M15)
+#     v1_0_0   = align_groups_id_sequence       (the 1.0.0 head)
 #
 # Exit codes:
 #     0 - all fixtures upgraded to head cleanly; projects torn down.
@@ -86,6 +97,7 @@ FIXTURE_DIR="backend/tests/fixtures/upgrade"
 declare -A REGENERATE_TARGETS=(
     [pre_m13]="pra149_review"
     [pre_m15]="pra156_lifecycle_notif_state"
+    [v1_0_0]="align_groups_id_sequence"
 )
 
 # ---------------------------------------------------------------- pre-flight
@@ -212,6 +224,10 @@ except Exception:
 # ---------------------------------------------------------------- regenerate
 
 if [[ "${1:-}" == "--regenerate" ]]; then
+    if [[ -n "${2:-}" && -z "${REGENERATE_TARGETS[$2]:-}" ]]; then
+        echo "ERR: unknown fixture '$2'. Known: ${!REGENERATE_TARGETS[*]}" >&2
+        exit 1
+    fi
     mkdir -p "${FIXTURE_DIR}"
     echo "==> regenerating upgrade fixtures into ${FIXTURE_DIR}"
 
@@ -234,6 +250,12 @@ if [[ "${1:-}" == "--regenerate" ]]; then
     # target revisions. Instead we ``run --rm backend`` with a custom
     # entrypoint that runs alembic to the target then dumps.
     for name in "${!REGENERATE_TARGETS[@]}"; do
+        # An optional second argument regenerates one fixture. Rewriting every
+        # dump to change one of them puts unrelated churn (a newer pg_dump
+        # header, a fresh restrict token) into the diff.
+        if [[ -n "${2:-}" && "${name}" != "$2" ]]; then
+            continue
+        fi
         target="${REGENERATE_TARGETS[$name]}"
         out="${FIXTURE_DIR}/${name}.sql"
         echo "==> generating ${out} at alembic revision ${target}"
@@ -250,6 +272,16 @@ if [[ "${1:-}" == "--regenerate" ]]; then
         # ``alembic upgrade head``. None of these argv tokens start
         # with ``/``, which avoids MSYS path-mangling on git-bash.
         compose run --rm backend alembic upgrade "${target}"
+        # Operator data, when this target ships some. A schema-only dump
+        # proves the chain applies; it cannot prove a backfill read the
+        # history it was written to repair. The seed is committed beside
+        # the dump so the fixture is reproducible from the tree.
+        seed="${FIXTURE_DIR}/${name}.seed.sql"
+        if [[ -f "${seed}" ]]; then
+            echo "    seeding operator data from ${seed}"
+            compose exec -T db psql -v ON_ERROR_STOP=1 -U postgres -d praxis \
+                < "${seed}" >/dev/null
+        fi
         # Dump to a host-visible file via stdout so we don't need a
         # shared volume contract.
         compose exec -T db pg_dump \
@@ -267,12 +299,143 @@ fi
 
 # ---------------------------------------------------------------- smoke
 
-if [[ ! -d "${FIXTURE_DIR}" ]] || \
-   ! compgen -G "${FIXTURE_DIR}/*.sql" >/dev/null 2>&1; then
+# Restorable dumps only. A ``<name>.seed.sql`` is an input to
+# ``--regenerate``, not a fixture: restoring one into an empty schema would
+# fail, and restoring it after its own dump would double every row.
+list_fixtures() {
+    local f
+    for f in "${FIXTURE_DIR}"/*.sql; do
+        [[ -e "${f}" ]] || continue
+        [[ "${f}" == *.seed.sql ]] && continue
+        printf '%s\n' "${f}"
+    done
+}
+
+if [[ ! -d "${FIXTURE_DIR}" ]] || [[ -z "$(list_fixtures)" ]]; then
     echo "ERR: no fixtures found under ${FIXTURE_DIR}/." >&2
     echo "    Run: scripts/test-upgrade-smoke.sh --regenerate" >&2
     exit 1
 fi
+
+# Scalar read against the smoke database. ON_ERROR_STOP so a malformed
+# query fails the smoke instead of comparing against an empty string.
+db_value() {
+    compose exec -T db psql -v ON_ERROR_STOP=1 -U postgres -d praxis -tAc "$1" \
+        | tr -d '[:space:]'
+}
+
+# Compare one backfill observation against what the fixture was built to
+# produce. Sets BACKFILL_FAILURES rather than returning early, so one run
+# reports every mismatch instead of only the first.
+expect_value() {
+    local what="$1" got="$2" want="$3"
+    if [[ "${got}" == "${want}" ]]; then
+        echo "    ok   ${what}: ${got}"
+    else
+        echo "==> ${what}: expected '${want}', got '${got}'" >&2
+        BACKFILL_FAILURES=$((BACKFILL_FAILURES + 1))
+    fi
+}
+
+# Content assertions for the v1.0.0 fixture, which ships the operator history
+# in ``v1_0_0.seed.sql``. The generic checks above prove the chain applied;
+# these prove the 1.0.1 backfills read that history correctly. They are keyed
+# to the seed's fixed identifiers, so a change to either has to change both.
+assert_backfills_v1_0_0() {
+    BACKFILL_FAILURES=0
+    echo "==> asserting 1.0.1 backfills against the seeded 1.0.0 history"
+
+    # PRA-402: a plan or execution event that named no host is attributed to
+    # every host it affected, an event that already named its own host gains
+    # no duplicate link, and an event about no host gains none either.
+    expect_value "plan event links to its plan's hosts" \
+        "$(db_value "SELECT coalesce(string_agg(system_id::text, ',' ORDER BY system_id), '') FROM audit_event_systems WHERE event_id = 1")" \
+        "1,2"
+    expect_value "execution event links to its execution's hosts" \
+        "$(db_value "SELECT coalesce(string_agg(system_id::text, ',' ORDER BY system_id), '') FROM audit_event_systems WHERE event_id = 2")" \
+        "1,2"
+    expect_value "already-attributed event keeps its host and gains no link" \
+        "$(db_value "SELECT target_system_id || ':' || (SELECT count(*) FROM audit_event_systems WHERE event_id = 3) FROM audit_events WHERE id = 3")" \
+        "3:0"
+    expect_value "hostless event gains no link" \
+        "$(db_value "SELECT count(*) FROM audit_event_systems WHERE event_id = 4")" \
+        "0"
+    # host-three is in the fixture precisely so a link to it would be a
+    # cross-host attribution bug rather than an absence nobody notices.
+    expect_value "no link reaches a host the plan never targeted" \
+        "$(db_value "SELECT count(*) FROM audit_event_systems WHERE system_id = 3")" \
+        "0"
+    expect_value "no attribution beyond the two multi-host events" \
+        "$(db_value "SELECT count(*) FROM audit_event_systems")" "4"
+    # The contract the backfill exists to restore: per-host history.
+    expect_value "per-host history for host-one" \
+        "$(db_value "SELECT count(*) FROM audit_events ae WHERE ae.target_system_id = 1 OR ae.id IN (SELECT event_id FROM audit_event_systems WHERE system_id = 1)")" \
+        "2"
+
+    # PRA-403: the installation is read as one that already applied the
+    # shipped baseline, so a deleted entry stays deleted across the upgrade
+    # and the boot that follows it.
+    expect_value "shipped baseline recorded as already applied" \
+        "$(db_value "SELECT CASE WHEN count(*) > 0 THEN 'recorded' ELSE 'empty' END FROM command_policy_baseline")" \
+        "recorded"
+    expect_value "deleted shipped entry recorded, so it is never recreated" \
+        "$(db_value "SELECT count(*) FROM command_policy_baseline WHERE item_type = 'whitelist_entry' AND item_key = 'APT Search'")" \
+        "1"
+    expect_value "deleted shipped entry stayed deleted" \
+        "$(db_value "SELECT count(*) FROM command_whitelist WHERE name = 'APT Search'")" \
+        "0"
+    expect_value "surviving operator-visible entries untouched" \
+        "$(db_value "SELECT count(*) FROM command_whitelist WHERE name IN ('APT Update', 'APT Upgrade')")" \
+        "2"
+
+    # PRA-421: an installation that already had accounts is recorded as
+    # initialized, adopting rather than provisioning, and no second bootstrap
+    # identity can appear.
+    expect_value "installation recorded as initialized, not provisioned" \
+        "$(db_value "SELECT state FROM bootstrap_admin_state WHERE marker = 'bootstrap_admin'")" \
+        "adopted"
+    expect_value "exactly one bootstrap record" \
+        "$(db_value "SELECT count(*) FROM bootstrap_admin_state")" "1"
+    # The record binds to the account this installation actually bootstrapped.
+    expect_value "bootstrap record names the seeded administrator" \
+        "$(db_value "SELECT state || ':' || bootstrap_user_id || ':' || bootstrap_username FROM bootstrap_admin_state WHERE marker = 'bootstrap_admin'")" \
+        "adopted:1:praxisadmin"
+    # A count alone would pass while the boot both deleted a seeded account and
+    # added an administrator, so name who holds what instead. The unroled
+    # ``system`` row is the documented placeholder the command-policy seeder
+    # creates when neither ``admin`` nor ``system`` exists; it is not a login.
+    expect_value "the upgrade added no second administrator" \
+        "$(db_value "SELECT string_agg(u.username || '/' || coalesce(r.name, '-'), ',' ORDER BY u.id) FROM \"user\" u LEFT JOIN user_role ur ON ur.user_id = u.id LEFT JOIN role r ON r.id = ur.role_id")" \
+        "praxisadmin/admin,fixture-operator/maintainer,system/-"
+
+    # A second boot must change none of that. This is the case the record
+    # exists for: the initializer runs again on every restart.
+    echo "==> restarting backend to prove the second boot changes nothing"
+    local before_id
+    before_id="$(db_value "SELECT id FROM bootstrap_admin_state WHERE marker = 'bootstrap_admin'")"
+    compose restart backend >/dev/null
+    if ! wait_for_backend_health; then
+        echo "==> backend did not come back after restart" >&2
+        return 1
+    fi
+    expect_value "bootstrap record survives a restart unchanged" \
+        "$(db_value "SELECT id FROM bootstrap_admin_state WHERE marker = 'bootstrap_admin'")" \
+        "${before_id}"
+    expect_value "restart created no second bootstrap identity" \
+        "$(db_value "SELECT count(*) FROM bootstrap_admin_state")" "1"
+    expect_value "restart changed no account and added no administrator" \
+        "$(db_value "SELECT string_agg(u.username || '/' || coalesce(r.name, '-'), ',' ORDER BY u.id) FROM \"user\" u LEFT JOIN user_role ur ON ur.user_id = u.id LEFT JOIN role r ON r.id = ur.role_id")" \
+        "praxisadmin/admin,fixture-operator/maintainer,system/-"
+    expect_value "restart did not resurrect the deleted policy entry" \
+        "$(db_value "SELECT count(*) FROM command_whitelist WHERE name = 'APT Search'")" \
+        "0"
+
+    if [[ "${BACKFILL_FAILURES}" -ne 0 ]]; then
+        echo "==> ${BACKFILL_FAILURES} backfill assertion(s) failed for v1_0_0" >&2
+        return 1
+    fi
+    echo "    all v1_0_0 backfill assertions passed"
+}
 
 run_one_fixture() {
     local fixture="$1"
@@ -377,17 +540,29 @@ run_one_fixture() {
     fi
     echo "    admin user present in user table"
 
+    # Fixtures that ship operator data assert what the backfills did with it.
+    if [[ "${name}" == "v1_0_0" ]]; then
+        if ! assert_backfills_v1_0_0; then
+            return 1
+        fi
+    fi
+
     # Tear this fixture's stack down so the next iteration starts
     # from a clean slate. Strict (no ``|| true``).
     teardown_stack
 }
 
+# Collected up front, not streamed into the loop: ``compose`` reads stdin, so
+# a ``while read`` whose body runs it loses the rest of the list and the smoke
+# reports success having exercised only the first fixture.
+mapfile -t FIXTURES < <(list_fixtures)
+
 echo "==> upgrade smoke starting; fixtures:"
-for fixture in "${FIXTURE_DIR}"/*.sql; do
+for fixture in "${FIXTURES[@]}"; do
     echo "      ${fixture}"
 done
 
-for fixture in "${FIXTURE_DIR}"/*.sql; do
+for fixture in "${FIXTURES[@]}"; do
     run_one_fixture "${fixture}"
 done
 

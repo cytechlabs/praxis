@@ -256,7 +256,7 @@ def test_download_proxy_serves_canonical_local_artifacts(client, monkeypatch, tm
     breaks the install never starts."""
     base = tmp_path / "agent-artifacts"
     base.mkdir()
-    real_name = "praxis-agent-v1.0.0-linux-amd64.tar.gz"
+    real_name = "praxis-agent-v1.0.1-linux-amd64.tar.gz"
     (base / real_name).write_bytes(b"E2E_TARBALL")
     (base / "checksums.txt").write_text(f"{'a' * 64}  {real_name}\n")
     monkeypatch.setenv("PRAXIS_AGENT_ARTIFACT_DIR", str(base))
