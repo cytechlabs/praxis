@@ -93,6 +93,30 @@ Fields:
 |---|---|
 | `totp.step_up` | `method` = `totp` or `recovery` |
 
+### First-run initialization
+
+An installation provisions its administrator once and records that it did. These
+events describe that record. They originate from startup rather than from a
+request, so `actor` is empty on all four: an operator identity here would be
+invented, and a reader could not tell it from a real login. `target.kind` is
+`bootstrap_admin` and `target.id` is null, because the subject is the
+installation's own state and not a user row. No `context` field carries or
+describes credential material.
+
+| Action | When it fires | `outcome` | `context` keys |
+|---|---|---|---|
+| `bootstrap.admin.provisioned` | The first administrator is created on an installation that has none | `success` | `username`, `user_id`, `state` |
+| `bootstrap.admin.adopted` | An installation that already has users is recorded as initialized. Nothing is created, modified, reactivated, or re-roled | `success` | `username` (the configured one), `matched_existing`, `user_id` (null when nothing carries that username), `user_count`, `state` |
+| `bootstrap.admin.suppressed` | A restart supplies an administrator password while nothing carries the configured username, on an installation already recorded as initialized. This is the state that would otherwise resurrect a deleted administrator | `success` | `username` |
+| `bootstrap.admin.reset` | An operator clears the record so the installation can provision again, or is refused because a user still exists | `success` / `denied` | on success `previous_state`, `username`; on refusal `reason`, `user_count` |
+
+`bootstrap.admin.provisioned` and `bootstrap.admin.adopted` fire at most once
+per installation, and each is written in the same transaction as the record and
+the account it describes, so neither can exist without the other.
+`bootstrap.admin.suppressed` fires at most once per backend start, and only in
+the narrow state above; an installation whose administrator password has been
+cleared after first run never emits it.
+
 ### Secrets, Vault & PKI
 
 Sensitive secret and PKI actions emit unified audit events so secret access and

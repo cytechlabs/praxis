@@ -675,13 +675,16 @@ external-Vault deployments must supply a token. Bundled-Vault
 deployments read the token from the shared
 <code>/vault/data/backend-token</code> at runtime, so empty is correct
 there.</li>
-<li><strong>Empty <code>ADMIN_PASSWORD</code> on a fresh deployment</strong>: enforced
-inside <code>backend/scripts/create_admin_user.py</code> (which knows the
-current user count); in production with <code>user_count == 0</code> and
-empty <code>ADMIN_PASSWORD</code>, the script now raises instead of
-silently skipping admin creation and leaving a production stack
-with no usable login. Subsequent boots that already have users
-skip the gate.</li>
+<li><strong>Empty <code>ADMIN_PASSWORD</code> on a deployment that is still being
+initialized</strong>: enforced on the boot path that provisions the
+first administrator; in production with no users yet and an
+empty <code>ADMIN_PASSWORD</code>, startup raises instead of silently
+skipping admin creation and leaving a production stack with no
+usable login. The gate stops applying once the deployment
+records that it has been initialized, because <code>ADMIN_PASSWORD</code>
+is a first-run input rather than desired state: a later restart
+neither reads it nor recreates an administrator that was
+removed. Clear it once the first administrator has signed in.</li>
 </ul>
 <p>Test coverage:
 <code>backend/tests/services/test_pra179_startup_validation.py</code> (13

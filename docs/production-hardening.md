@@ -887,13 +887,16 @@ name and the corrective action:
   deployments read the token from the shared
   `/vault/data/backend-token` at runtime, so empty is correct
   there.
-- **Empty `ADMIN_PASSWORD` on a fresh deployment**: enforced
-  inside `backend/scripts/create_admin_user.py` (which knows the
-  current user count); in production with `user_count == 0` and
-  empty `ADMIN_PASSWORD`, the script now raises instead of
-  silently skipping admin creation and leaving a production stack
-  with no usable login. Subsequent boots that already have users
-  skip the gate.
+- **Empty `ADMIN_PASSWORD` on a deployment that is still being
+  initialized**: enforced on the boot path that provisions the
+  first administrator; in production with no users yet and an
+  empty `ADMIN_PASSWORD`, startup raises instead of silently
+  skipping admin creation and leaving a production stack with no
+  usable login. The gate stops applying once the deployment
+  records that it has been initialized, because `ADMIN_PASSWORD`
+  is a first-run input rather than desired state: a later restart
+  neither reads it nor recreates an administrator that was
+  removed. Clear it once the first administrator has signed in.
 
 Test coverage:
 `backend/tests/services/test_pra179_startup_validation.py` (13
