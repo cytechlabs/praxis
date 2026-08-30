@@ -57,7 +57,7 @@ At minimum, set:
 |---|---|
 | `SECRET_KEY` | Signs application tokens. Generate a long random value. Startup refuses a weak or empty key in production. |
 | `POSTGRES_PASSWORD` | Bundled database password. The stack refuses to start on the retired default. |
-| `ADMIN_PASSWORD` | Initial administrator password. Set a strong value before first boot; a fresh production deployment fails closed when it is empty. Praxis does not generate or print this credential. |
+| `ADMIN_PASSWORD` | Initial administrator password. Set a strong value before first boot; a fresh production deployment fails closed when it is empty. Praxis does not generate or print this credential. It is read only while the deployment is still being initialized, so clear it once the first administrator has signed in. |
 | `PUBLIC_BASE_URL` | The external URL browsers use, for example `https://praxis.example.com`. Redirect flows and single sign-on depend on it. |
 | `PRAXIS_DOMAIN` | The hostname Caddy answers on. |
 | `PRAXIS_TLS_MODE` | `internal`, `acme`, or `byo`. See TLS below. |
