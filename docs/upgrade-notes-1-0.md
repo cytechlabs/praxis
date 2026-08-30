@@ -3,9 +3,10 @@ title: Upgrade notes for 1.0
 description: What changes when you move to 1.0 and the order to apply it in.
 ---
 
-These notes cover moving to `1.0.0` from a prerelease or a local development
-build. 1.0 is the first supported release; there is no supported upgrade from an
-older tagged release because none exists.
+These notes cover moving to the current 1.0 release. Two paths are supported:
+`1.0.0` to `1.0.1`, and a prerelease or local development build to the current
+release. There is no supported upgrade from a tagged release older than `1.0.0`,
+because none exists.
 
 If you are installing fresh, follow the
 [installation guide](install.md)
@@ -30,10 +31,10 @@ instead; you do not need this document.
 1. **Pin the target version.** In `.env`:
 
    ```sh
-   PRAXIS_VERSION=1.0.0
+   PRAXIS_VERSION=1.0.1
    ```
 
-2. **Pull (or build) the 1.0.0 images.**
+2. **Pull (or build) the release images.**
 
    ```sh
    # Pull published images (--profile proxy starts Caddy, the browser ingress):
@@ -75,6 +76,48 @@ instead; you do not need this document.
 7. **Run the smoke gates** (see [safe upgrade](guide-safe-upgrade.md)
    for the full set): fresh-install / upgrade / backup-restore smokes and the
    demo walkthrough if you want a visual confirmation of the lifecycle story.
+
+## Moving from 1.0.0 to 1.0.1
+
+`1.0.1` is a maintenance release. It adds no new required configuration, and
+the upgrade is the ordinary pinned-version upgrade above.
+
+One schema change needs attention before you start.
+
+**Host addresses must be unique.** `systems.ip_address` gains a uniqueness
+constraint. Praxis has always treated a duplicate address as invalid, but only
+in the application, so a database written by an older release can still hold
+two hosts with the same address. The migration refuses to run while any
+duplicate exists rather than choosing a row to keep:
+
+```text
+Cannot add the unique constraint on systems.ip_address while duplicate
+addresses exist. ... No data has been changed.
+  10.0.0.11/32 used by 2 systems: host-a, host-b
+```
+
+Nothing is modified when the migration refuses, and the database stays on the
+`1.0.0` schema. Check for duplicates before upgrading:
+
+```sh
+docker compose exec -T db psql -U postgres -d praxis -c \
+  "SELECT ip_address, count(*), string_agg(hostname, ', ') FROM systems \
+   GROUP BY ip_address HAVING count(*) > 1;"
+```
+
+Resolve each address by correcting or decommissioning the duplicate hosts, then
+run the upgrade again.
+
+**Rolling back past this release** re-pins `PRAXIS_VERSION` as described in
+[Rolling back](#rolling-back). If you also downgrade the schema, the
+`systems.description` column is dropped, and the downgrade refuses while any
+host carries description text so operator-entered text is not destroyed
+silently. Clear those descriptions deliberately if you intend to lose them.
+
+Clear `ADMIN_PASSWORD` from `.env` once your first administrator has signed in.
+From `1.0.1` the bootstrap administrator is provisioned once per installation
+and is not recreated on later restarts, but an older release rolled back onto
+the same database will recreate it while that value is still set.
 
 ## Breaking change: privileged access baseline
 

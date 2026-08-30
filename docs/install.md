@@ -38,7 +38,7 @@ Compose files change between releases, so a checkout that does not match the
 images can start a stack the release was never tested as:
 
 ```sh
-git checkout v1.0.0
+git checkout v1.0.1
 ```
 
 On the source path, stay on the branch you are working on.

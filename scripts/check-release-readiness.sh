@@ -83,6 +83,34 @@ else
     red "control-plane agent pin = v${BACKEND_PIN} (expected v${AGENT_VERSION} from agent/VERSION)"
 fi
 
+# Test modules that restate the released agent version as their own literal.
+# They are deliberately independent: a test that imported the constant it
+# checks would agree with any value that constant ever held, and would prove
+# nothing. An independent restatement is only worth having if something fails
+# when it drifts, which is what this does. Each file states the version once,
+# so every vX.Y.Z it contains has to match agent/VERSION.
+VERSION_MIRROR_FILES="
+backend/tests/api/test_agent_bootstrap_routes.py
+backend/tests/api/test_pra374_agent_artifact_redirects.py
+backend/tests/api/test_pra154_bootstrap_e2e.py
+"
+
+for mirror in ${VERSION_MIRROR_FILES}; do
+    label="$(printf '%-46s' "${mirror}")"
+    if [ ! -f "${mirror}" ]; then
+        red "${label} (missing)"
+        continue
+    fi
+    found="$(grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' "${mirror}" | sort -u)"
+    if [ -z "${found}" ]; then
+        red "${label} states no agent version (expected v${TARGET})"
+    elif [ "${found}" = "v${TARGET}" ]; then
+        green "${label} = ${found}"
+    else
+        red "${label} = $(echo "${found}" | tr '\n' ' ')(expected v${TARGET})"
+    fi
+done
+
 # --- 2. Required release docs ----------------------------------------------
 printf '\nRelease docs\n'
 for doc in \

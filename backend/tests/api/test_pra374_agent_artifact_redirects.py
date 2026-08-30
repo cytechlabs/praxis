@@ -27,7 +27,7 @@ from app.api.routes import agent_bootstrap
 
 # Mirrors the pinned constants in the route module. Kept by hand so a
 # version or host change has to be acknowledged here too.
-_RELEASE_VERSION = "v1.0.0"
+_RELEASE_VERSION = "v1.0.1"
 _TARBALL = f"praxis-agent-{_RELEASE_VERSION}-linux-amd64.tar.gz"
 _RELEASE_BASE = (
     "https://github.com/cytechlabs/praxis/releases/download/"
