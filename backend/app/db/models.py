@@ -3729,6 +3729,53 @@ class AppSettings(Base):  # pylint: disable=too-few-public-methods
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+class BootstrapAdminState(Base):  # pylint: disable=too-few-public-methods
+    """Records that this installation has completed first-run initialization.
+
+    The fact is about the installation, not about an account: once the row exists,
+    the bootstrap path never provisions an administrator again, whatever later
+    happened to the account it created. That is what separates a deployment
+    that was never initialized from one whose administrator was deliberately
+    deleted, renamed, disabled, or stripped of the admin role. ADMIN_PASSWORD
+    and ADMIN_USERNAME are first-run inputs, not recurring desired state.
+
+    ``marker`` always holds ``bootstrap_admin``. Two constraints make the
+    single-row invariant a database fact rather than a convention, and both are
+    needed: the check pins the column to that one literal, and the unique
+    constraint then admits only one row carrying it. Uniqueness alone would
+    permit any number of rows under different marker strings, each of which the
+    reader would fail to find, and a first boot would provision over the top of
+    a record that already said this installation was initialized. Together they
+    are also the backstop for two backends racing through their first boot.
+
+    ``bootstrap_user_id`` nulls out when the account is deleted, so the marker
+    outlives what it describes. ``bootstrap_username`` is kept as history for
+    that case; it is never a lookup key. No password material is stored.
+    """
+
+    __tablename__ = "bootstrap_admin_state"
+    __table_args__ = (
+        CheckConstraint(
+            "marker = 'bootstrap_admin'",
+            name="ck_bootstrap_admin_state_marker",
+        ),
+    )
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    marker = Column(String(32), unique=True, nullable=False)
+    state = Column(String(20), nullable=False)
+    bootstrap_user_id = Column(
+        Integer,
+        ForeignKey("user.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    bootstrap_username = Column(String(200), nullable=True)
+    initialized_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 class ActivationToken(Base):  # pylint: disable=too-few-public-methods
     """Activation token for one-line agent enrollment (PRA-154).
 
