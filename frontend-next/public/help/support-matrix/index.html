@@ -375,8 +375,12 @@ known limitation · ✖️ not supported.</p>
 
 <table><thead><tr><th>Capability</th><th>deb family (Ubuntu/Debian)</th><th>EL family (RHEL/Rocky/Alma, dnf)</th></tr></thead><tbody><tr><td>Enrollment (SSH bootstrap / agent)</td><td>✅</td><td>✅</td></tr><tr><td>Facts collection (<code>collect-facts.sh</code>)</td><td>✅</td><td>✅</td></tr><tr><td>Lifecycle / EOL</td><td>✅</td><td>✅</td></tr><tr><td>Mirror trust (signed repo)</td><td>✅ (deb)</td><td>✅ (rpm)</td></tr><tr><td>Content profile apply</td><td>✅</td><td>✅</td></tr><tr><td>Patch execution</td><td>✅ (<code>apt-get install</code>)</td><td>✅ (<code>dnf install</code>)</td></tr><tr><td>Reboot detection</td><td>✅ (<code>/var/run/reboot-required</code>)</td><td>⚠️ marker-file only; EL <code>needs-restarting</code> not checked (limitation #1)</td></tr><tr><td>Rollback feasibility</td><td>✅ (apt)</td><td>✅ (dnf)</td></tr><tr><td>Compliance probes</td><td>✅ (operator-defined, read-only)</td><td>✅ (operator-defined, read-only)</td></tr></tbody></table>
 <p>Unsupported families (<code>zypper</code>/<code>pacman</code>/<code>apk</code>) are ✖️ for mirror trust,
-content profile apply, patch execution, and rollback; they may still enroll
-and collect facts on a best-effort basis.</p>
+content profile apply, patch execution, and rollback.</p>
+<p>Enrollment itself requires a distribution from the seeded catalogue. Guided
+onboarding maps a discovered host onto one of the releases listed above and
+refuses to add a host it cannot map, so a distribution outside this matrix is
+enrollable only by explicitly selecting the release it is closest to, and is
+serviced no better than that selection implies.</p>
 <h2 id="known-distro-specific-limitations">Known distro-specific limitations</h2>
 <ol>
 <li>

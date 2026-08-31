@@ -270,21 +270,22 @@ export const DiscoverStep: React.FC<{
           {draft.discovery.support_mapping === 'unknown' && (
             <div className="space-y-3 rounded-md border border-warning/40 bg-warning/10 p-4">
               <p className="text-sm text-content">
-                Praxis does not recognise this distribution.
+                Praxis does not support this distribution.
               </p>
               <p className="text-xs text-content-muted">
-                You can still add the host, but package and patch
-                features may not work until it is supported. Pick the
-                closest match, or continue without one.
+                Praxis manages a host through its distribution, so it cannot
+                add one it has no supported release for. Select the release
+                this host actually runs. If none applies, this host cannot be
+                added until its distribution is supported.
               </p>
-              <FormField label="Distribution" htmlFor="ob-distro">
+              <FormField label="Distribution" htmlFor="ob-distro" required>
                 <select
                   id="ob-distro"
                   className={nativeSelectClass}
                   value={chosenDistroId}
                   onChange={(e) => setChosenDistroId(e.target.value)}
                 >
-                  <option value="">Continue without a match</option>
+                  <option value="">Choose a supported distribution</option>
                   {organizationOptions?.distros.map((d) => (
                     <option key={d.id} value={d.id}>
                       {d.name} {d.version}
@@ -297,6 +298,7 @@ export const DiscoverStep: React.FC<{
                 size="sm"
                 onClick={submitDiscoveryConfirmation}
                 loading={busy}
+                disabled={!chosenDistroId}
               >
                 Confirm and continue
               </Button>

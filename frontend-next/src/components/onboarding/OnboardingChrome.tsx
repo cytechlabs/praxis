@@ -79,7 +79,7 @@ export const StepFooter: React.FC<{
   canLeaveVerify: boolean;
   hasAddress: boolean;
   hasCredential: boolean;
-  hasDiscovery: boolean;
+  canLeaveDiscover: boolean;
   canFinish: boolean;
   onBack: () => void;
   onCancel: () => void;
@@ -95,7 +95,7 @@ export const StepFooter: React.FC<{
   canLeaveVerify,
   hasAddress,
   hasCredential,
-  hasDiscovery,
+  canLeaveDiscover,
   canFinish,
   onBack,
   onCancel,
@@ -156,7 +156,7 @@ export const StepFooter: React.FC<{
           variant="primary"
           icon={<ArrowRight size={14} />}
           onClick={onLeaveDiscover}
-          disabled={busy || !hasDiscovery}
+          disabled={busy || !canLeaveDiscover}
         >
           Next
         </Button>
