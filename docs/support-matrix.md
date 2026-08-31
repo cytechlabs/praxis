@@ -138,8 +138,13 @@ known limitation · ✖️ not supported.
 | Compliance probes | ✅ (operator-defined, read-only) | ✅ (operator-defined, read-only) |
 
 Unsupported families (`zypper`/`pacman`/`apk`) are ✖️ for mirror trust,
-content profile apply, patch execution, and rollback; they may still enroll
-and collect facts on a best-effort basis.
+content profile apply, patch execution, and rollback.
+
+Enrollment itself requires a distribution from the seeded catalogue. Guided
+onboarding maps a discovered host onto one of the releases listed above and
+refuses to add a host it cannot map, so a distribution outside this matrix is
+enrollable only by explicitly selecting the release it is closest to, and is
+serviced no better than that selection implies.
 
 ## Known distro-specific limitations
 
