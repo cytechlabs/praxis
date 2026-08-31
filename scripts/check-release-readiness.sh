@@ -6,10 +6,12 @@
 #      root package.json, frontend-next/package.json, frontend-next/package-lock.json,
 #      backend/setup.py, agent/VERSION, and the control plane's pinned agent
 #      release) against a target version;
-#   2. presence of the required release docs, publication scripts, and agent
+#   2. the reported product version being derived from the installed package
+#      rather than restated as a literal in the backend;
+#   3. presence of the required release docs, publication scripts, and agent
 #      packaging scripts;
-#   3. presence of the required release workflows;
-#   4. clean whitespace (`git diff --check`).
+#   4. presence of the required release workflows;
+#   5. clean whitespace (`git diff --check`).
 #
 # It NEVER tags, pushes, publishes, builds images, or mutates services/volumes.
 # It is safe to run at any time.
@@ -111,7 +113,48 @@ for mirror in ${VERSION_MIRROR_FILES}; do
     fi
 done
 
-# --- 2. Required release docs ----------------------------------------------
+# --- 2. Reported version derivation -----------------------------------------
+# The version served by /health, by the OpenAPI document, and by the support
+# bundle must come from the installed package's metadata. A release version
+# restated in the backend is a mirror nothing updates, so the release ships an
+# artifact that reports the previous version over its own health endpoint.
+printf '\nReported version derivation\n'
+
+VERSION_SOURCE="backend/app/core/version.py"
+if [ -f "${VERSION_SOURCE}" ]; then
+    green "${VERSION_SOURCE}"
+else
+    red "${VERSION_SOURCE} (missing; the backend has no authoritative version source)"
+fi
+
+for src in \
+    "${VERSION_SOURCE}" \
+    backend/app/api/main.py \
+    backend/app/services/diagnostics_service.py; do
+    if [ ! -f "${src}" ]; then
+        red "${src} (missing)"
+        continue
+    fi
+    LITERAL="$(grep -nE '"[0-9]+\.[0-9]+\.[0-9]+"' "${src}" | head -n 1 || true)"
+    if [ -n "${LITERAL}" ]; then
+        red "${src} restates a release version: ${LITERAL}"
+        red "  ^ delete the literal; derive the version from ${VERSION_SOURCE}"
+    else
+        green "${src} states no release version literal"
+    fi
+done
+
+for consumer in \
+    backend/app/api/main.py \
+    backend/app/services/diagnostics_service.py; do
+    if [ -f "${consumer}" ] && grep -q 'get_version()' "${consumer}"; then
+        green "${consumer} derives its version from ${VERSION_SOURCE}"
+    else
+        red "${consumer} does not call get_version() from ${VERSION_SOURCE}"
+    fi
+done
+
+# --- 3. Required release docs ----------------------------------------------
 printf '\nRelease docs\n'
 for doc in \
     CHANGELOG.md \
@@ -136,7 +179,7 @@ for doc in \
     fi
 done
 
-# --- 3. Required release workflows -----------------------------------------
+# --- 4. Required release workflows -----------------------------------------
 printf '\nRelease workflows\n'
 for wf in \
     .github/workflows/ci.yml \
@@ -149,7 +192,7 @@ for wf in \
     fi
 done
 
-# --- 4. Whitespace ----------------------------------------------------------
+# --- 5. Whitespace ----------------------------------------------------------
 printf '\nWorking tree\n'
 if git diff --check >/dev/null 2>&1; then
     green "git diff --check clean"
