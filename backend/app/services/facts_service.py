@@ -29,6 +29,17 @@ Locked rules (from PRA-155 design lock):
     Preserved keys are named in the audit row and on ``IngestResult`` so
     the carry-forward is never silent, and ``force=True`` bypasses it for
     a deliberate correction.
+  * Coverage rule for the SSH baseline: an unreported key is recorded
+    whether or not there was a value to retain. With nothing retained the
+    column is NULL, and a NULL that says nothing about itself is
+    indistinguishable from a host nobody has collected, so a collection
+    that ran and could not answer would present as one that never ran.
+    The entry is what keeps the two apart, and it makes silent omission
+    of a security-relevant value impossible for any transport or
+    collector revision.
+  * Canonical form for the SSH baseline: values are stored as the single
+    lowercased token the server itself reports, so the same setting
+    compares equal however the reporting collector obtained it.
   * Unknown payload keys are dropped (forward-compat for newer agents
     pushing fields a back-revved backend doesn't know yet).
   * Cloud metadata sanitizer is the gate. Anything not in the v1
@@ -137,13 +148,20 @@ _PRESERVED_EVIDENCE_KEYS: Tuple[str, ...] = (
 # key (``FACT_KEY_TO_COLLECTOR_PROBE_KEYS`` in the evaluation service).
 _SSH_BASELINE_PROBE_KEY = "ssh_config"
 
-# Coverage reason recorded when INGESTION, not the collector, noticed that a
+# Coverage reasons recorded when INGESTION, not the collector, noticed that a
 # value went unreported. A collector that can tell the difference between
-# "could not establish" and "did not look" says so itself and this is never
-# used; an older or lower-coverage collector simply omits the field, and
-# this marker is what stops the retained value being read as a fresh
-# observation.
+# "could not establish" and "did not look" says so itself and these are never
+# used; an older or lower-coverage collector simply omits the field, and these
+# markers are what keep the omission visible.
+#
+# The two cases differ only in what is left on the row. When an earlier value
+# was retained, the marker stops it being read as a fresh observation. When
+# there was nothing to retain, the marker is the only record that a collection
+# ran and could not answer: without it the NULL is indistinguishable from a
+# host nobody has scanned yet, and the operator is told to run a scan that
+# cannot help.
 PRESERVED_WITHOUT_COVERAGE_REASON = "value_not_reported_preserved"
+UNREPORTED_WITHOUT_EVIDENCE_REASON = "value_not_reported"
 
 # Allowlisted keys inside ``cloud_instance_metadata``. Anything else
 # is dropped by ``_sanitize_cloud_metadata`` before write/audit. Per
@@ -331,6 +349,43 @@ def _sanitize_scalars(
     return kept, rejected_unknown
 
 
+def _canonical_evidence_value(raw: Any) -> Optional[str]:
+    """Reduce an SSH baseline value to the single lowercased token the
+    server itself reports, or ``None`` when nothing usable is left.
+
+    Transports establish these values differently: one reads the server's
+    own effective dump, another reads configuration where an administrator's
+    capitalization and quoting survive, and a manual import can carry either.
+    Storing the same setting two ways would make one host's evidence compare
+    unequal to another's for a difference no operator can see, so the
+    canonical form is applied here, on the single path every transport
+    shares.
+
+    A value that reduces to nothing is not evidence. It is dropped rather
+    than stored, which routes it into the same preserve-or-mark handling as
+    a value the collection never reported at all.
+    """
+    if not isinstance(raw, str):
+        return None
+    tokens = raw.split()
+    if not tokens:
+        return None
+    return tokens[0].strip('"').lower() or None
+
+
+def _canonicalize_evidence_scalars(scalars: Dict[str, Any]) -> None:
+    """Rewrite the SSH baseline scalars in place into their canonical form,
+    dropping any that carry no usable value."""
+    for key in _PRESERVED_EVIDENCE_KEYS:
+        if key not in scalars:
+            continue
+        canonical = _canonical_evidence_value(scalars[key])
+        if canonical is None:
+            del scalars[key]
+        else:
+            scalars[key] = canonical
+
+
 def _preserved_evidence(
     existing: Optional[HostFacts], scalars: Dict[str, Any]
 ) -> Dict[str, Any]:
@@ -353,31 +408,44 @@ def _preserved_evidence(
     return preserved
 
 
-def _preserved_coverage_markers(
-    preserved: Dict[str, Any], partial_errors: List[Dict[str, Any]]
+def _evidence_coverage_markers(
+    scalars: Dict[str, Any],
+    preserved: Dict[str, Any],
+    partial_errors: List[Dict[str, Any]],
 ) -> List[Dict[str, Any]]:
-    """Return the coverage entries ingestion must add for carried-forward
-    values the incoming collection said nothing about.
+    """Return the coverage entries ingestion must add for SSH baseline
+    scalars this collection did not report.
 
-    Retaining a value is only truthful while something records that this
-    collection did not observe it. A collector that reports its own coverage
-    already provides that, per key or once for the whole probe, and its
-    entry is left alone. Anything it omitted silently gets a marker here, so
-    the guarantee holds for every transport and every collector revision
-    rather than only for the ones new enough to report gaps.
+    Every unreported key gets one, whether or not an earlier value was
+    retained, because the two silences mean the same thing: the collection
+    ran and could not establish the value. Recording it is what lets
+    compliance separate that from a host that has never been scanned, and it
+    is the guarantee that a collector too old or too limited to describe its
+    own coverage cannot leave a security-relevant value silently missing.
+
+    A collector that does report its own coverage already said this, per key
+    or once for the whole probe, and its entry is left alone.
     """
-    if not preserved:
-        return []
     covered = {
         str(entry.get("key")) for entry in partial_errors if isinstance(entry, dict)
     }
     if _SSH_BASELINE_PROBE_KEY in covered:
         return []
-    return [
-        {"key": key, "error": PRESERVED_WITHOUT_COVERAGE_REASON}
-        for key in _PRESERVED_EVIDENCE_KEYS
-        if key in preserved and key not in covered
-    ]
+    markers: List[Dict[str, Any]] = []
+    for key in _PRESERVED_EVIDENCE_KEYS:
+        if scalars.get(key) is not None or key in covered:
+            continue
+        markers.append(
+            {
+                "key": key,
+                "error": (
+                    PRESERVED_WITHOUT_COVERAGE_REASON
+                    if key in preserved
+                    else UNREPORTED_WITHOUT_EVIDENCE_REASON
+                ),
+            }
+        )
+    return markers
 
 
 def _coerce_collected_at(
@@ -467,6 +535,10 @@ def ingest(
                 )
 
     scalars, rejected_scalar_keys = _sanitize_scalars(payload, partial_errors)
+    # Canonical form first: everything below decides "did this collection
+    # report the value?" from ``scalars``, and a value that reduces to
+    # nothing must reach those decisions as unreported.
+    _canonicalize_evidence_scalars(scalars)
     cloud_md, rejected_cloud_keys = _sanitize_cloud_metadata(
         payload.get("cloud_instance_metadata")
     )
@@ -604,9 +676,12 @@ def ingest(
     # ``force`` skips it so an out-of-band correction can clear a value.
     preserved = {} if force else _preserved_evidence(existing, scalars)
     # A lower-coverage collector omits a value without saying it could not
-    # establish one. Ingestion supplies the missing per-key coverage so the
-    # retained value is never read as something this collection observed.
-    partial_errors.extend(_preserved_coverage_markers(preserved, partial_errors))
+    # establish one. Ingestion supplies the missing per-key coverage so an
+    # unreported setting is never read as something this collection observed,
+    # and never as a host that has simply not been scanned.
+    partial_errors.extend(
+        _evidence_coverage_markers(scalars, preserved, partial_errors)
+    )
 
     # Upsert. Apart from the preserved SSH baseline scalars we
     # deliberately do NOT carry forward fields from the prior row; each
