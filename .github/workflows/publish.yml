@@ -259,7 +259,7 @@ jobs:
           fi
 
       - name: Set up Buildx
-        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4
 
       # Fetch the private paid capability wheel into the local build context.
       # Runs only when the operator explicitly asked for a paid-capable build,
@@ -479,7 +479,7 @@ jobs:
       # Buildx supplies `imagetools`, which the absence check below uses to ask
       # the registry what exists. Install it before anything depends on it.
       - name: Set up Buildx
-        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4
 
       - name: Log in to GHCR
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
