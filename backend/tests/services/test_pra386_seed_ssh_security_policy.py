@@ -3,7 +3,7 @@
 Drives the seeder's ``main`` against the per-test ``db`` fixture. The backfill
 must attach every system that has no SSH security policy to the seeded default,
 leave an explicitly assigned system alone, stay idempotent across repeated runs,
-and create nothing when the admin account the policy is credited to is missing.
+and create nothing when there is no administrator to credit the policy to.
 """
 
 from __future__ import annotations
@@ -56,12 +56,13 @@ def seeder(db, monkeypatch):
     sys.modules.pop("seed_ssh_security_policy", None)
 
 
-def _make_admin(db) -> User:
+def _make_admin(db, seed_roles) -> User:
     admin = User(
-        username="admin",
-        email="admin@praxis.example.com",
+        username=f"admin-{uuid.uuid4().hex[:8]}",
+        email=f"admin-{uuid.uuid4().hex[:8]}@praxis.example.com",
         hashed_password=get_password_hash("testpass123"),
         is_active=True,
+        roles=[seed_roles["admin"]],
     )
     db.add(admin)
     db.flush()
@@ -92,9 +93,9 @@ def _make_system(db, seed_distro, *, policy_id: int | None = None) -> System:
 
 
 def test_backfill_attaches_every_orphan_system_to_the_default_policy(
-    db, seed_distro, seeder
+    db, seed_distro, seed_roles, seeder
 ):
-    admin = _make_admin(db)
+    admin = _make_admin(db, seed_roles)
     explicit = SSHSecurityPolicy(
         name=f"explicit-{uuid.uuid4().hex[:8]}", created_by=admin.id
     )
@@ -117,8 +118,10 @@ def test_backfill_attaches_every_orphan_system_to_the_default_policy(
     assert db.query(System).filter(System.ssh_security_policy_id.is_(None)).count() == 0
 
 
-def test_rerun_keeps_one_default_policy_and_no_orphans(db, seed_distro, seeder):
-    _make_admin(db)
+def test_rerun_keeps_one_default_policy_and_no_orphans(
+    db, seed_distro, seed_roles, seeder
+):
+    _make_admin(db, seed_roles)
     system = _make_system(db, seed_distro)
 
     seeder.main()
@@ -130,8 +133,8 @@ def test_rerun_keeps_one_default_policy_and_no_orphans(db, seed_distro, seeder):
     assert system.ssh_security_policy_id == default_id
 
 
-def test_missing_admin_user_seeds_nothing(db, seed_distro, seeder):
-    assert db.query(User).filter_by(username="admin").first() is None
+def test_missing_administrator_seeds_nothing(db, seed_distro, seeder):
+    assert db.query(User).count() == 0
     assert db.query(SSHSecurityPolicy).filter_by(name="Default").first() is None
     system = _make_system(db, seed_distro)
 

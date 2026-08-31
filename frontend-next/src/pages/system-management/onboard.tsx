@@ -91,6 +91,7 @@ const OnboardSystem: React.FC = () => {
     verification,
     needsHostKeyDecision,
     canLeaveVerify,
+    canLeaveDiscover,
     stepHeading,
   } = useOnboardingWizard();
 
@@ -250,7 +251,7 @@ const OnboardSystem: React.FC = () => {
                   canLeaveVerify={canLeaveVerify}
                   hasAddress={Boolean(address.trim())}
                   hasCredential={Boolean(credentialId)}
-                  hasDiscovery={Boolean(draft?.discovery)}
+                  canLeaveDiscover={canLeaveDiscover}
                   canFinish={Boolean(confirmation?.draft.finalize_token)}
                   onBack={goBack}
                   onCancel={cancel}

@@ -52,7 +52,7 @@ export interface Discovery {
   architecture: string | null;
   package_family: string | null;
   package_manager: string | null;
-  support_mapping: 'matched' | 'unknown';
+  support_mapping: 'matched' | 'unknown' | 'declared';
   distro_id: number | null;
   confirmed_unknown: boolean;
   collected_at: string;
@@ -266,9 +266,40 @@ export const runDiscovery = (id: string, version?: number) =>
     method: 'POST',
   });
 
+/**
+ * The body the discovery-confirmation step sends, once a distribution is bound.
+ *
+ * `confirmed_unknown` is always false. A host with no catalogue mapping cannot
+ * be patched, rolled back, mirrored, or assessed, so there is no acknowledgement
+ * that makes one manageable and the backend refuses the request either way.
+ */
+export interface DiscoveryConfirmationBody {
+  distro_id: number;
+  confirmed_unknown: false;
+}
+
+/**
+ * The request for a chosen distribution, or `null` when there is nothing to
+ * send.
+ *
+ * `null` means the operator has not bound this host to a supported release yet,
+ * which is not a request worth making: it is the one thing the step exists to
+ * collect. The caller keeps them on Discover instead of sending it and
+ * rendering a refusal.
+ */
+export function buildDiscoveryConfirmation(
+  chosenDistroId: string,
+): DiscoveryConfirmationBody | null {
+  const trimmed = chosenDistroId.trim();
+  if (!trimmed) return null;
+  const distroId = Number(trimmed);
+  if (!Number.isInteger(distroId) || distroId < 1) return null;
+  return { distro_id: distroId, confirmed_unknown: false };
+}
+
 export const confirmDiscovery = (
   id: string,
-  body: { distro_id?: number | null; confirmed_unknown: boolean },
+  body: DiscoveryConfirmationBody,
   version?: number,
 ) =>
   request<{ draft: Draft }>(

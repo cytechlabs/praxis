@@ -10,6 +10,7 @@ import type {
 } from '@/components/onboarding/OnboardingSteps';
 import { useAuth } from '@/context/AuthContext';
 import {
+  buildDiscoveryConfirmation,
   cancelDraft,
   confirmDiscovery,
   confirmDraft,
@@ -311,18 +312,21 @@ export function useOnboardingWizard() {
     }
   };
 
+  // Binding the host to a supported release is the whole of this step. Without
+  // one there is nothing to send, so the operator stays on Discover rather than
+  // being advanced and then refused.
   const submitDiscoveryConfirmation = async () => {
     if (!draft) return;
+    const body = buildDiscoveryConfirmation(chosenDistroId);
+    if (!body) {
+      const message =
+        'Select a supported distribution for this host before continuing.';
+      setError({ code: 'distro_unsupported', message });
+      setAnnouncement(message);
+      return;
+    }
     await run(
-      () =>
-        confirmDiscovery(
-          draft.id,
-          {
-            distro_id: chosenDistroId ? Number(chosenDistroId) : null,
-            confirmed_unknown: true,
-          },
-          draft.state_version,
-        ),
+      () => confirmDiscovery(draft.id, body, draft.state_version),
       'organize',
     );
   };
@@ -416,6 +420,10 @@ export function useOnboardingWizard() {
   );
   const canLeaveVerify =
     Boolean(verification?.verified) || Boolean(draft?.verification_skipped);
+  // Having read the host is not the same as knowing what it is. Progression
+  // waits on a catalogue mapping, so an unsupported host cannot be walked past
+  // this step and refused at the end.
+  const canLeaveDiscover = Boolean(draft?.discovery?.distro_id);
 
   const stepHeading = useMemo(
     () =>
@@ -505,6 +513,7 @@ export function useOnboardingWizard() {
     verification,
     needsHostKeyDecision,
     canLeaveVerify,
+    canLeaveDiscover,
     stepHeading,
   };
 }
