@@ -333,8 +333,10 @@ def open_session(
     try:
         # Enforce the system's host-key verification policy (PRA-245); a
         # mismatch/unknown key (or unsupported stored key) fails the connect,
-        # handled by the except below as a session error.
-        configure_host_key_policy(client, db, system)
+        # handled by the except below as a session error. The port dialled
+        # below is passed in so the key is pinned under the endpoint name
+        # paramiko will look it up by on this very connection.
+        configure_host_key_policy(client, db, system, ssh_port=port)
         client.connect(
             hostname=str(system.ip_address),
             port=port,
