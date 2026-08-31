@@ -304,6 +304,16 @@ def _facts_payload(row: HostFacts) -> Dict[str, Any]:
         "package_manager": row.package_manager,
         "package_manager_version": row.package_manager_version,
         "virtualization": row.virtualization,
+        # SSH server baseline and kernel sysctls. These back compliance
+        # verdicts, so leaving them out of the projection would hide the
+        # evidence an operator needs to explain a verdict, while
+        # ``partial_errors`` below already reports when a collection could
+        # not establish one.
+        "ssh_permit_root_login": row.ssh_permit_root_login,
+        "ssh_password_authentication": row.ssh_password_authentication,
+        "sysctl_kernel_randomize_va_space": row.sysctl_kernel_randomize_va_space,
+        "sysctl_net_ipv4_ip_forward": row.sysctl_net_ipv4_ip_forward,
+        "sysctl_net_ipv4_conf_all_rp_filter": row.sysctl_net_ipv4_conf_all_rp_filter,
         "cloud_provider": row.cloud_provider,
         "cloud_instance_metadata": _sanitize_cloud_for_read(
             row.cloud_instance_metadata
