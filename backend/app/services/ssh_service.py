@@ -1603,8 +1603,9 @@ class SSHService:  # pylint: disable=too-many-instance-attributes
         client.connect(**connect_kwargs)
         return username
 
+    @staticmethod
     def _private_key_from_secret(
-        self, system: System, secret_data: Dict[str, Any]
+        system: System, secret_data: Dict[str, Any]
     ) -> paramiko.PKey:
         """The credential's private key, at the system's configured strength floor."""
         ssh_key_data = secret_data.get("ssh_key")
