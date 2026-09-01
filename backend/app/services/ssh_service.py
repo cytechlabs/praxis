@@ -1113,6 +1113,102 @@ class SSHService:  # pylint: disable=too-many-instance-attributes
         self._on_connected(system, client, principal)
         return True
 
+    def _dial_port(self, system: System) -> int:
+        """The port a connection to ``system`` opens on.
+
+        The system's persisted port wins; a system that has never had one
+        recorded follows the configured global default. Resolved before the
+        host-key policy is installed, so the approved key is preloaded under the
+        endpoint name paramiko looks it up by on this very port.
+        """
+        if system.system_metadata and system.system_metadata.ssh_port:
+            return system.system_metadata.ssh_port
+        return self._default_ssh_port
+
+    def _require_credential(self, system: System) -> Credential:
+        """The credential ``system`` connects with, or a refusal naming the host."""
+        credential = (
+            self.db.query(Credential)
+            .filter(Credential.id == system.credentials_id)
+            .first()
+        )
+        if not credential:
+            raise SSHConnectionError(
+                f"Credentials not found for system {system.hostname}"
+            )
+        return credential
+
+    def _attempt_certificate_auth(
+        self,
+        client: paramiko.SSHClient,
+        system: System,
+        credential: Credential,
+        ssh_port: int,
+        disabled_algorithms: Optional[Dict[str, List[str]]],
+        force_password_auth: bool,
+    ) -> Tuple[bool, Optional[str]]:
+        """Try to carry the connection on a Vault-signed certificate.
+
+        Returns ``(authenticated, failure_detail)``. ``authenticated`` is True
+        only when the certificate completed the connection, so the caller can
+        return the client as it stands. ``failure_detail`` is the reason
+        certificate authentication did not carry it, which the credential path
+        keeps so a later authentication failure does not flatten both causes
+        into a bare "Authentication failed": the certificate reject is often the
+        actionable one, such as sshd allow-lists refusing the cert principal.
+
+        A host that answers with a key other than the approved one is refused
+        here rather than reported as a failure to fall back from. That is a
+        refusal of the host's identity, not of this credential, and there is
+        nothing to fall back to: another secret offered to the same endpoint
+        would be offered to whatever answered. The refusal is stated in
+        fingerprints, because the transport library's own text quotes both
+        public key bodies and would otherwise reach the fallback log line, the
+        security event and the operator error.
+
+        A system without CA trust deployed, or a caller that explicitly asked
+        for the stored credential, skips the attempt entirely.
+        """
+        if force_password_auth or not system.ca_trust_deployed:
+            return False, None
+
+        try:
+            authenticated = self._try_ca_cert_auth(
+                client, system, credential, ssh_port, disabled_algorithms
+            )
+            return authenticated, None
+        except paramiko.BadHostKeyException as e:
+            record_transport_reachable(self.db, system)
+            error = host_key_mismatch_error(system, e)
+            self._log_security_event(
+                system,
+                "connection_error",
+                {
+                    "username": credential.username,
+                    "source_ip": "localhost",
+                    "success": False,
+                    "error": str(error),
+                },
+            )
+            self._close_client_quietly(
+                client, system.hostname, reason="host_key_mismatch"
+            )
+            raise error from e
+        except Exception as e:  # pylint: disable=broad-except
+            logger.warning(
+                "CA cert auth failed for %s, falling back to credential auth: %s",
+                system.hostname,
+                e,
+            )
+            # PRA-342: the failed cert connect can leave a live transport/socket
+            # on this client; close it before the credential-auth path opens a
+            # new one, or the CA-cert transport orphans an sshd session. close()
+            # clears the transport but keeps host-key config, so reconnect is OK.
+            self._close_client_quietly(
+                client, system.hostname, reason="ca_cert_fallback"
+            )
+            return False, str(e)
+
     def validate_ssh_key(self, ssh_key: str, passphrase: Optional[str] = None) -> bool:
         """True when ``ssh_key`` is a usable credential private key.
 
@@ -1413,21 +1509,11 @@ class SSHService:  # pylint: disable=too-many-instance-attributes
         if not system:
             raise SSHConnectionError(f"System with ID {system_id} not found")
 
-        credential = (
-            self.db.query(Credential)
-            .filter(Credential.id == system.credentials_id)
-            .first()
-        )
-        if not credential:
-            raise SSHConnectionError(
-                f"Credentials not found for system {system.hostname}"
-            )
+        credential = self._require_credential(system)
 
         raise_if_cooling_down(self.db, system)
 
-        ssh_port = self._default_ssh_port
-        if system.system_metadata and system.system_metadata.ssh_port:
-            ssh_port = system.system_metadata.ssh_port
+        ssh_port = self._dial_port(system)
 
         client = CertificateSSHClient()
         configure_host_key_policy(client, self.db, system, ssh_port=ssh_port)
@@ -1466,157 +1552,121 @@ class SSHService:  # pylint: disable=too-many-instance-attributes
             )
         return client
 
-    def _create_connection(  # pylint: disable=too-many-branches,too-many-statements
+    def _connect_with_stored_credential(
+        self,
+        client: paramiko.SSHClient,
+        system: System,
+        credential: Credential,
+        ssh_port: int,
+        disabled_algorithms: Optional[Dict[str, List[str]]],
+    ) -> Optional[str]:
+        """Dial ``system`` with the credential's Vault-held secret.
+
+        Returns the username the connection authenticated as, for the caller's
+        post-connect bookkeeping. Every credential is Vault-backed, so the
+        secret is fetched at connection time rather than held anywhere, and a
+        credential whose secret is missing, empty, or of an unsupported kind
+        fails closed here rather than dialling with nothing.
+        """
+        if not credential.vault_path:
+            raise SSHConnectionError("Credential has no Vault path configured")
+
+        vault_service = VaultService(self.db)
+        secret_data = vault_service.read_secret(credential.vault_path)
+        if not secret_data:
+            raise SSHConnectionError(
+                f"Failed to retrieve credentials from Vault at {credential.vault_path}"
+            )
+
+        username = credential.username or secret_data.get("username")
+        connect_kwargs: Dict[str, Any] = {
+            "hostname": system.ip_address,
+            "port": ssh_port,
+            "username": username,
+            "timeout": self._connection_timeout,
+        }
+        if disabled_algorithms:
+            connect_kwargs["disabled_algorithms"] = disabled_algorithms
+
+        if credential.auth_method == "ssh_key":
+            connect_kwargs["pkey"] = self._private_key_from_secret(system, secret_data)
+        elif credential.auth_method == "password":
+            password = secret_data.get("password")
+            if not password:
+                raise SSHConnectionError("Password not found in Vault secret")
+            connect_kwargs["password"] = password
+        else:
+            raise SSHConnectionError(
+                f"Unsupported auth method: {credential.auth_method}"
+            )
+
+        client.connect(**connect_kwargs)
+        return username
+
+    def _private_key_from_secret(
+        self, system: System, secret_data: Dict[str, Any]
+    ) -> paramiko.PKey:
+        """The credential's private key, at the system's configured strength floor."""
+        ssh_key_data = secret_data.get("ssh_key")
+        if not ssh_key_data:
+            raise SSHConnectionError("SSH key not found in Vault secret")
+
+        # A configured policy raises the RSA floor; without one the loader
+        # still applies its own built-in minimum.
+        minimum_rsa_bits = (
+            system.ssh_security_policy.minimum_key_size
+            if system.ssh_security_policy
+            else None
+        )
+        return load_credential_private_key(
+            ssh_key_data,
+            passphrase=secret_data.get("ssh_passphrase"),
+            minimum_rsa_bits=minimum_rsa_bits,
+        )
+
+    def _create_connection(  # pylint: disable=too-many-statements
         self, system: System, force_password_auth: bool = False
-    ) -> paramiko.SSHClient:  # pylint: disable=too-many-branches,too-many-statements
+    ) -> paramiko.SSHClient:
         """Create a new SSH connection to the specified system.
 
-        If system.ca_trust_deployed is True and force_password_auth is False,
-        attempts Vault CA-signed cert auth first, falling back to the stored
-        credential on any failure (PRA-44).
+        The ordered attempt: a Vault-signed certificate first when the system
+        has CA trust deployed and the caller did not ask for the stored
+        credential, then the stored credential. Each way of failing is
+        translated into one sanitized refusal, and the breaker is advanced only
+        for failures that did not reach the host.
         """
         client = CertificateSSHClient()
-
-        # Get the SSH port from system metadata, falling back to global default.
-        # Resolved before the host-key policy so the key is preloaded under the
-        # endpoint name paramiko will look it up by on this very port.
-        ssh_port = self._default_ssh_port
-        if system.system_metadata and system.system_metadata.ssh_port:
-            ssh_port = system.system_metadata.ssh_port
+        ssh_port = self._dial_port(system)
 
         # Configure host key policy based on security settings (shared with
         # browser sessions and SFTP file transfers — PRA-245).
         configure_host_key_policy(client, self.db, system, ssh_port=ssh_port)
 
-        # Get the credentials for the system
-        credential = (
-            self.db.query(Credential)
-            .filter(Credential.id == system.credentials_id)
-            .first()
-        )
-        if not credential:
-            raise SSHConnectionError(
-                f"Credentials not found for system {system.hostname}"
-            )
+        credential = self._require_credential(system)
 
         # Translate the SSH policy allow-lists into paramiko's pre-handshake
         # disabled_algorithms dict so ciphers/MACs/KEX are actually enforced.
         disabled_algorithms = self._build_disabled_algorithms(system)
 
-        # PRA-44: Try Vault CA-signed cert auth if the system has CA trust deployed.
-        # On any failure we fall through to the existing credential-based auth.
-        # PRA-234: keep the CA-cert failure detail so a later credential-auth
-        # failure does not flatten both causes into a bare "Authentication
-        # failed" — the CA-cert reject is often the actionable one (e.g. sshd
-        # AllowUsers/AllowGroups rejecting the cert principal).
-        ca_auth_error: Optional[str] = None
-        if system.ca_trust_deployed and not force_password_auth:
-            try:
-                if self._try_ca_cert_auth(
-                    client, system, credential, ssh_port, disabled_algorithms
-                ):
-                    return client
-            except paramiko.BadHostKeyException as e:
-                # The host proved to be a different host. That is a refusal of
-                # its identity, not a failure of this credential, so there is
-                # nothing to fall back to: another credential offered to the
-                # same endpoint would be offered to whatever answered. Paramiko's
-                # own text quotes both key bodies, so it is dropped here rather
-                # than kept in ``ca_auth_error`` where the fallback warning and
-                # the later error would carry it.
-                record_transport_reachable(self.db, system)
-                error = host_key_mismatch_error(system, e)
-                self._log_security_event(
-                    system,
-                    "connection_error",
-                    {
-                        "username": credential.username,
-                        "source_ip": "localhost",
-                        "success": False,
-                        "error": str(error),
-                    },
-                )
-                self._close_client_quietly(
-                    client, system.hostname, reason="host_key_mismatch"
-                )
-                raise error from e
-            except Exception as e:  # pylint: disable=broad-except
-                ca_auth_error = str(e)
-                logger.warning(
-                    "CA cert auth failed for %s, falling back to credential auth: %s",
-                    system.hostname,
-                    e,
-                )
-                # PRA-342: the failed cert connect can leave a live transport/socket
-                # on this client; close it before the credential-auth path opens a
-                # new one, or the CA-cert transport orphans an sshd session. close()
-                # clears the transport but keeps host-key config, so reconnect is OK.
-                self._close_client_quietly(
-                    client, system.hostname, reason="ca_cert_fallback"
-                )
+        # PRA-44: certificate first, stored credential second. The attempt keeps
+        # its own failure detail so a later authentication failure can name both
+        # causes, and refuses outright rather than falling back when the host
+        # answers with a key other than the approved one.
+        authenticated, ca_auth_error = self._attempt_certificate_auth(
+            client,
+            system,
+            credential,
+            ssh_port,
+            disabled_algorithms,
+            force_password_auth,
+        )
+        if authenticated:
+            return client
 
         try:
-            # All credentials are Vault-backed — fetch secret at connection time
-            if not credential.vault_path:
-                raise SSHConnectionError("Credential has no Vault path configured")
-
-            vault_service = VaultService(self.db)
-            secret_data = vault_service.read_secret(credential.vault_path)
-
-            if not secret_data:
-                raise SSHConnectionError(
-                    f"Failed to retrieve credentials from Vault at {credential.vault_path}"
-                )
-
-            username = credential.username or secret_data.get("username")
-
-            if credential.auth_method == "ssh_key":
-                ssh_key_data = secret_data.get("ssh_key")
-                if not ssh_key_data:
-                    raise SSHConnectionError("SSH key not found in Vault secret")
-
-                # A configured policy raises the RSA floor; without one the
-                # loader still applies its own built-in minimum.
-                minimum_rsa_bits = (
-                    system.ssh_security_policy.minimum_key_size
-                    if system.ssh_security_policy
-                    else None
-                )
-                pkey = load_credential_private_key(
-                    ssh_key_data,
-                    passphrase=secret_data.get("ssh_passphrase"),
-                    minimum_rsa_bits=minimum_rsa_bits,
-                )
-                connect_kwargs: Dict[str, Any] = {
-                    "hostname": system.ip_address,
-                    "port": ssh_port,
-                    "username": username,
-                    "pkey": pkey,
-                    "timeout": self._connection_timeout,
-                }
-                if disabled_algorithms:
-                    connect_kwargs["disabled_algorithms"] = disabled_algorithms
-                client.connect(**connect_kwargs)
-            elif credential.auth_method == "password":
-                password = secret_data.get("password")
-                if not password:
-                    raise SSHConnectionError("Password not found in Vault secret")
-
-                connect_kwargs = {
-                    "hostname": system.ip_address,
-                    "port": ssh_port,
-                    "username": username,
-                    "password": password,
-                    "timeout": self._connection_timeout,
-                }
-                if disabled_algorithms:
-                    connect_kwargs["disabled_algorithms"] = disabled_algorithms
-                client.connect(**connect_kwargs)
-            else:
-                raise SSHConnectionError(
-                    f"Unsupported auth method: {credential.auth_method}"
-                )
-
+            username = self._connect_with_stored_credential(
+                client, system, credential, ssh_port, disabled_algorithms
+            )
             self._on_connected(system, client, username)
             return client
         except paramiko.AuthenticationException as exc:

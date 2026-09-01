@@ -57,8 +57,14 @@ def _server_dump_is_available() -> bool:
         if not candidate or not os.access(candidate, os.X_OK):
             continue
         try:
+            # A non-zero exit only means this candidate is not a usable sshd,
+            # which the return code check below is what decides.
             proc = subprocess.run(
-                [candidate, "-T"], capture_output=True, text=True, timeout=15
+                [candidate, "-T"],
+                capture_output=True,
+                text=True,
+                timeout=15,
+                check=False,
             )
         except (OSError, subprocess.SubprocessError):
             continue
@@ -103,6 +109,8 @@ def _run_collector(config_path, cwd=None) -> str:
     """Run the shipped collector against a fixture configuration root."""
     env = dict(os.environ)
     env["PRAXIS_SSHD_CONFIG"] = str(config_path)
+    # The collector reports what it found on stdout whatever its exit status,
+    # and the caller parses that, so a non-zero exit must not raise here.
     proc = subprocess.run(
         ["sh", COLLECTOR],
         capture_output=True,
@@ -110,6 +118,7 @@ def _run_collector(config_path, cwd=None) -> str:
         env=env,
         cwd=cwd,
         timeout=60,
+        check=False,
     )
     return proc.stdout
 
