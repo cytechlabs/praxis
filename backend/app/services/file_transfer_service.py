@@ -553,7 +553,7 @@ def download_stream(
     # UNSUPPORTED ops; UNAVAILABLE ops are full-on transport
     # failures that the caller surfaces themselves.
     try:
-        transport_name, transport = _run_async_from_sync(
+        transport_name, _transport = _run_async_from_sync(
             _resolve_file_transport(system, db)
         )
     except TransportUnavailable:
@@ -656,7 +656,7 @@ def _download_via_ssh(
 
 
 def _download_via_agent(
-    db: DbSession, system: System, path: str, audit_id: int
+    _db: DbSession, system: System, path: str, audit_id: int
 ) -> Iterator[bytes]:
     """Agent-backed download.
 
@@ -780,7 +780,7 @@ def upload_stream(
     # transport. force-agent + tunnel down → TransportUnavailable
     # bubbles after writing the rejection row.
     try:
-        transport_name, transport = _run_async_from_sync(
+        transport_name, _transport = _run_async_from_sync(
             _resolve_file_transport(system, db)
         )
     except TransportUnavailable:
