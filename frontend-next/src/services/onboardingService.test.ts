@@ -33,7 +33,7 @@ describe('PRA-414 onboarding service error handling', () => {
     fetchMock.mockResolvedValue({
       ok: status < 400,
       status,
-      json: async () => body,
+      json: () => Promise.resolve(body),
     });
 
   it('preserves the structured code from a refused step', async () => {

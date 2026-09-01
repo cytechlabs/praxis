@@ -145,7 +145,7 @@ def _ensure_metadata(db: Session, system: System) -> SystemMetadata:
 
 
 def is_host_cooling_down(
-    db: Session, system: System, *, now: Optional[datetime] = None
+    _db: Session, system: System, *, now: Optional[datetime] = None
 ) -> Optional[float]:
     """Seconds remaining in an active cooldown, or ``None`` if the host is not
     cooling down (never tripped, or the window elapsed)."""
@@ -1020,8 +1020,9 @@ class SSHService:  # pylint: disable=too-many-instance-attributes
     # ephemeral (reconcile/provisioning) SSHService instances never orphan a
     # Paramiko client — which showed up as long-lived `sshd: praxis@notty`
     # sessions piling up on managed hosts.
+    @staticmethod
     def _close_client_quietly(
-        self, client: paramiko.SSHClient, hostname: str, *, reason: str
+        client: paramiko.SSHClient, hostname: str, *, reason: str
     ) -> None:
         """Close a Paramiko client (transport + socket), swallowing errors."""
         try:

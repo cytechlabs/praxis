@@ -539,7 +539,7 @@ def _on_runtime_close(session_id: int, reason: str) -> None:
 # ---------------------------------------------------------------- sweepers
 
 
-def sweep_idle(db: Optional[DbSession] = None, idle_seconds: int = 900) -> int:
+def sweep_idle(_db: Optional[DbSession] = None, idle_seconds: int = 900) -> int:
     """Close sessions with no input in the last ``idle_seconds``.
 
     Uses each runtime's ``last_activity`` monotonic timestamp (PTY-level),
@@ -556,7 +556,7 @@ def sweep_idle(db: Optional[DbSession] = None, idle_seconds: int = 900) -> int:
     return closed
 
 
-def sweep_max_duration(db: Optional[DbSession] = None) -> int:
+def sweep_max_duration(_db: Optional[DbSession] = None) -> int:
     """Close sessions past their ``max_expires_at``."""
     now = datetime.utcnow()
     closed = 0
