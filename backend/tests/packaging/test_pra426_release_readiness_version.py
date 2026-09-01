@@ -35,6 +35,9 @@ COPIED = (
     "backend/app/core/version.py",
     "backend/app/api/main.py",
     "backend/app/services/diagnostics_service.py",
+    "backend/tests/api/test_agent_bootstrap_routes.py",
+    "backend/tests/api/test_pra374_agent_artifact_redirects.py",
+    "backend/tests/api/test_pra154_bootstrap_e2e.py",
 )
 
 # Files the readiness check only requires to exist.
