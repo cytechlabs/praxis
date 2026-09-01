@@ -166,7 +166,7 @@ def test_known_host_identity_agrees_with_paramiko_client():
     assert SSH_PORT == 22
     for host in ("host.example.com", "10.23.0.1", "fd00::23"):
         assert known_host_identity(host, SSH_PORT) == host
-        assert known_host_identity(host, 2222) == "[{}]:{}".format(host, 2222)
+        assert known_host_identity(host, 2222) == f"[{host}]:2222"
 
 
 # ------------------------------------------------------- port resolution
@@ -397,18 +397,19 @@ class _SpyClient:
         self.connect_calls.append(kw)
         if self.connect_raises is not None:
             raise self.connect_raises
-        return None
 
     @property
     def dialled_port(self) -> Optional[int]:
         return self.connect_calls[-1]["port"] if self.connect_calls else None
 
-    def open_sftp(self):
+    @staticmethod
+    def open_sftp():
         from unittest.mock import MagicMock
 
         return MagicMock()
 
-    def get_transport(self):
+    @staticmethod
+    def get_transport():
         return None
 
     def close(self):
@@ -665,7 +666,8 @@ def test_ca_path_host_key_mismatch_is_sanitized_and_does_not_fall_back(
         def __init__(self, _db):
             pass
 
-        def sign_ssh_user_cert(self, **_kw):
+        @staticmethod
+        def sign_ssh_user_cert(**_kw):
             return "signed-cert"
 
         def read_secret(self, path):
@@ -677,9 +679,11 @@ def test_ca_path_host_key_mismatch_is_sanitized_and_does_not_fall_back(
     monkeypatch.setattr(paramiko.RSAKey, "load_certificate", lambda self, cert: None)
 
     svc = sshs.SSHService(db)
-    with caplog.at_level(logging.DEBUG, logger="app.services.ssh_service"):
-        with pytest.raises(SSHConnectionError) as exc:
-            svc._create_connection(system)  # pylint: disable=protected-access
+    with (
+        caplog.at_level(logging.DEBUG, logger="app.services.ssh_service"),
+        pytest.raises(SSHConnectionError) as exc,
+    ):
+        svc._create_connection(system)  # pylint: disable=protected-access
 
     message = str(exc.value)
     assert "Host key MISMATCH" in message
@@ -962,7 +966,8 @@ def test_rotated_key_refusal_is_sanitized_and_actionable(
         def __init__(self, _db):
             pass
 
-        def read_secret(self, _path):
+        @staticmethod
+        def read_secret(_path):
             return {"password": "not-checked"}
 
     monkeypatch.setattr(sshs, "VaultService", _Vault)

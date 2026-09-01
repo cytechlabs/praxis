@@ -137,13 +137,15 @@ describe('PRA-424 discovery confirmation request', () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
-      json: async () => ({ draft: {} }),
+      json: () => Promise.resolve({ draft: {} }),
     });
     vi.stubGlobal('fetch', fetchMock);
     try {
       const body = buildDiscoveryConfirmation('12');
-      expect(body).not.toBeNull();
-      await confirmDiscovery('abc', body!, 4);
+      // A Vitest matcher does not narrow the type, so narrow it here: the
+      // request under test cannot be made without a body.
+      if (body === null) throw new Error('buildDiscoveryConfirmation returned null');
+      await confirmDiscovery('abc', body, 4);
 
       const [url, init] = fetchMock.mock.calls[0];
       expect(url).toContain('/drafts/abc/discovery-confirmation?state_version=4');

@@ -183,13 +183,15 @@ def el_targets(docker_client) -> Iterator[Dict[str, Dict[str, object]]]:
         )
         yield started
     finally:
-        if os.environ.get("PRAXIS_E2E_KEEP", "").lower() in ("1", "true", "yes"):
-            return
-        for target in started.values():
-            try:
-                target["container"].remove(force=True)
-            except Exception:  # pylint: disable=broad-except
-                pass
+        # Keeping the targets for inspection is a decision about cleanup only.
+        # Returning out of the ``finally`` instead would also swallow whatever
+        # exception was propagating out of the fixture.
+        if os.environ.get("PRAXIS_E2E_KEEP", "").lower() not in ("1", "true", "yes"):
+            for target in started.values():
+                try:
+                    target["container"].remove(force=True)
+                except Exception:  # pylint: disable=broad-except
+                    pass
 
 
 # ------------------------------------------------------------------- backend
@@ -304,8 +306,6 @@ def api(db_session, admin) -> Iterator[TestClient]:
 @pytest.fixture(scope="module")
 def credential_id(api, db_session) -> Iterator[int]:
     """A real Vault-backed password credential, created through its own route."""
-    from app.db.models import Credential
-
     name = f"p423-cred-{RUN_TAG}"
     res = api.post(
         "/credentials",
