@@ -3,7 +3,7 @@
 # compiled server, not the full node_modules tree.
 
 # ── Dependencies stage ───────────────────────────────────────────────────
-FROM node:24.18.1-slim AS deps
+FROM node:25.9.0-slim AS deps
 
 WORKDIR /app
 COPY package.json package-lock.json .npmrc ./
@@ -11,7 +11,7 @@ RUN npm ci
 
 
 # ── Builder stage ────────────────────────────────────────────────────────
-FROM node:24.18.1-slim AS builder
+FROM node:25.9.0-slim AS builder
 
 WORKDIR /app
 
@@ -25,7 +25,7 @@ RUN npm run build
 
 
 # ── Runtime stage ────────────────────────────────────────────────────────
-FROM node:24.18.1-slim AS runtime
+FROM node:25.9.0-slim AS runtime
 
 # node:22-slim ships a non-root "node" user (UID 1000).
 WORKDIR /app
