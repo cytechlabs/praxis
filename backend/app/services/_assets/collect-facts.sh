@@ -161,21 +161,208 @@ if command -v systemd-detect-virt >/dev/null 2>&1; then
 fi
 
 # ---- SSH server config (read-only, effective) ----
-# `sshd -T` prints the effective merged config with lowercased keys, e.g.
-# "permitrootlogin no". It's the honest effective value; if it fails (no
-# privilege / no host key / binary not found), fall back to the last
-# uncommented directive in sshd_config. If neither yields a value we emit
-# nothing — the fact stays NULL rather than guessing a version-specific default.
+# Two settings decide a security verdict, so they are only reported when
+# the value can be shown to be the one the server actually applies.
 #
-# sshd usually lives in /usr/sbin or /sbin, which a non-login managed SSH
-# command's PATH may not include — so resolve the binary explicitly, and run
-# the sshd_config fallback even when NO sshd binary is found (a readable
-# /etc/ssh/sshd_config still yields values). ``PRAXIS_SSHD_CONFIG`` overrides
-# the config path for tests; production uses /etc/ssh/sshd_config.
+# `sshd -T` is preferred: it prints the merged effective configuration with
+# lowercased keys, e.g. "permitrootlogin no". It needs privilege and a host
+# key, so an unprivileged managed account usually cannot run it.
+#
+# When it yields nothing, the configuration files are read in the server's
+# own merge order:
+#
+#   * the FIRST occurrence of a directive wins, exactly as the server
+#     resolves it, so a later line can never change a resolved value;
+#   * `Include` files are followed where they appear, because distributions
+#     ship the real settings in drop-in files and the root file only
+#     comments out the defaults;
+#   * the global section ends at the first `Match` block, since directives
+#     after it apply only to matching connections; and
+#   * the walk stops when a file that could still hold an earlier, winning
+#     value cannot be read, so an overridden directive is never reported as
+#     effective.
+#
+# A setting that cannot be established this way is simply not emitted.
+# Ingestion records that the collection did not observe it, which is what
+# keeps a compliance verdict honest; guessing a version-specific default
+# here would manufacture evidence.
+#
+# The walk is bounded in nesting depth and file count so a self-referential
+# include set cannot spin the collector. Everything it touches is read-only.
+#
+# ``PRAXIS_SSHD_CONFIG`` overrides the configuration root for tests;
+# production uses /etc/ssh/sshd_config. Relative include patterns resolve
+# against that root's directory, matching the server.
 sshd_config_path="${PRAXIS_SSHD_CONFIG:-/etc/ssh/sshd_config}"
+sshd_include_base=${sshd_config_path%/*}
+if [ -z "$sshd_include_base" ] || [ "$sshd_include_base" = "$sshd_config_path" ]; then
+    sshd_include_base=/etc/ssh
+fi
+sshd_include_max_depth=8
+sshd_max_files=64
+
+ssh_prl_value=""
+ssh_pwauth_value=""
+sshd_walk_depth=0
+sshd_walk_files=0
+sshd_walk_stopped=""
+
+# One awk pass per configuration file. It normalizes both accepted forms
+# ("Key value" and "Key=value"), drops comments and blank lines, and emits a
+# tiny ordered instruction stream the shell can act on without re-parsing:
+#
+#   D <lowercased key> <value>   a wanted directive
+#   I <patterns>                 an Include argument list
+#   M                            the first Match block; global section over
+#
+# Only the two wanted directives are ever printed, so no unrelated
+# configuration content leaves the file.
+sshd_scan_program='
+{
+    line = $0
+    sub(/\r$/, "", line)
+    sub(/^[ \t]+/, "", line)
+    if (line == "" || substr(line, 1, 1) == "#") next
+    if (match(line, /^[^ \t=]+=/)) {
+        key = substr(line, 1, RLENGTH - 1)
+        value = substr(line, RLENGTH + 1)
+    } else {
+        match(line, /^[^ \t]+/)
+        key = substr(line, 1, RLENGTH)
+        value = substr(line, RLENGTH + 1)
+    }
+    sub(/^[ \t]+/, "", value)
+    sub(/[ \t]+$/, "", value)
+    if (value == "") next
+    key = tolower(key)
+    if (key == "match") { print "M"; exit }
+    if (key == "include") { print "I " value; next }
+    if (key == "permitrootlogin" || key == "passwordauthentication") {
+        print "D " key " " value
+    }
+}
+'
+
+_sshd_have_both() {
+    [ -n "$ssh_prl_value" ] && [ -n "$ssh_pwauth_value" ]
+}
+
+_sshd_effective_value() {
+    # _sshd_effective_value <sshd -T output> <lowercased key>
+    printf '%s\n' "$1" | awk -v want="$2" 'tolower($1) == want && NF > 1 {
+        print $2
+        exit
+    }'
+}
+
+_ssh_normalize() {
+    # Reduce a directive argument to the single lowercased token the server
+    # reports, so a value compares the same however it was capitalized and
+    # whichever transport collected it.
+    printf '%s\n' "$1" | awk 'NF > 0 {
+        v = $1
+        sub(/^"+/, "", v)
+        sub(/"+$/, "", v)
+        print tolower(v)
+        exit
+    }'
+}
+
+_sshd_walk() {
+    # _sshd_walk <path>. Depth is tracked around the call rather than passed
+    # as an argument, because the include loop below needs the positional
+    # parameters for its own per-frame state.
+    sshd_walk_depth=$((sshd_walk_depth + 1))
+    _sshd_read_config "$1"
+    sshd_walk_depth=$((sshd_walk_depth - 1))
+}
+
+_sshd_include_walk() {
+    # _sshd_include_walk <one include pattern>
+    set -- "${1#\"}"
+    set -- "${1%\"}"
+    case "$1" in
+    /*) ;;
+    *) set -- "$sshd_include_base/$1" ;;
+    esac
+    for sshd_target in $1; do
+        [ -f "$sshd_target" ] || continue
+        _sshd_walk "$sshd_target"
+        if [ -n "$sshd_walk_stopped" ] || _sshd_have_both; then
+            return
+        fi
+    done
+}
+
+_sshd_read_config() {
+    # _sshd_read_config <path>
+    if [ -n "$sshd_walk_stopped" ] || _sshd_have_both; then
+        return
+    fi
+    if [ "$sshd_walk_depth" -gt "$sshd_include_max_depth" ] ||
+        [ "$sshd_walk_files" -ge "$sshd_max_files" ]; then
+        sshd_walk_stopped=1
+        return
+    fi
+    sshd_walk_files=$((sshd_walk_files + 1))
+    if [ ! -r "$1" ]; then
+        # An unread file may hold the winning occurrence, so nothing after
+        # it can be trusted as effective.
+        sshd_walk_stopped=1
+        return
+    fi
+    sshd_lines=$(awk "$sshd_scan_program" "$1" 2>/dev/null)
+    # The heredoc is materialized when the loop starts, so the recursion
+    # below is free to reuse ``sshd_lines`` for its own file.
+    while IFS= read -r sshd_line; do
+        case "$sshd_line" in
+        M)
+            sshd_walk_stopped=1
+            return
+            ;;
+        "I "*)
+            # Positional parameters are per-call in POSIX shells, so the
+            # pending patterns of an outer frame survive the recursion.
+            #
+            # Splitting is on whitespace only. Pathname expansion is
+            # suppressed here and done per pattern below, so a relative
+            # pattern resolves against the configuration directory instead
+            # of whatever directory the collector happens to run from.
+            set -f
+            set -- ${sshd_line#I }
+            set +f
+            while [ "$#" -gt 0 ]; do
+                _sshd_include_walk "$1"
+                if [ -n "$sshd_walk_stopped" ] || _sshd_have_both; then
+                    return
+                fi
+                shift
+            done
+            ;;
+        "D permitrootlogin "*)
+            if [ -z "$ssh_prl_value" ]; then
+                ssh_prl_value=${sshd_line#D permitrootlogin }
+            fi
+            ;;
+        "D passwordauthentication "*)
+            if [ -z "$ssh_pwauth_value" ]; then
+                ssh_pwauth_value=${sshd_line#D passwordauthentication }
+            fi
+            ;;
+        esac
+        if _sshd_have_both; then
+            return
+        fi
+    done <<SSHD_CONFIG_SCAN
+$sshd_lines
+SSHD_CONFIG_SCAN
+}
+
+# sshd usually lives in /usr/sbin or /sbin, which a non-login managed SSH
+# command's PATH may not include, so resolve the binary explicitly.
 sshd_bin=$(command -v sshd 2>/dev/null)
 if [ -z "$sshd_bin" ]; then
-    for _cand in /usr/sbin/sshd /sbin/sshd; do
+    for _cand in /usr/sbin/sshd /sbin/sshd /usr/local/sbin/sshd; do
         if [ -x "$_cand" ]; then
             sshd_bin=$_cand
             break
@@ -186,19 +373,17 @@ sshd_effective=""
 if [ -n "$sshd_bin" ]; then
     sshd_effective=$("$sshd_bin" -T 2>/dev/null || true)
 fi
-_ssh_directive() {
-    # _ssh_directive <effective-out> <lc-key> <sshd_config-Key>
-    v=$(printf '%s\n' "$1" | awk -v k="$2" '$1 == k { print $2; exit }')
-    if [ -z "$v" ] && [ -r "$sshd_config_path" ]; then
-        # Last uncommented "Key value" wins (matches sshd merge order).
-        v=$(awk -v k="$3" 'tolower($1) == tolower(k) && $1 !~ /^#/ { val=$2 } END { if (val != "") print val }' "$sshd_config_path" 2>/dev/null)
-    fi
-    printf '%s' "$v"
-}
-prl=$(_ssh_directive "$sshd_effective" "permitrootlogin" "PermitRootLogin")
-pwauth=$(_ssh_directive "$sshd_effective" "passwordauthentication" "PasswordAuthentication")
-[ -n "$prl" ] && emit ssh_permit_root_login "$prl"
-[ -n "$pwauth" ] && emit ssh_password_authentication "$pwauth"
+if [ -n "$sshd_effective" ]; then
+    ssh_prl_value=$(_sshd_effective_value "$sshd_effective" permitrootlogin)
+    ssh_pwauth_value=$(_sshd_effective_value "$sshd_effective" passwordauthentication)
+fi
+if ! _sshd_have_both; then
+    _sshd_walk "$sshd_config_path"
+fi
+ssh_prl_value=$(_ssh_normalize "$ssh_prl_value")
+ssh_pwauth_value=$(_ssh_normalize "$ssh_pwauth_value")
+[ -n "$ssh_prl_value" ] && emit ssh_permit_root_login "$ssh_prl_value"
+[ -n "$ssh_pwauth_value" ] && emit ssh_password_authentication "$ssh_pwauth_value"
 
 # ---- Kernel sysctls (read-only) ----
 # Prefer `sysctl -n`; fall back to the /proc/sys file. Both are pure reads.

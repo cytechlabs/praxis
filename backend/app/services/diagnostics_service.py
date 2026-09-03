@@ -31,6 +31,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from ..core.redaction import redact_text
+from ..core.version import get_version
 from ..db.access_models import AuditEvent
 from ..db.command_execution_models import CommandExecutionResult
 from ..db.models import System, VaultConfig
@@ -92,10 +93,6 @@ _CONFIG_ALLOWLIST = (
 
 class DiagnosticsError(Exception):
     """Raised when a bundle cannot be produced within bounds."""
-
-
-def _app_version() -> str:
-    return os.getenv("PRAXIS_VERSION", "1.0.0")
 
 
 def _json_bytes(obj: Any) -> bytes:
@@ -404,7 +401,7 @@ def generate_bundle(
     content: Dict[str, bytes] = {
         "version.json": _json_bytes(
             {
-                "praxis_version": _app_version(),
+                "praxis_version": get_version(),
                 "bundle_version": BUNDLE_VERSION,
                 "generated_at": now,
                 "time_range": time_range,
@@ -453,7 +450,7 @@ def generate_bundle(
 
     manifest = {
         "bundle_version": BUNDLE_VERSION,
-        "praxis_version": _app_version(),
+        "praxis_version": get_version(),
         "generated_at": now.isoformat(),
         "generated_by_user_id": actor_user_id,
         "time_range": time_range,

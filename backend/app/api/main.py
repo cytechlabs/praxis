@@ -356,6 +356,7 @@ class SecurityHeadersMiddleware(
 
 
 from app.core.rate_limit import limiter  # noqa: E402
+from app.core.version import get_version  # noqa: E402
 
 
 def create_app() -> FastAPI:
@@ -365,7 +366,7 @@ def create_app() -> FastAPI:
     app_instance = FastAPI(
         title="Praxis",
         description="Linux Management System API",
-        version="1.0.0",
+        version=get_version(),
         docs_url=None if is_production else "/docs",
         redoc_url=None if is_production else "/redoc",
         openapi_url=None if is_production else "/openapi.json",

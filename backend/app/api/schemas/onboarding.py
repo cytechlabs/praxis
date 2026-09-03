@@ -45,6 +45,17 @@ DEFAULT_SSH_PORT = 22
 # and far below anything that would make the table a storage surface.
 MAX_JSON_BYTES = 16 * 1024
 
+# How a draft came to know which distribution it is looking at. ``matched`` is
+# discovery mapping the host's own os-release onto the catalogue, ``unknown`` is
+# discovery finding no mapping for it, and ``declared`` is the operator naming
+# the distribution when verification was skipped and nothing was read from the
+# host at all. ``unknown`` describes what discovery found, not a state a draft
+# can be finished in: the step still requires a catalogue row before it
+# completes.
+SUPPORT_MAPPING_MATCHED = "matched"
+SUPPORT_MAPPING_UNKNOWN = "unknown"
+SUPPORT_MAPPING_DECLARED = "declared"
+
 ENVIRONMENTS = ("Production", "Staging", "Development", "Testing")
 TRANSPORT_PREFERENCES = ("auto", "ssh", "agent")
 
@@ -343,13 +354,21 @@ class SkipVerificationStep(BaseModel):
 
 
 class DiscoveryConfirmStep(BaseModel):
-    """Step 4 confirmation, required when support mapping is unknown."""
+    """Step 4 confirmation: which supported release this host is bound to.
+
+    ``confirmed_unknown`` is accepted and recorded, but it is not a way through
+    the step. A host with no catalogue mapping cannot be patched, rolled back,
+    mirrored or assessed, so there is no acknowledgement that makes one
+    manageable, and the step is refused without a distribution whatever the flag
+    says. It is still read rather than rejected so a client carrying the older
+    shape, which sent it alongside a real choice, is not refused for that alone.
+    """
 
     distro_id: Optional[int] = Field(
-        None, description="Operator-chosen distro when discovery could not map one"
+        None, description="The supported release this host is bound to"
     )
     confirmed_unknown: bool = Field(
-        False, description="Proceed with an unmapped distribution"
+        False, description="Legacy acknowledgement; never sufficient on its own"
     )
 
     @validator("distro_id", pre=True)

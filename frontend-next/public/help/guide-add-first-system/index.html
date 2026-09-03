@@ -201,13 +201,22 @@ is added as <strong>Inactive</strong>, its connection state is <strong>Pending</
 not treat it as reachable. The finished page says so and points at the next
 action. Praxis cannot inventory, patch, or connect to a host it has never
 reached, so treat this as recording intent rather than adding a working host.</p>
+<p>Nothing is read from the host either, so the next step asks you to name its
+distribution. The details discovery would have collected stay empty until Praxis
+first reaches the host.</p>
 <h2 id="4-discover">4. Discover</h2>
 <p>Praxis reads the host’s own name, fully qualified name, distribution and
 release, architecture, and package manager over the connection it just proved.</p>
 <p>If the distribution maps to one Praxis supports, the setup continues. If it does
-not, you are asked to confirm explicitly: pick the closest supported match, or
-continue without one. Continuing without a match is allowed, but package and
-patch features may not work until the distribution is supported.</p>
+not, you are asked to select a supported release for the host, and the setup
+does not move on until you do. Praxis manages a host through its distribution:
+packages, patches, rollback, mirrors and compliance are all expressed against
+one, so a host with no supported mapping cannot be added. If none of the
+supported releases applies, that host has to wait until its distribution is
+supported.</p>
+<p>If you skipped verification, there is nothing to map: choosing the distribution
+yourself is the only way past this step, and Praxis records it as your
+declaration rather than as something it read from the host.</p>
 <p>Discovery needs a working session. If authentication has stopped working since
 you verified, discovery reports the same reason code rather than a generic
 failure, and you can retry it on its own.</p>
