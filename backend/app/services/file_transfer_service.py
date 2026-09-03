@@ -202,9 +202,11 @@ def _open_sftp(
         # Enforce the system's host-key verification policy (PRA-245) — the same
         # path SSH sessions use. A mismatch/unknown key fails the connect below
         # (translated to ssh_connect_failed); an unsupported stored key fails
-        # closed here.
+        # closed here. The port dialled below is passed in so the key is pinned
+        # under the endpoint name paramiko will look it up by on this very
+        # connection.
         try:
-            configure_host_key_policy(client, db, system)
+            configure_host_key_policy(client, db, system, ssh_port=port)
         except SSHConnectionError as e:
             raise FileTransferError(f"ssh_host_key_error: {e}") from e
         try:

@@ -305,9 +305,19 @@ def test_force_ingest_clears_preserved_evidence(db, system):
 
     row = _facts_row(db, system.id)
     assert row.ssh_permit_root_login is None
-    # Nothing was retained, so there is no coverage marker either.
-    assert row.partial_errors is None
     assert result.preserved_keys == []
+    # Clearing the retained value does not make the collection able to
+    # report one, so the omission is still recorded.
+    assert row.partial_errors == [
+        {
+            "key": "ssh_permit_root_login",
+            "error": facts_service.UNREPORTED_WITHOUT_EVIDENCE_REASON,
+        },
+        {
+            "key": "ssh_password_authentication",
+            "error": facts_service.UNREPORTED_WITHOUT_EVIDENCE_REASON,
+        },
+    ]
 
 
 def test_stale_refresh_still_cannot_touch_the_row(db, system):
@@ -425,13 +435,29 @@ def test_unavailable_evidence_reads_as_coverage_pending_not_failure(db, system):
     )
 
 
-def test_null_without_a_probe_report_still_reads_as_awaiting_scan(db, system):
-    """A host whose collection simply never covered the fact keeps the
-    actionable "run a scan" state."""
+def test_null_the_collection_never_covered_reads_as_coverage_pending(db, system):
+    """A collection ran and said nothing about the fact. Re-scanning will
+    not change that, so it must not present as the actionable "run a scan"
+    state that a never-collected host gets."""
     _ingest_ssh_state(db, system.id, kernel_version="6.8.0-generic")
     verdict = _evaluate(db, system.id, "ssh.config.PermitRootLogin")
 
-    assert verdict.reason == compliance_evaluation_service.REASON_FACT_VALUE_NULL
+    assert (
+        verdict.reason
+        == compliance_evaluation_service.REASON_FACT_COLLECTION_UNAVAILABLE
+    )
+    assert (
+        compliance_labels.evidence_status(verdict.verdict, verdict.reason)
+        == compliance_labels.STATUS_COVERAGE_PENDING
+    )
+
+
+def test_host_with_no_collection_at_all_still_reads_as_awaiting_scan(db, system):
+    """The actionable "run a scan" state stays reachable, and stays scoped
+    to the host that genuinely has no collection behind it."""
+    verdict = _evaluate(db, system.id, "ssh.config.PermitRootLogin")
+
+    assert verdict.reason == compliance_evaluation_service.REASON_NO_HOST_FACTS
     assert (
         compliance_labels.evidence_status(verdict.verdict, verdict.reason)
         == compliance_labels.STATUS_AWAITING_SCAN
@@ -656,7 +682,14 @@ def test_later_successful_report_restores_a_real_verdict(
     )
 
     row = _facts_row(db, system.id)
-    assert row.partial_errors is None
+    # The marker is gone for the reported key. The other setting was never
+    # established by any collection, so its own omission is still recorded.
+    assert row.partial_errors == [
+        {
+            "key": "ssh_password_authentication",
+            "error": facts_service.UNREPORTED_WITHOUT_EVIDENCE_REASON,
+        }
+    ]
     verdict = _evaluate(db, system.id, "ssh.config.PermitRootLogin")
     assert verdict.verdict == compliance_evaluation_service.VERDICT_PASS
     assert verdict.observed_value == "no"
@@ -707,7 +740,13 @@ def test_marker_is_not_added_when_the_collector_reported_per_key_coverage(db, sy
 
     entries = _facts_row(db, system.id).partial_errors
     assert entries == [
-        {"key": "ssh_permit_root_login", "error": "config_precedence_unknown"}
+        {"key": "ssh_permit_root_login", "error": "config_precedence_unknown"},
+        # The collector said nothing about the other setting, so ingestion
+        # records that omission rather than leaving a bare NULL.
+        {
+            "key": "ssh_password_authentication",
+            "error": facts_service.UNREPORTED_WITHOUT_EVIDENCE_REASON,
+        },
     ]
 
 
@@ -734,16 +773,23 @@ def test_marker_is_not_added_when_the_collector_reported_whole_probe_coverage(
     assert entries == [{"key": "ssh_config", "error": "permission denied"}]
 
 
-def test_nothing_is_marked_when_there_was_no_value_to_retain(db, system):
-    """No retention means no misleading value, so the ordinary
-    awaiting-scan state stands."""
+def test_omission_is_recorded_even_when_there_was_no_value_to_retain(db, system):
+    """Nothing to retain is not nothing to say: the collection still ran
+    and still could not establish the value, and a bare NULL would report
+    that as a host awaiting its first scan."""
     _ingest(db, system.id, "ssh", kernel_version="6.8.0-generic")
     result = _ingest(db, system.id, "agent", offset_hours=1, cpu_cores=8)
 
     assert result.preserved_keys == []
-    assert _facts_row(db, system.id).partial_errors is None
+    assert {
+        "key": "ssh_permit_root_login",
+        "error": facts_service.UNREPORTED_WITHOUT_EVIDENCE_REASON,
+    } in _facts_row(db, system.id).partial_errors
     verdict = _evaluate(db, system.id, "ssh.config.PermitRootLogin")
-    assert verdict.reason == compliance_evaluation_service.REASON_FACT_VALUE_NULL
+    assert (
+        verdict.reason
+        == compliance_evaluation_service.REASON_FACT_COLLECTION_UNAVAILABLE
+    )
 
 
 def _verdict_parts(verdict):
@@ -789,12 +835,16 @@ def test_fact_absent_does_not_pass_on_unavailable_evidence(db, system):
 
 def test_unrelated_partial_error_does_not_mask_a_missing_fact(db, system):
     """Only a probe entry for this fact flips the reason. A partial error
-    about some other probe leaves the awaiting-scan state alone."""
+    about some other probe leaves the awaiting-scan state alone. Checked on
+    a sysctl, because the SSH baseline pair is the one place ingestion
+    records the omission itself."""
     _ingest_ssh_state(
         db,
         system.id,
         partial_errors=[{"key": "cloud_metadata", "error": "no_response"}],
     )
-    verdict = _evaluate(db, system.id, "ssh.config.PermitRootLogin")
+    verdict = compliance_evaluation_service._evaluate_fact_equals(
+        db, system.id, {"fact_key": "sysctl.net.ipv4.ip_forward", "expected": "0"}
+    )
 
     assert verdict.reason == compliance_evaluation_service.REASON_FACT_VALUE_NULL
