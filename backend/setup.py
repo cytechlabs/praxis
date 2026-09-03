@@ -13,17 +13,17 @@ setup(
         "app.services": ["_assets/*.sh"],
     },
     install_requires=[
-        "fastapi==0.137.0",
+        "fastapi==0.141.1",
         # Pinned alongside fastapi, which declares no upper bound on it. Starlette
         # runs the form and multipart parsers this package's routes depend on, and
         # 1.3.1 is the floor that carries their denial-of-service fixes; see the
         # requirements.txt header for the advisories.
-        "starlette==1.3.1",
-        "uvicorn==0.27.0",
-        "sqlalchemy==2.0.51",
-        "alembic==1.18.5",
+        "starlette==1.6.0",
+        "uvicorn==0.52.4",
+        "sqlalchemy==2.0.52",
+        "alembic==1.19.1",
         "psycopg2-binary==2.9.12",
-        "pydantic-settings==2.1.0",
+        "pydantic-settings==2.15.0",
     ],
     entry_points={
         "console_scripts": [

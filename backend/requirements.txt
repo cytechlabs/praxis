@@ -25,31 +25,31 @@
 # 0.137.0 is the smallest fastapi release that both admits starlette 1.3.1 and was
 # cut after it shipped. Its declared python-multipart floor is >=0.0.18, which
 # keeps the linear Content-Type option-header parser (CVE-2024-24762) in place.
-fastapi==0.137.0
+fastapi==0.141.1
 # fastapi declares starlette>=0.46.0 with no upper bound, so this pin is what makes
 # the resolved framework version deterministic instead of whatever is newest.
-starlette==1.3.1
-uvicorn==0.27.0
-websockets==12.0
-sqlalchemy==2.0.51
-alembic==1.18.5
-pydantic[email]==2.12.0
-pydantic-settings==2.1.0
+starlette==1.6.0
+uvicorn==0.52.4
+websockets==17.1
+sqlalchemy==2.0.52
+alembic==1.19.1
+pydantic[email]==2.13.5
+pydantic-settings==2.15.0
 python-jose[cryptography]==3.5.0
 passlib[bcrypt]==1.7.4
-bcrypt==3.2.0
+bcrypt==5.0.0
 # Form/upload parsing behind Starlette, which imports the renamed
 # ``python_multipart`` package and falls back to the legacy top-level ``multipart``
 # module. This line ships both, so either import path resolves.
 python-multipart==0.0.32
 psycopg2-binary==2.9.12
-python-dotenv==1.2.2
+python-dotenv==1.2.3
 slowapi==0.1.10
 pyjwt==2.13.0
 hvac==2.4.0
 paramiko==5.0.0
-psutil==5.9.8
-croniter==2.0.1
+psutil==7.2.2
+croniter==6.2.4
 APScheduler==3.11.3
 pyotp==2.10.0
 prometheus-client==0.26.0
@@ -59,10 +59,10 @@ pytest==9.1.1
 # pytest-asyncio 0.23.x caps pytest below 9, so the runner bump carries this
 # plugin with it.
 pytest-asyncio==1.4.0
-httpx==0.26.0
+httpx==0.28.1
 docker==7.2.0  # PRA-144 integration test spawns disposable SSH containers
 
 # Code Quality
 black==26.5.1
-pylint==3.0.3
-isort==5.13.2
+pylint==4.0.7
+isort==9.0.1
