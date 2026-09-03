@@ -5,15 +5,26 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from app.db.models import Group
-from scripts.seed_data import seed_data
+from scripts.seed_data import DISTRO_DEFINITIONS, ROLE_DEFINITIONS, seed_data
 
 
 def test_default_group_seed_uses_database_generated_id():
     db = MagicMock()
-    db.query.return_value.filter.return_value.first.side_effect = [None] + [True] * 18
+    # One lookup for the group, one per distro, one per role. The group is the
+    # only one answered "absent", so it is the only row the run creates, and
+    # the list is sized from the seed data so adding a release does not turn
+    # this into a StopIteration.
+    lookups = len(DISTRO_DEFINITIONS) + len(ROLE_DEFINITIONS)
+    db.query.return_value.filter.return_value.first.side_effect = [None] + [
+        True
+    ] * lookups
 
     with patch("scripts.seed_data.SessionLocal", return_value=db):
         seed_data()
+
+    # Nothing but the group was added, which is what makes the assertion below
+    # about the group rather than about whichever lookup happened to see None.
+    assert [type(call.args[0]) for call in db.add.call_args_list] == [Group]
 
     seeded_groups = [
         call.args[0]

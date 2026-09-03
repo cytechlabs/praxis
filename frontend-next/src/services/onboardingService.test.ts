@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   OnboardingError,
+  buildDiscoveryConfirmation,
+  confirmDiscovery,
   createDraft,
   fetchDraft,
   runDiscovery,
@@ -102,5 +104,58 @@ describe('PRA-414 onboarding service error handling', () => {
     // Only a reference travels; the secret stays in the secrets service.
     expect(body).toEqual({ credential_id: 4, ssh_security_policy_id: undefined });
     expect(JSON.stringify(body)).not.toMatch(/password|ssh_key|vault/i);
+  });
+});
+
+
+/**
+ * A managed host is serviced through its distribution, so binding it to a
+ * supported release is the whole of the discover step. These pin the client
+ * half of that: what a selection sends, and that no selection is not a request
+ * at all rather than one the server has to refuse.
+ */
+describe('PRA-424 discovery confirmation request', () => {
+  it('sends the chosen distro and never claims the host is unmapped', () => {
+    expect(buildDiscoveryConfirmation('12')).toEqual({
+      distro_id: 12,
+      confirmed_unknown: false,
+    });
+  });
+
+  it('cannot advance without a selection', () => {
+    expect(buildDiscoveryConfirmation('')).toBeNull();
+    expect(buildDiscoveryConfirmation('   ')).toBeNull();
+  });
+
+  it('cannot advance on a value that is not a distro id', () => {
+    for (const value of ['0', '-3', '1.5', 'ubuntu', 'NaN']) {
+      expect(buildDiscoveryConfirmation(value)).toBeNull();
+    }
+  });
+
+  it('puts exactly that body on the wire', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ draft: {} }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      const body = buildDiscoveryConfirmation('12');
+      // A Vitest matcher does not narrow the type, so narrow it here: the
+      // request under test cannot be made without a body.
+      if (body === null) throw new Error('buildDiscoveryConfirmation returned null');
+      await confirmDiscovery('abc', body, 4);
+
+      const [url, init] = fetchMock.mock.calls[0];
+      expect(url).toContain('/drafts/abc/discovery-confirmation?state_version=4');
+      expect(init.method).toBe('PUT');
+      expect(JSON.parse(init.body)).toEqual({
+        distro_id: 12,
+        confirmed_unknown: false,
+      });
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

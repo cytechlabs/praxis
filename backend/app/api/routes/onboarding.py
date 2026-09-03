@@ -750,7 +750,11 @@ async def discover_draft(
         architecture=result.identity.get("arch"),
         package_family=package_family,
         package_manager=preflight.package_manager_for(package_family),
-        support_mapping="matched" if matched else "unknown",
+        support_mapping=(
+            schemas.SUPPORT_MAPPING_MATCHED
+            if matched
+            else schemas.SUPPORT_MAPPING_UNKNOWN
+        ),
         distro_id=matched.id if matched else None,
         confirmed_unknown=False,
         collected_at=preflight.utcnow_iso(),
@@ -792,6 +796,30 @@ async def discover_draft(
     return {"draft": _render_draft(db, draft)}
 
 
+def _unsupported_distro_message(discovery: Dict[str, Any]) -> str:
+    """What to tell an operator whose host has no supported mapping.
+
+    Names what the host reported when discovery read it, so the operator can
+    see which distribution Praxis does not support rather than being told only
+    that something is wrong.
+    """
+    reported = " ".join(
+        str(value)
+        for value in (discovery.get("distro_name"), discovery.get("distro_version"))
+        if value
+    ).strip()
+    subject = (
+        f"{reported} is not a supported distribution"
+        if reported
+        else ("This host has no supported distribution")
+    )
+    return (
+        f"{subject}. Praxis manages a host through its distribution, so select "
+        "a supported release for it to continue. If none applies, this host "
+        "cannot be added until its distribution is supported."
+    )
+
+
 @router.put("/drafts/{public_id}/discovery-confirmation")
 async def confirm_discovery(
     public_id: str,
@@ -800,35 +828,63 @@ async def confirm_discovery(
     current_user: User = Depends(require_role("admin", "maintainer")),
     db: Session = Depends(get_db),
 ):
-    """Resolve an unmapped distribution, explicitly."""
+    """Bind this host to a supported distribution.
+
+    A managed host must resolve to a catalogue row: package, patch, rollback,
+    mirror and compliance work is all expressed against one, and a host with no
+    mapping cannot be serviced by any of it. So the requirement is enforced
+    here, where the operator can still act on it, rather than accepted now and
+    refused at Finish once every other step has been worked through.
+
+    Discovery having failed to map the host is not by itself a refusal: the
+    operator may bind it to a supported release from the catalogue, and that is
+    also the one way past this step when verification was skipped and nothing
+    was read from the host at all. What is refused is finishing with no mapping.
+    """
     try:
         draft = drafts.load_draft(db, current_user, public_id)
         drafts.assert_authority_unchanged(db, draft, current_user)
 
         discovery = dict(draft.discovery or {})
-        if not discovery:
-            raise drafts.DraftError(
-                "discovery_required",
-                "Run discovery before confirming what this host is.",
-                status_code=409,
-            )
-
         distro_id = step.distro_id or discovery.get("distro_id")
+        distro = None
         if distro_id:
             distro = db.query(Distro).filter(Distro.id == distro_id).first()
             if distro is None:
                 raise drafts.DraftError(
                     "reference_missing", "That distribution no longer exists.", 400
                 )
-        elif not step.confirmed_unknown:
+        else:
+            # One code for every way of arriving here without a mapping, so the
+            # wizard has a single state to render and the operator a single
+            # thing to do. ``confirmed_unknown`` is deliberately not consulted:
+            # there is no acknowledgement that makes an unmapped host
+            # manageable, so accepting one would only move the refusal later.
             raise drafts.DraftError(
-                "distro_required",
-                "Choose a distribution, or confirm this host is unmapped.",
+                "distro_unsupported",
+                _unsupported_distro_message(discovery),
                 status_code=400,
             )
 
-        discovery["distro_id"] = distro_id
-        discovery["confirmed_unknown"] = bool(step.confirmed_unknown)
+        if not discovery:
+            discovery = schemas.serialize_discovery(
+                effective_hostname=None,
+                fqdn=None,
+                distro_name=distro.name,
+                distro_version=distro.version,
+                architecture=None,
+                package_family=None,
+                package_manager=None,
+                support_mapping=schemas.SUPPORT_MAPPING_DECLARED,
+                distro_id=distro.id,
+                confirmed_unknown=False,
+                collected_at=preflight.utcnow_iso(),
+            )
+        else:
+            discovery["distro_id"] = distro_id
+            # Binding to a catalogue row is the opposite of proceeding without
+            # one, and it is now the only way this step completes.
+            discovery["confirmed_unknown"] = False
 
         draft = drafts.apply_step(
             db,

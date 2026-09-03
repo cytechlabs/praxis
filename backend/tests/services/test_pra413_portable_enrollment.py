@@ -1367,8 +1367,9 @@ def test_connect_with_certificate_applies_host_key_policy_and_port(
     host = _FakeHost()
     applied = {}
 
-    def _policy(client, database, target):  # noqa: ARG001
+    def _policy(client, database, target, ssh_port=None):  # noqa: ARG001
         applied["policy_for"] = target.hostname
+        applied["policy_port"] = ssh_port
 
     monkeypatch.setattr("app.services.ssh_service.configure_host_key_policy", _policy)
     monkeypatch.setattr(
@@ -1388,6 +1389,8 @@ def test_connect_with_certificate_applies_host_key_policy_and_port(
 
     assert applied["policy_for"] == system.hostname
     assert applied["port"] == service._default_ssh_port
+    # The port the pin is preloaded under is the port the connection dials.
+    assert applied["policy_port"] == applied["port"]
     assert applied["disabled"] == {"kex": ["weak"]}
 
 
