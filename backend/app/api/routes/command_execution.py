@@ -178,7 +178,12 @@ def execute_command(
         try:
             from ...services.audit_event_service import safe_emit
 
-            outcome = "success" if result.get("status") == "success" else "failure"
+            # The service reports terminal state as ``execution_status``; only
+            # a completed run with a zero exit code is ``success``. A refused,
+            # pending, failed, or missing status is never recorded as success.
+            outcome = (
+                "success" if result.get("execution_status") == "success" else "failure"
+            )
             safe_emit(
                 db=db,
                 action="command.exec",
