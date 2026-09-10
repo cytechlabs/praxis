@@ -11,9 +11,24 @@ from sqlalchemy.orm import relationship
 
 from .base import Base
 
+# Allow-lists a new policy carries when its creator names none. Each list
+# narrows what a connection may negotiate; it can never widen it, because the
+# retired-algorithm floor is applied on top of every policy. An empty list
+# leaves that dimension to every algorithm Praxis supports, which for key
+# exchange is what keeps a policy negotiable with servers that no longer offer
+# finite-field Diffie-Hellman. Ciphers and MACs stay pinned to their modern
+# subsets. The API schema and the policy form carry the same values.
+DEFAULT_ALLOWED_CIPHERS = "aes256-ctr,aes192-ctr,aes128-ctr"
+DEFAULT_ALLOWED_MACS = "hmac-sha2-512,hmac-sha2-256"
+DEFAULT_ALLOWED_KEX = ""
+
 
 class SSHSecurityPolicy(Base):
-    """SSH security policy configuration."""
+    """SSH security policy configuration.
+
+    The cipher, MAC and key-exchange columns are comma-separated allow-lists.
+    An empty or null list does not constrain that dimension.
+    """
 
     __tablename__ = "ssh_security_policies"
 
@@ -30,9 +45,9 @@ class SSHSecurityPolicy(Base):
     require_host_key_verification = Column(Boolean, default=True)
     minimum_key_size = Column(Integer, default=2048)
     allowed_auth_methods = Column(String(255), default="publickey,password")
-    allowed_ciphers = Column(String(255), default="aes256-ctr,aes192-ctr,aes128-ctr")
-    allowed_macs = Column(String(255), default="hmac-sha2-512,hmac-sha2-256")
-    allowed_kex = Column(String(255), default="diffie-hellman-group-exchange-sha256")
+    allowed_ciphers = Column(String(255), default=DEFAULT_ALLOWED_CIPHERS)
+    allowed_macs = Column(String(255), default=DEFAULT_ALLOWED_MACS)
+    allowed_kex = Column(String(255), default=DEFAULT_ALLOWED_KEX)
 
     # Audit settings
     log_commands = Column(Boolean, default=True)
