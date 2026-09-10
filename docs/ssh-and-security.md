@@ -37,6 +37,30 @@ Two consequences are worth knowing before you enroll:
 - A host that offers **only** a SHA-1 key exchange, or only a DSA or `ssh-rsa` host key, cannot be reached. Every supported release in [the support matrix](support-matrix.md) offers modern algorithms out of the box; re-enable SHA-1 on the host and you have not made Praxis accept it.
 - A host key already pinned as `ssh-dss` is refused with a message naming the type. Delete it under `Secure > SSH Security > Host Keys` and re-trust the host, which pins its modern key instead. Ed25519, ECDSA and RSA host keys are all pinned normally, so this affects DSA alone.
 
+### Default allow-lists
+
+A policy created without naming its allow-lists carries these values. That covers the seeded `Default`, a policy created through the API with the fields omitted, and a policy created from the form.
+
+| Dimension | Default | Effect |
+|---|---|---|
+| Ciphers | `aes256-ctr,aes192-ctr,aes128-ctr` | Only these are offered |
+| MACs | `hmac-sha2-512,hmac-sha2-256` | Only these are offered |
+| Key exchange | empty | Every key exchange Praxis supports, minus the refusals above |
+
+An empty list means the policy does not constrain that dimension. It is not permissive: the refusals above still apply to every connection. Leaving key exchange open is what lets one policy reach both current OpenSSH servers, which no longer offer finite-field Diffie-Hellman (`diffie-hellman-group-exchange-sha256`, `-group14-sha256`, `-group16-sha512`) by default, and older releases that still do.
+
+**Existing policies are never rewritten.** A policy keeps the values it was created with across upgrades and restarts, and a deleted `Default` is not recreated. A policy created by an earlier release may therefore still pin key exchange to `diffie-hellman-group-exchange-sha256` alone; against a current OpenSSH server, preflight and enrollment then fail with no key exchange algorithm in common. Bring that one field in line through the policy API, which changes nothing it is not given. Set `POLICY_ID` to the numeric ID of the policy you intend to change (shown by `GET /api/backend/ssh-security/policies`) and `TOKEN` to a valid bearer token for an administrator or maintainer:
+
+```bash
+POLICY_ID=1
+curl -sS -X PUT -H "Authorization: Bearer ${TOKEN}" \
+    -H "Content-Type: application/json" \
+    -d '{"allowed_kex": ""}' \
+    "https://praxis.example.com/api/backend/ssh-security/policies/${POLICY_ID}"
+```
+
+If a list was chosen deliberately, keep it, or name the modern set you want explicitly (for example `curve25519-sha256@libssh.org,ecdh-sha2-nistp256`). A list that names only refused algorithms is reported as unnegotiable rather than re-enabling them, and a policy that narrows ciphers or MACs keeps that narrowing regardless of what it says about key exchange.
+
 ## Host key TOFU
 
 Trust-on-first-use means Praxis records a system's SSH host key on the first successful connection and verifies it on every subsequent one. If the key changes you get a `host_key_changed` event - this is usually fine (OS reinstall, key rotation) but sometimes it isn't (MitM, impersonation).
