@@ -30,13 +30,19 @@ class SSHSecurityPolicyBase(BaseModel):
         "publickey,password", description="Allowed authentication methods"
     )
     allowed_ciphers: Optional[str] = Field(
-        "aes256-ctr,aes192-ctr,aes128-ctr", description="Allowed ciphers"
+        "aes256-ctr,aes192-ctr,aes128-ctr",
+        description="Allowed ciphers; empty leaves every supported cipher",
     )
     allowed_macs: Optional[str] = Field(
-        "hmac-sha2-512,hmac-sha2-256", description="Allowed MACs"
+        "hmac-sha2-512,hmac-sha2-256",
+        description="Allowed MACs; empty leaves every supported MAC",
     )
     allowed_kex: Optional[str] = Field(
-        "diffie-hellman-group-exchange-sha256", description="Allowed key exchanges"
+        "",
+        description=(
+            "Allowed key exchange algorithms; empty leaves every supported "
+            "key exchange"
+        ),
     )
     log_commands: Optional[bool] = Field(True, description="Log command executions")
     log_file_transfers: Optional[bool] = Field(True, description="Log file transfers")
