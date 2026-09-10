@@ -51,6 +51,28 @@ interface SSHHostKey {
   last_seen?: string;
 }
 
+// What the create form submits for anything the operator leaves untouched.
+// The algorithm allow-lists match the backend's new-policy defaults: ciphers
+// and MACs stay on their modern subsets, while the empty key-exchange list
+// leaves every supported key exchange negotiable so a new policy still
+// reaches servers that no longer offer finite-field Diffie-Hellman. The
+// backend applies its retired-algorithm floor regardless of what is sent.
+const emptyPolicyForm: Partial<SSHSecurityPolicy> = {
+  name: '',
+  description: '',
+  max_auth_tries: 3,
+  connection_timeout: 10,
+  idle_timeout: 600,
+  require_host_key_verification: true,
+  minimum_key_size: 2048,
+  allowed_auth_methods: 'publickey,password',
+  allowed_ciphers: 'aes256-ctr,aes192-ctr,aes128-ctr',
+  allowed_macs: 'hmac-sha2-512,hmac-sha2-256',
+  allowed_kex: '',
+  log_commands: false,
+  log_file_transfers: true,
+};
+
 export default function SSHSecurityPage() {
   const formatTimestamp = useFormatTimestamp();
   const router = useRouter();
@@ -71,21 +93,7 @@ export default function SSHSecurityPage() {
   const [showDeleteHostKeyConfirm, setShowDeleteHostKeyConfirm] = useState(false);
   const [deleteHostKeyId, setDeleteHostKeyId] = useState<number | null>(null);
 
-  const [newPolicy, setNewPolicy] = useState<Partial<SSHSecurityPolicy>>({
-    name: '',
-    description: '',
-    max_auth_tries: 3,
-    connection_timeout: 10,
-    idle_timeout: 600,
-    require_host_key_verification: true,
-    minimum_key_size: 2048,
-    allowed_auth_methods: 'publickey,password',
-    allowed_ciphers: 'aes256-ctr,aes192-ctr,aes128-ctr',
-    allowed_macs: 'hmac-sha2-512,hmac-sha2-256',
-    allowed_kex: 'diffie-hellman-group-exchange-sha256',
-    log_commands: false,
-    log_file_transfers: true,
-  });
+  const [newPolicy, setNewPolicy] = useState<Partial<SSHSecurityPolicy>>(emptyPolicyForm);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -151,21 +159,7 @@ export default function SSHSecurityPage() {
 
       if (response.ok) {
         setShowCreateModal(false);
-        setNewPolicy({
-          name: '',
-          description: '',
-          max_auth_tries: 3,
-          connection_timeout: 10,
-          idle_timeout: 600,
-          require_host_key_verification: true,
-          minimum_key_size: 2048,
-          allowed_auth_methods: 'publickey,password',
-          allowed_ciphers: 'aes256-ctr,aes192-ctr,aes128-ctr',
-          allowed_macs: 'hmac-sha2-512,hmac-sha2-256',
-          allowed_kex: 'diffie-hellman-group-exchange-sha256',
-          log_commands: false,
-          log_file_transfers: true,
-        });
+        setNewPolicy(emptyPolicyForm);
         fetchData();
       } else {
         const errorData = await response.json();
