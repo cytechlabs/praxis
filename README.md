@@ -244,12 +244,11 @@ path is optional and best-effort: it does nothing unless a renewal credential
 has been stored, it is attempted only near expiry rather than on every start,
 and an install that cannot reach it keeps running on the licence it holds. It
 never gates a running deployment and is not needed for air-gapped operation.
-The service behind it arrives with the purchase flow.
 
-**Self-serve purchasing is not open yet.** The tiers, entitlements, and host
-caps are settled, and the deployment side of activation (validate a licence,
-apply it, report status) is implemented; the checkout and licence-issuing
-service is part of the remaining launch work.
+**[Purchase a licence](https://praxisfleet.com/buy/)** for your existing
+installation. Have your installation ID ready from **Settings > License**;
+the licence unlocks its included paid features in place, with no separate
+image or reinstall required.
 
 [Editions and feature tiers](docs/editions.md) draws the line;
 [licensing and activation](docs/licensing.md) covers the mechanics.
