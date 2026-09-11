@@ -79,28 +79,62 @@ while duplicate addresses exist and names them rather than merging them; see
 
 ### Accepted security findings
 
-The backend image scan for this release reports no CRITICAL findings and two
-HIGH findings, both accepted under the CRITICAL-blocks, HIGH-report-only policy
-in
+The qualified backend image reports no fixable CRITICAL findings, two fixable
+HIGH findings and one fixable MEDIUM finding. These findings are accepted for
+1.0.1 under the report-only policy in
 [docs/maintainers/dependency-security-policy.md](docs/maintainers/dependency-security-policy.md).
-Neither is suppressed, ignored, or reclassified, and no scanner gate was
-changed:
+No per-finding suppression or scanner gate change was made:
 
-- `CVE-2025-47273`, setuptools 70.3.0, fixed in 78.1.1
-- `GHSA-6v7p-g79w-8964`, msgpack 1.1.2, fixed in 1.2.1
+- HIGH: `CVE-2025-47273`, setuptools 70.3.0, fixed in 78.1.1
+- HIGH: `GHSA-6v7p-g79w-8964`, msgpack 1.1.2, fixed in 1.2.1
+- MEDIUM: `CVE-2026-59890`, setuptools 70.3.0, fixed in 83.0.0
 
-Both are base-image or transitive packages rather than declared Praxis
-dependencies, so neither is pinned in `backend/requirements.txt`. They are
-deferred to dependency and image maintenance and are expected to clear when the
-base image advances.
+These copies are vendored inside pip, rather than separately installed Python
+distributions. Their absence from package metadata does not mean the code is
+absent. Remediation must verify patched vendored copies or their safe removal
+in the built image; upgrading pip or the base image alone is not proof of a fix.
 
-The reachable Starlette form-parsing advisories that applied to the 1.0.0 pins
-are fixed in this release, not accepted.
+The qualified frontend image has zero fixable findings. The source dependency
+scan reports three additional findings in the documentation build dependencies,
+also accepted for 1.0.1:
+
+- HIGH: `CVE-2026-84375`, js-yaml 4.3.1, fixed in 4.3.2
+- HIGH: `CVE-2026-84370`, svgo 4.0.2, fixed in 4.1.0
+- MEDIUM: `CVE-2026-84369`, svgo 4.0.2, fixed in 4.1.0
+
+These documentation-build packages are absent from both qualified runtime
+images, but execute during documentation builds. No exploit path was
+demonstrated; absence from runtime images is not a claim of unreachability.
+Both sets of accepted findings are scheduled for 1.0.2 maintenance.
+
+The qualification used Trivy 0.70.0 with the vulnerability database updated
+2026-09-10. The existing `ignore-unfixed: true` gate excludes findings without
+available fixes. Unfiltered scans still reported 17 backend and 4 frontend
+CRITICAL findings without fixes; a passing gate does not mean these are absent
+or harmless. This reporting limitation is explicitly acknowledged for 1.0.1;
+final publication artifacts must be checked for materially changed findings.
+
+The Starlette form-parsing advisories affecting the 1.0.0 pins and the six
+libssh2 findings covered by Debian DLA-4773-1 are remediated in the qualified
+images, not accepted debt. The backend carries libssh2-1 1.10.0-3+deb12u1.
 
 ### Known limitations
 
 Unchanged from 1.0.0; see
 [docs/upgrade-notes-1-0.md](docs/upgrade-notes-1-0.md).
+
+A failed file download can return HTTP 200 after streaming headers have been
+sent, even though the server audit records failure. Clients should not treat
+the status alone as proof of transfer completeness. Correction is scheduled for
+1.0.2.
+
+Browser qualification includes accepted test limitations: the full suite is
+not green because of authentication prerequisites, login-rate budgeting,
+obsolete UI assertions and edition-specific expectations. Focused onboarding
+and live operational controls passed. Paid bulk-export downloads, demo and
+rollback fixtures, and the routes covered only by the excluded screenshot
+suite were not fully exercised. Test repairs and coverage follow-ups are
+scheduled for 1.0.2; these gaps are not reported as passing tests.
 
 ## 1.0.0 — first stable release
 
