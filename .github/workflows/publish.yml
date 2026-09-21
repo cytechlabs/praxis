@@ -259,7 +259,7 @@ jobs:
           fi
 
       - name: Set up Buildx
-        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
 
       # Fetch the private paid capability wheel into the local build context.
       # Runs only when the operator explicitly asked for a paid-capable build,
@@ -287,7 +287,7 @@ jobs:
           ls backend/ee-wheels/praxis_ee-*.whl
 
       - name: Build backend
-        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
         with:
           context: ./backend
           file: ./backend/Dockerfile.prod
@@ -302,7 +302,7 @@ jobs:
           tags: ${{ env.REGISTRY }}/${{ env.OWNER }}/${{ env.BACKEND_PACKAGE }}:${{ needs.verify.outputs.version }}
 
       - name: Build frontend
-        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
         with:
           context: ./frontend-next
           file: ./frontend-next/Dockerfile.prod
@@ -479,7 +479,7 @@ jobs:
       # Buildx supplies `imagetools`, which the absence check below uses to ask
       # the registry what exists. Install it before anything depends on it.
       - name: Set up Buildx
-        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
 
       - name: Log in to GHCR
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
@@ -679,7 +679,7 @@ jobs:
           cat release-index.md
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3
         with:
           name: ${{ needs.verify.outputs.tag }}
           tag_name: ${{ needs.verify.outputs.tag }}
