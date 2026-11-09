@@ -21,7 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-python@v7.1.0
         with:
           python-version: '3.14'  # PRA-321: run backend CI on the shipped 3.14 runtime
           cache: 'pip'
@@ -48,7 +48,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-python@v7.1.0
         with:
           python-version: '3.14'  # PRA-321: run backend CI on the shipped 3.14 runtime
           cache: 'pip'
@@ -125,7 +125,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-python@v7.1.0
         with:
           python-version: '3.14'  # PRA-321: run backend CI on the shipped 3.14 runtime
           cache: 'pip'
@@ -156,7 +156,7 @@ jobs:
           pytest --tb=short --cov --cov-report= ${{ matrix.paths }}
 
       - name: Upload coverage data (${{ matrix.lane }})
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: coverage-python-${{ matrix.lane }}
           path: backend/.coverage.${{ matrix.lane }}
@@ -235,7 +235,7 @@ jobs:
         run: go test -covermode=atomic -coverpkg=./... -coverprofile=coverage.out ./...
 
       - name: Upload coverage profile
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: coverage-go
           path: agent/coverage.out
@@ -269,7 +269,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@v7.1.0
         with:
           node-version: '22'
           cache: 'npm'
@@ -298,7 +298,7 @@ jobs:
         run: npm run test:coverage
 
       - name: Upload coverage report
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: coverage-javascript
           path: frontend-next/coverage/lcov.info
@@ -329,11 +329,11 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-python@v7.1.0
         with:
           python-version: '3.14'
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@v7.1.0
         with:
           node-version: '22'
 
@@ -343,7 +343,7 @@ jobs:
         run: pip install "coverage==7.15.4"
 
       - name: Download the lane reports
-        uses: actions/download-artifact@v7.0.0
+        uses: actions/download-artifact@v8.0.2
         with:
           pattern: coverage-*
           path: coverage-artifacts
@@ -392,7 +392,7 @@ jobs:
           cp "$GO_REPORT" coverage-reports/go.out
 
       - name: Upload the validated reports
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: coverage-reports
           path: coverage-reports/
@@ -439,7 +439,7 @@ jobs:
 
     steps:
       - name: Download the validated reports
-        uses: actions/download-artifact@v7.0.0
+        uses: actions/download-artifact@v8.0.2
         with:
           name: coverage-reports
           path: coverage-reports
@@ -493,7 +493,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@v7.1.0
         with:
           node-version: '22'
           cache: 'npm'
@@ -670,7 +670,7 @@ jobs:
 
       - name: Upload SBOMs + SARIF as artifacts
         if: always()
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: security-reports
           path: |
@@ -723,7 +723,7 @@ jobs:
 
       - name: Upload filesystem scan SARIF as artifact
         if: always()
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: dependency-scan-reports
           path: trivy-fs.sarif
