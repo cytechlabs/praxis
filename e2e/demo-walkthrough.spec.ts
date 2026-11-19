@@ -1,15 +1,11 @@
 /**
  * PRA-184: 1.0 demo walkthrough — deterministic proof path + screenshots.
  *
- * Assumes the synthetic demo fixture has been seeded first:
+ * Reads the synthetic demo fleet seeded by e2e/fixtures/seed-demo.sh; the
+ * "fixtures" project verifies it first and names the command when it is
+ * missing (see e2e/README.md).
  *
- *   docker compose exec -T backend python -m app.scripts.update_eol_data
- *   docker compose exec -T backend python -m app.scripts.seed_demo_fixture
- *
- * Then run against the running prod-parity stack via Caddy (E2E_BASE_URL,
- * default https://localhost — bring it up with `--profile bundled --profile proxy`):
- *
- *   npx playwright test e2e/demo-walkthrough.spec.ts
+ *   npx playwright test --project=chromium-fixtures demo-walkthrough
  *
  * Auth state is pre-loaded from auth.setup.ts (chromium project storageState).
  * Screenshots land under the ignored test-results/demo-walkthrough/ directory;

@@ -1,5 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import { adminApi } from "./support/api";
+import { API_BASE } from "./support/env";
+
 /**
  * PRA-414: guided onboarding, walked in a browser at desktop and at 390px.
  *
@@ -7,27 +10,15 @@ import { expect, test, type Page } from "@playwright/test";
  * suites: they exist to catch what unit tests cannot, namely controls that
  * clip, overlap, or read as success when nothing succeeded.
  *
- * Run against a stack with the wizard reachable:
- *   E2E_BASE_URL=http://localhost:3010 npx playwright test e2e/pra414-onboarding.spec.ts
+ * Runs on the suite's saved administrator session; it never signs in itself,
+ * because the login endpoint is rate limited. Disposable credentials are
+ * created through the API and removed afterwards.
  */
-
-const USERNAME = process.env.E2E_USERNAME ?? "praxisadmin";
-const PASSWORD = process.env.E2E_PASSWORD ?? "PraxisDemo!2026";
 
 const DESKTOP = { width: 1440, height: 900 };
 const MOBILE = { width: 390, height: 844 };
 // The narrowest width the application actually supports (PRA-272).
 const NARROW_SUPPORTED = { width: 1280, height: 900 };
-
-async function login(page: Page) {
-  await page.goto("/login");
-  await page.fill("#username", USERNAME);
-  await page.fill("#password", PASSWORD);
-  await page.click('button[type="submit"]');
-  await page.waitForURL((url) => !url.pathname.includes("/login"), {
-    timeout: 20_000,
-  });
-}
 
 /** Nothing may spill sideways: a horizontal scrollbar at 390px is a defect. */
 async function expectNoHorizontalOverflow(page: Page) {
@@ -60,16 +51,44 @@ async function expectControlsUsable(page: Page) {
 }
 
 test.describe("PRA-414 guided onboarding", () => {
-  // This spec signs in itself, so it does not use the suite-wide stored
-  // session. Starting signed out is also what an operator adding their
-  // first host actually does.
-  test.use({ storageState: { cookies: [], origins: [] } });
+  const credentialName = `e2e-onboard-${Date.now()}`;
+  let credentialId: number | null = null;
+
+  test.beforeAll(async ({ playwright }) => {
+    const api = await adminApi(playwright);
+    try {
+      const res = await api.post(`${API_BASE}/credentials`, {
+        data: {
+          name: credentialName,
+          auth_method: "password",
+          username: "e2e-user",
+          password: "e2e-not-a-real-secret",
+        },
+      });
+      expect(res.ok(), await res.text()).toBeTruthy();
+      credentialId = ((await res.json()) as { id: number }).id;
+    } finally {
+      await api.dispose();
+    }
+  });
+
+  test.afterAll(async ({ playwright }) => {
+    if (credentialId == null) return;
+    const api = await adminApi(playwright);
+    try {
+      const removed = await api.delete(`${API_BASE}/credentials/${credentialId}`);
+      expect(removed.ok(), await removed.text()).toBeTruthy();
+      const gone = await api.get(`${API_BASE}/credentials/${credentialId}`);
+      expect(gone.status(), "credential still present after teardown").toBe(404);
+    } finally {
+      await api.dispose();
+    }
+  });
 
   test("desktop: the wizard opens on Connect and asks for an address first", async ({
     page,
   }) => {
     await page.setViewportSize(DESKTOP);
-    await login(page);
     await page.goto("/system-management/onboard");
 
     await expect(page.getByRole("heading", { name: /where is this host/i })).toBeVisible();
@@ -91,7 +110,6 @@ test.describe("PRA-414 guided onboarding", () => {
 
   test("desktop: Connect advances to Authenticate and Back returns", async ({ page }) => {
     await page.setViewportSize(DESKTOP);
-    await login(page);
     await page.goto("/system-management/onboard");
 
     await page.getByLabel("Address").fill("198.51.100.24");
@@ -117,14 +135,13 @@ test.describe("PRA-414 guided onboarding", () => {
   }) => {
     test.setTimeout(90_000);
     await page.setViewportSize(DESKTOP);
-    await login(page);
     await page.goto("/system-management/onboard");
 
     // An address with nothing behind it: verification must fail cleanly.
     await page.getByLabel("Address").fill("198.51.100.99");
     await page.getByRole("button", { name: /^Next$/ }).click();
 
-    await page.getByLabel("Credential").selectOption({ index: 1 });
+    await page.getByLabel("Credential").selectOption(String(credentialId));
     await page.getByRole("button", { name: /^Next$/ }).click();
 
     await expect(page.getByRole("heading", { name: /check the connection/i })).toBeVisible();
@@ -160,7 +177,6 @@ test.describe("PRA-414 guided onboarding", () => {
     // application, sign-in included, so there is no way to reach the wizard
     // from a 390px viewport in the first place.
     await page.setViewportSize(DESKTOP);
-    await login(page);
     await page.goto("/system-management/onboard");
     await expect(page.getByRole("heading", { name: /where is this host/i })).toBeVisible();
 
@@ -176,7 +192,6 @@ test.describe("PRA-414 guided onboarding", () => {
     // The real narrow case for this application. Every control must fit and
     // stay hittable at the boundary itself.
     await page.setViewportSize(NARROW_SUPPORTED);
-    await login(page);
     await page.goto("/system-management/onboard");
 
     await expect(page.getByRole("heading", { name: /where is this host/i })).toBeVisible();
@@ -200,7 +215,6 @@ test.describe("PRA-414 guided onboarding", () => {
 
   test("keyboard: the wizard is operable without a mouse", async ({ page }) => {
     await page.setViewportSize(DESKTOP);
-    await login(page);
     await page.goto("/system-management/onboard");
 
     const address = page.getByLabel("Address");
@@ -220,7 +234,6 @@ test.describe("PRA-414 guided onboarding", () => {
     // point at the old page. They must land here without losing what they were
     // carrying.
     await page.setViewportSize(DESKTOP);
-    await login(page);
 
     await page.goto("/system-management/register?hostname=web-01&ref=runbook");
     await page.waitForURL((u) => u.pathname.includes("/onboard"), {
@@ -238,7 +251,6 @@ test.describe("PRA-414 guided onboarding", () => {
 
   test("authorization is resolved before the form is shown", async ({ page }) => {
     await page.setViewportSize(DESKTOP);
-    await login(page);
     await page.goto("/system-management/onboard");
 
     await page.getByLabel("Address").fill("198.51.100.24");

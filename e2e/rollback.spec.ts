@@ -11,74 +11,103 @@
  * happy-path can be wired in a follow-up that seeds an approved
  * rollback via the backend API.
  *
- * Pre-requisites:
- *   - Prod-parity stack running via Caddy (bring it up with
- *     `--profile bundled --profile proxy`; Playwright targets E2E_BASE_URL,
- *     default https://localhost — see playwright.config.ts) with seeded
- *     auth (auth.setup.ts handles login).
- *   - At least one patch update plan visible from
- *     /patch-update-plans/all.
+ * Pre-requisites: the seeded synthetic fleet (e2e/README.md), which provides
+ * a plan with a succeeded execution.
  */
 
 import { test, expect } from "@playwright/test";
 
-test.describe("PRA-173 rollback panel", () => {
-  test("renders the rollback panel shell on a plan detail page when an execution exists", async ({
+import { adminApi } from "./support/api";
+import { API_BASE } from "./support/env";
+
+const SEEDED_PLAN = "Demo baseline patch plan";
+
+test.describe("rollback panel", () => {
+  const decoyName = `e2e-decoy-plan-${Date.now()}`;
+  let decoyId: number | null = null;
+
+  // A second plan with no execution is present so the spec has to select the
+  // seeded plan by name rather than take whatever link comes first.
+  test.beforeAll(async ({ playwright }) => {
+    const api = await adminApi(playwright);
+    try {
+      const policies = await api.get(`${API_BASE}/patch/policies`);
+      expect(policies.ok(), await policies.text()).toBeTruthy();
+      const body = await policies.json();
+      const rows: Array<{ id: number; name: string }> = Array.isArray(body)
+        ? body
+        : (body.items ?? []);
+      const policy = rows.find((p) => p.name === "Demo baseline patch policy");
+      expect(
+        policy,
+        "seeded patch policy is missing; run e2e/fixtures/seed-demo.sh",
+      ).toBeTruthy();
+      const created = await api.post(`${API_BASE}/patch/update-plans/dry-run`, {
+        data: { policy_id: policy!.id, name: decoyName },
+      });
+      expect(created.ok(), await created.text()).toBeTruthy();
+      decoyId = ((await created.json()) as { id: number }).id;
+    } finally {
+      await api.dispose();
+    }
+  });
+
+  test.afterAll(async ({ playwright }) => {
+    if (decoyId == null) return;
+    const api = await adminApi(playwright);
+    try {
+      const removed = await api.delete(
+        `${API_BASE}/patch/update-plans/${decoyId}`,
+      );
+      expect(removed.ok(), await removed.text()).toBeTruthy();
+      const gone = await api.get(`${API_BASE}/patch/update-plans/${decoyId}`);
+      expect(gone.status(), "decoy plan still present after teardown").toBe(404);
+    } finally {
+      await api.dispose();
+    }
+  });
+
+  test("the seeded plan with a succeeded execution offers rollback evaluation", async ({
     page,
   }) => {
-    // Open the plan list; pick the first plan with an execution.
-    // If no plan list URL is reachable in this environment, skip
-    // gracefully — the smoke spec is best-effort coverage rather
-    // than a hard fixture dependency.
-    const listResponse = await page.goto("/patch-update-plans/all");
-    if (!listResponse || listResponse.status() >= 400) {
-      test.skip(true, "patch-update-plans list unavailable in this env");
-    }
-
-    // Click the first plan row. The list page renders rows as
-    // <a href="/patch-update-plans/{id}">; find any such link.
-    const firstPlanLink = page
-      .locator('a[href^="/patch-update-plans/"]')
-      .first();
-    const linkCount = await firstPlanLink.count();
-    if (linkCount === 0) {
-      test.skip(true, "no patch update plans seeded in this env");
-    }
-    await firstPlanLink.click();
+    // The seeded fleet (see e2e/README.md) includes an approved plan with a
+    // succeeded execution and no rollback evaluation yet, so the panel must
+    // offer "Evaluate rollback". A missing plan, panel or control is a
+    // failure, not a skip.
+    await page.goto("/patch-update-plans/all");
+    await expect(page.getByText(decoyName)).toBeVisible({ timeout: 15_000 });
+    const seededLink = page.getByRole("link", { name: SEEDED_PLAN, exact: true });
+    await expect(seededLink).toBeVisible();
+    await seededLink.click();
     await expect(page).toHaveURL(/\/patch-update-plans\/\d+/);
+    await expect(
+      page.getByRole("heading", { name: SEEDED_PLAN }).first(),
+    ).toBeVisible();
 
-    // The rollback panel renders only once an execution exists. If
-    // the plan has no execution, the panel is hidden by design;
-    // skip rather than fail.
     const panel = page.getByTestId("rollback-panel");
-    if (!(await panel.isVisible().catch(() => false))) {
-      test.skip(true, "plan has no execution; rollback panel hidden");
+    await expect(panel).toBeVisible({ timeout: 15_000 });
+    await expect(panel.getByTestId("rollback-evaluate")).toBeVisible();
+    for (const id of [
+      "rollback-request-approval",
+      "rollback-vote-approve",
+      "rollback-vote-reject",
+      "rollback-start",
+      "rollback-dispatch-next",
+      "rollback-cancel",
+      "rollback-verify-due",
+    ]) {
+      await expect(panel.getByTestId(id)).toHaveCount(0);
     }
+  });
 
-    // Panel is visible — verify the data-testid contract the rest
-    // of the rollback workflow depends on. Exactly one of these
-    // buttons should be visible at a time (the panel state
-    // machine gates on rollback / approval / dispatch state).
-    const evaluate = panel.getByTestId("rollback-evaluate");
-    const requestApproval = panel.getByTestId("rollback-request-approval");
-    const voteApprove = panel.getByTestId("rollback-vote-approve");
-    const voteReject = panel.getByTestId("rollback-vote-reject");
-    const start = panel.getByTestId("rollback-start");
-    const dispatchNext = panel.getByTestId("rollback-dispatch-next");
-    const cancel = panel.getByTestId("rollback-cancel");
-    const verifyDue = panel.getByTestId("rollback-verify-due");
-
-    const counts = await Promise.all([
-      evaluate.count(),
-      requestApproval.count(),
-      voteApprove.count(),
-      voteReject.count(),
-      start.count(),
-      dispatchNext.count(),
-      cancel.count(),
-      verifyDue.count(),
-    ]);
-    const total = counts.reduce((a, b) => a + b, 0);
-    expect(total, "expected at least one rollback action button").toBeGreaterThan(0);
+  test("a plan without an execution does not show the rollback panel", async ({
+    page,
+  }) => {
+    expect(decoyId).not.toBeNull();
+    await page.goto(`/patch-update-plans/${decoyId}`);
+    await expect(page.getByText(decoyName).first()).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByTestId("rollback-panel")).toHaveCount(0);
   });
 });
