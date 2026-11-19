@@ -21,12 +21,18 @@ mints short-lived (1h) mTLS certs for agents. This service orchestrates:
     we still re-sign. Beyond grace, agent must re-enroll.
 
   * ``disable`` / ``enable`` — reversible operator pause. ``disabled``
-    refuses CSR renewal but the existing cert lives until its TTL
-    expires (max 1h).
+    refuses CSR renewal and, once committed, the broker refuses all new
+    work for the agent and evicts its live tunnel.
 
   * ``revoke`` — terminal. Status flips to ``revoked``, serial recorded
-    as the last-used identity. Existing tunnel must be killed by the
-    caller (PRA-151 will wire that into the tunnel registry).
+    as the last-used identity, and the live tunnel is evicted.
+
+Ordering for disable/revoke: the status commit is the authority and happens
+first, then the audit row, then the broker is signalled to evict. The signal
+is best effort and never undoes the commit: if it cannot be delivered the
+failure is audited and the broker converges on its own by re-reading the
+committed status (bounded by its revalidation interval). Callers that need to
+know can read ``last_eviction`` after the call.
 
 Every state transition emits an ``agent.*`` audit event via
 ``audit_event_service.safe_emit`` so cert lifecycle is captured in the
@@ -45,6 +51,7 @@ from cryptography.hazmat.primitives import serialization
 from sqlalchemy.orm import Session
 
 from ..db.models import System
+from .broker_client import EvictOutcome, signal_eviction
 from .vault_service import VaultConnectionError, VaultSecretError, VaultService
 
 logger = logging.getLogger(__name__)
@@ -76,6 +83,10 @@ class AgentIdentityService:
     def __init__(self, db: Session):
         self.db = db
         self.vault = VaultService(db)
+        # Outcome of the most recent eviction signal made by this instance
+        # (None until disable/revoke runs). ``delivered`` False means the
+        # broker has not confirmed convergence yet.
+        self.last_eviction: Optional[EvictOutcome] = None
 
     # ------------------------------------------------------------------ helpers
 
@@ -286,6 +297,7 @@ class AgentIdentityService:
             actor_user_id=actor_user_id,
             context={"reason": reason},
         )
+        self._evict_live_session(system.id, "disabled", actor_user_id)
         return system
 
     def enable(self, system_id: int, actor_user_id: Optional[int] = None) -> System:
@@ -309,11 +321,14 @@ class AgentIdentityService:
         reason: str,
         actor_user_id: Optional[int] = None,
     ) -> System:
-        """Terminal revoke. {active,disabled} -> revoked. Existing tunnel
-        is the caller's responsibility to terminate (PRA-151)."""
+        """Terminal revoke. {active,disabled} -> revoked, then evict the
+        live tunnel (see the module docstring for ordering)."""
         system = self._load_system(system_id)
         if system.agent_status == "revoked":
-            return system  # idempotent
+            # Idempotent, and a safe retry for an eviction signal that was
+            # lost the first time.
+            self._evict_live_session(system.id, "revoked", actor_user_id)
+            return system
         if system.agent_status == "not_enrolled":
             raise AgentIdentityError("Cannot revoke a never-enrolled system")
         prior_serial = system.agent_cert_serial
@@ -333,7 +348,44 @@ class AgentIdentityService:
             actor_user_id=actor_user_id,
             context={"reason": reason, "serial_number": prior_serial},
         )
+        self._evict_live_session(system.id, "revoked", actor_user_id)
         return system
+
+    def _evict_live_session(
+        self, system_id: int, reason: str, actor_user_id: Optional[int]
+    ) -> EvictOutcome:
+        """Post-commit: ask the broker to evict the live tunnel.
+
+        Never raises and never rolls anything back. A delivery failure is
+        recorded as ``agent.tunnel.evict_failed`` so an operator can see that
+        the live session has not been confirmed gone.
+        """
+        try:
+            outcome = signal_eviction(system_id, reason)
+        except Exception as exc:  # pylint: disable=broad-except
+            outcome = EvictOutcome(delivered=False, error=type(exc).__name__)
+        self.last_eviction = outcome
+        if not outcome.delivered:
+            logger.warning(
+                "agent %s committed for system %s but eviction was not delivered (%s)",
+                reason,
+                system_id,
+                outcome.error,
+            )
+            system = self.db.query(System).filter(System.id == system_id).first()
+            if system is not None:
+                self._audit(
+                    "agent.tunnel.evict_failed",
+                    outcome="failure",
+                    system=system,
+                    actor_user_id=actor_user_id,
+                    context={
+                        "reason": reason,
+                        "error": outcome.error,
+                        "convergence": "broker re-reads identity status periodically",
+                    },
+                )
+        return outcome
 
     def is_serial_active(self, serial: str) -> bool:
         """Tunnel-admission gate (PRA-151): True iff a System currently has

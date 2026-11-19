@@ -253,6 +253,7 @@ def _register_healthy_agent(registry: AgentRegistry, system_id: int) -> None:
         identity=MagicMock(),
         capabilities=["exec", "facts"],
         agent_version="fake-0.1",
+        authorize=lambda: None,
     )
     now = time.monotonic()
     entry.last_recv_monotonic = now
