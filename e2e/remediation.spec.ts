@@ -24,14 +24,20 @@
  */
 import { test, expect } from "@playwright/test";
 
+import { adminApi } from "./support/api";
+import { API_BASE } from "./support/env";
+import { openWorkspace } from "./support/navigation";
+
 test.describe("Compliance Remediation read-only surface", () => {
-  test("Compliance nav exposes the Remediation entry", async ({ page }) => {
+  test("Verify workspace exposes the Compliance Remediation entry", async ({
+    page,
+  }) => {
     await page.goto("/");
-    await page
-      .getByRole("button", { name: "Compliance", exact: true })
-      .click();
+    await openWorkspace(page, "Verify");
     await expect(
-      page.getByRole("link", { name: "Remediation", exact: true }),
+      page
+        .getByRole("group", { name: "Verify navigation" })
+        .getByRole("link", { name: "Compliance Remediation", exact: true }),
     ).toBeVisible();
   });
 
@@ -46,10 +52,12 @@ test.describe("Compliance Remediation read-only surface", () => {
     // The disclaimer copy is part of the slice locks — it explains
     // why no mutation controls are visible.
     const body = await page.textContent("body");
-    expect((body ?? "").toLowerCase()).toContain(
-      "praxis does not execute remediation today",
+    const text = (body ?? "").toLowerCase();
+    expect(text).toContain("rolls up compliance remediation requests");
+    expect(text).toContain(
+      "dispatch is the only control that can reach a host",
     );
-    expect((body ?? "").toLowerCase()).toContain("later pra-177 slice");
+    expect(text).toContain("backend readiness gate");
   });
 
   test("read-only remediation page exposes no mutation controls", async ({
@@ -103,15 +111,29 @@ test.describe("Compliance Remediation read-only surface", () => {
 
   test("per-host remediation inventory page renders all five sections", async ({
     page,
+    playwright,
   }) => {
-    // The per-host inventory should render its five bounded sections
-    // even when the host has no remediation activity yet. The page
-    // accepts any numeric id; missing-host 404s are a server-side
-    // concern handled by the backend.
-    await page.goto("/compliance/systems/1/remediation");
+    // The per-host inventory renders its five bounded sections for a seeded
+    // host that has no remediation activity of its own. Uses the synthetic
+    // fleet (e2e/README.md); the host id is looked up, never assumed.
+    const api = await adminApi(playwright);
+    const res = await api.get(`${API_BASE}/systems/all`);
+    expect(res.ok()).toBeTruthy();
+    const body = await res.json();
+    const rows: Array<{ id: number; hostname: string }> = Array.isArray(body)
+      ? body
+      : (body.items ?? []);
+    await api.dispose();
+    const host = rows.find((r) => r.hostname === "demo-db-01");
+    expect(
+      host,
+      "demo-db-01 is not seeded; run e2e/fixtures/seed-demo.sh",
+    ).toBeTruthy();
+
+    await page.goto(`/compliance/systems/${host!.id}/remediation`);
     await page.waitForLoadState("networkidle");
     await expect(
-      page.getByRole("heading", { name: /System #1 Remediation/ }),
+      page.getByRole("heading", { name: /demo-db-01 Remediation/ }),
     ).toBeVisible({ timeout: 10_000 });
     for (const section of [
       "Open requests",
@@ -306,8 +328,8 @@ test.describe("Slice 2 — request lifecycle mutation UI", () => {
       page.getByRole("button", { name: /Remediate/i }).first(),
     ).toBeVisible({ timeout: 10_000 });
     // Pass and error rows render disabled explanatory labels.
-    await expect(page.getByText(/Pass — no action/)).toBeVisible();
-    await expect(page.getByText(/Error — re-evaluate first/)).toBeVisible();
+    await expect(page.getByText(/Pass - no action/)).toBeVisible();
+    await expect(page.getByText(/Error - re-evaluate first/)).toBeVisible();
     // And there is no active CTA inside the not-applicable label.
     await expect(
       page
@@ -677,7 +699,9 @@ test.describe("Slice 3 — plan build / refresh / acknowledge UI", () => {
     await expect(ack).toBeVisible({ timeout: 10_000 });
     await expect(ack).toBeDisabled();
     await expect(
-      page.getByText(/plan is superseded by a newer current plan/i),
+      page.getByText(
+        /^Acknowledge unavailable: Plan is superseded by a newer current plan\.$/,
+      ),
     ).toBeVisible();
   });
 });

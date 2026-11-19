@@ -19,23 +19,24 @@
 
 import { test, expect } from "@playwright/test";
 
+import { API_BASE, EXPECTED_EDITION } from "./support/env";
+import { openWorkspace } from "./support/navigation";
+
 test.describe("Compliance navigation + dashboard", () => {
-  test("sidebar exposes the Compliance group", async ({ page }) => {
+  test("Verify workspace exposes the compliance destinations", async ({
+    page,
+  }) => {
     await page.goto("/");
-    // The Compliance dropdown button appears in the top nav and
-    // expanding it surfaces the Dashboard link.
-    await page
-      .getByRole("button", { name: "Compliance", exact: true })
-      .click();
-    await expect(
-      page.getByRole("link", { name: "Dashboard", exact: true }),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("link", { name: "Policies", exact: true }),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("link", { name: "Starter Pack", exact: true }),
-    ).toBeVisible();
+    await openWorkspace(page, "Verify");
+    const group = page.getByRole("group", { name: "Verify navigation" });
+    for (const label of [
+      "Compliance Dashboard",
+      "Compliance Policies",
+      "Compliance Remediation",
+      "Compliance Starter Pack",
+    ]) {
+      await expect(group.getByRole("link", { name: label, exact: true })).toBeVisible();
+    }
   });
 
   test("compliance dashboard renders without 404", async ({ page }) => {
@@ -57,17 +58,33 @@ test.describe("Compliance navigation + dashboard", () => {
     expect((body ?? "").toLowerCase()).not.toContain("compliance failure");
   });
 
-  test("export buttons are direct GET <a> tags", async ({ page }) => {
+  test("free edition shows the evidence export as locked", async ({ page }) => {
+    test.skip(
+      EXPECTED_EDITION !== "free",
+      "E2E_EDITION=paid: the locked state is not rendered on a licensed stack",
+    );
     await page.goto("/compliance");
     await page.waitForLoadState("networkidle");
-    const jsonlLink = page.getByRole("link", { name: /Export JSONL/i });
-    const csvLink = page.getByRole("link", { name: /Export CSV/i });
-    // Admin user from auth.setup.ts, so the export CTAs must render.
-    await expect(jsonlLink).toBeVisible();
-    await expect(csvLink).toBeVisible();
-    // Direct GET hrefs against the streaming export endpoints (no
-    // JS fetch-into-memory). Asserts the slice's "browser handles
-    // the download" lock.
+    const locked = page.getByRole("button", { name: /Export evidence \(Pro\)/ });
+    await expect(locked).toBeVisible();
+    await expect(locked).toBeDisabled();
+    await expect(page.getByRole("link", { name: /^(JSONL|CSV)$/ })).toHaveCount(0);
+  });
+
+  test("licensed edition exports evidence through direct GET <a> tags", async ({
+    page,
+  }) => {
+    test.skip(
+      EXPECTED_EDITION !== "paid",
+      "requires a licensed stack with compliance.bulk_exports (set E2E_EDITION=paid)",
+    );
+    await page.goto("/compliance");
+    await page.waitForLoadState("networkidle");
+    await page.getByRole("button", { name: /^Export evidence$/ }).click();
+    const jsonlLink = page.getByRole("link", { name: "JSONL", exact: true });
+    const csvLink = page.getByRole("link", { name: "CSV", exact: true });
+    // Direct GET hrefs against the streaming export endpoints: the browser
+    // handles the download, not a fetch into page memory.
     await expect(jsonlLink).toHaveAttribute(
       "href",
       /\/api\/backend\/compliance\/exports\/evidence\.jsonl/,
@@ -75,6 +92,17 @@ test.describe("Compliance navigation + dashboard", () => {
     await expect(csvLink).toHaveAttribute(
       "href",
       /\/api\/backend\/compliance\/exports\/evidence\.csv/,
+    );
+  });
+
+  test("the edition under test matches E2E_EDITION", async ({ request }) => {
+    const res = await request.get(`${API_BASE}/edition`);
+    expect(res.ok()).toBeTruthy();
+    const edition = (await res.json()) as {
+      entitlements: Record<string, boolean>;
+    };
+    expect(edition.entitlements["compliance.bulk_exports"] === true).toBe(
+      EXPECTED_EDITION === "paid",
     );
   });
 });
@@ -86,7 +114,7 @@ test.describe("Compliance policies list + detail", () => {
     await page.goto("/compliance/policies");
     await page.waitForLoadState("networkidle");
     await expect(
-      page.getByRole("heading", { name: "Compliance Policies" }),
+      page.getByRole("heading", { name: "Compliance Policies", exact: true }),
     ).toBeVisible({ timeout: 10_000 });
     // Origin filter (built-in / custom / all) is the P2 fix surface.
     await expect(page.getByText("Origin", { exact: false })).toBeVisible();
@@ -125,7 +153,7 @@ test.describe("Compliance policy detail typed-check form + filters", () => {
     expect(res.ok()).toBeTruthy();
   });
 
-  test("typed check form surfaces the PRA-166 deferred warning for file kinds", async ({ page }) => {
+  test("typed check form warns that file kinds need probe evidence", async ({ page }) => {
     await page.goto("/compliance/policies");
     await page.waitForLoadState("networkidle");
 
@@ -150,28 +178,49 @@ test.describe("Compliance policy detail typed-check form + filters", () => {
     // The Kind <select> is the third Field labelled "Kind". Use
     // getByLabel for resilience against future re-orderings.
     await page.getByLabel("Kind").selectOption("file_exists");
-    await expect(page.getByText(/deferred to PRA-166/i)).toBeVisible();
+    await expect(
+      page.getByText(/File and command checks require probe evidence/i),
+    ).toBeVisible();
   });
 
-  test("evidence filter wires through to the export hrefs", async ({ page }) => {
+  async function openFirstPolicyEvidence(page: import("@playwright/test").Page) {
     await page.goto("/compliance/policies");
     await page.waitForLoadState("networkidle");
-
-    const firstLink = page.locator("a[href^='/compliance/policies/']").first();
-    await firstLink.click();
+    await page.locator("a[href^='/compliance/policies/']").first().click();
     await page.waitForLoadState("networkidle");
-
-    // Switch to the Evidence tab.
     await page.getByRole("tab", { name: "Evidence" }).click();
-
-    // Pick "fail" verdict + a specific System ID; both filters must
-    // travel into the export hrefs (otherwise the CSV/JSONL download
-    // would not honor what the operator is looking at).
+    // Pick "fail" verdict + a specific System ID.
     await page.getByLabel("Verdict").selectOption("fail");
     await page.getByLabel("System ID").fill("42");
+  }
 
-    const jsonl = page.getByRole("link", { name: /JSONL/i });
-    const csv = page.getByRole("link", { name: /CSV/i });
+  test("free edition keeps the evidence export locked while filtering", async ({
+    page,
+  }) => {
+    test.skip(
+      EXPECTED_EDITION !== "free",
+      "E2E_EDITION=paid: the locked state is not rendered on a licensed stack",
+    );
+    await openFirstPolicyEvidence(page);
+    await expect(
+      page.getByRole("button", { name: /Export evidence \(Pro\)/ }),
+    ).toBeDisabled();
+  });
+
+  test("licensed edition carries evidence filters into the export hrefs", async ({
+    page,
+  }) => {
+    test.skip(
+      EXPECTED_EDITION !== "paid",
+      "requires a licensed stack with compliance.bulk_exports (set E2E_EDITION=paid)",
+    );
+    await openFirstPolicyEvidence(page);
+    await page.getByRole("button", { name: /^Export evidence$/ }).click();
+
+    // Both filters must travel into the export hrefs, otherwise the download
+    // would not honor what the operator is looking at.
+    const jsonl = page.getByRole("link", { name: "JSONL", exact: true });
+    const csv = page.getByRole("link", { name: "CSV", exact: true });
     await expect(jsonl).toHaveAttribute("href", /verdict=fail/);
     await expect(jsonl).toHaveAttribute("href", /system_id=42/);
     await expect(csv).toHaveAttribute("href", /verdict=fail/);

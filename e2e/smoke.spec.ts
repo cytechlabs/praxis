@@ -9,26 +9,8 @@
 
 import { test, expect } from "@playwright/test";
 
-const ADMIN_USER = process.env.E2E_USERNAME ?? "admin";
-const ADMIN_PASS = process.env.E2E_PASSWORD ?? "admin";
-
-// ── Helpers ─────────────────────────────────────────────────────────────
-
-/** Open a workspace drawer and select one of its destinations. */
-async function navigateViaWorkspace(
-  page: import("@playwright/test").Page,
-  workspaceLabel: string,
-  itemLabel: string,
-) {
-  await page
-    .getByRole("navigation", { name: "Workspaces" })
-    .getByRole("button", { name: workspaceLabel, exact: true })
-    .click();
-  await page
-    .getByRole("group", { name: `${workspaceLabel} navigation` })
-    .getByRole("link", { name: itemLabel, exact: true })
-    .click();
-}
+import { ADMIN_USER, adminPassword } from "./support/env";
+import { navigateViaWorkspace } from "./support/navigation";
 
 // ── Auth (no storageState — tests against unauthenticated browser) ──────
 
@@ -54,7 +36,7 @@ test.describe("Authentication", () => {
   test("login with valid credentials lands on dashboard", async ({ page }) => {
     await page.goto("/login");
     await page.fill("#username", ADMIN_USER);
-    await page.fill("#password", ADMIN_PASS);
+    await page.fill("#password", adminPassword());
     await page.click('button[type="submit"]');
     await expect(
       page.getByRole("heading", {
@@ -164,13 +146,16 @@ test.describe("Credential CRUD", () => {
 // ── System pages (pre-authenticated) ────────────────────────────────────
 
 test.describe("System pages", () => {
-  test("register page loads with form fields", async ({ page }) => {
+  test("the retired register page forwards into the Add a system wizard", async ({
+    page,
+  }) => {
     await page.goto("/system-management/register");
-    await page.waitForLoadState("networkidle");
-    await expect(page.locator('input[name="hostname"]')).toBeVisible();
-    await expect(page.locator('input[name="ip_address"]')).toBeVisible();
-    await expect(page.locator('select[name="distro_id"]')).toBeVisible();
-    await expect(page.locator('select[name="credentials_id"]')).toBeVisible();
+    await page.waitForURL("**/system-management/onboard", { timeout: 10_000 });
+    await expect(
+      page.getByRole("heading", { name: /where is this host/i }),
+    ).toBeVisible();
+    // The retired single-page form must not render.
+    await expect(page.locator('input[name="hostname"]')).toHaveCount(0);
   });
 
   test("all-systems page renders its inventory state", async ({ page }) => {
