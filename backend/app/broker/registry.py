@@ -18,7 +18,7 @@ import asyncio
 import logging
 import time
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Callable, Dict, List, Optional
 
 from websockets.legacy.server import WebSocketServerProtocol
 
@@ -47,6 +47,21 @@ class TunnelEntry:
     last_recv_monotonic: float = field(default_factory=time.monotonic)
     last_heartbeat_sent_monotonic: float = 0.0
     last_db_write_monotonic: float = 0.0
+    # Re-reads the committed identity state for THIS session's certificate.
+    # Returns None when the identity is still authorized, otherwise a short
+    # reason code. Synchronous (it touches the database), so callers run it
+    # off the event loop. ``None`` (tests, tunnels built without a validator)
+    # means no authority gate.
+    authorize: Optional[Callable[[], Optional[str]]] = None
+    # Set synchronously, before any await, when eviction begins. Dispatch
+    # re-checks it under the manager lock and the per-tunnel send lock, which
+    # is what orders eviction against a concurrent dispatch.
+    evicted: bool = False
+    evict_reason: Optional[str] = None
+    evict_task: Optional["asyncio.Task"] = None
+    # Serialises op_request/op_nonce/op_cancel writes so an op_cancel can
+    # never overtake the op_request it refers to.
+    send_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
 
 class AgentRegistry:

@@ -211,9 +211,15 @@ peer dead after 90s of silence and tears down.
   "op_type": "exec",
   "params": {"cmd": "uname -a", "timeout_s": 30},
   "transport": "per_op_wss",
-  "nonce_expires_in_s": 30
+  "nonce_expires_in_s": 30,
+  "await_ready": true
 }
 ```
+
+`await_ready` is optional. When it is `true` the agent must not start any
+work for the operation until the broker sends `op_ready` on the per-op
+WSS (see [Start gate](#start-gate)). An agent that does not know the field
+ignores it and behaves as before.
 
 `transport` for v1 is always `per_op_wss`. The nonce itself is delivered
 in a separate message immediately after, allowing the broker to compute
@@ -233,7 +239,8 @@ without restating the whole op.)
 {"type": "op_cancel", "operation_id": 12345, "reason": "user requested"}
 ```
 Agent terminates the op and sends `op_complete` with
-`outcome: "cancelled"`.
+`outcome: "cancelled"`. For a process-backed op the agent adds a
+`termination` field; see [Termination reporting](#termination-reporting).
 
 #### Operation complete (agent → backend)
 
@@ -281,10 +288,11 @@ Other side acknowledges by closing.
    expiry, system_id mismatch, or already-redeemed.
 4. Agent sends first message on the new WSS:
    ```json
-   {"type": "op_attach", "operation_id": 12345}
+   {"type": "op_attach", "operation_id": 12345, "await_ready": true}
    ```
    Backend confirms operation_id matches the redeemed nonce. Mismatch
-   closes the WSS with a protocol_violation error.
+   closes the WSS with a protocol_violation error. `await_ready` is
+   echoed only when the `op_request` carried it.
 5. After `op_attach`, all frames use the binary envelope above.
 6. Either side closes the WSS to end the op. Agent sends
    `op_complete` on the control WSS afterward.
@@ -300,6 +308,127 @@ Other side acknowledges by closing.
 Nonces stored server-side as **SHA-256 of the raw token**. The raw
 token only exists in transit (control WSS → agent → header). Logs
 record the hash, never the raw value.
+
+### Start gate
+
+When the agent echoed `await_ready` in `op_attach`, it starts nothing
+until the broker sends a text frame on the per-op WSS:
+
+```json
+{"type": "op_ready", "operation_id": 12345}
+```
+
+The broker re-reads the committed identity state immediately before it
+sends `op_ready`, and withholds it when the identity is no longer active,
+the session was evicted or replaced, or the op is already cancelling. A
+withheld start closes the per-op WSS; the agent reports
+`op_complete` with `error.reason: "op_not_authorized"` and
+`termination: "not_started"`. The agent waits at most 10 seconds for
+`op_ready`.
+
+Agents that predate the gate do not echo `await_ready`. For them the
+broker still refuses at dispatch and at the per-op handshake, but cannot
+hold the process back afterwards: a disable or revoke that commits after
+the per-op handshake does not prevent the process from starting. The
+eviction that follows cancels it, and because such an agent reports no
+`termination`, the outcome is `unconfirmed`. The start guarantee is
+therefore weaker for older agents and becomes complete once the agent is
+upgraded.
+
+### Disabling or revoking a live agent
+
+The committed identity row (`agent_status`, certificate serial and
+fingerprint) is the only authority. The order is fixed:
+
+1. The backend commits the status change and writes its audit row.
+2. The backend then signals the broker over the authenticated internal
+   API: `POST /internal/agent/sessions/{system_id}/evict` with
+   `{"reason": "disabled" | "revoked" | "not_active", "expected_session_id": "..."}`.
+3. The broker treats the signal as a hint. It re-reads the committed
+   state and does nothing when the identity is active again
+   (`not_evicted`), when the named session is no longer current
+   (`stale_session`), or when no session exists (`no_session`). A repeated
+   or concurrent signal for the same session joins the eviction already in
+   progress and reports its result (`evicted`), including while the
+   session is still draining.
+
+**New work.** Every dispatch (`exec`, file transfer, facts) re-reads the
+committed state before anything is sent to the agent. A non-active
+identity is refused with HTTP 403 `agent_not_active`; a state the broker
+cannot read is refused with `identity_unverifiable`. Neither falls back to
+SSH. Transport selection is unchanged: an agent-targeted action never
+runs over SSH, and `auto` selection keeps its existing rule that a
+tunnel that is down falls through to SSH.
+
+**Ordering against concurrent dispatch.** Eviction marks the session
+evicted before it takes any lock. A dispatch that reaches the send step
+afterwards sees the mark and sends nothing; one that sent first has its
+`op_request` delivered before the `op_cancel` for it, because both go out
+under one per-session send lock. An `op_cancel` is never sent for an
+operation the agent was not told about.
+
+**Bounded eviction.** The whole eviction has a hard deadline (10 seconds
+by default). Each step that waits on the peer is bounded separately: the
+send lock and the cancel write (2 s), the wait for acknowledgements (5 s),
+and the closing frame (2 s). Past a bound the socket is aborted and every
+operation that has not acknowledged is finished as `unconfirmed`. All
+per-operation data sockets share the one eviction deadline rather than
+each getting a fresh wait: once it expires, remaining data sockets are
+aborted without waiting. The deadline bounds transport waits only. The
+completion audit event and the status read are synchronous and are not
+cut short by it, so a slow database or audit sink can still lengthen the
+call beyond the deadline. Each completion audit event is recorded exactly
+once, before any socket wait, even if the deadline fires during cleanup. The
+session is fenced from the first instant and is never reported as
+`no_session` while it is still draining.
+
+**Missed or delayed signals.** Each tunnel session re-reads its own
+identity every 30 seconds and evicts itself when it is no longer active.
+A lost signal therefore converges within about 35 seconds (interval plus
+the acknowledgement window) with no help from the backend, and new
+dispatches are refused from the moment of the commit. An unreadable
+status refuses dispatch immediately; the session itself is evicted only
+after three consecutive unreadable results, so a status lookup that fails
+or times out (5 s bound) each round can keep a session up for roughly
+`3 x (30 s + 5 s)` before it is dropped.
+
+**What the API guarantees.** A successful disable or revoke response
+means the status change is committed. It does not mean the live tunnel is
+already closed. When the backend cannot deliver the signal, the commit
+stands, the failure is recorded as `agent.tunnel.evict_failed`, and the
+response still reports the committed status; the tunnel then converges
+through the periodic re-read above. The response does not currently carry
+the delivery result.
+
+#### Termination reporting
+
+For an operation interrupted by eviction, `op_complete` from the agent
+and the broker's own result use one vocabulary:
+
+| `termination` | Meaning |
+|---|---|
+| `confirmed` | The agent sent SIGKILL to the operation's process group and found no live member left (zombies ignored) within one second. |
+| `not_started` | No process was started for the operation. |
+| `unconfirmed` | Anything else: no acknowledgement in time, an agent that reports nothing, an unreadable or partly hidden process table, a failed signal, or members still alive. |
+| `not_applicable` | A non-process operation (broker only). |
+
+The agent reports `confirmed` only with evidence: the kernel says the
+group does not exist, or a complete scan of the process table accounts
+for every entry. An entry that cannot be read or parsed, hidden
+processes (non-root with `hidepid`), or a group the kernel says still
+exists but the scan cannot see all yield `unconfirmed`. A process that
+moved itself to another session or process group is outside both the kill
+and the check. The error `reason` is `agent_revoked` for `confirmed` and
+`not_started`, and `agent_revoked_unconfirmed` otherwise. A closed
+per-op socket is never evidence that a process stopped, and an
+operation that finished before the cancel stays a success. The platform
+never claims that changes a command already made on the host were
+undone.
+
+An acknowledgement is accepted only from the tunnel session the
+operation was dispatched on; a replacement session for the same host
+cannot complete or supply termination evidence for its predecessor's
+operations.
 
 ### Duplicate tunnel handling
 
@@ -424,5 +553,13 @@ events emit dedicated audit types:
 - ``agent.cert.revoked``
 - ``agent.disabled``
 - ``agent.enabled``
+- ``agent.tunnel.evicted`` (broker; reason, session, per-termination
+  operation counts, whether the deadline was exceeded)
+- ``agent.tunnel.evict_failed`` (backend; the eviction signal could not be
+  delivered)
+
+Operations interrupted by eviction reuse ``agent.op.completed`` with the
+reason ``agent_revoked`` or ``agent_revoked_unconfirmed`` and a
+``termination`` field.
 
 (Wired in later commits.)

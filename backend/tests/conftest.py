@@ -23,6 +23,25 @@ from sqlalchemy.orm import Session, sessionmaker
 
 
 @pytest.fixture(autouse=True)
+def _no_live_broker_eviction_signal(monkeypatch):
+    """Disabling or revoking an agent identity signals the broker over HTTP.
+
+    Tests that are not about that signal must not dial a real host, so the call
+    is replaced by one that reports a delivered no-op. The tests that cover the
+    signal replace this again (``agent_identity_service.signal_eviction``) or
+    call ``broker_client.signal_eviction`` directly with a mock transport.
+    """
+    from app.services import agent_identity_service
+    from app.services.broker_client import EvictOutcome
+
+    monkeypatch.setattr(
+        agent_identity_service,
+        "signal_eviction",
+        lambda *_a, **_k: EvictOutcome(delivered=True, result="no_session"),
+    )
+
+
+@pytest.fixture(autouse=True)
 def _default_entitlements():
     """PRA-132: default every test to the fully-entitled enterprise edition.
 
