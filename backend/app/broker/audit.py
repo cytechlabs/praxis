@@ -15,6 +15,11 @@ traffic are intentionally not audited):
     agent.tunnel.rejected          identity validation or handshake failed
     agent.tunnel.heartbeat_dead    tunnel torn down for receive silence
     agent.tunnel.cert_expired      cert NotAfter timer fired
+    agent.tunnel.evicted           session torn down because the identity is
+                                   no longer authorized (disabled, revoked,
+                                   changed); carries per-termination op counts
+    agent.tunnel.evict_failed      backend could not deliver the eviction
+                                   signal (emitted by the backend)
 
   Op
     agent.op.requested             backend created an op + issued nonce
@@ -47,6 +52,8 @@ TUNNEL_REPLACED = "agent.tunnel.replaced"
 TUNNEL_REJECTED = "agent.tunnel.rejected"
 TUNNEL_HEARTBEAT_DEAD = "agent.tunnel.heartbeat_dead"
 TUNNEL_CERT_EXPIRED = "agent.tunnel.cert_expired"
+TUNNEL_EVICTED = "agent.tunnel.evicted"
+TUNNEL_EVICT_FAILED = "agent.tunnel.evict_failed"
 
 # ---------- op actions ----------
 OP_REQUESTED = "agent.op.requested"

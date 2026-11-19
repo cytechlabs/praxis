@@ -34,6 +34,7 @@ def _entry(system_id: int = 42, age_seconds: float = 0.0) -> TunnelEntry:
         identity=MagicMock(),
         capabilities=["heartbeat"],
         agent_version="test",
+        authorize=lambda: None,
         connected_at_monotonic=now - 60.0,
         last_recv_monotonic=now - age_seconds,
     )

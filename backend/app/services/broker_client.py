@@ -319,6 +319,17 @@ class BrokerClient:
                 reason = "broker_timeout"
             await cm.__aexit__(None, None, None)
             raise BrokerError(reason, "pre-stream broker timeout")
+        if response.status_code == 403:
+            # Dispatch refused: agent identity is not authorized (or could
+            # not be confirmed). Surface the broker's reason, not http_403.
+            try:
+                payload = await response.aread()
+                err = json.loads(payload).get("error") or {}
+                reason = err.get("reason", "agent_not_active")
+            except Exception:  # pylint: disable=broad-except
+                reason = "agent_not_active"
+            await cm.__aexit__(None, None, None)
+            raise BrokerError(reason, "dispatch refused")
         if response.status_code == 502:
             # JSON error body — read it for the reason.
             try:
@@ -451,6 +462,72 @@ class BrokerClient:
             )
             self._owns_client = True
         return self._client
+
+
+# ---- identity eviction signal ----
+
+# The broker waits up to its ack window (5s) for in-flight ops before it
+# answers, so the read timeout must comfortably exceed that.
+EVICT_TIMEOUT = httpx.Timeout(connect=3.0, read=20.0, write=5.0, pool=3.0)
+
+
+@dataclass
+class EvictOutcome:
+    """Result of asking the broker to evict a live agent session.
+
+    ``delivered`` is True only when the broker answered 2xx. ``result`` is the
+    broker's verdict (``evicted``, ``no_session``, ``not_evicted``,
+    ``stale_session``). A failed delivery never raises: the identity change is
+    already committed and the broker converges on its own.
+    """
+
+    delivered: bool
+    result: Optional[str] = None
+    detail: Optional[dict] = None
+    error: Optional[str] = None
+
+
+def signal_eviction(
+    system_id: int,
+    reason: str,
+    *,
+    expected_session_id: Optional[str] = None,
+    base_url: Optional[str] = None,
+    client: Optional[httpx.Client] = None,
+) -> EvictOutcome:
+    """Synchronously ask the broker to evict ``system_id``'s live session.
+
+    Sync on purpose: the identity routes and service are synchronous. Carries
+    the same shared-secret header as every other internal call.
+    """
+    body: dict = {"reason": reason}
+    if expected_session_id is not None:
+        body["expected_session_id"] = expected_session_id
+    url = f"/internal/agent/sessions/{int(system_id)}/evict"
+    owns = client is None
+    http = client or httpx.Client(
+        base_url=(base_url or DEFAULT_BROKER_INTERNAL_URL).rstrip("/"),
+        timeout=EVICT_TIMEOUT,
+        headers=_auth_headers(),
+    )
+    try:
+        resp = http.post(url, json=body)
+    except httpx.HTTPError as exc:
+        logger.warning("eviction signal for system_id=%s failed: %s", system_id, exc)
+        return EvictOutcome(delivered=False, error=type(exc).__name__)
+    finally:
+        if owns:
+            http.close()
+    if resp.status_code >= 300:
+        logger.warning(
+            "eviction signal for system_id=%s rejected: http %s",
+            system_id,
+            resp.status_code,
+        )
+        return EvictOutcome(delivered=False, error=f"http_{resp.status_code}")
+    data = _safe_json(resp)
+    data = data if isinstance(data, dict) else {}
+    return EvictOutcome(delivered=True, result=data.get("result"), detail=data)
 
 
 # ---- op response shapes ----
