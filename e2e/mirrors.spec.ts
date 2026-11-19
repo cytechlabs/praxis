@@ -10,67 +10,50 @@
 
 import { test, expect } from "@playwright/test";
 
-// PRA-299: the backend publishes no direct host port on the prod-proxy stack; the
-// API is reached through Caddy + the Next proxy (/api/backend/*) at
-// https://localhost/api/backend. Override with PRAXIS_API_BASE for other topologies.
-const API_BASE = process.env.PRAXIS_API_BASE ?? "https://localhost/api/backend";
+import { adminApi } from "./support/api";
+import { API_BASE } from "./support/env";
 
-async function apiAuth(page: import("@playwright/test").Page): Promise<string> {
-  // Browser already has the auth cookies from auth.setup.ts; the
-  // backend exposes /auth/login that returns an access_token. We
-  // re-use that path to get a Bearer token for the API calls.
-  const username = process.env.E2E_USERNAME ?? "admin";
-  const password = process.env.E2E_PASSWORD ?? "admin";
-  const res = await page.request.post(`${API_BASE}/auth/login`, {
-    form: { username, password },
-  });
-  expect(res.ok(), await res.text()).toBeTruthy();
-  const body = (await res.json()) as { access_token: string };
-  return body.access_token;
-}
+
 
 test.describe("Mirrors UI smoke (PRA-157 #5)", () => {
   const slug = `e2e-mirror-${Date.now()}`;
   let mirrorId: number | null = null;
-  let token: string;
 
-  test.beforeAll(async ({ browser }) => {
-    const ctx = await browser.newContext();
-    const page = await ctx.newPage();
-    token = await apiAuth(page);
-
-    // Create the test mirror via API.
-    const res = await page.request.post(`${API_BASE}/mirrors`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      data: {
-        slug,
-        display_name: "E2E Smoke Mirror",
-        package_family: "deb",
-        upstream_url: "http://archive.ubuntu.com/ubuntu",
-        distribution: "jammy",
-        components: ["main"],
-        architectures: ["amd64"],
-        sync_schedule_cron: "0 2 * * *",
-      },
-    });
-    expect(res.ok(), await res.text()).toBeTruthy();
-    const body = (await res.json()) as { id: number };
-    mirrorId = body.id;
-    await ctx.close();
+  test.beforeAll(async ({ playwright }) => {
+    const api = await adminApi(playwright);
+    try {
+      // Create the test mirror via API.
+      const res = await api.post(`${API_BASE}/mirrors`, {
+        data: {
+          slug,
+          display_name: "E2E Smoke Mirror",
+          package_family: "deb",
+          upstream_url: "http://archive.ubuntu.com/ubuntu",
+          distribution: "jammy",
+          components: ["main"],
+          architectures: ["amd64"],
+          sync_schedule_cron: "0 2 * * *",
+        },
+      });
+      expect(res.ok(), await res.text()).toBeTruthy();
+      const body = (await res.json()) as { id: number };
+      mirrorId = body.id;
+    } finally {
+      await api.dispose();
+    }
   });
 
-  test.afterAll(async ({ browser }) => {
+  test.afterAll(async ({ playwright }) => {
     if (mirrorId == null) return;
-    const ctx = await browser.newContext();
-    const page = await ctx.newPage();
-    const t = await apiAuth(page);
-    await page.request.delete(`${API_BASE}/mirrors/${mirrorId}`, {
-      headers: { Authorization: `Bearer ${t}` },
-    });
-    await ctx.close();
+    const api = await adminApi(playwright);
+    try {
+      const removed = await api.delete(`${API_BASE}/mirrors/${mirrorId}`);
+      expect(removed.ok(), await removed.text()).toBeTruthy();
+      const gone = await api.get(`${API_BASE}/mirrors/${mirrorId}`);
+      expect(gone.status(), "mirror still present after teardown").toBe(404);
+    } finally {
+      await api.dispose();
+    }
   });
 
   test("list page shows the mirror", async ({ page }) => {
@@ -93,30 +76,27 @@ test.describe("Mirrors UI smoke (PRA-157 #5)", () => {
 
   test("sync-now button is disabled when source_mode=imported_offline", async ({
     page,
+    playwright,
   }) => {
     // Flip via API to validate disabled state in the UI.
-    const t = await apiAuth(page);
-    const flip = await page.request.patch(`${API_BASE}/mirrors/${mirrorId}`, {
-      headers: {
-        Authorization: `Bearer ${t}`,
-        "Content-Type": "application/json",
-      },
-      data: { source_mode: "imported_offline" },
-    });
-    expect(flip.ok(), await flip.text()).toBeTruthy();
+    const api = await adminApi(playwright);
+    try {
+      const flip = await api.patch(`${API_BASE}/mirrors/${mirrorId}`, {
+        data: { source_mode: "imported_offline" },
+      });
+      expect(flip.ok(), await flip.text()).toBeTruthy();
 
-    await page.goto(`/mirrors/${mirrorId}`);
-    const syncBtn = page.getByRole("button", { name: /sync now/i });
-    await expect(syncBtn).toBeVisible();
-    await expect(syncBtn).toBeDisabled();
-
-    // Flip back so other tests can use it.
-    await page.request.patch(`${API_BASE}/mirrors/${mirrorId}`, {
-      headers: {
-        Authorization: `Bearer ${t}`,
-        "Content-Type": "application/json",
-      },
-      data: { source_mode: "upstream_sync" },
-    });
+      await page.goto(`/mirrors/${mirrorId}`);
+      const syncBtn = page.getByRole("button", { name: /sync now/i });
+      await expect(syncBtn).toBeVisible();
+      await expect(syncBtn).toBeDisabled();
+    } finally {
+      // Flip back so other tests can use it.
+      const restore = await api.patch(`${API_BASE}/mirrors/${mirrorId}`, {
+        data: { source_mode: "upstream_sync" },
+      });
+      expect(restore.ok(), await restore.text()).toBeTruthy();
+      await api.dispose();
+    }
   });
 });
