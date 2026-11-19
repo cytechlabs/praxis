@@ -39,6 +39,19 @@ import (
 	"github.com/coder/websocket"
 )
 
+// opReadyTimeout bounds how long a gated op waits for the broker's op_ready
+// after op_attach. Nothing is started while waiting.
+const opReadyTimeout = 10 * time.Second
+
+// Termination values carried on op_complete for ops the broker cancelled.
+// The broker reports "confirmed" or "not_started" to operators only when the
+// agent says so; anything else is treated as unconfirmed.
+const (
+	terminationConfirmed   = "confirmed"
+	terminationNotStarted  = "not_started"
+	terminationUnconfirmed = "unconfirmed"
+)
+
 // DefaultOpPairTimeout is how long an unpaired op_request or op_nonce
 // is held before we drop it. Configurable for tests.
 const DefaultOpPairTimeout = 5 * time.Second
@@ -277,7 +290,7 @@ func (p *opPump) cancelOp(opID int) {
 func (p *opPump) sendCancelledForPending(opID int) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	msg := opOutcomeCancelled().toMessage(opID, 0)
+	msg := opOutcomeCancelledWith(terminationNotStarted).toMessage(opID, 0)
 	if err := p.sendCtl(ctx, msg); err != nil {
 		p.log.Printf("op=%d op_complete(cancelled) send failed: %v", opID, err)
 	}
@@ -286,11 +299,12 @@ func (p *opPump) sendCancelledForPending(opID int) {
 func (p *opPump) startOp(parent context.Context, opID int, request map[string]any, nonce string) {
 	opType, _ := request["op_type"].(string)
 	params, _ := request["params"].(map[string]any)
+	awaitReady, _ := request["await_ready"].(bool)
 	opCtx, cancel := context.WithCancel(parent)
 	p.mu.Lock()
 	p.active[opID] = &activeOp{cancel: cancel}
 	p.mu.Unlock()
-	go p.runOp(opCtx, opID, opType, nonce, params)
+	go p.runOp(opCtx, opID, opType, nonce, params, awaitReady)
 }
 
 func (p *opPump) finishActive(opID int) {
@@ -311,7 +325,7 @@ func (p *opPump) finishActive(opID int) {
 // inline result fields (facts payload, exit_code, etc.) would be
 // dropped. The unified defer below sends op_complete first, then closes
 // the per-op WSS — closing the race for every op_type, not just facts.
-func (p *opPump) runOp(ctx context.Context, opID int, opType, nonce string, params map[string]any) {
+func (p *opPump) runOp(ctx context.Context, opID int, opType, nonce string, params map[string]any, awaitReady bool) {
 	defer p.finishActive(opID)
 
 	start := time.Now()
@@ -354,14 +368,35 @@ func (p *opPump) runOp(ctx context.Context, opID int, opType, nonce string, para
 	conn.SetReadLimit(int64(DefaultMaxFramePayload + FrameHeaderSize + 1024))
 
 	// op_attach is JSON text per spec; subsequent frames are binary.
-	attach, _ := json.Marshal(map[string]any{
+	attachMsg := map[string]any{
 		"type":         "op_attach",
 		"operation_id": opID,
-	})
+	}
+	if awaitReady {
+		// Tell the broker this op is gated: nothing runs until op_ready.
+		attachMsg["await_ready"] = true
+	}
+	attach, _ := json.Marshal(attachMsg)
 	if err := conn.Write(ctx, websocket.MessageText, attach); err != nil {
 		p.log.Printf("op=%d op_attach send failed: %v", opID, err)
 		outcome = opOutcomeError("op_stream_closed")
 		return
+	}
+
+	// A broker that authorizes the start sends op_ready. Until then no
+	// process, file or fact collection exists, so a refusal (identity
+	// disabled or revoked between dispatch and attach) leaves nothing to
+	// stop. Brokers that predate the gate never set await_ready.
+	if awaitReady {
+		if err := awaitOpReady(ctx, conn); err != nil {
+			if ctx.Err() != nil {
+				outcome = opOutcomeCancelledWith(terminationNotStarted)
+				return
+			}
+			p.log.Printf("op=%d broker did not authorize start: %v", opID, err)
+			outcome = opOutcomeErrorWith("op_not_authorized", terminationNotStarted)
+			return
+		}
 	}
 
 	// Dispatch by op_type. Each handler owns its own bridge and is
@@ -386,9 +421,34 @@ func (p *opPump) runOp(ctx context.Context, opID int, opType, nonce string, para
 
 	// If ctx cancelled and the handler reported success/error from
 	// torn-down state, override with cancelled — op_cancel always wins.
-	if errors.Is(ctx.Err(), context.Canceled) && outcome.outcome != "error" {
+	// A handler that already reported cancelled keeps its own result, which
+	// may carry termination evidence.
+	if errors.Is(ctx.Err(), context.Canceled) &&
+		outcome.outcome != "error" && outcome.outcome != "cancelled" {
 		outcome = opOutcomeCancelled()
 	}
+}
+
+// awaitOpReady blocks for the broker's op_ready text frame on the per-op
+// socket. Any other first message, a close, or the timeout is a refusal.
+func awaitOpReady(ctx context.Context, conn *websocket.Conn) error {
+	readyCtx, cancel := context.WithTimeout(ctx, opReadyTimeout)
+	defer cancel()
+	mt, raw, err := conn.Read(readyCtx)
+	if err != nil {
+		return err
+	}
+	if mt != websocket.MessageText {
+		return errors.New("op_ready: expected a text frame")
+	}
+	var msg map[string]any
+	if err := json.Unmarshal(raw, &msg); err != nil {
+		return fmt.Errorf("op_ready: %w", err)
+	}
+	if t, _ := msg["type"].(string); t != "op_ready" {
+		return fmt.Errorf("op_ready: unexpected message type %q", t)
+	}
+	return nil
 }
 
 // runStub is the placeholder handler for op_types we don't implement
@@ -558,6 +618,23 @@ func opOutcomeSuccessExit(code int) opOutcome {
 func opOutcomeCancelled() opOutcome {
 	// exit_code intentionally nil per spec ("omitted or null").
 	return opOutcome{outcome: "cancelled"}
+}
+
+// opOutcomeCancelledWith reports a cancelled op together with what is known
+// about its process: terminationConfirmed (the process group was verified
+// gone), terminationNotStarted (nothing was ever started) or
+// terminationUnconfirmed.
+func opOutcomeCancelledWith(termination string) opOutcome {
+	return opOutcome{outcome: "cancelled", extra: map[string]any{"termination": termination}}
+}
+
+// opOutcomeErrorWith is opOutcomeError plus termination evidence.
+func opOutcomeErrorWith(reason, termination string) opOutcome {
+	return opOutcome{
+		outcome: "error",
+		error:   &opErr{Reason: reason},
+		extra:   map[string]any{"termination": termination},
+	}
 }
 
 func opOutcomeError(reason string) opOutcome {

@@ -19,6 +19,7 @@ Routes:
     POST /internal/agent/ops/exec              (slice #3a)
     POST /internal/agent/ops/file_get          (slice #3a)
     POST /internal/agent/ops/file_put          (slice #3a)
+    POST /internal/agent/sessions/{id}/evict   (identity revocation)
 
 PTY (WS endpoint) is intentionally NOT included — agent-backed
 PTY is deferred from PRA-153 #3 until effective_login switching is
@@ -41,6 +42,7 @@ from pydantic import BaseModel, Field
 
 from .internal_auth import INTERNAL_AUTH_HEADER, tokens_match
 from .ops import (
+    AgentNotAuthorized,
     ConcurrentOpsExceeded,
     NoActiveTunnel,
     NonceLimitExceeded,
@@ -143,6 +145,14 @@ class ExecRequest(BaseModel):
 
 class FactsRequest(BaseModel):
     system_id: int = Field(..., gt=0)
+
+
+class EvictRequest(BaseModel):
+    # Why the backend is asking. The broker still re-reads authority itself.
+    reason: str = Field(..., pattern="^(disabled|revoked|not_active)$")
+    # When set, only that tunnel session is eligible; a newer session for the
+    # same system is left alone.
+    expected_session_id: Optional[str] = Field(default=None, max_length=64)
 
 
 class FileGetRequest(BaseModel):
@@ -309,6 +319,20 @@ def _spawn_logged_cancel(cancel_fn, operation_id: int) -> None:
     asyncio.create_task(_run(), name=f"int_op_cancel_bg:{operation_id}")
 
 
+def _not_authorized_response(exc: AgentNotAuthorized) -> JSONResponse:
+    """Dispatch refused because the agent identity is not (or cannot be
+    confirmed) authorized. Distinct from ``transport_unavailable`` so callers
+    never mistake a revoked agent for a flaky tunnel and retry or fall back."""
+    reason = "identity_unverifiable" if exc.unverifiable else "agent_not_active"
+    return JSONResponse(
+        status_code=403,
+        content={
+            "outcome": "error",
+            "error": {"reason": reason, "detail": exc.code},
+        },
+    )
+
+
 def _outcome_json(op: Operation, **extra) -> dict:
     """Serialise op terminal state into the API response shape."""
     return {
@@ -426,6 +450,24 @@ def build_internal_app(
             "last_heartbeat_age_seconds": age,
         }
 
+    @app.post("/internal/agent/sessions/{system_id}/evict")
+    async def evict_session(system_id: int, req: EvictRequest) -> dict:
+        """Tear down the live tunnel for ``system_id`` and interrupt its ops.
+
+        The signal is advisory: the broker re-reads the committed identity
+        state and does nothing when the identity is authorized (a delayed or
+        repeated signal after re-enable). Idempotent per tunnel session.
+        Responds once in-flight ops have resolved or the ack window elapsed.
+        """
+        mgr: OperationManager = app.state.manager
+        if mgr is None:  # pragma: no cover - production wiring
+            raise HTTPException(500, "broker manager not initialised")
+        return await mgr.evict_system(
+            system_id,
+            reason=req.reason,
+            expected_session_id=req.expected_session_id,
+        )
+
     @app.get("/internal/logs")
     async def broker_logs(
         since_epoch: Optional[float] = None, limit: Optional[int] = None
@@ -472,6 +514,8 @@ def build_internal_app(
 
         try:
             op, _nonce = await mgr.create_and_dispatch(req.system_id, "exec", params)
+        except AgentNotAuthorized as exc:
+            return _not_authorized_response(exc)
         except NoActiveTunnel:
             return JSONResponse(
                 status_code=503,
@@ -615,6 +659,8 @@ def build_internal_app(
                 inbound_maxsize=4,
                 skip_terminal_sentinel=True,
             )
+        except AgentNotAuthorized as exc:
+            return _not_authorized_response(exc)
         except NoActiveTunnel:
             return JSONResponse(
                 status_code=503,
@@ -915,6 +961,8 @@ def build_internal_app(
             op, _nonce = await mgr.create_and_dispatch(
                 system_id, "file_put", params, outbound_maxsize=4
             )
+        except AgentNotAuthorized as exc:
+            return _not_authorized_response(exc)
         except NoActiveTunnel:
             return JSONResponse(
                 status_code=503,
@@ -1042,6 +1090,8 @@ def build_internal_app(
 
         try:
             op, _nonce = await mgr.create_and_dispatch(req.system_id, "facts", {})
+        except AgentNotAuthorized as exc:
+            return _not_authorized_response(exc)
         except NoActiveTunnel:
             return JSONResponse(
                 status_code=503,

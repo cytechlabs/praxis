@@ -44,7 +44,13 @@ from .audit import (
     emit_op_event,
     emit_tunnel_event,
 )
-from .ops import NonceExpired, NonceInvalid, OperationManager, OperationState
+from .ops import (
+    REASON_UNVERIFIABLE,
+    NonceExpired,
+    NonceInvalid,
+    OperationManager,
+    OperationState,
+)
 from .protocol import (
     CONTROL_WSS_MAX_MESSAGE_BYTES,
     DEFAULT_MAX_FRAME_PAYLOAD_BYTES,
@@ -76,6 +82,15 @@ REJECT_NOT_ACTIVE = "system_not_active"
 REJECT_FINGERPRINT_MISMATCH = "fingerprint_mismatch"
 REJECT_SERIAL_MISMATCH = "serial_mismatch"
 
+# How often a live tunnel re-reads its own identity state. This is the bound on
+# convergence when the backend's eviction signal is lost, and it does not depend
+# on heartbeat timing.
+REVALIDATE_INTERVAL_SECONDS = 30.0
+# Consecutive unverifiable status reads before the tunnel evicts itself. Every
+# dispatch is already refused while status is unreadable; this bounds how long
+# an in-flight op or an idle tunnel can outlive an unreadable status.
+UNVERIFIABLE_EVICT_AFTER = 3
+
 # Throttle DB writes for ``System.agent_last_seen_at`` so a chatty
 # heartbeat loop doesn't generate one UPDATE per peer per 30s.
 LAST_SEEN_DB_WRITE_THROTTLE_SECONDS = 60.0
@@ -102,6 +117,7 @@ async def tunnel_handler(
     heartbeat_interval_seconds: float = HEARTBEAT_INTERVAL_SECONDS,
     heartbeat_dead_seconds: float = HEARTBEAT_DEAD_SECONDS,
     last_seen_throttle_seconds: float = LAST_SEEN_DB_WRITE_THROTTLE_SECONDS,
+    revalidate_interval_seconds: float = REVALIDATE_INTERVAL_SECONDS,
 ) -> None:
     """Handle a /agent/tunnel WSS connection through to disconnect.
 
@@ -242,6 +258,7 @@ async def tunnel_handler(
         identity=identity,
         capabilities=accepted_caps,
         agent_version=hello["agent_version"],
+        authorize=_make_authorizer(identity_validator, identity),
     )
     displaced = await registry.register(entry)
 
@@ -298,6 +315,7 @@ async def tunnel_handler(
             manager=manager,
             audit_emit=audit_emit,
             facts_writer=facts_writer,
+            revalidate_interval_seconds=revalidate_interval_seconds,
         )
     finally:
         # Cleanup is scoped to OUR tunnel_session_id, never the
@@ -370,6 +388,7 @@ async def _run_lifecycle(
     manager: Optional[OperationManager] = None,
     audit_emit: AuditEmit = default_audit_emit,
     facts_writer=None,
+    revalidate_interval_seconds: float = REVALIDATE_INTERVAL_SECONDS,
 ) -> None:
     """Run all four loops concurrently until any one finishes; cancel the
     rest. Exceptions inside loops are logged and treated as terminating
@@ -402,6 +421,14 @@ async def _run_lifecycle(
     if expiry_task is not None:
         loops.append(expiry_task)
 
+    if manager is not None and entry.authorize is not None:
+        loops.append(
+            asyncio.create_task(
+                _revalidation_loop(entry, manager, revalidate_interval_seconds),
+                name=f"revalidate:{entry.system_id}",
+            )
+        )
+
     try:
         done, pending = await asyncio.wait(loops, return_when=asyncio.FIRST_COMPLETED)
         for task in done:
@@ -414,6 +441,71 @@ async def _run_lifecycle(
         await asyncio.gather(*pending, return_exceptions=True)
     except Exception:  # pylint: disable=broad-except
         logger.exception("tunnel lifecycle crashed system_id=%s", entry.system_id)
+
+
+def _make_authorizer(identity_validator, identity: PeerIdentity):
+    """Bind the handshake validator to one session's certificate identity.
+
+    The returned callable re-reads the committed identity state (same
+    validator, same checks as the handshake) and returns ``None`` when the
+    identity is still authorized or a reason code when it is not. It is
+    synchronous because the production validator queries the database; callers
+    run it off the event loop.
+    """
+
+    def _authorize() -> Optional[str]:
+        try:
+            accepted = identity_validator(identity)
+        except BrokerRejection as rej:
+            return rej.code
+        except Exception:  # pylint: disable=broad-except
+            logger.exception(
+                "identity re-validation failed system_id=%s", identity.system_id
+            )
+            return REASON_UNVERIFIABLE
+        return None if accepted is not None else REJECT_NOT_ACTIVE
+
+    return _authorize
+
+
+def _eviction_reason(code: str) -> str:
+    if code == REJECT_NOT_ACTIVE:
+        return "not_active"
+    if code in (REJECT_SERIAL_MISMATCH, REJECT_FINGERPRINT_MISMATCH):
+        return "identity_changed"
+    return code
+
+
+async def _revalidation_loop(
+    entry: TunnelEntry, manager: OperationManager, interval_seconds: float
+) -> None:
+    """Periodically re-read this session's identity state and evict the
+    session when it is no longer authorized.
+
+    This is the convergence guarantee for a lost or delayed eviction signal:
+    the session governs itself from the committed state rather than waiting to
+    be told. An unreadable status is refused at dispatch immediately; the loop
+    evicts only after ``UNVERIFIABLE_EVICT_AFTER`` consecutive failures so a
+    brief database blip does not drop the whole fleet.
+    """
+    unverifiable = 0
+    while True:
+        await asyncio.sleep(interval_seconds)
+        if entry.evicted:
+            return
+        code = await manager.authorize_tunnel(entry)
+        if code is None:
+            unverifiable = 0
+            continue
+        if code == REASON_UNVERIFIABLE:
+            unverifiable += 1
+            if unverifiable < UNVERIFIABLE_EVICT_AFTER:
+                continue
+            reason = "unverifiable"
+        else:
+            reason = _eviction_reason(code)
+        await manager.evict_tunnel(entry, reason=reason)
+        return
 
 
 async def _recv_loop(
@@ -477,7 +569,9 @@ async def _recv_loop(
         if msg_type == "heartbeat":
             continue
         if msg_type == "op_complete" and manager is not None:
-            await _route_op_complete(manager, entry.system_id, msg)
+            await _route_op_complete(
+                manager, entry.system_id, entry.tunnel_session_id, msg
+            )
             continue
         if msg_type == "facts_report":
             _route_facts_report(facts_writer, entry.system_id, msg)
@@ -510,7 +604,7 @@ def _route_facts_report(facts_writer, system_id: int, msg: dict) -> None:
 
 
 async def _route_op_complete(
-    manager: OperationManager, system_id: int, msg: dict
+    manager: OperationManager, system_id: int, tunnel_session_id: str, msg: dict
 ) -> None:
     op_id = msg.get("operation_id")
     if not isinstance(op_id, int):
@@ -519,9 +613,19 @@ async def _route_op_complete(
         )
         return
     op = manager.get(op_id)
-    if op is None or op.system_id != system_id:
+    if (
+        op is None
+        or op.system_id != system_id
+        or op.tunnel_session_id != tunnel_session_id
+    ):
+        # An acknowledgement (and its termination evidence) is only accepted
+        # from the tunnel session the op was dispatched on, not from a
+        # replacement for the same system.
         logger.warning(
-            "op_complete for unknown op=%s from system_id=%s", op_id, system_id
+            "op_complete for unknown op=%s from system_id=%s session=%s",
+            op_id,
+            system_id,
+            tunnel_session_id,
         )
         return
     outcome = str(msg.get("outcome") or "completed")
@@ -776,6 +880,34 @@ async def op_handler(
         )
         return
 
+    # ---------- start gate ----------
+    # A gated agent (it echoes ``await_ready`` in op_attach) starts nothing
+    # until op_ready arrives, so this is the point where a revoked identity is
+    # refused BEFORE any process exists. The broker re-reads authority here.
+    op.agent_gated = attach.get("await_ready") is True
+    if op.agent_gated:
+        if not await manager.confirm_start(op, ws):
+            if not op.revocation_reason:
+                # Never released: the agent was held at the gate, so no work
+                # started on its side. Recorded before the socket closes so
+                # the agent's own op_complete cannot win the report.
+                op.termination = "not_started"
+                op.revocation_reason = "not_active"
+            await _reject(ws, REJECT_NOT_ACTIVE, "start refused")
+            emit_op_event(
+                audit_emit,
+                OP_REJECTED,
+                system_id=identity.system_id,
+                operation_id=op.operation_id,
+                op_type=op.op_type,
+                outcome="denied",
+                reason="start_refused",
+            )
+            await manager.complete(
+                op.operation_id, outcome="error", error={"reason": "agent_not_active"}
+            )
+            return
+
     # ---------- bridge ----------
     op.attached_ws = ws
     logger.info(
@@ -802,12 +934,15 @@ async def op_handler(
         # them as success; clean exits become COMPLETED. The control
         # WSS may have already supplied a richer outcome via
         # op_complete.
-        if op.state not in {
+        if op.revocation_reason is None and op.state not in {
             OperationState.COMPLETED,
             OperationState.ERRORED,
             OperationState.CANCELLED,
             OperationState.EXPIRED,
         }:
+            # (An op interrupted by eviction is resolved only by the agent's
+            # own op_complete or the eviction deadline: a closed per-op socket
+            # is not evidence that the process stopped.)
             if bridge_error:
                 await manager.complete(
                     op.operation_id, outcome="error", error=bridge_error

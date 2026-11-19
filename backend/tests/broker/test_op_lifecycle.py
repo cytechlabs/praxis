@@ -142,6 +142,7 @@ def fake_registry_with_tunnel():
         identity=MagicMock(not_after=None),
         capabilities=[],
         agent_version="0.1.0",
+        authorize=lambda: None,
     )
     asyncio.get_event_loop().run_until_complete(reg.register(entry))
     return reg, ws
@@ -170,6 +171,7 @@ async def test_create_dispatches_op_request_and_op_nonce():
         identity=MagicMock(),
         capabilities=[],
         agent_version="0.1.0",
+        authorize=lambda: None,
     )
     await reg.register(entry)
 
@@ -208,6 +210,7 @@ async def test_redeem_succeeds_and_is_one_shot():
             identity=MagicMock(),
             capabilities=[],
             agent_version="0.1.0",
+            authorize=lambda: None,
         )
     )
     mgr = OperationManager(reg)
@@ -243,6 +246,7 @@ async def test_redeem_wrong_system_id_rejected():
             identity=MagicMock(),
             capabilities=[],
             agent_version="0.1.0",
+            authorize=lambda: None,
         )
     )
     mgr = OperationManager(reg)
@@ -273,6 +277,7 @@ async def test_redeem_after_ttl_expires():
             identity=MagicMock(),
             capabilities=[],
             agent_version="0.1.0",
+            authorize=lambda: None,
         )
     )
     mgr = OperationManager(reg, nonce_ttl_seconds=0.05)
@@ -304,6 +309,7 @@ async def test_reissue_invalidates_prior_nonce():
             identity=MagicMock(),
             capabilities=[],
             agent_version="0.1.0",
+            authorize=lambda: None,
         )
     )
     mgr = OperationManager(reg)
@@ -339,6 +345,7 @@ async def test_concurrent_ops_limit():
             identity=MagicMock(),
             capabilities=[],
             agent_version="0.1.0",
+            authorize=lambda: None,
         )
     )
     mgr = OperationManager(reg, max_concurrent_ops_per_agent=2)
@@ -1013,6 +1020,7 @@ async def test_complete_skips_inbound_sentinel_for_streaming_ops():
         identity=MagicMock(not_after=None),
         capabilities=[],
         agent_version="0.1.0",
+        authorize=lambda: None,
     )
     await reg.register(entry)
 

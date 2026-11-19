@@ -69,6 +69,7 @@ def _entry(ws: _RecordingWs, expires_in_seconds: float) -> TunnelEntry:
         identity=identity,
         capabilities=[],
         agent_version="1.0.0",
+        authorize=lambda: None,
     )
 
 
