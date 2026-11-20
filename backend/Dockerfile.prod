@@ -99,6 +99,18 @@ RUN groupadd --system --gid 1000 praxis \
 WORKDIR /app
 
 COPY --from=builder /opt/venv /opt/venv
+
+# The runtime image never installs packages, so drop the installer from both
+# interpreters (the venv copy and the base image's own). pip bundles private
+# copies of certifi, msgpack, urllib3 and pkg_resources that no application code
+# imports but that vulnerability scanners report as shipped components. All
+# installation happens in the builder stage.
+RUN /opt/venv/bin/python -m pip uninstall -y pip \
+ && /usr/local/bin/python -m pip uninstall -y pip \
+ && ! /opt/venv/bin/python -c "import pip" 2>/dev/null \
+ && ! /usr/local/bin/python -c "import pip" 2>/dev/null \
+ && ! find /usr/local /opt/venv -type d -path "*/pip/_vendor" | grep -q .
+
 COPY --from=builder /build/app /app/app
 COPY --from=builder /build/alembic.ini /app/
 COPY --from=builder /build/alembic /app/alembic
