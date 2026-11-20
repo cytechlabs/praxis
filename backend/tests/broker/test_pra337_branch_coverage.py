@@ -224,10 +224,10 @@ async def test_start_gate_refuses_when_eviction_lands_during_the_lookup():
     op = await _attached(manager, entry)
     lookups = []
 
-    def _authorized_but_evicted_meanwhile():
+    def _authorized_but_evicted_meanwhile() -> None:
+        # Returning None is how the read reports the identity authorized.
         lookups.append(1)
         entry.evicted = True  # the eviction commits while the read is in flight
-        return None  # the read itself still reports the identity authorized
 
     entry.authorize = _authorized_but_evicted_meanwhile  # type: ignore[assignment]
     per_op = _StubWs()
