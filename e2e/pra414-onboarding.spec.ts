@@ -1,6 +1,8 @@
+import { randomBytes } from "node:crypto";
+
 import { expect, test, type Page } from "@playwright/test";
 
-import { adminApi } from "./support/api";
+import { adminApi, postJsonUntraced } from "./support/api";
 import { API_BASE } from "./support/env";
 
 /**
@@ -54,22 +56,18 @@ test.describe("PRA-414 guided onboarding", () => {
   const credentialName = `e2e-onboard-${Date.now()}`;
   let credentialId: number | null = null;
 
-  test.beforeAll(async ({ playwright }) => {
-    const api = await adminApi(playwright);
-    try {
-      const res = await api.post(`${API_BASE}/credentials`, {
-        data: {
-          name: credentialName,
-          auth_method: "password",
-          username: "e2e-user",
-          password: "e2e-not-a-real-secret",
-        },
-      });
-      expect(res.ok(), await res.text()).toBeTruthy();
-      credentialId = ((await res.json()) as { id: number }).id;
-    } finally {
-      await api.dispose();
-    }
+  test.beforeAll(async () => {
+    // The password is a secret, so this request is issued outside Playwright:
+    // anything sent through its request contexts is recorded in the trace.
+    const res = await postJsonUntraced(`${API_BASE}/credentials`, {
+      name: credentialName,
+      auth_method: "password",
+      username: "e2e-user",
+      password: randomBytes(24).toString("hex"),
+    });
+    // The body is left out of the message: a validation error can echo the input.
+    expect(res.status, "credential creation failed").toBeLessThan(300);
+    credentialId = (JSON.parse(res.body) as { id: number }).id;
   });
 
   test.afterAll(async ({ playwright }) => {

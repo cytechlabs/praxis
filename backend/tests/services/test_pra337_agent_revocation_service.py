@@ -222,7 +222,8 @@ def test_signal_eviction_network_error_is_not_delivered_and_does_not_raise():
 
 def _transport(result=None, exc=None):
     class Fake:
-        async def exec(self, *a, **k):
+        @staticmethod
+        async def exec(*_a, **_k):
             if exc is not None:
                 raise exc
             return result
@@ -286,6 +287,33 @@ def test_file_get_refusal_keeps_the_broker_reason():
             return err.value
 
     assert asyncio.run(run()).reason == "agent_not_active"
+
+
+@pytest.mark.parametrize("body", [b"<html>gateway</html>", b"", b"[1, 2]"])
+def test_file_get_malformed_refusal_still_surfaces_agent_not_active(body):
+    exits = []
+
+    class _StreamCtx:
+        async def __aenter__(self):
+            return httpx.Response(403, content=body)
+
+        async def __aexit__(self, *exc):
+            exits.append(exc)
+
+    class _FakeClient:
+        @staticmethod
+        def stream(*_a, **_k):
+            return _StreamCtx()
+
+    async def run():
+        bc = BrokerClient(client=_FakeClient())  # type: ignore[arg-type]
+        with pytest.raises(BrokerError) as err:
+            await bc.file_get(5, "/etc/hostname")
+        return err.value
+
+    err = asyncio.run(run())
+    assert err.reason == "agent_not_active"
+    assert exits == [(None, None, None)]  # the refused response was released
 
 
 # ---------------------------------------------------------------------------
