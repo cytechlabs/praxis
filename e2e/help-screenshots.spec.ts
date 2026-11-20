@@ -68,8 +68,10 @@ const SHOTS: Shot[] = [
 /** Navigate and prove the page is the intended authenticated destination. */
 async function openExpectedPage(page: Page, shot: Shot): Promise<void> {
   const response = await page.goto(shot.path);
-  expect(response, `no response for ${shot.path}`).not.toBeNull();
-  expect(response!.status(), `${shot.path} did not load`).toBeLessThan(400);
+  if (response === null) {
+    throw new Error(`no response for ${shot.path}`);
+  }
+  expect(response.status(), `${shot.path} did not load`).toBeLessThan(400);
   await page.waitForLoadState("networkidle", { timeout: 15_000 });
   expect(new URL(page.url()).pathname, `${shot.path} ended elsewhere`).toBe(
     shot.finalPath ?? shot.path,

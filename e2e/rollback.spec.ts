@@ -38,12 +38,13 @@ test.describe("rollback panel", () => {
         ? body
         : (body.items ?? []);
       const policy = rows.find((p) => p.name === "Demo baseline patch policy");
-      expect(
-        policy,
-        "seeded patch policy is missing; run e2e/fixtures/seed-demo.sh",
-      ).toBeTruthy();
+      if (!policy) {
+        throw new Error(
+          "seeded patch policy is missing; run e2e/fixtures/seed-demo.sh",
+        );
+      }
       const created = await api.post(`${API_BASE}/patch/update-plans/dry-run`, {
-        data: { policy_id: policy!.id, name: decoyName },
+        data: { policy_id: policy.id, name: decoyName },
       });
       expect(created.ok(), await created.text()).toBeTruthy();
       decoyId = ((await created.json()) as { id: number }).id;
