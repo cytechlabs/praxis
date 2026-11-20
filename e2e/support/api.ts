@@ -3,7 +3,7 @@ import type {
   PlaywrightWorkerArgs,
 } from "@playwright/test";
 
-import { readFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { request as httpRequest } from "node:http";
 import { request as httpsRequest } from "node:https";
 
@@ -98,7 +98,7 @@ export async function postJsonUntraced(
       `refusing to send the session outside the API origin (${target.origin})`,
     );
   }
-  const saved = JSON.parse(readFileSync(STORAGE_STATE, "utf8")) as {
+  const saved = JSON.parse(await readFile(STORAGE_STATE, "utf8")) as {
     cookies?: SavedCookie[];
   };
   const cookie = sessionCookieFor(

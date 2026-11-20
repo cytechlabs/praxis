@@ -35,15 +35,15 @@ test.describe("session cookie domain matching", () => {
   });
 
   test("domain cookie matches the host and a subdomain", () => {
-    const c = cookie({ domain: ".app.example.test" });
-    expect(select(c, "https://app.example.test/x")).toBe(TOKEN);
-    expect(select(c, "https://sub.app.example.test/x")).toBe(TOKEN);
+    const domainCookie = cookie({ domain: ".app.example.test" });
+    expect(select(domainCookie, "https://app.example.test/x")).toBe(TOKEN);
+    expect(select(domainCookie, "https://sub.app.example.test/x")).toBe(TOKEN);
   });
 
   test("domain cookie is withheld from a suffix lookalike and a parent", () => {
-    const c = cookie({ domain: ".app.example.test" });
-    expect(select(c, "https://notapp.example.test/x")).toBe("");
-    expect(select(c, "https://example.test/x")).toBe("");
+    const domainCookie = cookie({ domain: ".app.example.test" });
+    expect(select(domainCookie, "https://notapp.example.test/x")).toBe("");
+    expect(select(domainCookie, "https://example.test/x")).toBe("");
   });
 });
 
