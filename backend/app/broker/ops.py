@@ -636,7 +636,7 @@ class OperationManager:
         try:
             await asyncio.wait_for(awaitable, timeout or self._evict_io_timeout)
             return True
-        except (asyncio.TimeoutError, ConnectionClosed, OSError):
+        except (ConnectionClosed, OSError):
             return False
 
     @staticmethod
@@ -787,8 +787,9 @@ class OperationManager:
         if not await self._bounded(_goodbye()):
             self._abort_ws(entry.ws)
 
+    @staticmethod
     async def _send_cancels(
-        self, entry: TunnelEntry, victims: List[Operation], reason: str
+        entry: TunnelEntry, victims: List[Operation], reason: str
     ) -> None:
         # op_cancel goes out under the tunnel send lock, after any op_request
         # that dispatch had already committed to sending.
@@ -814,9 +815,8 @@ class OperationManager:
                 entry.system_id,
             )
 
-    def _revocation_error(
-        self, op: Operation, outcome: str, error: Optional[dict]
-    ) -> dict:
+    @staticmethod
+    def _revocation_error(op: Operation, outcome: str, error: Optional[dict]) -> dict:
         """Error body for an op interrupted by eviction. The termination value
         is only ever ``confirmed`` / ``not_started`` when the agent said so (or
         the broker never sent the op); everything else is ``unconfirmed``."""

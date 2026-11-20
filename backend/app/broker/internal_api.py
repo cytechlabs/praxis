@@ -242,22 +242,14 @@ async def _drain_op_until_complete(
                 "op=%s aborted by caller cap; cancelling agent op",
                 op.operation_id,
             )
-            await cancel(op.operation_id)
-            try:
-                await asyncio.wait_for(op.completion, timeout=5.0)
-            except asyncio.TimeoutError:
-                pass
+            await _cancel_and_settle(cancel, op)
             break
         if await request.is_disconnected():
             logger.info(
                 "op=%s caller HTTP disconnected; cancelling agent op",
                 op.operation_id,
             )
-            await cancel(op.operation_id)
-            try:
-                await asyncio.wait_for(op.completion, timeout=5.0)
-            except asyncio.TimeoutError:
-                pass
+            await _cancel_and_settle(cancel, op)
             break
         if time.monotonic() > deadline:
             logger.warning(
@@ -265,11 +257,7 @@ async def _drain_op_until_complete(
                 op.operation_id,
                 cap_seconds,
             )
-            await cancel(op.operation_id)
-            try:
-                await asyncio.wait_for(op.completion, timeout=5.0)
-            except asyncio.TimeoutError:
-                pass
+            await _cancel_and_settle(cancel, op)
             break
         try:
             await asyncio.wait_for(
@@ -381,6 +369,642 @@ class _InternalAuthMiddleware:
 # -------- app builder --------
 
 
+def _manager_of(app: FastAPI) -> OperationManager:
+    mgr: Optional[OperationManager] = app.state.manager
+    if mgr is None:  # pragma: no cover - production wiring
+        raise HTTPException(500, "broker manager not initialised")
+    return mgr
+
+
+def _health_snapshot(registry: AgentRegistry, system_id: int) -> dict:
+    """Tunnel health for one system as the transport-selection layer sees it."""
+    entry = registry.get(system_id)
+    if entry is None:
+        return {
+            "system_id": system_id,
+            "state": "unregistered",
+            "tunnel_session_id": None,
+            "since_seconds": None,
+            "last_heartbeat_age_seconds": None,
+            # capabilities is the per-tunnel set the
+            # broker accepted at handshake. Returned here so the
+            # transport-selection layer can gate auto-mode fallback
+            # on whether the agent actually advertises the op_type
+            # the caller wants (facts, eventually pty/etc).
+            "capabilities": [],
+        }
+    now = time.monotonic()
+    age = now - entry.last_recv_monotonic
+    connected_age = now - entry.connected_at_monotonic
+    state = "healthy" if age <= HEARTBEAT_DEAD_SECONDS else "stale"
+    return {
+        "system_id": system_id,
+        "state": state,
+        "capabilities": list(entry.capabilities or []),
+        "tunnel_session_id": entry.tunnel_session_id,
+        "since_seconds": connected_age,
+        "last_heartbeat_age_seconds": age,
+    }
+
+
+_TRANSPORT_UNAVAILABLE = {
+    "outcome": "error",
+    "error": {"reason": "transport_unavailable"},
+}
+
+
+def _error_response(status: int, reason: str, **extra) -> JSONResponse:
+    """Bounded ``{"outcome": "error", "error": {"reason": ...}}`` response."""
+    return JSONResponse(
+        status_code=status,
+        content={"outcome": "error", "error": {"reason": reason, **extra}},
+    )
+
+
+async def _dispatch_and_attach(
+    mgr: OperationManager,
+    system_id: int,
+    op_type: str,
+    params: dict,
+    **dispatch_kwargs,
+) -> tuple[Optional[Operation], Optional[JSONResponse]]:
+    """Create + dispatch an op, then wait for the agent to attach.
+
+    Returns ``(op, None)`` once attached, or ``(None, response)`` with the
+    refusal to return to the caller. Authority is checked by the manager
+    inside ``create_and_dispatch``, before any frame is sent.
+    """
+    try:
+        op, _nonce = await mgr.create_and_dispatch(
+            system_id, op_type, params, **dispatch_kwargs
+        )
+    except AgentNotAuthorized as exc:
+        return None, _not_authorized_response(exc)
+    except NoActiveTunnel:
+        return None, JSONResponse(status_code=503, content=_TRANSPORT_UNAVAILABLE)
+    except (ConcurrentOpsExceeded, NonceLimitExceeded):
+        return None, _busy_response()
+
+    try:
+        await _wait_for_attach(op, ATTACH_TIMEOUT_SECONDS)
+    except asyncio.TimeoutError:
+        try:
+            await mgr.cancel(op.operation_id)
+        except OpNotFound:
+            pass
+        return None, _error_response(504, "agent_attach_timeout")
+    return op, None
+
+
+async def _cancel_and_settle(cancel, op: Operation) -> None:
+    """Cancel ``op`` and give its completion a bounded window to resolve."""
+    await cancel(op.operation_id)
+    try:
+        await asyncio.wait_for(op.completion, timeout=5.0)
+    except asyncio.TimeoutError:
+        pass
+
+
+async def _cancel_task(task: "asyncio.Task") -> None:
+    """Cancel ``task`` and swallow whatever it ends with."""
+    task.cancel()
+    try:
+        await task
+    except (asyncio.CancelledError, Exception):  # pylint: disable=broad-except
+        pass
+
+
+# -------- exec --------
+
+
+def _exec_params(req: ExecRequest) -> tuple[dict, float]:
+    """Dispatch params and the broker-side time cap for an exec request."""
+    params: dict = {"cmd": req.cmd, "args": req.args}
+    if req.cwd is not None:
+        params["cwd"] = req.cwd
+    if req.env is not None:
+        params["env"] = req.env
+    if req.timeout_s > 0:
+        params["timeout_s"] = req.timeout_s
+    # Cap timeout_s at the broker hard cap so a misconfigured
+    # caller can't drag us past it.
+    cap = (
+        min(req.timeout_s, EXEC_HARD_CAP_SECONDS)
+        if req.timeout_s > 0
+        else EXEC_HARD_CAP_SECONDS
+    )
+    return params, cap
+
+
+async def _push_exec_stdin(
+    mgr: OperationManager, op: Operation, stdin_b64: str
+) -> None:
+    """Forward caller-supplied stdin and CLOSE the channel."""
+    try:
+        stdin_bytes = base64.b64decode(stdin_b64)
+    except Exception:  # pylint: disable=broad-except
+        await mgr.cancel(op.operation_id)
+        raise HTTPException(400, "stdin_b64 not valid base64")
+    await op.outbound.put(
+        Frame(op=FrameOp.DATA, channel=Channel.STDIN, flags=0, payload=stdin_bytes)
+    )
+    await op.outbound.put(
+        Frame(op=FrameOp.CLOSE, channel=Channel.STDIN, flags=0, payload=b"")
+    )
+
+
+class _ExecCapture:
+    """Bounded stdout/stderr accumulator for an exec op."""
+
+    def __init__(self) -> None:
+        self.stdout: list[bytes] = []
+        self.stderr: list[bytes] = []
+        self.total = 0
+        self.exceeded = asyncio.Event()
+
+    def accumulate(self, frame: Frame) -> None:
+        if frame.op != FrameOp.DATA:
+            return
+        if frame.channel == Channel.STDOUT:
+            chunks = self.stdout
+        elif frame.channel == Channel.STDERR:
+            chunks = self.stderr
+        else:
+            return
+        # Bound captured output. Once over the cap, stop
+        # appending (so memory can't grow past ~cap + one in-flight frame)
+        # and signal the drain loop to cancel the agent op early.
+        if self.exceeded.is_set():
+            return
+        payload = bytes(frame.payload)
+        self.total += len(payload)
+        if self.total > EXEC_OUTPUT_MAX_BYTES:
+            self.exceeded.set()
+            return
+        chunks.append(payload)
+
+
+def _exec_result(op: Operation, capture: _ExecCapture) -> dict:
+    # exit_code + duration_ms travel as TOP-LEVEL fields on the
+    # agent's op_complete --
+    # _route_op_complete in handlers.py captures them into
+    # op.result_metadata. Reading from op.error here would only
+    # work for outcomes the agent considers errors.
+    meta = op.result_metadata or {}
+    return {
+        "outcome": op.outcome or "error",
+        "operation_id": op.operation_id,
+        "exit_code": meta.get("exit_code") if op.outcome == "success" else None,
+        "stdout_b64": base64.b64encode(b"".join(capture.stdout)).decode("ascii"),
+        "stderr_b64": base64.b64encode(b"".join(capture.stderr)).decode("ascii"),
+        "duration_ms": meta.get("duration_ms"),
+        "error": op.error if op.outcome != "success" else None,
+    }
+
+
+async def _handle_exec(mgr: OperationManager, req: ExecRequest, request: Request):
+    params, cap = _exec_params(req)
+    op, refusal = await _dispatch_and_attach(mgr, req.system_id, "exec", params)
+    if refusal is not None:
+        return refusal
+
+    # If caller supplied stdin, push it now and CLOSE on stdin.
+    if req.stdin_b64:
+        await _push_exec_stdin(mgr, op, req.stdin_b64)
+
+    capture = _ExecCapture()
+    op = await _drain_op_until_complete(
+        op,
+        request,
+        cap_seconds=cap,
+        on_frame=capture.accumulate,
+        cancel=mgr.cancel,
+        abort_event=capture.exceeded,
+    )
+
+    # If output blew the cap, return a bounded error
+    # (no captured command output in the body) rather than the truncated
+    # stream. The op was cancelled by the drain loop's abort path.
+    if capture.exceeded.is_set():
+        return _error_response(
+            413, "exec_output_too_large", limit_bytes=EXEC_OUTPUT_MAX_BYTES
+        )
+    return _exec_result(op, capture)
+
+
+# -------- file_get --------
+
+
+class _StreamFailure(Exception):
+    """Sentinel pushed onto the body queue to abort the stream mid-flight
+    when the op fails after the header has gone out. Re-raised by the body
+    iterator."""
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(reason)
+        self.reason = reason
+
+
+class _FileGetStream:
+    """State and tasks for one streaming file_get.
+
+    Streaming lifecycle (deliberately NOT using ``_drain_op_until_complete``):
+    that helper has a 2-second pump-cancel window that's safe for exec
+    accumulators but can truncate a download under backpressure, when the HTTP
+    consumer is slow and the frame pump is legitimately blocked on
+    ``body_queue.put()``. Instead the body iterator drives teardown: the pump
+    runs until the body iterator is fully consumed (or aborts via
+    ``_StreamFailure``), then the iterator's ``finally`` cancels everything.
+
+    The header (size, mode) lands as a ChannelControl Data frame before any
+    ChannelFile bytes. Once the response body starts we cannot downgrade to a
+    JSON error: post-header failures surface as the body iterator raising
+    ``_StreamFailure``, aborting the response.
+    """
+
+    def __init__(self, mgr: OperationManager, op: Operation, request: Request) -> None:
+        self.mgr = mgr
+        self.op = op
+        self.request = request
+        self.header_evt = asyncio.Event()
+        self.header: dict = {}
+        # Bounded body queue: AWAITED puts so a slow HTTP consumer
+        # back-pressures the on_frame coroutine, which in turn pauses
+        # the inbound bridge pump (op.inbound is also bounded).
+        self.body_queue: asyncio.Queue = asyncio.Queue(maxsize=4)
+        self.pump_task: Optional[asyncio.Task] = None
+        self.watch_task: Optional[asyncio.Task] = None
+
+    async def _on_frame(self, frame: Frame) -> None:
+        if frame.channel == Channel.CONTROL and frame.op == FrameOp.DATA:
+            try:
+                self.header.update(json.loads(frame.payload.decode("utf-8")))
+            except Exception:  # pylint: disable=broad-except
+                self.header["_bad_header"] = True
+            self.header_evt.set()
+        elif frame.channel == Channel.FILE and frame.op == FrameOp.DATA:
+            await self.body_queue.put(bytes(frame.payload))
+        elif frame.channel == Channel.FILE and frame.op == FrameOp.CLOSE:
+            await self.body_queue.put(None)
+
+    async def _frame_pump(self) -> None:
+        # Runs until it sees a sentinel None on op.inbound (only the test
+        # fake produces this) or the body iterator's finally cancels it.
+        while True:
+            frame = await self.op.inbound.get()
+            if frame is None:
+                return
+            await self._on_frame(frame)
+
+    async def _watch_completion(self) -> None:
+        # Waits for op.completion (or caller disconnect, or the broker hard
+        # cap). On SUCCESS the watcher MUST NOT enqueue anything: clean EOF is
+        # the pump's responsibility via the FILE CLOSE frame from the agent. If
+        # the watcher raced ahead and put None directly, a backpressured pump
+        # could still be parked on body_queue.put(chunk) for unsent FILE Data
+        # frames; None could end up between the chunk and CLOSE in the queue
+        # and produce a clean-but-truncated 200. Only the failure paths publish
+        # a sentinel (_StreamFailure) because no more frames are coming then.
+        op = self.op
+        deadline = time.monotonic() + EXEC_HARD_CAP_SECONDS
+        while not op.completion.done():
+            if await self.request.is_disconnected() or time.monotonic() > deadline:
+                await _cancel_and_settle(self.mgr.cancel, op)
+                break
+            try:
+                await asyncio.wait_for(
+                    asyncio.shield(op.completion),
+                    timeout=DISCONNECT_POLL_SECONDS,
+                )
+            except asyncio.TimeoutError:
+                continue
+        # On error after the header has gone out, abort the body
+        # mid-flight. On success, do NOT touch body_queue: the
+        # pump handles EOF when it processes the FILE CLOSE.
+        if self.header_evt.is_set() and op.outcome != "success":
+            reason = (op.error or {}).get("reason", "op_stream_closed")
+            await self.body_queue.put(_StreamFailure(reason))
+
+    def start(self) -> None:
+        op_id = self.op.operation_id
+        self.pump_task = asyncio.create_task(
+            self._frame_pump(), name=f"int_op_pump:{op_id}"
+        )
+        self.watch_task = asyncio.create_task(
+            self._watch_completion(), name=f"int_op_watch:{op_id}"
+        )
+
+    async def _wait_for_failure(self) -> None:
+        await asyncio.shield(self.watch_task)
+        if self.op.outcome != "success":
+            return
+        # Success completion alone never resolves this: the header timeout is
+        # the only catch for the (very rare) case where a "successful" op
+        # produced no header.
+        await asyncio.Event().wait()
+
+    async def wait_for_header(self) -> bool:
+        """Race the header against a non-success completion and the header
+        timeout. SUCCESS completion alone is NOT a pre-header failure signal:
+        it's a normal scheduler ordering when the agent's op_complete (control
+        WSS) reaches the broker before the per-op frame pump has processed the
+        header already sitting on op.inbound, so we keep waiting for it.
+
+        Returns True when the header-timeout timer is what ended the wait.
+        """
+        op_id = self.op.operation_id
+        wait_header = asyncio.create_task(self.header_evt.wait())
+        wait_failure = asyncio.create_task(
+            self._wait_for_failure(), name=f"int_op_failwait:{op_id}"
+        )
+        wait_timeout = asyncio.create_task(
+            asyncio.sleep(HEADER_TIMEOUT_SECONDS), name=f"int_op_hdrto:{op_id}"
+        )
+        try:
+            done_set, _pending = await asyncio.wait(
+                {wait_header, wait_failure, wait_timeout},
+                return_when=asyncio.FIRST_COMPLETED,
+            )
+        finally:
+            for t in (wait_header, wait_failure, wait_timeout):
+                if not t.done():
+                    t.cancel()
+        return wait_timeout in done_set
+
+    async def refuse_before_header(self, header_timeout_fired: bool):
+        """Response for a stream that never produced a usable header."""
+        if header_timeout_fired:
+            # Fire-and-forget cancel: production manager.cancel just marks the
+            # op CANCELLING and schedules a fallback, it does NOT resolve
+            # op.completion synchronously, so awaiting watch_task here would
+            # extend the header timeout. Tear down background tasks
+            # immediately and return 504.
+            _spawn_logged_cancel(self.mgr.cancel, self.op.operation_id)
+            self.pump_task.cancel()
+            if not self.watch_task.done():
+                self.watch_task.cancel()
+            return _error_response(504, "header_timeout")
+        # The failure waiter won: watch_task already resolved with the
+        # outcome we want to surface.
+        await self.watch_task
+        await _cancel_task(self.pump_task)
+        return JSONResponse(status_code=502, content=_outcome_json(self.op))
+
+    async def refuse_bad_header(self):
+        await self.mgr.cancel(self.op.operation_id)
+        await self.watch_task
+        await _cancel_task(self.pump_task)
+        return _error_response(502, "bad_header")
+
+    async def body_iter(self) -> AsyncIterator[bytes]:
+        try:
+            while True:
+                chunk = await self.body_queue.get()
+                if chunk is None:
+                    return
+                if isinstance(chunk, _StreamFailure):
+                    raise chunk
+                yield chunk
+        finally:
+            # Body fully consumed (or aborted): now safe to tear down the pump
+            # and watcher. The watcher already enqueued its sentinel; the pump
+            # may be parked on op.inbound.get() so it has to be cancelled.
+            await _cancel_task(self.pump_task)
+            if not self.watch_task.done():
+                await _cancel_task(self.watch_task)
+
+
+async def _handle_file_get(
+    mgr: OperationManager, req: FileGetRequest, request: Request
+):
+    params: dict = {"path": req.path}
+    if req.max_bytes > 0:
+        params["max_bytes"] = req.max_bytes
+
+    # Bounded inbound queue: if the HTTP response consumer is slow,
+    # body_queue.put() blocks -> on_frame awaits -> frame pump pauses ->
+    # op.inbound fills -> bridge _pump_inbound blocks on its await put() ->
+    # WSS reads stop -> TCP backpressure to the agent. Without this, a fast
+    # agent producing a large file faster than the backend client reads can
+    # pile the whole download in broker memory.
+    # skip_terminal_sentinel=True: success-path EOF is owned by the FILE
+    # CLOSE frame, not the manager's terminal None push. Without this,
+    # op_complete arriving on the control WSS before the per-op pump has
+    # delivered FILE CLOSE could inject a None ahead of remaining file frames
+    # and truncate (or hang) the response.
+    op, refusal = await _dispatch_and_attach(
+        mgr,
+        req.system_id,
+        "file_get",
+        params,
+        inbound_maxsize=4,
+        skip_terminal_sentinel=True,
+    )
+    if refusal is not None:
+        return refusal
+
+    stream = _FileGetStream(mgr, op, request)
+    stream.start()
+    header_timeout_fired = await stream.wait_for_header()
+    if not stream.header_evt.is_set():
+        return await stream.refuse_before_header(header_timeout_fired)
+    if stream.header.get("_bad_header"):
+        return await stream.refuse_bad_header()
+    return StreamingResponse(
+        stream.body_iter(),
+        media_type="application/octet-stream",
+        headers={
+            "X-Praxis-File-Size": str(stream.header.get("size", 0)),
+            "X-Praxis-File-Mode": str(stream.header.get("mode", "")),
+        },
+    )
+
+
+# -------- file_put --------
+
+
+def _file_put_request(request: Request) -> tuple[int, dict, int, int]:
+    """Parse the file_put metadata headers into (system_id, params, max_bytes,
+    declared_size)."""
+    try:
+        system_id = int(request.headers["x-praxis-system-id"])
+        path = request.headers["x-praxis-file-path"]
+    except (KeyError, ValueError) as e:
+        raise HTTPException(400, f"missing/invalid header: {e}")
+
+    mode_str = request.headers.get("x-praxis-file-mode")
+    overwrite = request.headers.get("x-praxis-overwrite", "false").lower() == "true"
+    max_bytes = int(request.headers.get("x-praxis-max-bytes", "0"))
+    declared_size = int(request.headers.get("x-praxis-declared-size", "0"))
+
+    params: dict = {"path": path, "overwrite": overwrite}
+    if mode_str:
+        params["mode"] = mode_str
+    if max_bytes > 0:
+        params["max_bytes"] = max_bytes
+    return system_id, params, max_bytes, declared_size
+
+
+async def _stream_upload(
+    mgr: OperationManager, op: Operation, request: Request, max_bytes: int
+) -> tuple[int, Optional[JSONResponse]]:
+    """Forward the HTTP body to the agent as ChannelFile Data frames.
+
+    The broker MUST NOT buffer the upload: chunks are forwarded as they arrive
+    with a max-bytes counter. Returns ``(bytes_written, failure_response)``.
+    """
+    bytes_written = 0
+    chunk_cap = DEFAULT_MAX_FRAME_PAYLOAD_BYTES
+    try:
+        async for chunk in request.stream():
+            if not chunk:
+                continue
+            # Re-chunk if the HTTP client gives us larger pieces
+            # than a single frame can carry.
+            view = memoryview(chunk)
+            while view:
+                piece, view = bytes(view[:chunk_cap]), view[chunk_cap:]
+                bytes_written += len(piece)
+                if max_bytes and bytes_written > max_bytes:
+                    await mgr.cancel(op.operation_id)
+                    return bytes_written, _error_response(413, "too_large")
+                await op.outbound.put(
+                    Frame(
+                        op=FrameOp.DATA,
+                        channel=Channel.FILE,
+                        flags=0,
+                        payload=piece,
+                    )
+                )
+    except Exception as e:  # pylint: disable=broad-except
+        logger.warning("file_put: HTTP body read failed: %s", e)
+        await mgr.cancel(op.operation_id)
+        return bytes_written, _error_response(502, "client_disconnected")
+    return bytes_written, None
+
+
+async def _handle_file_put(mgr: OperationManager, request: Request):
+    system_id, params, max_bytes, declared_size = _file_put_request(request)
+
+    # Bounded outbound queue -> put() blocks when the per-op WSS bridge can't
+    # drain fast enough -> the upstream HTTP body read pauses -> TCP
+    # backpressure walks back to the client. Without this, a fast HTTP upload
+    # can pile ~1MiB-each frames into op.outbound while the agent / WSS slowly
+    # drains, blowing broker memory.
+    op, refusal = await _dispatch_and_attach(
+        mgr, system_id, "file_put", params, outbound_maxsize=4
+    )
+    if refusal is not None:
+        return refusal
+
+    # Send the file_put header on ChannelControl first, then stream the body.
+    await op.outbound.put(
+        Frame(
+            op=FrameOp.DATA,
+            channel=Channel.CONTROL,
+            flags=0,
+            payload=json.dumps({"type": "file_header", "size": declared_size}).encode(
+                "utf-8"
+            ),
+        )
+    )
+    bytes_written, failure = await _stream_upload(mgr, op, request, max_bytes)
+    if failure is not None:
+        return failure
+
+    # Signal end-of-file to the agent.
+    await op.outbound.put(
+        Frame(op=FrameOp.CLOSE, channel=Channel.FILE, flags=0, payload=b"")
+    )
+
+    # Now wait for the agent's op_complete.
+    op = await _drain_op_until_complete(
+        op,
+        request,
+        cap_seconds=EXEC_HARD_CAP_SECONDS,
+        on_frame=lambda _f: None,
+        cancel=mgr.cancel,
+    )
+    if op.outcome == "success":
+        return {"outcome": "success", "bytes_written": bytes_written}
+    return JSONResponse(
+        status_code=502,
+        content=_outcome_json(op, bytes_written=bytes_written),
+    )
+
+
+# -------- facts --------
+
+
+def _facts_result(op: Operation):
+    """Map a terminal facts op to its response."""
+    meta = op.result_metadata or {}
+    if op.outcome == "success":
+        facts = meta.get("facts") if isinstance(meta.get("facts"), dict) else None
+        partial = (
+            meta.get("partial_errors")
+            if isinstance(meta.get("partial_errors"), list)
+            else []
+        )
+        if facts is None:
+            # Success without inline facts is a protocol violation --
+            # an older agent that still runs the stub for op_type=
+            # "facts" would land here. Surface as 502 so the caller
+            # doesn't ingest an empty row as a healthy poll.
+            return _error_response(502, "missing_inline_facts")
+        return {
+            "outcome": "success",
+            "operation_id": op.operation_id,
+            "facts": facts,
+            "partial_errors": partial,
+        }
+
+    # ``cancelled`` here means _drain_op_until_complete hit our cap
+    # or the caller disconnected; either way the agent didn't
+    # report on time. Map to 504 so the refresh endpoint can
+    # surface "agent didn't respond" distinct from a real op
+    # error. Other terminal outcomes are agent-reported failures
+    # -> 502.
+    if op.outcome == "cancelled":
+        return _error_response(504, "facts_timeout")
+    return JSONResponse(status_code=502, content=_outcome_json(op))
+
+
+async def _handle_facts(mgr: OperationManager, req: FactsRequest, request: Request):
+    op, refusal = await _dispatch_and_attach(mgr, req.system_id, "facts", {})
+    if refusal is not None:
+        return refusal
+
+    # No frame draining: facts is inline-only on op_complete.
+    # _drain_op_until_complete with a no-op on_frame is the right
+    # primitive (it also handles caller disconnect + the cap).
+    op = await _drain_op_until_complete(
+        op,
+        request,
+        cap_seconds=FACTS_HARD_CAP_SECONDS,
+        on_frame=lambda _f: None,
+        cancel=mgr.cancel,
+    )
+    return _facts_result(op)
+
+
+# -------- logs --------
+
+
+def _broker_logs(since_epoch: Optional[float], limit: Optional[int]) -> dict:
+    from app.core.log_buffer import (  # pylint: disable=import-outside-toplevel
+        get_log_buffer,
+    )
+
+    buf = get_log_buffer()
+    if buf is None:
+        return {"installed": False, "records": []}
+    if limit is None or limit > MAX_INTERNAL_LOG_RECORDS:
+        limit = MAX_INTERNAL_LOG_RECORDS
+    records = buf.records(since_epoch=since_epoch, limit=limit)
+    return {"installed": True, "records": records}
+
+
 def build_internal_app(
     registry: AgentRegistry | None = None,
     manager: OperationManager | None = None,
@@ -399,6 +1023,9 @@ def build_internal_app(
     ``None`` (the default) leaves the API unauthenticated — production wiring in
     ``main.py`` always passes a derived token, while op-flow unit tests that
     aren't exercising auth keep the historical no-auth behavior.
+
+    The route bodies live in module-level ``_handle_*`` functions; this
+    factory only binds them to the app and keeps the registration order.
     """
     if registry is None:
         registry = default_registry
@@ -422,33 +1049,7 @@ def build_internal_app(
 
     @app.get("/internal/agent/health/{system_id}")
     async def agent_health(system_id: int) -> dict:
-        entry = registry.get(system_id)
-        if entry is None:
-            return {
-                "system_id": system_id,
-                "state": "unregistered",
-                "tunnel_session_id": None,
-                "since_seconds": None,
-                "last_heartbeat_age_seconds": None,
-                # PRA-155 #2b-b: capabilities is the per-tunnel set the
-                # broker accepted at handshake. Returned here so the
-                # transport-selection layer can gate auto-mode fallback
-                # on whether the agent actually advertises the op_type
-                # the caller wants (facts, eventually pty/etc).
-                "capabilities": [],
-            }
-        now = time.monotonic()
-        age = now - entry.last_recv_monotonic
-        connected_age = now - entry.connected_at_monotonic
-        state = "healthy" if age <= HEARTBEAT_DEAD_SECONDS else "stale"
-        return {
-            "system_id": system_id,
-            "state": state,
-            "capabilities": list(entry.capabilities or []),
-            "tunnel_session_id": entry.tunnel_session_id,
-            "since_seconds": connected_age,
-            "last_heartbeat_age_seconds": age,
-        }
+        return _health_snapshot(registry, system_id)
 
     @app.post("/internal/agent/sessions/{system_id}/evict")
     async def evict_session(system_id: int, req: EvictRequest) -> dict:
@@ -459,9 +1060,7 @@ def build_internal_app(
         repeated signal after re-enable). Idempotent per tunnel session.
         Responds once in-flight ops have resolved or the ack window elapsed.
         """
-        mgr: OperationManager = app.state.manager
-        if mgr is None:  # pragma: no cover - production wiring
-            raise HTTPException(500, "broker manager not initialised")
+        mgr = _manager_of(app)
         return await mgr.evict_system(
             system_id,
             reason=req.reason,
@@ -479,590 +1078,19 @@ def build_internal_app(
         backend log-buffer flow. Auth is the internal shared-secret middleware
         that already wraps every route on this app. ``limit`` is clamped so a
         caller can't ask for an unbounded dump (the buffer itself is bounded)."""
-        from app.core.log_buffer import (  # pylint: disable=import-outside-toplevel
-            get_log_buffer,
-        )
-
-        buf = get_log_buffer()
-        if buf is None:
-            return {"installed": False, "records": []}
-        if limit is None or limit > MAX_INTERNAL_LOG_RECORDS:
-            limit = MAX_INTERNAL_LOG_RECORDS
-        records = buf.records(since_epoch=since_epoch, limit=limit)
-        return {"installed": True, "records": records}
+        return _broker_logs(since_epoch, limit)
 
     @app.post("/internal/agent/ops/exec")
     async def agent_exec(req: ExecRequest, request: Request):
-        mgr: OperationManager = app.state.manager
-        if mgr is None:  # pragma: no cover - production wiring
-            raise HTTPException(500, "broker manager not initialised")
-
-        params = {"cmd": req.cmd, "args": req.args}
-        if req.cwd is not None:
-            params["cwd"] = req.cwd
-        if req.env is not None:
-            params["env"] = req.env
-        # Cap timeout_s at the broker hard cap so a misconfigured
-        # caller can't drag us past it.
-        cap = (
-            min(req.timeout_s, EXEC_HARD_CAP_SECONDS)
-            if req.timeout_s > 0
-            else EXEC_HARD_CAP_SECONDS
-        )
-        if req.timeout_s > 0:
-            params["timeout_s"] = req.timeout_s
-
-        try:
-            op, _nonce = await mgr.create_and_dispatch(req.system_id, "exec", params)
-        except AgentNotAuthorized as exc:
-            return _not_authorized_response(exc)
-        except NoActiveTunnel:
-            return JSONResponse(
-                status_code=503,
-                content={
-                    "outcome": "error",
-                    "error": {"reason": "transport_unavailable"},
-                },
-            )
-        except (ConcurrentOpsExceeded, NonceLimitExceeded):
-            return _busy_response()
-
-        try:
-            await _wait_for_attach(op, ATTACH_TIMEOUT_SECONDS)
-        except asyncio.TimeoutError:
-            try:
-                await mgr.cancel(op.operation_id)
-            except OpNotFound:
-                pass
-            return JSONResponse(
-                status_code=504,
-                content={
-                    "outcome": "error",
-                    "error": {"reason": "agent_attach_timeout"},
-                },
-            )
-
-        # If caller supplied stdin, push it now and CLOSE on stdin.
-        if req.stdin_b64:
-            try:
-                stdin_bytes = base64.b64decode(req.stdin_b64)
-            except Exception:  # pylint: disable=broad-except
-                await mgr.cancel(op.operation_id)
-                raise HTTPException(400, "stdin_b64 not valid base64")
-            await op.outbound.put(
-                Frame(
-                    op=FrameOp.DATA,
-                    channel=Channel.STDIN,
-                    flags=0,
-                    payload=stdin_bytes,
-                )
-            )
-            await op.outbound.put(
-                Frame(op=FrameOp.CLOSE, channel=Channel.STDIN, flags=0, payload=b"")
-            )
-
-        stdout_chunks: list[bytes] = []
-        stderr_chunks: list[bytes] = []
-        output_total = 0
-        output_exceeded = asyncio.Event()
-
-        def _accumulate(frame: Frame) -> None:
-            nonlocal output_total
-            if frame.op != FrameOp.DATA:
-                return
-            if frame.channel == Channel.STDOUT:
-                chunks = stdout_chunks
-            elif frame.channel == Channel.STDERR:
-                chunks = stderr_chunks
-            else:
-                return
-            # PRA-228 BROKER-03: bound captured output. Once over the cap, stop
-            # appending (so memory can't grow past ~cap + one in-flight frame)
-            # and signal the drain loop to cancel the agent op early.
-            if output_exceeded.is_set():
-                return
-            payload = bytes(frame.payload)
-            output_total += len(payload)
-            if output_total > EXEC_OUTPUT_MAX_BYTES:
-                output_exceeded.set()
-                return
-            chunks.append(payload)
-
-        op = await _drain_op_until_complete(
-            op,
-            request,
-            cap_seconds=cap,
-            on_frame=_accumulate,
-            cancel=mgr.cancel,
-            abort_event=output_exceeded,
-        )
-
-        # PRA-228 BROKER-03: if output blew the cap, return a bounded error
-        # (no captured command output in the body) rather than the truncated
-        # stream. The op was cancelled by the drain loop's abort path.
-        if output_exceeded.is_set():
-            return JSONResponse(
-                status_code=413,
-                content={
-                    "outcome": "error",
-                    "error": {
-                        "reason": "exec_output_too_large",
-                        "limit_bytes": EXEC_OUTPUT_MAX_BYTES,
-                    },
-                },
-            )
-
-        # exit_code + duration_ms travel as TOP-LEVEL fields on the
-        # agent's op_complete (PRA-152 task #4 op_complete shape) —
-        # _route_op_complete in handlers.py captures them into
-        # op.result_metadata. Reading from op.error here would only
-        # work for outcomes the agent considers errors.
-        meta = op.result_metadata or {}
-        return {
-            "outcome": op.outcome or "error",
-            "operation_id": op.operation_id,
-            "exit_code": meta.get("exit_code") if op.outcome == "success" else None,
-            "stdout_b64": base64.b64encode(b"".join(stdout_chunks)).decode("ascii"),
-            "stderr_b64": base64.b64encode(b"".join(stderr_chunks)).decode("ascii"),
-            "duration_ms": meta.get("duration_ms"),
-            "error": op.error if op.outcome != "success" else None,
-        }
+        return await _handle_exec(_manager_of(app), req, request)
 
     @app.post("/internal/agent/ops/file_get")
     async def agent_file_get(req: FileGetRequest, request: Request):
-        mgr: OperationManager = app.state.manager
-        if mgr is None:  # pragma: no cover
-            raise HTTPException(500, "broker manager not initialised")
-
-        params: dict = {"path": req.path}
-        if req.max_bytes > 0:
-            params["max_bytes"] = req.max_bytes
-
-        try:
-            # Bounded inbound queue: if the HTTP response consumer is
-            # slow, body_queue.put() blocks → on_frame awaits → frame
-            # pump pauses → op.inbound fills → bridge _pump_inbound
-            # blocks on its await put() → WSS reads stop → TCP
-            # backpressure to the agent. Without this, a fast agent
-            # producing a large file faster than the backend client
-            # reads can pile the whole download in broker memory.
-            # skip_terminal_sentinel=True: success-path EOF is owned
-            # by the FILE CLOSE frame, not the manager's terminal
-            # None push. Without this, op_complete arriving on the
-            # control WSS before the per-op pump has delivered FILE
-            # CLOSE could inject a None ahead of remaining file
-            # frames and truncate (or hang) the response.
-            op, _nonce = await mgr.create_and_dispatch(
-                req.system_id,
-                "file_get",
-                params,
-                inbound_maxsize=4,
-                skip_terminal_sentinel=True,
-            )
-        except AgentNotAuthorized as exc:
-            return _not_authorized_response(exc)
-        except NoActiveTunnel:
-            return JSONResponse(
-                status_code=503,
-                content={
-                    "outcome": "error",
-                    "error": {"reason": "transport_unavailable"},
-                },
-            )
-        except (ConcurrentOpsExceeded, NonceLimitExceeded):
-            return _busy_response()
-
-        try:
-            await _wait_for_attach(op, ATTACH_TIMEOUT_SECONDS)
-        except asyncio.TimeoutError:
-            try:
-                await mgr.cancel(op.operation_id)
-            except OpNotFound:
-                pass
-            return JSONResponse(
-                status_code=504,
-                content={
-                    "outcome": "error",
-                    "error": {"reason": "agent_attach_timeout"},
-                },
-            )
-
-        # Streaming lifecycle (deliberately NOT using
-        # _drain_op_until_complete here): that helper has a 2-second
-        # pump-cancel window that's safe for exec accumulators but
-        # can truncate a download under backpressure — when the HTTP
-        # consumer is slow, the frame pump is legitimately blocked on
-        # body_queue.put() and we MUST NOT cancel it. Instead, the
-        # body iterator drives teardown: pump runs until the body
-        # iter is fully consumed (or aborts via _StreamFailure), then
-        # the iter's finally cancels everything.
-        #
-        # Header (size, mode) lands as a ChannelControl Data frame
-        # before any ChannelFile bytes per the PRA-152 file primitive.
-        # Once we start writing the response body we cannot downgrade
-        # to a JSON error — post-header failures surface as the body
-        # iterator raising _StreamFailure, aborting the response.
-        header_evt = asyncio.Event()
-        header_holder: dict = {}
-        # Bounded body queue: AWAITED puts so a slow HTTP consumer
-        # back-pressures the on_frame coroutine, which in turn pauses
-        # the inbound bridge pump (op.inbound is also bounded above).
-        body_queue: asyncio.Queue[Optional[bytes]] = asyncio.Queue(maxsize=4)
-
-        class _StreamFailure(Exception):
-            """Sentinel pushed onto body_queue to abort the stream
-            mid-flight when the op fails after the header has gone
-            out. Caught and re-raised by _body_iter."""
-
-            def __init__(self, reason: str) -> None:
-                super().__init__(reason)
-                self.reason = reason
-
-        async def _on_frame(frame: Frame) -> None:
-            if frame.channel == Channel.CONTROL and frame.op == FrameOp.DATA:
-                try:
-                    header_holder.update(json.loads(frame.payload.decode("utf-8")))
-                except Exception:  # pylint: disable=broad-except
-                    header_holder["_bad_header"] = True
-                header_evt.set()
-                return
-            if frame.channel == Channel.FILE and frame.op == FrameOp.DATA:
-                await body_queue.put(bytes(frame.payload))
-                return
-            if frame.channel == Channel.FILE and frame.op == FrameOp.CLOSE:
-                await body_queue.put(None)
-                return
-
-        # Pump runs forever until either:
-        #   - it sees a sentinel None on op.inbound (only the test
-        #     fake produces this), or
-        #   - the body iterator's finally cancels it
-        async def _frame_pump() -> None:
-            while True:
-                frame = await op.inbound.get()
-                if frame is None:
-                    return
-                await _on_frame(frame)
-
-        # Watcher waits for op.completion (or caller disconnect, or
-        # the broker hard cap). On SUCCESS the watcher MUST NOT
-        # enqueue anything — clean EOF is the pump's responsibility
-        # via the FILE CLOSE frame from the agent. If the watcher
-        # raced ahead and put None directly, a backpressured pump
-        # could still be parked on body_queue.put(chunk) for unsent
-        # FILE Data frames; None could end up between the chunk and
-        # CLOSE in the queue and produce a clean-but-truncated 200.
-        # Only the failure paths publish a sentinel (_StreamFailure)
-        # because in those cases there are no more frames coming.
-        async def _watch_completion() -> None:
-            deadline = time.monotonic() + EXEC_HARD_CAP_SECONDS
-            while not op.completion.done():
-                if await request.is_disconnected():
-                    await mgr.cancel(op.operation_id)
-                    try:
-                        await asyncio.wait_for(op.completion, timeout=5.0)
-                    except asyncio.TimeoutError:
-                        pass
-                    break
-                if time.monotonic() > deadline:
-                    await mgr.cancel(op.operation_id)
-                    try:
-                        await asyncio.wait_for(op.completion, timeout=5.0)
-                    except asyncio.TimeoutError:
-                        pass
-                    break
-                try:
-                    await asyncio.wait_for(
-                        asyncio.shield(op.completion),
-                        timeout=DISCONNECT_POLL_SECONDS,
-                    )
-                except asyncio.TimeoutError:
-                    continue
-            # On error after the header has gone out, abort the body
-            # mid-flight. On success, do NOT touch body_queue — the
-            # pump handles EOF when it processes the FILE CLOSE.
-            if header_evt.is_set() and op.outcome != "success":
-                reason = (op.error or {}).get("reason", "op_stream_closed")
-                await body_queue.put(_StreamFailure(reason))
-
-        pump_task = asyncio.create_task(
-            _frame_pump(), name=f"int_op_pump:{op.operation_id}"
-        )
-        watch_task = asyncio.create_task(
-            _watch_completion(), name=f"int_op_watch:{op.operation_id}"
-        )
-
-        # Pre-header wait: race the header arriving against (a) the
-        # watcher resolving with a NON-success outcome, and (b) a
-        # protocol-level header timeout. SUCCESS completion alone is
-        # NOT a pre-header failure signal — it's a normal scheduler
-        # ordering when the agent's op_complete (control WSS) reaches
-        # the broker before the per-op frame pump has processed the
-        # header (which is already sitting on op.inbound). For that
-        # case we just keep waiting for the header.
-        wait_header = asyncio.create_task(header_evt.wait())
-
-        async def _wait_for_failure() -> None:
-            await asyncio.shield(watch_task)
-            if op.outcome != "success":
-                return
-            # Success completion alone never resolves this — the
-            # header timeout below is the only catch for the (very
-            # rare) case where a "successful" op produced no header.
-            await asyncio.Event().wait()
-
-        async def _wait_for_header_timeout() -> None:
-            await asyncio.sleep(HEADER_TIMEOUT_SECONDS)
-
-        wait_failure = asyncio.create_task(
-            _wait_for_failure(), name=f"int_op_failwait:{op.operation_id}"
-        )
-        wait_timeout = asyncio.create_task(
-            _wait_for_header_timeout(), name=f"int_op_hdrto:{op.operation_id}"
-        )
-        try:
-            done_set, _pending = await asyncio.wait(
-                {wait_header, wait_failure, wait_timeout},
-                return_when=asyncio.FIRST_COMPLETED,
-            )
-        finally:
-            for t in (wait_header, wait_failure, wait_timeout):
-                if not t.done():
-                    t.cancel()
-        # Distinguish "agent failed pre-header" from "agent never
-        # sent a header within the timeout". Both produce no body
-        # but should report different reasons.
-        header_timeout_fired = wait_timeout in done_set
-
-        if not header_evt.is_set():
-            # Two distinct cases:
-            #   header_timeout_fired — agent never produced a header
-            #       within HEADER_TIMEOUT_SECONDS. Fire-and-forget
-            #       the cancel (production manager.cancel just marks
-            #       the op CANCELLING and schedules a fallback; it
-            #       does NOT resolve op.completion synchronously, so
-            #       awaiting watch_task here would extend the 30s
-            #       header timeout to ~40s by default). Tear down
-            #       background tasks immediately and return 504.
-            #   else — op completed with non-success outcome before
-            #       any header. watch_task is already done; surface
-            #       op.outcome / op.error as 502.
-            if header_timeout_fired:
-                # Fire-and-forget cancel; manager cleans up async.
-                # Wrap so OpNotFound / transport errors don't become
-                # "Task exception was never retrieved" warnings.
-                _spawn_logged_cancel(mgr.cancel, op.operation_id)
-                pump_task.cancel()
-                if not watch_task.done():
-                    watch_task.cancel()
-                return JSONResponse(
-                    status_code=504,
-                    content={
-                        "outcome": "error",
-                        "error": {"reason": "header_timeout"},
-                    },
-                )
-            # wait_failure won — watch_task already resolved with the
-            # outcome we want to surface.
-            await watch_task
-            pump_task.cancel()
-            try:
-                await pump_task
-            except (asyncio.CancelledError, Exception):  # pylint: disable=broad-except
-                pass
-            return JSONResponse(status_code=502, content=_outcome_json(op))
-        if header_holder.get("_bad_header"):
-            await mgr.cancel(op.operation_id)
-            await watch_task
-            pump_task.cancel()
-            try:
-                await pump_task
-            except (asyncio.CancelledError, Exception):  # pylint: disable=broad-except
-                pass
-            return JSONResponse(
-                status_code=502,
-                content={"outcome": "error", "error": {"reason": "bad_header"}},
-            )
-
-        async def _body_iter() -> AsyncIterator[bytes]:
-            try:
-                while True:
-                    chunk = await body_queue.get()
-                    if chunk is None:
-                        return
-                    if isinstance(chunk, _StreamFailure):
-                        raise chunk
-                    yield chunk
-            finally:
-                # Body fully consumed (or aborted) — now safe to tear
-                # down the pump + watcher. Watcher already enqueued
-                # its sentinel; pump may be parked on op.inbound.get()
-                # so it has to be cancelled.
-                pump_task.cancel()
-                try:
-                    await pump_task
-                except (
-                    asyncio.CancelledError,
-                    Exception,
-                ):  # pylint: disable=broad-except
-                    pass
-                if not watch_task.done():
-                    watch_task.cancel()
-                    try:
-                        await watch_task
-                    except (
-                        asyncio.CancelledError,
-                        Exception,
-                    ):  # pylint: disable=broad-except
-                        pass
-
-        size = header_holder.get("size", 0)
-        mode = header_holder.get("mode", "")
-        return StreamingResponse(
-            _body_iter(),
-            media_type="application/octet-stream",
-            headers={
-                "X-Praxis-File-Size": str(size),
-                "X-Praxis-File-Mode": str(mode),
-            },
-        )
+        return await _handle_file_get(_manager_of(app), req, request)
 
     @app.post("/internal/agent/ops/file_put")
     async def agent_file_put(request: Request):
-        mgr: OperationManager = app.state.manager
-        if mgr is None:  # pragma: no cover
-            raise HTTPException(500, "broker manager not initialised")
-
-        # Required headers carry the metadata.
-        try:
-            system_id = int(request.headers["x-praxis-system-id"])
-            path = request.headers["x-praxis-file-path"]
-        except (KeyError, ValueError) as e:
-            raise HTTPException(400, f"missing/invalid header: {e}")
-
-        mode_str = request.headers.get("x-praxis-file-mode")
-        overwrite = request.headers.get("x-praxis-overwrite", "false").lower() == "true"
-        max_bytes = int(request.headers.get("x-praxis-max-bytes", "0"))
-        declared_size = int(request.headers.get("x-praxis-declared-size", "0"))
-
-        params: dict = {"path": path, "overwrite": overwrite}
-        if mode_str:
-            params["mode"] = mode_str
-        if max_bytes > 0:
-            params["max_bytes"] = max_bytes
-
-        try:
-            # Bounded outbound queue → put() blocks when the per-op
-            # WSS bridge can't drain fast enough → the upstream HTTP
-            # body read pauses → TCP backpressure walks back to the
-            # client. Without this, a fast HTTP upload can pile
-            # ~1MiB-each frames into op.outbound while the agent /
-            # WSS slowly drains, blowing broker memory.
-            op, _nonce = await mgr.create_and_dispatch(
-                system_id, "file_put", params, outbound_maxsize=4
-            )
-        except AgentNotAuthorized as exc:
-            return _not_authorized_response(exc)
-        except NoActiveTunnel:
-            return JSONResponse(
-                status_code=503,
-                content={
-                    "outcome": "error",
-                    "error": {"reason": "transport_unavailable"},
-                },
-            )
-        except (ConcurrentOpsExceeded, NonceLimitExceeded):
-            return _busy_response()
-
-        try:
-            await _wait_for_attach(op, ATTACH_TIMEOUT_SECONDS)
-        except asyncio.TimeoutError:
-            try:
-                await mgr.cancel(op.operation_id)
-            except OpNotFound:
-                pass
-            return JSONResponse(
-                status_code=504,
-                content={
-                    "outcome": "error",
-                    "error": {"reason": "agent_attach_timeout"},
-                },
-            )
-
-        # Send the file_put header on ChannelControl first, then
-        # stream HTTP body chunks → ChannelFile Data frames. Per the
-        # slice-3 lock the broker MUST NOT buffer the upload; we
-        # forward chunks as they arrive with a max-bytes counter.
-        await op.outbound.put(
-            Frame(
-                op=FrameOp.DATA,
-                channel=Channel.CONTROL,
-                flags=0,
-                payload=json.dumps(
-                    {"type": "file_header", "size": declared_size}
-                ).encode("utf-8"),
-            )
-        )
-
-        bytes_written = 0
-        chunk_cap = DEFAULT_MAX_FRAME_PAYLOAD_BYTES
-        try:
-            async for chunk in request.stream():
-                if not chunk:
-                    continue
-                # Re-chunk if the HTTP client gives us larger pieces
-                # than a single frame can carry.
-                view = memoryview(chunk)
-                while view:
-                    piece, view = bytes(view[:chunk_cap]), view[chunk_cap:]
-                    bytes_written += len(piece)
-                    if max_bytes and bytes_written > max_bytes:
-                        await mgr.cancel(op.operation_id)
-                        return JSONResponse(
-                            status_code=413,
-                            content={
-                                "outcome": "error",
-                                "error": {"reason": "too_large"},
-                            },
-                        )
-                    await op.outbound.put(
-                        Frame(
-                            op=FrameOp.DATA,
-                            channel=Channel.FILE,
-                            flags=0,
-                            payload=piece,
-                        )
-                    )
-        except Exception as e:  # pylint: disable=broad-except
-            logger.warning("file_put: HTTP body read failed: %s", e)
-            await mgr.cancel(op.operation_id)
-            return JSONResponse(
-                status_code=502,
-                content={
-                    "outcome": "error",
-                    "error": {"reason": "client_disconnected"},
-                },
-            )
-
-        # Signal end-of-file to the agent.
-        await op.outbound.put(
-            Frame(op=FrameOp.CLOSE, channel=Channel.FILE, flags=0, payload=b"")
-        )
-
-        # Now wait for the agent's op_complete.
-        op = await _drain_op_until_complete(
-            op,
-            request,
-            cap_seconds=EXEC_HARD_CAP_SECONDS,
-            on_frame=lambda _f: None,
-            cancel=mgr.cancel,
-        )
-        if op.outcome == "success":
-            return {"outcome": "success", "bytes_written": bytes_written}
-        return JSONResponse(
-            status_code=502,
-            content=_outcome_json(op, bytes_written=bytes_written),
-        )
+        return await _handle_file_put(_manager_of(app), request)
 
     @app.post("/internal/agent/ops/facts")
     async def agent_facts(req: FactsRequest, request: Request):
@@ -1084,89 +1112,6 @@ def build_internal_app(
             502 op_error                     op_complete reported error /
                                              cancelled outcome
         """
-        mgr: OperationManager = app.state.manager
-        if mgr is None:  # pragma: no cover - production wiring
-            raise HTTPException(500, "broker manager not initialised")
-
-        try:
-            op, _nonce = await mgr.create_and_dispatch(req.system_id, "facts", {})
-        except AgentNotAuthorized as exc:
-            return _not_authorized_response(exc)
-        except NoActiveTunnel:
-            return JSONResponse(
-                status_code=503,
-                content={
-                    "outcome": "error",
-                    "error": {"reason": "transport_unavailable"},
-                },
-            )
-        except (ConcurrentOpsExceeded, NonceLimitExceeded):
-            return _busy_response()
-
-        try:
-            await _wait_for_attach(op, ATTACH_TIMEOUT_SECONDS)
-        except asyncio.TimeoutError:
-            try:
-                await mgr.cancel(op.operation_id)
-            except OpNotFound:
-                pass
-            return JSONResponse(
-                status_code=504,
-                content={
-                    "outcome": "error",
-                    "error": {"reason": "agent_attach_timeout"},
-                },
-            )
-
-        # No frame draining — facts is inline-only on op_complete.
-        # _drain_op_until_complete with a no-op on_frame is the right
-        # primitive (it also handles caller disconnect + the cap).
-        op = await _drain_op_until_complete(
-            op,
-            request,
-            cap_seconds=FACTS_HARD_CAP_SECONDS,
-            on_frame=lambda _f: None,
-            cancel=mgr.cancel,
-        )
-
-        meta = op.result_metadata or {}
-        if op.outcome == "success":
-            facts = meta.get("facts") if isinstance(meta.get("facts"), dict) else None
-            partial = (
-                meta.get("partial_errors")
-                if isinstance(meta.get("partial_errors"), list)
-                else []
-            )
-            if facts is None:
-                # Success without inline facts is a protocol violation —
-                # an older agent that still runs the stub for op_type=
-                # "facts" would land here. Surface as 502 so the caller
-                # doesn't ingest an empty row as a healthy poll.
-                return JSONResponse(
-                    status_code=502,
-                    content={
-                        "outcome": "error",
-                        "error": {"reason": "missing_inline_facts"},
-                    },
-                )
-            return {
-                "outcome": "success",
-                "operation_id": op.operation_id,
-                "facts": facts,
-                "partial_errors": partial,
-            }
-
-        # ``cancelled`` here means _drain_op_until_complete hit our cap
-        # or the caller disconnected; either way the agent didn't
-        # report on time. Map to 504 so the refresh endpoint can
-        # surface "agent didn't respond" distinct from a real op
-        # error. Other terminal outcomes are agent-reported failures
-        # → 502.
-        if op.outcome == "cancelled":
-            return JSONResponse(
-                status_code=504,
-                content={"outcome": "error", "error": {"reason": "facts_timeout"}},
-            )
-        return JSONResponse(status_code=502, content=_outcome_json(op))
+        return await _handle_facts(_manager_of(app), req, request)
 
     return app

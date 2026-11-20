@@ -537,8 +537,9 @@ async def test_stale_eviction_does_not_touch_replacement_session(
         try:
             await _wait_for(lambda: registry.get(42).tunnel_session_id != old_session)
             new_session = registry.get(42).tunnel_session_id
-            authority.status[42] = "disabled"
-            authority.status[42] = "active"  # operator flipped it back
+            # The replacement session is active; only the delayed eviction for
+            # the old session arrives.
+            assert authority.status.get(42, "active") == "active"
 
             res = await manager.evict_system(
                 42, reason="disabled", expected_session_id=old_session
@@ -1321,6 +1322,11 @@ async def test_status_lookup_timeouts_converge_within_the_documented_bound(
             bound = UNVERIFIABLE_EVICT_AFTER * (interval + lookup_timeout)
             assert elapsed >= bound - interval  # not dropped on the first blip
             assert elapsed <= bound + 2.0  # plus the eviction window
+            # The registry entry is removed before the eviction audit row is
+            # emitted, so the row is awaited separately instead of read at once.
+            assert await _wait_for(
+                lambda: "agent.tunnel.evicted" in audit.actions(), timeout=5
+            )
             assert (
                 audit.last("agent.tunnel.evicted")["context"]["reason"]
                 == "unverifiable"

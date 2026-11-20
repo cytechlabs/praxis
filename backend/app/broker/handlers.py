@@ -48,6 +48,7 @@ from .ops import (
     REASON_UNVERIFIABLE,
     NonceExpired,
     NonceInvalid,
+    Operation,
     OperationManager,
     OperationState,
 )
@@ -753,6 +754,35 @@ REJECT_ATTACH_MISMATCH = "attach_mismatch"
 REJECT_ATTACH_NOT_JSON = "attach_not_json"
 
 
+async def _refuse_start(
+    ws: WebSocketServerProtocol,
+    op,
+    manager: OperationManager,
+    audit_emit: AuditEmit,
+    system_id: int,
+) -> None:
+    """Refuse a gated op whose start was not released: the agent was held at
+    the gate, so no work started on its side."""
+    if not op.revocation_reason:
+        # Recorded before the socket closes so the agent's own op_complete
+        # cannot win the report.
+        op.termination = "not_started"
+        op.revocation_reason = "not_active"
+    await _reject(ws, REJECT_NOT_ACTIVE, "start refused")
+    emit_op_event(
+        audit_emit,
+        OP_REJECTED,
+        system_id=system_id,
+        operation_id=op.operation_id,
+        op_type=op.op_type,
+        outcome="denied",
+        reason="start_refused",
+    )
+    await manager.complete(
+        op.operation_id, outcome="error", error={"reason": "agent_not_active"}
+    )
+
+
 async def op_handler(
     ws: WebSocketServerProtocol,
     *,
@@ -792,92 +822,14 @@ async def op_handler(
         await ws.close(code=4404, reason="unknown_path")
         return
 
-    def _audit_op_reject(sys_id: Optional[int], code: str) -> None:
-        # Op rejections happen before we redeem an op, so operation_id
-        # is None — the system_id is still the best correlation we have.
-        if sys_id is None:
-            return
-        emit_op_event(
-            audit_emit,
-            OP_REJECTED,
-            system_id=sys_id,
-            operation_id=None,
-            outcome="denied",
-            reason=code,
-        )
-
-    # ---------- mTLS identity ----------
-    identity: Optional[PeerIdentity] = None
-    try:
-        identity = _extract(ws)
-        accepted = identity_validator(identity)
-        if accepted is None:
-            raise BrokerRejection(REJECT_NOT_ACTIVE, "identity not accepted")
-    except BrokerRejection as rej:
-        await _reject(ws, rej.code, rej.detail)
-        _audit_op_reject(identity.system_id if identity else None, rej.code)
+    identity = await _identify_op_peer(ws, identity_validator, audit_emit)
+    if identity is None:
         return
-    except PeerCertError as e:
-        logger.warning("op rejected: bad peer cert: %s", e)
-        await ws.close(code=4001, reason=REJECT_BAD_CERT)
-        _audit_op_reject(None, REJECT_BAD_CERT)
+    op = await _redeem_op_nonce(ws, registry, manager, identity, audit_emit)
+    if op is None:
         return
-
-    # ---------- defence-in-depth: agent must have a live control tunnel ----------
-    if registry.get(identity.system_id) is None:
-        await _reject(ws, REJECT_NO_TUNNEL, "no control tunnel for system")
-        _audit_op_reject(identity.system_id, REJECT_NO_TUNNEL)
-        return
-
-    # ---------- nonce ----------
-    nonce = ws.request_headers.get("X-Praxis-Op-Nonce")
-    if not nonce:
-        await _reject(ws, REJECT_MISSING_NONCE, "header missing")
-        _audit_op_reject(identity.system_id, REJECT_MISSING_NONCE)
-        return
-    try:
-        op = await manager.redeem_nonce(nonce, system_id=identity.system_id)
-    except NonceExpired as e:
-        await _reject(ws, REJECT_NONCE_EXPIRED, str(e))
-        _audit_op_reject(identity.system_id, REJECT_NONCE_EXPIRED)
-        return
-    except NonceInvalid as e:
-        await _reject(ws, REJECT_NONCE_INVALID, str(e))
-        _audit_op_reject(identity.system_id, REJECT_NONCE_INVALID)
-        return
-
-    # ---------- op_attach ----------
-    try:
-        first = await ws.recv()
-    except ConnectionClosed:
-        await manager.complete(
-            op.operation_id, outcome="error", error={"reason": "closed_before_attach"}
-        )
-        return
-    try:
-        attach = (
-            json.loads(first) if isinstance(first, (str, bytes, bytearray)) else None
-        )
-    except (ValueError, TypeError):
-        attach = None
-    if (
-        not isinstance(attach, dict)
-        or attach.get("type") != "op_attach"
-        or attach.get("operation_id") != op.operation_id
-    ):
-        await _reject(ws, REJECT_ATTACH_MISMATCH, "first message must be op_attach")
-        emit_op_event(
-            audit_emit,
-            OP_REJECTED,
-            system_id=identity.system_id,
-            operation_id=op.operation_id,
-            op_type=op.op_type,
-            outcome="denied",
-            reason=REJECT_ATTACH_MISMATCH,
-        )
-        await manager.complete(
-            op.operation_id, outcome="error", error={"reason": "attach_mismatch"}
-        )
+    attach = await _read_op_attach(ws, manager, op, audit_emit, identity.system_id)
+    if attach is None:
         return
 
     # ---------- start gate ----------
@@ -885,28 +837,9 @@ async def op_handler(
     # until op_ready arrives, so this is the point where a revoked identity is
     # refused BEFORE any process exists. The broker re-reads authority here.
     op.agent_gated = attach.get("await_ready") is True
-    if op.agent_gated:
-        if not await manager.confirm_start(op, ws):
-            if not op.revocation_reason:
-                # Never released: the agent was held at the gate, so no work
-                # started on its side. Recorded before the socket closes so
-                # the agent's own op_complete cannot win the report.
-                op.termination = "not_started"
-                op.revocation_reason = "not_active"
-            await _reject(ws, REJECT_NOT_ACTIVE, "start refused")
-            emit_op_event(
-                audit_emit,
-                OP_REJECTED,
-                system_id=identity.system_id,
-                operation_id=op.operation_id,
-                op_type=op.op_type,
-                outcome="denied",
-                reason="start_refused",
-            )
-            await manager.complete(
-                op.operation_id, outcome="error", error={"reason": "agent_not_active"}
-            )
-            return
+    if op.agent_gated and not await manager.confirm_start(op, ws):
+        await _refuse_start(ws, op, manager, audit_emit, identity.system_id)
+        return
 
     # ---------- bridge ----------
     op.attached_ws = ws
@@ -928,27 +861,150 @@ async def op_handler(
     try:
         bridge_error = await _run_op_bridge(ws, op, max_frame_payload=max_frame_payload)
     finally:
-        # If we exited the bridge for any reason and the op isn't
-        # already terminal, terminalise. Protocol violations
-        # (bad_frame) become ERRORED so callers and audit don't see
-        # them as success; clean exits become COMPLETED. The control
-        # WSS may have already supplied a richer outcome via
-        # op_complete.
-        if op.revocation_reason is None and op.state not in {
-            OperationState.COMPLETED,
-            OperationState.ERRORED,
-            OperationState.CANCELLED,
-            OperationState.EXPIRED,
-        }:
-            # (An op interrupted by eviction is resolved only by the agent's
-            # own op_complete or the eviction deadline: a closed per-op socket
-            # is not evidence that the process stopped.)
-            if bridge_error:
-                await manager.complete(
-                    op.operation_id, outcome="error", error=bridge_error
-                )
-            else:
-                await manager.complete(op.operation_id, outcome="completed")
+        await _terminalise_op(manager, op, bridge_error)
+
+
+def _audit_op_reject(audit_emit: AuditEmit, sys_id: Optional[int], code: str) -> None:
+    # Op rejections happen before we redeem an op, so operation_id
+    # is None: the system_id is still the best correlation we have.
+    if sys_id is None:
+        return
+    emit_op_event(
+        audit_emit,
+        OP_REJECTED,
+        system_id=sys_id,
+        operation_id=None,
+        outcome="denied",
+        reason=code,
+    )
+
+
+async def _identify_op_peer(
+    ws: WebSocketServerProtocol, identity_validator, audit_emit: AuditEmit
+) -> Optional[PeerIdentity]:
+    """mTLS identity extraction + validator for a per-op connection.
+
+    Returns the peer identity, or ``None`` after the connection has been
+    refused (and the refusal audited when a system can be named).
+    """
+    identity: Optional[PeerIdentity] = None
+    try:
+        identity = _extract(ws)
+        if identity_validator(identity) is None:
+            raise BrokerRejection(REJECT_NOT_ACTIVE, "identity not accepted")
+    except BrokerRejection as rej:
+        await _reject(ws, rej.code, rej.detail)
+        _audit_op_reject(audit_emit, identity.system_id if identity else None, rej.code)
+        return None
+    except PeerCertError as e:
+        logger.warning("op rejected: bad peer cert: %s", e)
+        await ws.close(code=4001, reason=REJECT_BAD_CERT)
+        _audit_op_reject(audit_emit, None, REJECT_BAD_CERT)
+        return None
+    return identity
+
+
+async def _redeem_op_nonce(
+    ws: WebSocketServerProtocol,
+    registry: AgentRegistry,
+    manager: OperationManager,
+    identity: PeerIdentity,
+    audit_emit: AuditEmit,
+) -> Optional[Operation]:
+    """Defence in depth (the agent must have a live control tunnel), then
+    redeem the op nonce. Returns the operation, or ``None`` after refusing."""
+    if registry.get(identity.system_id) is None:
+        await _reject(ws, REJECT_NO_TUNNEL, "no control tunnel for system")
+        _audit_op_reject(audit_emit, identity.system_id, REJECT_NO_TUNNEL)
+        return None
+    nonce = ws.request_headers.get("X-Praxis-Op-Nonce")
+    if not nonce:
+        await _reject(ws, REJECT_MISSING_NONCE, "header missing")
+        _audit_op_reject(audit_emit, identity.system_id, REJECT_MISSING_NONCE)
+        return None
+    try:
+        return await manager.redeem_nonce(nonce, system_id=identity.system_id)
+    except NonceExpired as e:
+        code = REJECT_NONCE_EXPIRED
+        detail = str(e)
+    except NonceInvalid as e:
+        code = REJECT_NONCE_INVALID
+        detail = str(e)
+    await _reject(ws, code, detail)
+    _audit_op_reject(audit_emit, identity.system_id, code)
+    return None
+
+
+async def _read_op_attach(
+    ws: WebSocketServerProtocol,
+    manager: OperationManager,
+    op: Operation,
+    audit_emit: AuditEmit,
+    system_id: int,
+) -> Optional[Dict[str, Any]]:
+    """Read the first inbound frame, which must be ``op_attach`` for ``op``.
+
+    Returns the parsed attach message, or ``None`` after the op has been
+    terminalised as an attach failure.
+    """
+    try:
+        first = await ws.recv()
+    except ConnectionClosed:
+        await manager.complete(
+            op.operation_id, outcome="error", error={"reason": "closed_before_attach"}
+        )
+        return None
+    try:
+        attach = (
+            json.loads(first) if isinstance(first, (str, bytes, bytearray)) else None
+        )
+    except (ValueError, TypeError):
+        attach = None
+    if (
+        isinstance(attach, dict)
+        and attach.get("type") == "op_attach"
+        and attach.get("operation_id") == op.operation_id
+    ):
+        return attach
+    await _reject(ws, REJECT_ATTACH_MISMATCH, "first message must be op_attach")
+    emit_op_event(
+        audit_emit,
+        OP_REJECTED,
+        system_id=system_id,
+        operation_id=op.operation_id,
+        op_type=op.op_type,
+        outcome="denied",
+        reason=REJECT_ATTACH_MISMATCH,
+    )
+    await manager.complete(
+        op.operation_id, outcome="error", error={"reason": "attach_mismatch"}
+    )
+    return None
+
+
+async def _terminalise_op(
+    manager: OperationManager, op, bridge_error: Optional[Dict[str, Any]]
+) -> None:
+    """If the bridge exited and the op isn't already terminal, terminalise it.
+    Protocol violations (bad_frame) become ERRORED so callers and audit don't
+    see them as success; clean exits become COMPLETED. The control WSS may
+    have already supplied a richer outcome via op_complete.
+
+    An op interrupted by eviction is resolved only by the agent's own
+    op_complete or the eviction deadline: a closed per-op socket is not
+    evidence that the process stopped.
+    """
+    if op.revocation_reason is not None or op.state in {
+        OperationState.COMPLETED,
+        OperationState.ERRORED,
+        OperationState.CANCELLED,
+        OperationState.EXPIRED,
+    }:
+        return
+    if bridge_error:
+        await manager.complete(op.operation_id, outcome="error", error=bridge_error)
+    else:
+        await manager.complete(op.operation_id, outcome="completed")
 
 
 async def _run_op_bridge(

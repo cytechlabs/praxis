@@ -125,12 +125,11 @@ test.describe("Compliance Remediation read-only surface", () => {
       : (body.items ?? []);
     await api.dispose();
     const host = rows.find((r) => r.hostname === "demo-db-01");
-    expect(
-      host,
-      "demo-db-01 is not seeded; run e2e/fixtures/seed-demo.sh",
-    ).toBeTruthy();
+    if (!host) {
+      throw new Error("demo-db-01 is not seeded; run e2e/fixtures/seed-demo.sh");
+    }
 
-    await page.goto(`/compliance/systems/${host!.id}/remediation`);
+    await page.goto(`/compliance/systems/${host.id}/remediation`);
     await page.waitForLoadState("networkidle");
     await expect(
       page.getByRole("heading", { name: /demo-db-01 Remediation/ }),
