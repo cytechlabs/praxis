@@ -39,7 +39,9 @@ class _SharedSession:
         return self._db.query(*a, **k)
 
     def close(self):
-        pass
+        """Deliberately leave the session open: the fixture owns it and rolls
+        it back at teardown, so the validator's own close must not end it."""
+        return None
 
 
 @pytest.fixture

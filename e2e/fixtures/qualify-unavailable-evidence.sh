@@ -88,6 +88,7 @@ compose() {
 }
 # The backend reads its Vault token from the bundled token file.
 run_py() {
+    # shellcheck disable=SC2016  # single quotes: the container's sh must expand these
     compose exec -T -e QUAL_RUN_ID="$RUN_ID" -e QUAL_PASSWORD="$PASSWORD" \
         -e QUAL_IP="$IP" ${QUAL_TAMPER:+-e QUAL_TAMPER="$QUAL_TAMPER"} backend \
         sh -c 'VAULT_TOKEN="$(cat /vault/data/backend-token)" exec python - "$@"' sh "$@" \

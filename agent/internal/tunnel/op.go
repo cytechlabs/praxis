@@ -77,6 +77,10 @@ type opPump struct {
 	maxFrame    int
 	pairTimeout time.Duration
 
+	// bridgeFirst, when set, observes which side of runBridge finished
+	// first. It exists so tests can prove both completion orders occur.
+	bridgeFirst func(inboundFirst bool)
+
 	mu      sync.Mutex
 	pending map[int]*pendingOp
 	active  map[int]*activeOp
@@ -351,6 +355,32 @@ func (p *opPump) runOp(ctx context.Context, opID int, opType, nonce string, para
 		}
 	}()
 
+	var failed *opOutcome
+	conn, failed = p.openOp(ctx, opID, nonce, awaitReady)
+	if failed != nil {
+		outcome = *failed
+		return
+	}
+
+	outcome = p.dispatchOp(ctx, opID, opType, conn, params)
+
+	// If ctx cancelled and the handler reported success/error from
+	// torn-down state, override with cancelled: op_cancel always wins.
+	// A handler that already reported cancelled keeps its own result, which
+	// may carry termination evidence.
+	if errors.Is(ctx.Err(), context.Canceled) &&
+		outcome.outcome != "error" && outcome.outcome != "cancelled" {
+		outcome = opOutcomeCancelled()
+	}
+}
+
+// openOp dials the per-op socket, sends op_attach and, for a gated op, waits
+// for the broker's op_ready. It returns the connection (when one was
+// established, so the caller can close it even on failure) and a non-nil
+// outcome when the op must not start. Nothing is started by this step.
+func (p *opPump) openOp(
+	ctx context.Context, opID int, nonce string, awaitReady bool,
+) (*websocket.Conn, *opOutcome) {
 	opURL := strings.TrimSuffix(p.cfg.BrokerURL, "/") + "/agent/op"
 	dialOpts := &websocket.DialOptions{
 		HTTPClient: &http.Client{
@@ -358,12 +388,11 @@ func (p *opPump) runOp(ctx context.Context, opID int, opType, nonce string, para
 		},
 		HTTPHeader: http.Header{"X-Praxis-Op-Nonce": []string{nonce}},
 	}
-	var err error
-	conn, _, err = websocket.Dial(ctx, opURL, dialOpts)
+	conn, _, err := websocket.Dial(ctx, opURL, dialOpts)
 	if err != nil {
 		p.log.Printf("op=%d dial /agent/op failed: %v", opID, err)
-		outcome = opOutcomeError("op_dial_failed")
-		return
+		o := opOutcomeError("op_dial_failed")
+		return nil, &o
 	}
 	conn.SetReadLimit(int64(DefaultMaxFramePayload + FrameHeaderSize + 1024))
 
@@ -379,8 +408,8 @@ func (p *opPump) runOp(ctx context.Context, opID int, opType, nonce string, para
 	attach, _ := json.Marshal(attachMsg)
 	if err := conn.Write(ctx, websocket.MessageText, attach); err != nil {
 		p.log.Printf("op=%d op_attach send failed: %v", opID, err)
-		outcome = opOutcomeError("op_stream_closed")
-		return
+		o := opOutcomeError("op_stream_closed")
+		return conn, &o
 	}
 
 	// A broker that authorizes the start sends op_ready. Until then no
@@ -389,43 +418,37 @@ func (p *opPump) runOp(ctx context.Context, opID int, opType, nonce string, para
 	// stop. Brokers that predate the gate never set await_ready.
 	if awaitReady {
 		if err := awaitOpReady(ctx, conn); err != nil {
+			o := opOutcomeErrorWith("op_not_authorized", terminationNotStarted)
 			if ctx.Err() != nil {
-				outcome = opOutcomeCancelledWith(terminationNotStarted)
-				return
+				o = opOutcomeCancelledWith(terminationNotStarted)
+			} else {
+				p.log.Printf("op=%d broker did not authorize start: %v", opID, err)
 			}
-			p.log.Printf("op=%d broker did not authorize start: %v", opID, err)
-			outcome = opOutcomeErrorWith("op_not_authorized", terminationNotStarted)
-			return
+			return conn, &o
 		}
 	}
+	return conn, nil
+}
 
-	// Dispatch by op_type. Each handler owns its own bridge and is
-	// responsible for closing inbound + outbound frames cleanly. The
-	// returned outcome is what we report on op_complete; the handler
-	// is allowed to return zero opOutcome only when ctx was cancelled
-	// (we map that to opOutcomeCancelled below).
+// dispatchOp hands the attached per-op socket to the handler for opType. Each
+// handler owns its own bridge and is responsible for closing inbound and
+// outbound frames cleanly.
+func (p *opPump) dispatchOp(
+	ctx context.Context, opID int, opType string, conn *websocket.Conn, params map[string]any,
+) opOutcome {
 	switch opType {
 	case "exec":
-		outcome = p.runExec(ctx, opID, conn, params)
+		return p.runExec(ctx, opID, conn, params)
 	case "file_get":
-		outcome = p.runFileGet(ctx, opID, conn, params)
+		return p.runFileGet(ctx, opID, conn, params)
 	case "file_put":
-		outcome = p.runFilePut(ctx, opID, conn, params)
+		return p.runFilePut(ctx, opID, conn, params)
 	case "pty":
-		outcome = p.runPty(ctx, opID, conn, params)
+		return p.runPty(ctx, opID, conn, params)
 	case "facts":
-		outcome = p.runFacts(ctx, opID, conn, params)
+		return p.runFacts(ctx, opID, conn, params)
 	default:
-		outcome = p.runStub(ctx, opID, conn, opType)
-	}
-
-	// If ctx cancelled and the handler reported success/error from
-	// torn-down state, override with cancelled — op_cancel always wins.
-	// A handler that already reported cancelled keeps its own result, which
-	// may carry termination evidence.
-	if errors.Is(ctx.Err(), context.Canceled) &&
-		outcome.outcome != "error" && outcome.outcome != "cancelled" {
-		outcome = opOutcomeCancelled()
+		return p.runStub(ctx, opID, conn, opType)
 	}
 }
 
@@ -495,9 +518,15 @@ func (p *opPump) runBridge(ctx context.Context, conn *websocket.Conn, outbox []F
 	var outboundErr, inboundErr *bridgeErr
 	select {
 	case outboundErr = <-outErrCh:
+		if p.bridgeFirst != nil {
+			p.bridgeFirst(false)
+		}
 		cancel()
 		inboundErr = <-inErrCh
 	case e := <-inErrCh:
+		if p.bridgeFirst != nil {
+			p.bridgeFirst(true)
+		}
 		if e != nil {
 			cancel()
 			<-outErrCh
