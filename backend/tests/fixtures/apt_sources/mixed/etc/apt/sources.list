@@ -1,0 +1,4 @@
+# main file
+deb [arch=amd64] http://deb.example.test/debian trixie main contrib
+#deb http://deb.example.test/commented trixie main
+deb-src [arch=amd64] http://deb.example.test/debian trixie main # inline comment

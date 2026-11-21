@@ -1,0 +1,4 @@
+Types: deb
+URIs: http://download.example.test/pve
+Suites: trixie
+Components: pve-no-subscription
