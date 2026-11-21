@@ -323,8 +323,9 @@ async def test_local_spool_failure_mid_body_releases_the_broker(
         def __exit__(self, *exc):
             self._fh.close()
 
-    def _open(path, mode="r", *a, **k):
-        fh = real_open(path, mode, *a, **k)
+    def _open(path, *a, **k):
+        fh = real_open(path, *a, **k)
+        mode = a[0] if a else k.get("mode", "r")
         return _FullDisk(fh) if mode == "wb" else fh
 
     big = tmp_path / "big.bin"

@@ -76,9 +76,9 @@ export function useUrlState<T extends string = string>(
   // After cancelled or failed writes, converge on what the URL actually holds.
   useEffect(() => {
     const resync = () => {
-      const r = routerRef.current;
-      if (!r.isReady) return;
-      const actual = readParam(r.query[key], defaultRef.current);
+      const currentRouter = routerRef.current;
+      if (!currentRouter.isReady) return;
+      const actual = readParam(currentRouter.query[key], defaultRef.current);
       written.current = [];
       lastUrl.current = actual;
       setValue(actual as T);

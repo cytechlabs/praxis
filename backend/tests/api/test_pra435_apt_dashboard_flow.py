@@ -101,7 +101,9 @@ def _posture(client, system):
 
 def _freshness(client, system):
     rows = client.get("/packages/metadata-freshness").json()
-    return next(r for r in rows if r["system_id"] == system.id)
+    row = next((r for r in rows if r["system_id"] == system.id), None)
+    assert row is not None, f"no freshness row for system {system.id}"
+    return row
 
 
 def _legacy_success(db, user, system):
@@ -144,6 +146,7 @@ def test_migrated_host_with_a_legacy_success_is_not_trusted_until_scanned(
 
     scanned = authed_client.post(f"/packages/{apt_host.id}/scan-security").json()
     assert scanned["scan_state"] == provenance.STATE_COMPLETE
+    assert {call[0] for call in host_script.calls} == {apt_host.id}
     posture = _posture(authed_client, apt_host)
     assert posture["counts_trustworthy"] is True
     assert posture["coverage_complete"] is True

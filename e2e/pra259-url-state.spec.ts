@@ -52,10 +52,10 @@ test.describe("all-systems URL-backed filters", () => {
     // Filter edits replace history, so push real entries through the router
     // (as a link would) and let the hook follow back/forward across them.
     await page.evaluate(() => {
-      const w = window as unknown as {
+      const appWindow = window as unknown as {
         next: { router: { push: (u: string, a?: string, o?: object) => Promise<boolean> } };
       };
-      return w.next.router.push("?status=Inactive&ca=off", undefined, { shallow: true });
+      return appWindow.next.router.push("?status=Inactive&ca=off", undefined, { shallow: true });
     });
     await expect(status(page)).toHaveValue("Inactive");
     await page.goBack();
@@ -89,15 +89,15 @@ test.describe("all-systems URL-backed filters", () => {
     await open(page);
     // Count router replacements: navigation events alone cannot bound them.
     await page.evaluate(() => {
-      const w = window as unknown as {
+      const appWindow = window as unknown as {
         __replaces: number;
-        next: { router: { replace: (...a: unknown[]) => Promise<boolean> } };
+        next: { router: { replace: (...args: unknown[]) => Promise<boolean> } };
       };
-      w.__replaces = 0;
-      const orig = w.next.router.replace.bind(w.next.router);
-      w.next.router.replace = (...a: unknown[]) => {
-        w.__replaces += 1;
-        return orig(...a);
+      appWindow.__replaces = 0;
+      const orig = appWindow.next.router.replace.bind(appWindow.next.router);
+      appWindow.next.router.replace = (...args: unknown[]) => {
+        appWindow.__replaces += 1;
+        return orig(...args);
       };
     });
     const replaces = () =>
@@ -112,10 +112,10 @@ test.describe("all-systems URL-backed filters", () => {
     expect(await replaces()).toBe(settled);
     // Back/forward navigation must not write either.
     await page.evaluate(() => {
-      const w = window as unknown as {
+      const appWindow = window as unknown as {
         next: { router: { push: (u: string, a?: string, o?: object) => Promise<boolean> } };
       };
-      return w.next.router.push("?search=zzz", undefined, { shallow: true });
+      return appWindow.next.router.push("?search=zzz", undefined, { shallow: true });
     });
     await expect(search(page)).toHaveValue("zzz");
     await page.goBack();
@@ -142,10 +142,10 @@ test.describe("available-updates URL-backed search", () => {
     await expect(box(page)).toHaveValue("curl");
 
     await page.evaluate(() => {
-      const w = window as unknown as {
+      const appWindow = window as unknown as {
         next: { router: { push: (u: string, a?: string, o?: object) => Promise<boolean> } };
       };
-      return w.next.router.push("?search=bash&keep=1", undefined, { shallow: true });
+      return appWindow.next.router.push("?search=bash&keep=1", undefined, { shallow: true });
     });
     await expect(box(page)).toHaveValue("bash");
     await page.goBack();

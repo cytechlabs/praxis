@@ -34,6 +34,7 @@ class ScriptedHost:
         self.refresh = CLEAN_REFRESH
         self.listing = LISTING
         self.installed = INSTALLED
+        self.calls = []
 
     def run(self, command):
         if "apt-get update" in command:
@@ -57,7 +58,8 @@ class ScriptedHost:
     def install(self, monkeypatch):
         host = self
 
-        def execute(self, system_id, command, timeout=None, user_id=None):
+        def execute(_ssh, system_id, command, timeout=None, user_id=None):
+            host.calls.append((system_id, command, timeout, user_id))
             return host.run(command)
 
         for name in ("execute_command", "execute_privileged_command"):
