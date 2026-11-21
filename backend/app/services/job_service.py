@@ -1153,7 +1153,7 @@ class JobService:
                 "hostname": system.hostname,
             }
 
-            if job.job_type == "package_scan" or job.job_type == "audit":
+            if job.job_type in ("package_scan", "audit"):
                 pkg_count = (
                     self.db.query(Package)
                     .filter(Package.system_id == system.id)
@@ -1533,10 +1533,13 @@ class JobService:
         visited = set()
 
         for job in all_jobs:
-            if job.id in dep_ids and job.depends_on_job_id is None:
-                if job.id not in visited:
-                    chain = self._build_chain(job, all_jobs, visited)
-                    chains.append(chain)
+            if (
+                job.id in dep_ids
+                and job.depends_on_job_id is None
+                and job.id not in visited
+            ):
+                chain = self._build_chain(job, all_jobs, visited)
+                chains.append(chain)
 
         # Also include orphan dependents (parent deleted)
         for job in all_jobs:

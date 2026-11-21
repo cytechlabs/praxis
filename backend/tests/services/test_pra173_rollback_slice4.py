@@ -860,7 +860,7 @@ def test_verify_due_handles_observed_package_not_installed(
     unambiguous "verified" sentinel — subsequent verify-due batches
     must NOT re-probe this row, and the completion event must fire
     exactly once."""
-    run, host_row, _system = _build_dispatched_run(
+    run, _host_row, _system = _build_dispatched_run(
         db, admin_user, host_factory, slug="rb-s4-not-installed"
     )
     # Probe reports the package as not installed (e.g. an apt purge
