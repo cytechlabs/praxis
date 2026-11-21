@@ -8,13 +8,21 @@ import shlex
 import threading
 from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from urllib.parse import urlsplit
 
-from sqlalchemy import false
+from sqlalchemy import false, or_
+from sqlalchemy import update as sql_update
 from sqlalchemy.orm import Session
 
+from ..core.redaction import redact_text
 from ..db.models import Distro, Package, PackageHistory, PackageUpdate, System, User
 from . import reboot_evidence_service
-from .security_scan_status_service import STATE_COMPLETE, STATE_FAILED, STATE_PARTIAL
+from .security_scan_status_service import (
+    APT_DISTRO_KEYS,
+    STATE_COMPLETE,
+    STATE_FAILED,
+    STATE_PARTIAL,
+)
 from .ssh_service import SSHConnectionError, SSHService
 
 # PRA-322: per-host single-flight for expensive SSH/package-manager work. Repeated
@@ -60,8 +68,19 @@ MAX_REPORTED_PACKAGES = 10
 PKG_COMMANDS = {
     "apt": {
         "list_installed": "dpkg-query -W -f='${Package}\\t${Version}\\t${Status}\\n' | grep 'install ok installed'",
-        "check_updates": "apt list --upgradable 2>/dev/null | tail -n +2",
-        "check_security": "apt list --upgradable 2>/dev/null | grep -i security | tail -n +2",
+        # The parsed commands run in the C locale: the refresh and listing
+        # parsers read apt's untranslated progress, error and "upgradable from"
+        # text, which a host's configured language would otherwise rewrite.
+        "refresh_metadata": (
+            "LC_ALL=C DEBIAN_FRONTEND=noninteractive apt-get update "
+            "-o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 "
+            "-o Acquire::Retries=0"
+        ),
+        # The exit status is apt's own, so a listing failure is visible. The
+        # header line and non-matching lines are ignored by the parser, and the
+        # security subset is selected after parsing.
+        "check_updates": "LC_ALL=C apt list --upgradable 2>/dev/null",
+        "check_security": "LC_ALL=C apt list --upgradable 2>/dev/null",
         "apply_update": "DEBIAN_FRONTEND=noninteractive apt-get install -y --only-upgrade {packages}",
         "apply_all": "DEBIAN_FRONTEND=noninteractive apt-get upgrade -y",
         "apply_security": "DEBIAN_FRONTEND=noninteractive apt-get install -y --only-upgrade {packages}",
@@ -98,8 +117,7 @@ PKG_COMMANDS = {
 
 # Map distro names to package manager
 DISTRO_PKG_MANAGER = {
-    "ubuntu": "apt",
-    "debian": "apt",
+    **{key: "apt" for key in APT_DISTRO_KEYS},
     "centos": "yum",
     "rhel": "yum",
     "red hat": "yum",
@@ -191,6 +209,207 @@ def _parse_rpm_nevra(token: str) -> Optional[Dict[str, str]]:
         "version": match.group("version"),
         "release": match.group("release"),
         "arch": match.group("arch"),
+    }
+
+
+# APT metadata observation states. ``fresh`` is the only state that vouches for
+# the candidate versions a scan reports.
+APT_FRESH = "fresh"
+APT_PARTIAL = "partial"
+APT_FAILED = "failed"
+APT_CACHED = "cached"
+
+APT_REFRESH_TIMEOUT = 300
+APT_DETAIL_MAX_CHARS = 500
+APT_DETAIL_MAX_REPOS = 5
+
+_APT_ERR_RE = re.compile(r"^Err:\d+\s+(\S+)(?:\s+(.*))?$")
+_APT_PROGRESS_RE = re.compile(r"^(?:Hit|Get):\d+\s+(\S+)")
+_APT_IP_RE = re.compile(r"\s*\[IP:[^\]]*\]")
+_APT_DIAG_RE = re.compile(r"^[EW]:\s*(.+)$")
+_APT_GENERIC_DIAG_RE = re.compile(
+    r"^(?:Failed to fetch |Some index files failed to download)", re.IGNORECASE
+)
+# E:/W: lines that mean a source did not refresh. apt exits zero for some of
+# these, and other warnings (duplicate targets, deprecated keys) are benign, so
+# only fetch and signature failures count.
+_APT_FETCH_FAILURE_RE = re.compile(
+    r"failed to fetch|index files failed|gpg error|signature verification|"
+    r"not signed|NO_PUBKEY|EXPKEYSIG|KEYEXPIRED|BADSIG|no longer has a release "
+    r"file|does not have a release file|release file .* (?:expired|not valid yet)",
+    re.IGNORECASE,
+)
+_APT_PRIVILEGE_RE = re.compile(
+    r"permission denied|could not open lock file|unable to lock|are you root|"
+    r"must be root|a password is required|no tty present|not in the sudoers",
+    re.IGNORECASE,
+)
+_APT_AUTH_RE = re.compile(r"\b(?:401|403)\b|unauthorized|forbidden", re.IGNORECASE)
+_APT_MISSING_RE = re.compile(r"\b404\b|not found", re.IGNORECASE)
+_APT_SIGNATURE_RE = re.compile(
+    r"NO_PUBKEY|EXPKEYSIG|KEYEXPIRED|BADSIG|not signed|signatures? couldn't be "
+    r"verified|invalid signature|public key is not available",
+    re.IGNORECASE,
+)
+_APT_NETWORK_RE = re.compile(
+    r"could not resolve|temporary failure|connection (?:refused|timed out|failed)|"
+    r"network is unreachable|no route to host|timed out",
+    re.IGNORECASE,
+)
+
+
+def _bound_detail(text: str) -> str:
+    """Redact, flatten and bound remote diagnostic text before it is stored."""
+    flat = " ".join(redact_text(text).split())
+    if len(flat) > APT_DETAIL_MAX_CHARS:
+        flat = flat[: APT_DETAIL_MAX_CHARS - 3].rstrip() + "..."
+    return flat
+
+
+def _repo_label(url: str, suite: str) -> str:
+    """Repository identity without credentials, query, or fragment."""
+    parts = urlsplit(url)
+    host = parts.hostname or ""
+    if parts.port:
+        host = f"{host}:{parts.port}"
+    label = f"{host}{parts.path}" if host else url.split("?", 1)[0]
+    return f"{label} {suite}".strip()
+
+
+def _apt_guidance(text: str) -> str:
+    if _APT_PRIVILEGE_RE.search(text):
+        return (
+            "Refreshing APT metadata needs root or passwordless sudo on the host; "
+            "set the credential's sudo method, or scan cached-only."
+        )
+    if _APT_SIGNATURE_RE.search(text):
+        return "Verify the repository signing key and that the source is signed."
+    if _APT_AUTH_RE.search(text):
+        return (
+            "Check the repository credentials or subscription, or disable the source."
+        )
+    if _APT_MISSING_RE.search(text):
+        return (
+            "The source may have been removed or the suite renamed; fix or disable it."
+        )
+    if _APT_NETWORK_RE.search(text):
+        return "The host could not reach the repository; check network access."
+    return "Run apt-get update on the host to see the full error."
+
+
+def classify_apt_refresh(
+    stdout: str, stderr: str, exit_code: Optional[int]
+) -> Tuple[str, str]:
+    """Classify ``apt-get update`` output as ``(state, detail)``.
+
+    ``fresh`` requires a clean exit and no failed source. Otherwise the result is
+    ``partial`` when some other source fetched cleanly alongside the failed
+    ones, and ``failed`` when no source is known to have refreshed: a privilege
+    or lock failure, or an error such as an unsigned repository that apt
+    reports without a per-source failure and that stops the whole update.
+    Detail is source-scoped, redacted, and bounded.
+    """
+    lines = (stdout or "").splitlines()
+    failed: Dict[str, str] = {}
+    succeeded: Set[str] = set()
+    index = 0
+    while index < len(lines):
+        line = lines[index]
+        index += 1
+        progress = _APT_PROGRESS_RE.match(line)
+        if progress:
+            succeeded.add(progress.group(1))
+            continue
+        match = _APT_ERR_RE.match(line)
+        if not match:
+            continue
+        reason = ""
+        while index < len(lines) and lines[index][:1].isspace():
+            if not reason and lines[index].strip():
+                reason = _APT_IP_RE.sub("", lines[index].strip())
+            index += 1
+        url = match.group(1)
+        if url not in failed:
+            label = _repo_label(url, (match.group(2) or "").strip())
+            failed[url] = f"{label} ({reason})" if reason else label
+
+    diagnostics: List[str] = []
+    fetch_diagnostics: List[str] = []
+    for line in (stderr or "").splitlines() + [
+        row for row in lines if _APT_DIAG_RE.match(row)
+    ]:
+        diag = _APT_DIAG_RE.match(line.strip())
+        if not diag:
+            continue
+        text = _APT_IP_RE.sub("", diag.group(1).strip())
+        if _APT_FETCH_FAILURE_RE.search(text):
+            fetch_diagnostics.append(text)
+        # Generic fetch summaries repeat the per-source failures, so they are
+        # evidence of failure but not worth echoing when a source is named.
+        if not _APT_GENERIC_DIAG_RE.match(text):
+            diagnostics.append(text)
+
+    if exit_code == 0 and not failed and not fetch_diagnostics:
+        if succeeded:
+            return APT_FRESH, ""
+        # A clean exit with no source reporting in means nothing was refreshed:
+        # no enabled source, or every source skipped. It cannot vouch for the
+        # cached lists, and it is not the same as a refreshed repository that
+        # simply has no updates.
+        return APT_FAILED, _bound_detail(
+            "apt-get update refreshed no source; no enabled APT source "
+            "reported in. Enable a source on the host, or treat the cached "
+            "lists as unverified."
+        )
+
+    evidence = " ".join(list(failed.values()) + diagnostics)
+    privilege_blocked = bool(_APT_PRIVILEGE_RE.search(evidence))
+    other_sources_ok = bool(succeeded - set(failed))
+    # apt stops the whole update on errors that carry no per-source failure
+    # line (an unsigned repository), so those are partial only when apt itself
+    # exited cleanly after skipping the failing source.
+    state = (
+        APT_PARTIAL
+        if (failed or exit_code == 0) and other_sources_ok and not privilege_blocked
+        else APT_FAILED
+    )
+
+    if failed:
+        shown = "; ".join(list(failed.values())[:APT_DETAIL_MAX_REPOS])
+        extra = len(failed) - APT_DETAIL_MAX_REPOS
+        if extra > 0:
+            shown += f"; and {extra} more"
+        detail = f"{len(failed)} source(s) failed to refresh: {shown}."
+    elif diagnostics or fetch_diagnostics:
+        shown = fetch_diagnostics or diagnostics
+        detail = "apt-get update reported: " + "; ".join(shown[:3]) + "."
+    else:
+        detail = f"apt-get update exited with status {exit_code}."
+    return state, _bound_detail(f"{detail} {_apt_guidance(evidence)}")
+
+
+def _iso_utc(value: Optional[datetime]) -> Optional[str]:
+    return value.isoformat() + "Z" if value else None
+
+
+def apt_metadata_view(
+    state: Optional[str],
+    refreshed_at: Optional[datetime],
+    checked_at: Optional[datetime],
+    detail: Optional[str],
+) -> Dict[str, Any]:
+    """API shape of a host's APT metadata observation.
+
+    ``state`` is ``unknown`` until a check has been recorded. Only ``fresh``
+    vouches for candidate versions; ``verified`` repeats that as a boolean so a
+    consumer cannot mistake a cached or failed check for current metadata.
+    """
+    return {
+        "state": state or "unknown",
+        "verified": state == APT_FRESH,
+        "refreshed_at": _iso_utc(refreshed_at),
+        "checked_at": _iso_utc(checked_at),
+        "detail": detail,
     }
 
 
@@ -294,8 +513,178 @@ class PackageService:
             return False
         return True
 
+    @staticmethod
+    def _apt_list_ok(result: Dict[str, Any]) -> bool:
+        """``apt list`` succeeded: apt's own exit status was zero.
+
+        An empty list with a clean exit means no candidates; any other outcome
+        means the candidate set is unknown and must not read as zero.
+        """
+        return (
+            result.get("status") == "success"
+            and result.get("exit_code") in (0, None)
+            and not result.get("truncated")
+            and PackageService._ssh_result_ok(result)
+        )
+
+    @staticmethod
+    def _listing_failure_reason(result: Dict[str, Any]) -> str:
+        """Why a candidate listing cannot be trusted, for operator-facing text."""
+        if result.get("truncated"):
+            return (
+                "The candidate update list exceeded the output capture limit and "
+                "is incomplete."
+            )
+        return "The candidate update list could not be read."
+
+    def _stored_update_count(self, system_id: int, security_only: bool = False) -> int:
+        query = self.db.query(PackageUpdate).filter(
+            PackageUpdate.system_id == system_id
+        )
+        if security_only:
+            query = query.filter(PackageUpdate.update_type == "security")
+        return query.count()
+
+    def _refresh_apt_metadata(
+        self, system_id: int, commands: Dict[str, str], refresh: bool
+    ) -> Tuple[str, str, bool]:
+        """Refresh APT metadata, or report that cached lists are being used.
+
+        Returns ``(state, detail, incomplete)``; ``incomplete`` is True when the
+        refresh output was clipped by the capture limit.
+
+        The refresh is a privileged mutation of the host's package lists, so it
+        runs through the credential's sudo method like every other privileged
+        package operation. A host that cannot escalate reports a failed refresh
+        with guidance; scanning is never blocked by it, and the host's cached
+        lists keep answering as last-known inventory.
+        """
+        if not refresh:
+            return (
+                APT_CACHED,
+                "Cached package lists were used; the metadata was not refreshed.",
+                False,
+            )
+        try:
+            result = self.ssh_service.execute_privileged_command(
+                system_id, commands["refresh_metadata"], timeout=APT_REFRESH_TIMEOUT
+            )
+        except SSHConnectionError as exc:
+            return (
+                APT_FAILED,
+                _bound_detail(
+                    f"The connection failed during the metadata refresh: {exc}"
+                ),
+                False,
+            )
+        exit_code = result.get("exit_code")
+        if exit_code is None:
+            reason = (result.get("stderr") or "").strip() or "no result from the host"
+            return (
+                APT_FAILED,
+                _bound_detail(f"The metadata refresh did not complete: {reason}"),
+                False,
+            )
+        state, detail = classify_apt_refresh(
+            result.get("stdout", ""), result.get("stderr", ""), exit_code
+        )
+        if result.get("truncated"):
+            # The capture limit clipped the evidence, so a clean-looking prefix
+            # proves nothing about the sources that came after it.
+            note = (
+                "The refresh output exceeded the capture limit, so the result "
+                "cannot be verified."
+            )
+            return (
+                (APT_FAILED if state == APT_FRESH else state),
+                _bound_detail(f"{note} {detail}".strip()),
+                True,
+            )
+        return state, detail, False
+
+    def _record_apt_observation(
+        self, system_id: int, observed_at: datetime, state: str, detail: str
+    ) -> Dict[str, Any]:
+        """Persist one APT metadata observation and return the stored summary.
+
+        Writes are ordered by observation time: evidence older than the stored
+        check cannot replace it, so a scan that finishes late never overwrites a
+        newer result. Only a fresh observation advances the last verified
+        refresh, and it only moves forward; every other state leaves it alone.
+        """
+        self.db.execute(
+            sql_update(System)
+            .where(
+                System.id == system_id,
+                or_(
+                    System.apt_metadata_checked_at.is_(None),
+                    System.apt_metadata_checked_at <= observed_at,
+                ),
+            )
+            .values(
+                apt_metadata_state=state,
+                apt_metadata_checked_at=observed_at,
+                apt_metadata_detail=(detail or None),
+            )
+            .execution_options(synchronize_session=False)
+        )
+        if state == APT_FRESH:
+            self.db.execute(
+                sql_update(System)
+                .where(
+                    System.id == system_id,
+                    or_(
+                        System.apt_metadata_refreshed_at.is_(None),
+                        System.apt_metadata_refreshed_at < observed_at,
+                    ),
+                )
+                .values(apt_metadata_refreshed_at=observed_at)
+                .execution_options(synchronize_session=False)
+            )
+        self.db.commit()
+        return self.get_apt_metadata(system_id)
+
+    def get_apt_metadata(self, system_id: int) -> Dict[str, Any]:
+        """Latest stored APT metadata observation for one host."""
+        row = (
+            self.db.query(
+                System.apt_metadata_state,
+                System.apt_metadata_refreshed_at,
+                System.apt_metadata_checked_at,
+                System.apt_metadata_detail,
+            )
+            .filter(System.id == system_id)
+            .one_or_none()
+        )
+        return apt_metadata_view(*(row or (None, None, None, None)))
+
+    def list_apt_metadata(
+        self, system_ids: Optional[Set[int]] = None
+    ) -> List[Dict[str, Any]]:
+        """APT metadata freshness for hosts in the caller's fleet scope."""
+        query = _apply_system_scope(
+            self.db.query(
+                System.id,
+                System.hostname,
+                System.apt_metadata_state,
+                System.apt_metadata_refreshed_at,
+                System.apt_metadata_checked_at,
+                System.apt_metadata_detail,
+            ),
+            System.id,
+            system_ids,
+        )
+        return [
+            {"system_id": row[0], "hostname": row[1], **apt_metadata_view(*row[2:])}
+            for row in query.order_by(System.hostname).all()
+        ]
+
     def scan_scope(
-        self, targets: List[Tuple[int, str]], *, security: bool = False
+        self,
+        targets: List[Tuple[int, str]],
+        *,
+        security: bool = False,
+        refresh: bool = True,
     ) -> Dict[str, Any]:
         """Run the existing single-host scan across a resolved cohort of hosts.
 
@@ -306,14 +695,14 @@ class PackageService:
         Returns aggregate counts plus a per-host status list.
         """
         results: List[Dict[str, Any]] = []
-        success = failure = skipped = 0
+        success = failure = skipped = partial = 0
         for system_id, hostname in targets:
             scan_state = None
             try:
                 summary = (
-                    self.scan_security_updates(system_id)
+                    self.scan_security_updates(system_id, refresh=refresh)
                     if security
-                    else self.scan_packages(system_id)
+                    else self.scan_packages(system_id, refresh=refresh)
                 )
                 status = summary.get("status", "error")
                 message = summary.get("message")
@@ -328,6 +717,8 @@ class PackageService:
 
             if status == "success":
                 success += 1
+                if scan_state == STATE_PARTIAL:
+                    partial += 1
             elif status == "already_running":
                 skipped += 1
             else:
@@ -348,16 +739,27 @@ class PackageService:
             "success_count": success,
             "failure_count": failure,
             "skipped_count": skipped,
+            # Scanned hosts (counted in success_count) whose results rest on
+            # unverified APT metadata.
+            "partial_count": partial,
             "results": results,
         }
 
-    def scan_packages(self, system_id: int) -> Dict[str, Any]:
-        """Scan a system for installed packages via SSH (per-host single-flight)."""
+    def scan_packages(self, system_id: int, refresh: bool = True) -> Dict[str, Any]:
+        """Scan a system for installed packages via SSH (per-host single-flight).
+
+        ``refresh`` controls APT metadata: True refreshes it first (privileged),
+        False reads the host's cached lists. Either way the observation is
+        recorded, and only a verified refresh makes update counts trustworthy.
+        Hosts on other package managers ignore it.
+        """
         return self._single_flight(
-            system_id, lambda: self._scan_packages_impl(system_id)
+            system_id, lambda: self._scan_packages_impl(system_id, refresh)
         )
 
-    def _scan_packages_impl(self, system_id: int) -> Dict[str, Any]:
+    def _scan_packages_impl(
+        self, system_id: int, refresh: bool = True
+    ) -> Dict[str, Any]:
         """
         Scan a system for installed packages via SSH and store results in DB.
 
@@ -387,6 +789,21 @@ class PackageService:
                 "packages_found": 0,
             }
 
+        if result.get("truncated"):
+            # Reconciling a clipped listing would delete every package past the
+            # cut, so the stored inventory is left as the last-known state.
+            return {
+                "system_id": system_id,
+                "hostname": system.hostname,
+                "status": "error",
+                "evidence_incomplete": True,
+                "message": (
+                    "Failed to scan packages: the installed package list exceeded "
+                    "the output capture limit; the stored inventory is unchanged."
+                ),
+                "packages_found": 0,
+            }
+
         # Parse output based on package manager
         packages = self._parse_installed_packages(result["stdout"], pkg_manager)
 
@@ -395,22 +812,59 @@ class PackageService:
             system_id, packages, pkg_manager, scanned_at=scanned_at
         )
 
+        is_apt = pkg_manager == "apt"
+        apt_state = apt_detail = ""
+        refresh_clipped = False
+        observed_at = datetime.utcnow()
+        if is_apt:
+            apt_state, apt_detail, refresh_clipped = self._refresh_apt_metadata(
+                system_id, commands, refresh
+            )
+
         # Now check for available updates
         update_result = self.ssh_service.execute_command(
             system_id, commands["check_updates"], timeout=120
         )
 
         updates_found = 0
-        if self._ssh_result_ok(update_result):
+        listing_ok = (
+            self._apt_list_ok(update_result)
+            if is_apt
+            else self._ssh_result_ok(update_result)
+        )
+        if listing_ok and is_apt and apt_state != APT_FRESH:
+            # The listing came from lists no refresh vouched for, so it cannot
+            # replace the stored candidates: an empty or incomplete cache would
+            # erase last-known updates. They stay until a verified scan.
+            updates_found = (
+                self.db.query(PackageUpdate)
+                .filter(PackageUpdate.system_id == system_id)
+                .count()
+            )
+        elif listing_ok:
             updates = self._parse_available_updates(
                 update_result["stdout"], pkg_manager
             )
             updates_found = self._upsert_updates(system_id, updates, pkg_manager)
         else:
+            # The previous candidate rows are left in place as last-known data.
             logger.warning(
                 "Update check failed for system %s: %s",
                 system_id,
                 update_result.get("stderr", "").strip() or "no output",
+            )
+            if is_apt:
+                apt_state = APT_FAILED
+                apt_detail = _bound_detail(
+                    f"{self._listing_failure_reason(update_result)} Showing "
+                    f"last-known updates. {apt_detail}"
+                )
+                updates_found = self._stored_update_count(system_id)
+
+        apt_metadata = None
+        if is_apt:
+            apt_metadata = self._record_apt_observation(
+                system_id, observed_at, apt_state, apt_detail
             )
 
         # Mark system as audited so dashboard "stale scan" check is accurate. Same
@@ -427,11 +881,16 @@ class PackageService:
             title=f"Package scan complete: {system.hostname}",
             message=(
                 f"Found {len(packages)} packages, {updates_found} updates available"
+                + (
+                    " (unverified: APT metadata was not refreshed)"
+                    if is_apt and apt_state != APT_FRESH
+                    else ""
+                )
             ),
-            severity="info",
+            severity="warning" if is_apt and apt_state != APT_FRESH else "info",
         )
 
-        return {
+        summary = {
             "system_id": system_id,
             "hostname": system.hostname,
             "status": "success",
@@ -441,6 +900,19 @@ class PackageService:
             "updates_available": updates_found,
             "scanned_at": scanned_at.isoformat(),
         }
+        if is_apt:
+            summary["apt_metadata"] = apt_metadata
+            summary["evidence_incomplete"] = refresh_clipped or not listing_ok
+            summary["scan_state"] = (
+                STATE_COMPLETE if apt_state == APT_FRESH else STATE_PARTIAL
+            )
+            if apt_state != APT_FRESH:
+                summary["message"] = (
+                    "Inventory scanned. Showing last-known updates; the APT "
+                    f"metadata is {'cached' if apt_state == APT_CACHED else 'unverified'}"
+                    f" and did not replace them. {apt_detail}"
+                ).strip()
+        return summary
 
     def _parse_installed_packages(
         self, output: str, pkg_manager: str
@@ -680,28 +1152,70 @@ class PackageService:
         self.db.commit()
         return count
 
-    def scan_security_updates(self, system_id: int) -> Dict[str, Any]:
-        """Scan a system for security updates via SSH (per-host single-flight)."""
+    def scan_security_updates(
+        self, system_id: int, refresh: bool = True
+    ) -> Dict[str, Any]:
+        """Scan a system for security updates via SSH (per-host single-flight).
+
+        On APT hosts the result is complete only when this scan ran against
+        freshly refreshed metadata. A cached or unverified scan reports
+        ``partial`` and is never counted as covered; a later refresh does not
+        certify counts that an earlier scan computed from stale metadata.
+        """
         return self._single_flight(
-            system_id, lambda: self._scan_security_updates_impl(system_id)
+            system_id, lambda: self._scan_security_updates_impl(system_id, refresh)
         )
 
-    def _scan_security_updates_impl(self, system_id: int) -> Dict[str, Any]:
+    def _scan_security_updates_impl(
+        self, system_id: int, refresh: bool = True
+    ) -> Dict[str, Any]:
         system = self._get_system_or_raise(system_id)
         pkg_manager = self._get_pkg_manager(system)
         commands = self._get_commands(pkg_manager)
+
+        is_apt = pkg_manager == "apt"
+        apt_state = apt_detail = ""
+        refresh_clipped = False
+        observed_at = datetime.utcnow()
+        if is_apt:
+            apt_state, apt_detail, refresh_clipped = self._refresh_apt_metadata(
+                system_id, commands, refresh
+            )
 
         result = self.ssh_service.execute_command(
             system_id, commands["check_security"], timeout=120
         )
 
-        if not self._ssh_result_ok(result):
+        listing_ok = (
+            self._apt_list_ok(result) if is_apt else self._ssh_result_ok(result)
+        )
+        apt_metadata = None
+        if is_apt and not listing_ok:
+            apt_metadata = self._record_apt_observation(
+                system_id,
+                observed_at,
+                APT_FAILED,
+                _bound_detail(f"{self._listing_failure_reason(result)} {apt_detail}"),
+            )
+        if not listing_ok:
+            last_known = self._stored_update_count(system_id, security_only=True)
+            reason = (
+                self._listing_failure_reason(result)
+                if (is_apt or result.get("truncated"))
+                else result.get("stderr", "").strip() or "no output from remote host"
+            )
             return {
                 "system_id": system_id,
                 "hostname": system.hostname,
                 "status": "error",
                 "scan_state": STATE_FAILED,
-                "message": f"Failed to scan security updates: {result.get('stderr', '').strip() or 'no output from remote host'}",
+                "evidence_incomplete": True,
+                "last_known_updates": last_known,
+                "apt_metadata": apt_metadata,
+                "message": (
+                    f"Failed to scan security updates: {reason} "
+                    f"{last_known} last-known security update(s) are retained."
+                ),
                 "packages_found": 0,
                 "packages_added": 0,
                 "packages_updated": 0,
@@ -709,6 +1223,11 @@ class PackageService:
                 "unreadable_advisories": 0,
                 "unmatched_packages": [],
             }
+
+        if is_apt:
+            apt_metadata = self._record_apt_observation(
+                system_id, observed_at, apt_state, apt_detail
+            )
 
         unreadable_rows = 0
         if pkg_manager in ("yum", "dnf"):
@@ -749,6 +1268,8 @@ class PackageService:
                 )
         else:
             updates = self._parse_available_updates(result["stdout"], pkg_manager)
+            if is_apt:
+                updates = [u for u in updates if u["type"] == "security"]
             for upd in updates:
                 upd["type"] = "security"
 
@@ -802,7 +1323,12 @@ class PackageService:
                 severity="warning",
             )
 
-        scan_state = STATE_PARTIAL if (unreadable_rows or unmatched) else STATE_COMPLETE
+        metadata_unverified = is_apt and apt_state != APT_FRESH
+        scan_state = (
+            STATE_PARTIAL
+            if (unreadable_rows or unmatched or metadata_unverified)
+            else STATE_COMPLETE
+        )
         summary = {
             "system_id": system_id,
             "hostname": system.hostname,
@@ -816,7 +1342,18 @@ class PackageService:
             "unmatched_packages": unmatched[:MAX_REPORTED_PACKAGES],
             "scanned_at": datetime.utcnow().isoformat(),
         }
-        if scan_state == STATE_PARTIAL:
+        if is_apt:
+            summary["apt_metadata"] = apt_metadata
+            summary["evidence_incomplete"] = refresh_clipped
+        if metadata_unverified:
+            # Candidates came from package lists no refresh vouched for, so the
+            # count may miss updates the repositories now offer.
+            summary["message"] = (
+                f"Security scan stored {updates_found} update(s) from "
+                f"{'cached' if apt_state == APT_CACHED else 'unverified'} APT "
+                f"metadata; the count is not verified. {apt_detail}"
+            ).strip()
+        elif scan_state == STATE_PARTIAL:
             # A count that skipped rows is a floor, not a total, so the caller
             # is told what the scan could not account for.
             summary["message"] = (
@@ -986,7 +1523,7 @@ class PackageService:
                 "packages_skipped": packages_skipped,
             }
 
-        self.scan_packages(system_id)
+        self.scan_packages(system_id, refresh=False)
 
         completed = 0
         for entry in history_entries:
@@ -1235,7 +1772,7 @@ class PackageService:
                 "packages_skipped": packages_skipped,
             }
 
-        self.scan_packages(system_id)
+        self.scan_packages(system_id, refresh=False)
 
         still_installed = {
             p.name
@@ -1519,7 +2056,7 @@ class PackageService:
             }
 
         # Re-scan to sync DB with actual system state
-        self.scan_packages(system_id)
+        self.scan_packages(system_id, refresh=False)
 
         # Check which packages actually updated
         completed = 0
@@ -1921,7 +2458,7 @@ class PackageService:
             }
 
         # Re-scan to verify
-        self.scan_packages(system_id)
+        self.scan_packages(system_id, refresh=False)
 
         rolled_back = 0
         for entry, name, target_version in history_entries:

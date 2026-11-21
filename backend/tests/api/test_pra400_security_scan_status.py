@@ -75,6 +75,12 @@ def _mk_system(db, distro, group, cred, hostname, ip):
         status="Active",
         group_id=group.id,
         credentials_id=cred.id,
+        # APT hosts count as covered only against verified metadata; these
+        # fixtures model a host whose refresh was verified before any scan.
+        apt_metadata_state="fresh" if distro.name != "Rocky" else None,
+        apt_metadata_refreshed_at=(
+            datetime(2000, 1, 1) if distro.name != "Rocky" else None
+        ),
     )
     db.add(s)
     db.flush()
@@ -176,7 +182,15 @@ def captured_ops(monkeypatch):
 
 
 def _ssh_stub(monkeypatch, stdout, status="success", stderr=""):
-    def fake_exec(self, system_id, command, timeout=60):
+    def fake_exec(self, system_id, command, timeout=60, user_id=None):
+        if "apt-get update" in command:
+            # A clean metadata refresh, so apt scans below are against fresh lists.
+            return {
+                "status": "success",
+                "stdout": "Hit:1 http://deb.debian.org/debian trixie InRelease\n",
+                "stderr": "",
+                "exit_code": 0,
+            }
         return {"status": status, "stdout": stdout, "stderr": stderr}
 
     monkeypatch.setattr(
@@ -397,7 +411,7 @@ def test_single_host_scan_records_a_transport_failure(
 
     from app.services.ssh_service import SSHConnectionError
 
-    def fake_exec(self, system_id, command, timeout=60):
+    def fake_exec(self, system_id, command, timeout=60, user_id=None):
         raise SSHConnectionError("host unreachable")
 
     monkeypatch.setattr(
@@ -424,7 +438,7 @@ def test_single_host_scan_failure_never_persists_credential_material(
 
     from app.services.ssh_service import SSHConnectionError
 
-    def fake_exec(self, system_id, command, timeout=60):
+    def fake_exec(self, system_id, command, timeout=60, user_id=None):
         raise SSHConnectionError(
             f"ssh handshake failed: password={sentinel} for user deploy"
         )
@@ -455,7 +469,7 @@ def test_single_host_partial_scan_message_is_redacted_before_recording(
 
     monkeypatch.setattr(
         "app.services.package_service.PackageService.scan_security_updates",
-        lambda self, system_id: {
+        lambda self, system_id, refresh=True: {
             "system_id": system_id,
             "hostname": host.hostname,
             "status": "success",
@@ -487,7 +501,7 @@ def test_cohort_security_scan_redacts_recorded_host_messages(
 
     monkeypatch.setattr(
         "app.services.package_service.PackageService.scan_security_updates",
-        lambda self, system_id: {
+        lambda self, system_id, refresh=True: {
             "system_id": system_id,
             "hostname": host.hostname,
             "status": "error",
@@ -522,7 +536,7 @@ def test_ordinary_cohort_package_scan_recording_is_unchanged(
 
     monkeypatch.setattr(
         "app.services.package_service.PackageService.scan_packages",
-        lambda self, system_id: {
+        lambda self, system_id, refresh=True: {
             "system_id": system_id,
             "hostname": host.hostname,
             "status": "error",

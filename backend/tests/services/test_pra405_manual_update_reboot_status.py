@@ -127,7 +127,7 @@ def _service(
     ssh = _FakeSSH(probe_result)
     service.ssh_service = ssh
 
-    def _rescan(self, system_id):
+    def _rescan(self, system_id, refresh=True):
         if versions_change:
             for upd in (
                 db.query(PackageUpdate)
@@ -464,8 +464,8 @@ def test_a_partially_applied_update_is_probed(db, admin_user, host, monkeypatch)
 
     real_rescan = PackageService.scan_packages
 
-    def _partial(self, system_id):
-        real_rescan(self, system_id)
+    def _partial(self, system_id, refresh=True):
+        real_rescan(self, system_id, refresh=refresh)
         # Roll one package back to where it started.
         stuck.installed_version = "1.0"
         db.flush()

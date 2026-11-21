@@ -334,6 +334,9 @@ class CohortScanRequest(BaseModel):
     scope_type: str
     scope_id: Optional[int] = None
     security: bool = False
+    # APT hosts: refresh package metadata before scanning (privileged), or read
+    # the host's cached lists only. Ignored for other package managers.
+    refresh: bool = True
 
 
 @router.post("/scope/scan", response_model=Dict[str, Any])
@@ -361,6 +364,7 @@ def scan_scope_packages(
         "scope_type": body.scope_type,
         "scope_id": body.scope_id,
         "security": body.security,
+        "refresh": body.refresh,
     }
     if not ids:
         # Empty/disjoint cohort → operate on nothing, never a global fallback.
@@ -393,7 +397,9 @@ def scan_scope_packages(
     )
     try:
         service = PackageService(db)
-        result = service.scan_scope(targets, security=body.security)
+        result = service.scan_scope(
+            targets, security=body.security, refresh=body.refresh
+        )
         for row in result["results"]:
             # A security scan that could not read or store part of its result is
             # recorded as partial, so the host is not counted as covered by a
@@ -490,6 +496,10 @@ def _record_single_host_scan_failure(
 )
 def scan_security_updates(
     system_id: int = Path(..., description="The ID of the system to scan"),
+    refresh: bool = Query(
+        True,
+        description="Refresh APT metadata first; false reads cached lists only",
+    ),
     current_user: User = Depends(require_role("admin", "maintainer")),
     db: Session = Depends(get_db),
 ):
@@ -515,7 +525,7 @@ def scan_security_updates(
     )
     try:
         service = PackageService(db)
-        result = service.scan_security_updates(system_id)
+        result = service.scan_security_updates(system_id, refresh=refresh)
     except (SSHConnectionError, ValueError) as e:
         _record_single_host_scan_failure(fleet_op_id, system_id, str(e))
         raise HTTPException(status_code=400, detail=str(e)) from e
@@ -660,6 +670,31 @@ def remove_packages(
         raise internal_error(e, context="removing packages", logger=logger) from e
 
 
+@router.get("/metadata-freshness", response_model=List[Dict[str, Any]])
+def list_apt_metadata_freshness(
+    scope_type: Optional[str] = Query(
+        None, description="Cohort scope: all|system|group|smart_group"
+    ),
+    scope_id: Optional[int] = Query(
+        None, description="Scope target id for group/smart_group/system scopes"
+    ),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """APT metadata freshness per host in the caller's fleet scope.
+
+    ``state`` is ``unknown`` until a check is recorded. ``refreshed_at`` is the
+    last verified refresh and survives later failed or cached-only checks.
+    """
+    system_ids = _resolve_scope(db, current_user, scope_type, scope_id)
+    try:
+        return PackageService(db).list_apt_metadata(system_ids)
+    except Exception as e:
+        raise internal_error(
+            e, context="listing metadata freshness", logger=logger
+        ) from e
+
+
 @router.get("/inventory", response_model=Dict[str, Any])
 def list_scoped_packages(
     search: Optional[str] = Query(None, description="Search packages by name"),
@@ -727,19 +762,29 @@ def list_packages(
 )
 def scan_packages(
     system_id: int = Path(..., description="The ID of the system to scan"),
+    refresh: bool = Query(
+        True,
+        description="Refresh APT metadata first; false reads cached lists only",
+    ),
     current_user: User = Depends(
         require_role("admin", "maintainer")
     ),  # pylint:disable=unused-argument
     db: Session = Depends(get_db),
 ):
-    """Trigger a package scan on a system via SSH."""
+    """Trigger a package scan on a system via SSH.
+
+    On APT hosts the scan first refreshes package metadata, which needs root or
+    the credential's sudo method; ``refresh=false`` reads cached lists only. The
+    response carries ``apt_metadata`` and a ``scan_state`` that is ``complete``
+    only when the metadata was verified.
+    """
     system = db.query(System).filter(System.id == system_id).first()
     if not system:
         raise HTTPException(status_code=404, detail="System not found")
 
     try:
         service = PackageService(db)
-        return service.scan_packages(system_id)
+        return service.scan_packages(system_id, refresh=refresh)
     except SSHConnectionError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except ValueError as e:

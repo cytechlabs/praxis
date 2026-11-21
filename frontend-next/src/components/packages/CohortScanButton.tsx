@@ -7,14 +7,17 @@ import { scanScope, CohortScanResult } from '@/services/packageService';
 
 // Guarded cohort scan button: confirms scope + host count, runs the cohort scan,
 // and shows per-host results. Rendered only for group/smart-group scopes.
-function statusVariant(status: string): 'success' | 'warning' | 'danger' {
-  if (status === 'success') return 'success';
+function statusVariant(
+  status: string,
+  scanState?: string | null,
+): 'success' | 'warning' | 'danger' {
+  if (status === 'success') return scanState === 'partial' ? 'warning' : 'success';
   if (status === 'already_running') return 'warning';
   return 'danger';
 }
 
-function statusLabel(status: string): string {
-  if (status === 'success') return 'Refreshed';
+function statusLabel(status: string, scanState?: string | null): string {
+  if (status === 'success') return scanState === 'partial' ? 'Unverified' : 'Refreshed';
   if (status === 'already_running') return 'Skipped';
   return 'Failed';
 }
@@ -44,6 +47,10 @@ const CohortScanButton: React.FC<{
       if (res.failure_count > 0) {
         toast.warning(
           `Refreshed ${res.success_count}/${res.total} host(s); ${res.failure_count} failed`,
+        );
+      } else if (res.partial_count) {
+        toast.warning(
+          `Scanned ${res.success_count}/${res.total} host(s); ${res.partial_count} with unverified package metadata`,
         );
       } else {
         toast.success(
@@ -118,7 +125,9 @@ const CohortScanButton: React.FC<{
                       <div className="truncate text-xs text-content-subtle">{r.message}</div>
                     )}
                   </div>
-                  <Badge variant={statusVariant(r.status)}>{statusLabel(r.status)}</Badge>
+                  <Badge variant={statusVariant(r.status, r.scan_state)}>
+                    {statusLabel(r.status, r.scan_state)}
+                  </Badge>
                 </div>
               ))}
             </div>
