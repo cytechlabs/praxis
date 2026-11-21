@@ -399,8 +399,9 @@ class RepoService:
             )
         return entries
 
+    @staticmethod
     def _parse_deb822(
-        self, text: str, file_path: Optional[str] = None
+        text: str, file_path: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         """Parse a single DEB822 .sources file.
 

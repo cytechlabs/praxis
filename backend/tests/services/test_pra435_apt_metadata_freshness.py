@@ -326,8 +326,12 @@ def test_refresh_scan_records_a_verified_refresh(db, seed_distro, group, cred):
     state, refreshed, checked, detail = _stored(db, system.id)
     assert state == APT_FRESH and refreshed == checked and detail is None
     # The refresh ran before the candidate list was read.
-    refresh_at = next(i for i, c in enumerate(ssh.commands) if "apt-get update" in c)
-    list_at = next(i for i, c in enumerate(ssh.commands) if "apt list" in c)
+    refresh_at = next(
+        (i for i, c in enumerate(ssh.commands) if "apt-get update" in c), None
+    )
+    list_at = next((i for i, c in enumerate(ssh.commands) if "apt list" in c), None)
+    assert refresh_at is not None, "no repository refresh command was run"
+    assert list_at is not None, "no candidate listing command was run"
     assert refresh_at < list_at
 
 
