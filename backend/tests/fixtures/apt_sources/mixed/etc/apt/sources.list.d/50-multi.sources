@@ -1,0 +1,23 @@
+Types: deb deb-src
+URIs: http://mirror-a.example.test/ubuntu http://mirror-b.example.test/ubuntu
+Suites: noble
+ noble-backports
+Components: main
+ universe
+
+Types: deb
+URIs: http://disabled.example.test/ubuntu
+Suites: noble
+Components: main
+Enabled: FALSE
+
+# stanza with uppercase field names and unknown Enabled value
+TYPES: deb
+uris: http://odd.example.test/ubuntu
+SUITES: noble
+Components: main
+Enabled: maybe
+
+Types: deb
+URIs: http://flat.example.test/flat/
+Suites: ./
