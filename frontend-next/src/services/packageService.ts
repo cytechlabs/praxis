@@ -547,7 +547,7 @@ export const scanScope = async (
     body: JSON.stringify({
       scope_type: scope.type,
       scope_id: scope.id,
-      security: !!opts?.security,
+      security: Boolean(opts?.security),
     }),
   });
   if (!response.ok) {
