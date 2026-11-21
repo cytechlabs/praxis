@@ -6,7 +6,7 @@ import logging
 import re
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request
 from pydantic import BaseModel, validator
 from sqlalchemy.orm import Session
 
@@ -29,6 +29,12 @@ from ...services.security_scan_status_service import (
     result_status_for_scan,
 )
 from ...services.ssh_service import SSHConnectionError
+from .package_update_audit import (
+    bulk_update_gate,
+    emit_package_update,
+    record_bulk_scope_denial,
+    update_gate,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -162,8 +168,9 @@ def search_fleet_packages(
 
 @router.post("/bulk/update", response_model=Dict[str, Any])
 def bulk_update_packages(
+    request: Request,
     body: BulkUpdateRequest,
-    current_user: User = Depends(require_role("admin", "maintainer")),
+    current_user: User = Depends(bulk_update_gate),
     db: Session = Depends(get_db),
 ):
     """Apply package updates across multiple systems."""
@@ -171,6 +178,7 @@ def bulk_update_packages(
         raise HTTPException(
             status_code=400, detail="At least one system ID is required"
         )
+    record_bulk_scope_denial(db, request, current_user, body.system_ids)
     _enforce_bulk_scope(db, current_user, body.system_ids)
 
     # Validate all system IDs exist
@@ -203,6 +211,16 @@ def bulk_update_packages(
         failure = int(result.get("failure_count", 0)) if isinstance(result, dict) else 0
         if success == 0 and failure == 0:
             success = len(body.system_ids)
+        if isinstance(result, dict):
+            for host_result in result.get("results", []):
+                emit_package_update(
+                    db,
+                    request,
+                    current_user,
+                    host_result,
+                    host_result["system_id"],
+                    body.package_names,
+                )
         for sid in body.system_ids:
             fleet_operation_service.record_result(fleet_op_id, sid, "success")
         fleet_operation_service.complete_operation(fleet_op_id, success, failure)
@@ -839,12 +857,12 @@ def list_system_updates(
 @router.post(
     "/{system_id}/update",
     response_model=Dict[str, Any],
-    dependencies=[Depends(require_system_access())],
 )
 def apply_updates(
+    request: Request,
     system_id: int = Path(..., description="The ID of the system"),
     body: Optional[UpdateRequest] = None,
-    current_user: User = Depends(require_role("admin", "maintainer")),
+    current_user: User = Depends(update_gate),
     db: Session = Depends(get_db),
 ):
     """Apply package updates on a system."""
@@ -852,20 +870,38 @@ def apply_updates(
     if not system:
         raise HTTPException(status_code=404, detail="System not found")
 
+    package_names = body.package_names if body else None
+    hostname = system.hostname
+
+    def _record_failure(reason: str) -> None:
+        emit_package_update(
+            db,
+            request,
+            current_user,
+            {"status": "error", "hostname": hostname, "message": reason},
+            system_id,
+            package_names,
+        )
+
     try:
         service = PackageService(db)
-        package_names = body.package_names if body else None
-        return service.apply_updates(
+        result = service.apply_updates(
             system_id,
             package_names=package_names,
             user_id=current_user.id,
         )
-    except SSHConnectionError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
-    except ValueError as e:
+    except (SSHConnectionError, ValueError) as e:
+        _record_failure(str(e))
         raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
+        # Only the exception class is recorded: its text can carry host or
+        # credential detail that the response also withholds.
+        db.rollback()
+        _record_failure(f"Update failed: {type(e).__name__}")
         raise internal_error(e, context="applying updates", logger=logger) from e
+
+    emit_package_update(db, request, current_user, result, system_id, package_names)
+    return result
 
 
 @router.get("/history/all", response_model=Dict[str, Any])

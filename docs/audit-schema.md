@@ -65,6 +65,27 @@ Fields:
 | `command.exec` | `success` / `failure` | `command`, `exit_code`, `execution_time_ms`, `bypass_validation` |
 | `command.exec` | `denied` | `reason_code`, `reason` |
 
+### Package updates
+
+| Action | `outcome` | `context` keys |
+|---|---|---|
+| `package.update` | `success` / `failure` | `hostname`, `package_names`, `package_count`, `result`, `packages_updated`, `packages_skipped`, `packages_failed`, `packages_unrecorded`, and `reason` on a failure |
+| `package.update` | `denied` | `reason_code`, `reason`, and for a bulk request `system_ids`, `system_count` |
+
+Recorded once per host for an ad-hoc update from the package page or the bulk update action, attributed to the operator who requested it and to the host in `target`. Scheduled jobs and patch plan executions keep their own run history and do not emit this event.
+
+`result` reports what the host showed before and after the command, not the package manager exit code. The service reads the installed versions from the host itself on both sides of the command rather than from the stored inventory, which may predate the request, so a change is credited to the request only when the two readings differ:
+
+- `updated`: the attempted packages moved to their new version, or the two readings show other packages changed (`outcome` is `success`).
+- `no_change`: nothing needed to run, or the command ran and the two readings show nothing moved (`outcome` is `success`). A package already at its target before the command is not counted.
+- `partial`: a verified change accompanies a tracked package that did not move, whether the verified change is a tracked package or one without a history row (`outcome` is `failure`).
+- `failed`: the command exited nonzero, the host could not be reached, or no verified change accompanies the tracked packages that did not move (`outcome` is `failure`).
+- `unverified`: the command exited cleanly but either reading was unavailable (a listing that exits nonzero is unavailable even when it printed a package list), so the effect cannot be attributed to the request (`outcome` is `failure`, so it is never read as a confirmed success). History rows for the request are closed as failed with a message saying the result could not be verified.
+
+`packages_updated` counts packages with a history row that were verified at their new version by this request. In the API response the integer counts only moves the two readings attribute to the request, so it is `0` when the reading before is missing even though the history row records the version observed afterward. `packages_unrecorded` counts packages whose installed version changed between the two readings with no history row to verify them, for example a named package that had no pending update or an upgrade of everything with nothing tracked. A count that was not measured is `null`, not `0`: after a failed command or a connection error `packages_updated` and `packages_unrecorded` are `null`, and `packages_failed` is `null` unless history rows were marked failed. The same holds for `unverified`, where `packages_updated` and `packages_unrecorded` are `null` and `packages_failed` is `null` unless a reading after the command was available. `package_names` is the list the operator named, or `null` when all pending updates were requested, capped at 50 entries with `package_count` giving the full size. `reason` is redacted text capped at 512 characters; an unexpected error records only its class name.
+
+A refusal of an authenticated caller records `outcome` `denied` before the unchanged `403` or `404` response. `reason_code` is `role_not_permitted` or `system_not_in_scope`. A single-host refusal names the requested id in `target.id` and links the host only when it exists, so a probe of an unknown id leaves no host link; a bulk refusal links every existing host the caller lacked scope on. Denied events never carry a hostname. A request that finds an update already running on the host records no event; the running request records the outcome. Unauthenticated requests record nothing.
+
 ### File transfer
 
 | Action | When it fires | `context` keys |
