@@ -36,7 +36,7 @@ from sqlalchemy import false, func
 from sqlalchemy.orm import Session
 
 from ..core.redaction import redact_text
-from ..db.models import FleetOperation, FleetOperationResult, System
+from ..db.models import Distro, FleetOperation, FleetOperationResult, System
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +62,39 @@ STATE_SCANNING = "scanning"
 STATE_FAILED = "failed"
 STATE_PARTIAL = "partial"
 STATE_COMPLETE = "complete"
+
+# APT metadata observation states that do not vouch for candidate versions.
+UNVERIFIED_METADATA_STATES = ("partial", "failed", "cached")
+APT_METADATA_FRESH = "fresh"
+
+# Distribution names whose package manager is APT. The package service derives
+# its distro-to-manager map from this tuple so the two cannot disagree.
+APT_DISTRO_KEYS = ("ubuntu", "debian")
+
+
+def is_apt_distro(name: Optional[str]) -> bool:
+    lowered = (name or "").lower()
+    return any(key in lowered for key in APT_DISTRO_KEYS)
+
+
+def _security_success_is_vouched_for(
+    outcome: FleetOperationResult,
+    metadata_state: Optional[str],
+    refreshed_at: Optional[datetime],
+) -> bool:
+    """An APT host's security success counts only against verified metadata.
+
+    The scan must have run against a verified refresh, the host's latest APT
+    check must still be verified, and no later refresh may sit between that
+    scan and now: a refresh newer than the scan changed the metadata under its
+    counts, so only a security scan of its own certifies them again. A host that
+    never recorded a freshness observation, such as one migrated with a legacy
+    scan history, has no verified evidence and is not vouched for.
+    """
+    if metadata_state != APT_METADATA_FRESH or refreshed_at is None:
+        return False
+    return outcome.created_at is not None and outcome.created_at >= refreshed_at
+
 
 # A scan runs inside the request that started it, so an operation still marked
 # running long afterwards belongs to a process that died mid-scan. Treat those
@@ -303,13 +336,21 @@ def get_security_scan_coverage(
     """
     now = now or datetime.utcnow()
 
-    in_scope = {
-        row[0]
-        for row in _scope(
-            db.query(System.id).filter(System.status != DECOMMISSIONED_STATUS),
+    scope_rows = _scope(
+        db.query(
             System.id,
-            system_ids,
-        ).all()
+            Distro.name,
+            System.apt_metadata_state,
+            System.apt_metadata_refreshed_at,
+        )
+        .join(Distro, Distro.id == System.distro_id)
+        .filter(System.status != DECOMMISSIONED_STATUS),
+        System.id,
+        system_ids,
+    ).all()
+    in_scope = {row[0] for row in scope_rows}
+    apt_hosts = {
+        row[0]: (row[2], row[3]) for row in scope_rows if is_apt_distro(row[1])
     }
     outcomes = _latest_outcomes(db, system_ids)
     scanning_ids = _scanning_system_ids(db, system_ids, now) & in_scope
@@ -322,7 +363,12 @@ def get_security_scan_coverage(
         if outcome is None:
             never_scanned += 1
         elif outcome.status == RESULT_SUCCESS:
-            scanned += 1
+            if system_id in apt_hosts and not _security_success_is_vouched_for(
+                outcome, *apt_hosts[system_id]
+            ):
+                partial += 1
+            else:
+                scanned += 1
         elif outcome.status == RESULT_PARTIAL:
             partial += 1
         else:
@@ -348,12 +394,26 @@ def get_security_scan_coverage(
     else:
         state = STATE_PARTIAL
 
+    # In-scope hosts whose latest APT check was cached, partial, or failed. A
+    # host that has never recorded a check is unknown, not unverified.
+    metadata_unverified = (
+        db.query(System)
+        .filter(
+            System.id.in_(in_scope),
+            System.apt_metadata_state.in_(UNVERIFIED_METADATA_STATES),
+        )
+        .count()
+        if in_scope
+        else 0
+    )
+
     coverage_complete = bool(in_scope) and scanned == len(in_scope)
     return {
         "state": state,
         "coverage_complete": coverage_complete,
         "counts_trustworthy": state == STATE_COMPLETE,
         **counts,
+        "systems_metadata_unverified": metadata_unverified,
         "last_successful_scan_at": _iso(
             _last_outcome_time(db, system_ids, (RESULT_SUCCESS,))
         ),

@@ -32,6 +32,38 @@ export interface ScanResult {
   updates_available: number;
   scanned_at: string;
   message?: string;
+  /** `complete` only when the counts were established against verified metadata. */
+  scan_state?: 'complete' | 'partial' | 'failed';
+  apt_metadata?: AptMetadata;
+  /** True when output limits clipped the evidence; counts are last-known. */
+  evidence_incomplete?: boolean;
+  /** Stored security updates retained when a security scan could not read its list. */
+  last_known_updates?: number;
+}
+
+export type AptMetadataState =
+  | 'unknown'
+  | 'fresh'
+  | 'partial'
+  | 'failed'
+  | 'cached';
+
+/**
+ * The latest APT metadata observation for a host. Only `verified` vouches for
+ * candidate versions. `refreshed_at` is the last verified refresh and survives
+ * later failed or cached-only checks.
+ */
+export interface AptMetadata {
+  state: AptMetadataState;
+  verified: boolean;
+  refreshed_at: string | null;
+  checked_at: string | null;
+  detail: string | null;
+}
+
+export interface AptMetadataFreshness extends AptMetadata {
+  system_id: number;
+  hostname: string;
 }
 
 export interface PackageUpdateItem {
@@ -225,6 +257,21 @@ export const fetchAllUpdates = async (
   if (!response.ok) {
     const error = await response.json();
     throw new Error(formatApiError(error, 'Failed to fetch updates'));
+  }
+  return response.json();
+};
+
+export const fetchAptMetadataFreshness = async (
+  scope?: PackageScope
+): Promise<AptMetadataFreshness[]> => {
+  const params = new URLSearchParams(scope ? scopeSearchParams(scope) : {});
+  const qs = params.toString();
+  const response = await apiFetch(
+    `/api/backend/packages/metadata-freshness${qs ? `?${qs}` : ''}`
+  );
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(formatApiError(error, 'Failed to fetch metadata freshness'));
   }
   return response.json();
 };
@@ -468,6 +515,8 @@ export interface CohortScanHostResult {
   hostname: string;
   status: string; // success | error | already_running
   message?: string | null;
+  /** `partial` when the host scanned but its counts rest on unverified metadata. */
+  scan_state?: string | null;
 }
 
 export interface CohortScanResult {
@@ -478,6 +527,8 @@ export interface CohortScanResult {
   success_count: number;
   failure_count: number;
   skipped_count: number;
+  /** Hosts counted in success_count whose counts are not verified. */
+  partial_count?: number;
   results: CohortScanHostResult[];
   fleet_operation_id: number | null;
 }

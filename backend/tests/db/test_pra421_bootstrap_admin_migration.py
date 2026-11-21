@@ -301,7 +301,7 @@ def test_downgrade_drops_only_this_table_and_re_upgrade_restores_it(engine):
     config = Config("alembic.ini")
     engine.dispose()
 
-    command.downgrade(config, "-1")
+    command.downgrade(config, "system_onboarding_drafts")
     scratch = create_engine(os.environ["DATABASE_URL"])
     try:
         names = set(inspect(scratch).get_table_names())

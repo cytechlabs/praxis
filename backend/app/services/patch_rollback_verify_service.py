@@ -147,7 +147,9 @@ def default_rollback_package_probe(
     from .package_service import PackageService
 
     try:
-        scan_result = PackageService(db).scan_packages(system.id)
+        # The probe compares installed versions, so it reads cached lists
+        # instead of running a privileged metadata refresh.
+        scan_result = PackageService(db).scan_packages(system.id, refresh=False)
     except Exception as exc:  # pylint: disable=broad-except
         # ``scan_packages`` can raise ``ValueError`` (unknown system
         # / unsupported distro) and a variety of SSH-transport

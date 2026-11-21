@@ -95,7 +95,7 @@ def test_scan_packages_success(authed_client, db, distro, monkeypatch):
     ]
     call_idx = {"i": 0}
 
-    def fake_exec(self, system_id, command, timeout=60):
+    def fake_exec(self, system_id, command, timeout=60, user_id=None):
         i = call_idx["i"]
         call_idx["i"] += 1
         return ssh_responses[min(i, len(ssh_responses) - 1)]
