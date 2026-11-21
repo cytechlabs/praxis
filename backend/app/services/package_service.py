@@ -563,6 +563,18 @@ class PackageService:
         return True
 
     @staticmethod
+    def _exited_cleanly(result: Dict[str, Any]) -> bool:
+        """The command ran and exited zero.
+
+        The SSH layer reports a nonzero exit as status ``warning`` with
+        ``exit_code`` set, so the status alone cannot tell success from a
+        command that failed.
+        """
+        return result.get("status") in ("success", "warning") and result.get(
+            "exit_code"
+        ) in (0, None)
+
+    @staticmethod
     def _apt_list_ok(result: Dict[str, Any]) -> bool:
         """``apt list`` succeeded: apt's own exit status was zero.
 
@@ -1649,8 +1661,12 @@ class PackageService:
             system_id, cmd, timeout=600
         )
 
-        if result["status"] not in ("success", "warning"):
-            err_msg = result.get("stderr", "") or result.get("error_message", "")
+        if not self._exited_cleanly(result):
+            err_msg = (
+                result.get("stderr", "")
+                or result.get("error_message", "")
+                or f"exit status {result.get('exit_code')}"
+            )
             for entry in history_entries:
                 entry.status = "failed"
                 entry.error_message = f"Security update failed: {err_msg}"
@@ -1898,8 +1914,12 @@ class PackageService:
             system_id, cmd, timeout=600
         )
 
-        if result["status"] not in ("success", "warning"):
-            err_msg = result.get("stderr", "") or result.get("error_message", "")
+        if not self._exited_cleanly(result):
+            err_msg = (
+                result.get("stderr", "")
+                or result.get("error_message", "")
+                or f"exit status {result.get('exit_code')}"
+            )
             for entry in history_entries:
                 entry.status = "failed"
                 entry.error_message = f"Remove failed: {err_msg}"
@@ -2177,12 +2197,26 @@ class PackageService:
             entry.status = "running"
         self.db.commit()
 
+        # Versions are read from the host itself on both sides of the command,
+        # not from the stored inventory, which may predate this request. That
+        # evidence attributes a change to this operation, including changes the
+        # history has no row for (a named package with no pending-update row,
+        # or an upgrade-all with nothing tracked).
+        tracked_names = {entry.package.name for entry in history_entries}
+        versions_before = self._observe_installed_versions(
+            system_id, pkg_manager, commands
+        )
+
         result = self.ssh_service.execute_privileged_command(
             system_id, cmd, timeout=600
         )
 
-        if result["status"] not in ("success", "warning"):
-            err_msg = result.get("stderr", "") or result.get("error_message", "")
+        if not self._exited_cleanly(result):
+            err_msg = (
+                result.get("stderr", "")
+                or result.get("error_message", "")
+                or f"exit status {result.get('exit_code')}"
+            )
             for entry in history_entries:
                 entry.status = "failed"
                 entry.error_message = f"Update failed: {err_msg}"
@@ -2194,21 +2228,55 @@ class PackageService:
                 "message": f"Update failed: {err_msg}",
                 "packages_updated": 0,
                 "packages_skipped": packages_skipped,
+                "packages_failed": len(history_entries),
             }
 
         # Re-scan to sync DB with actual system state
         self.scan_packages(system_id, refresh=False)
 
-        # Check which packages actually updated
+        versions_after = self._observe_installed_versions(
+            system_id, pkg_manager, commands
+        )
+
+        # Without a host reading after the command the outcome of every tracked
+        # package is unknown, and without one before it a change cannot be
+        # attributed to this operation.
+        attributable = versions_before is not None and versions_after is not None
         completed = 0
+        failed: Optional[int] = None if versions_after is None else 0
         for entry in history_entries:
-            pkg = self.db.query(Package).filter(Package.id == entry.package_id).first()
-            if pkg and pkg.installed_version == entry.new_version:
+            name = entry.package.name
+            if versions_after is None:
+                entry.status = "failed"
+                entry.error_message = (
+                    "Update could not be verified: the installed package list "
+                    "was unavailable after the update"
+                )
+            elif versions_after.get(name) == entry.new_version:
                 entry.status = "completed"
-                completed += 1
+                # Only a move the readings attribute to this command is counted:
+                # a package already at its target before it was not moved by it,
+                # and without a reading before there is nothing to compare.
+                if versions_before is not None and versions_before.get(name) != (
+                    entry.new_version
+                ):
+                    completed += 1
             else:
                 entry.status = "failed"
                 entry.error_message = "Package version unchanged after update"
+                failed = (failed or 0) + 1
+
+        # Packages whose installed version moved without a history row to
+        # verify them. Unknown, not zero, when the evidence is incomplete.
+        unrecorded: Optional[int] = None
+        if attributable:
+            unrecorded = sum(
+                1
+                for name, before in versions_before.items()
+                if name not in tracked_names
+                and name in versions_after
+                and versions_after[name] != before
+            )
 
         # Clean up applied PackageUpdate rows
         self._cleanup_applied_updates(system_id, package_names)
@@ -2222,6 +2290,9 @@ class PackageService:
             "status": "success",
             "packages_updated": completed,
             "packages_skipped": packages_skipped,
+            "packages_failed": failed,
+            "packages_unrecorded": unrecorded,
+            "verification": "complete" if attributable else "unavailable",
             "applied_at": datetime.utcnow().isoformat(),
         }
 
@@ -2230,12 +2301,41 @@ class PackageService:
         # any installed version mutated nothing, so there is no new reboot
         # answer to report and no reason to spend a round-trip asking for
         # one.
-        if completed > 0:
+        if completed > 0 or (unrecorded or 0) > 0 or not attributable:
             reboot_evidence = self._collect_reboot_evidence(system)
             response["reboot_required"] = reboot_evidence["value"]
             response["reboot_evidence"] = reboot_evidence
 
         return response
+
+    def _observe_installed_versions(
+        self, system_id: int, pkg_manager: str, commands: Dict[str, str]
+    ) -> Optional[Dict[str, str]]:
+        """Installed version by package name as the host reports it right now.
+
+        Returns None when the listing is unusable (transport failure, error
+        output, clipped capture or an empty list), so callers treat the
+        evidence as missing instead of reading it as "nothing installed".
+        """
+        try:
+            result = self.ssh_service.execute_command(
+                system_id, commands["list_installed"], timeout=120
+            )
+        except SSHConnectionError:
+            return None
+        if (
+            not self._exited_cleanly(result)
+            or not self._ssh_result_ok(result)
+            or result.get("truncated")
+        ):
+            return None
+        versions = {
+            pkg["name"]: pkg["version"]
+            for pkg in self._parse_installed_packages(
+                result.get("stdout", ""), pkg_manager
+            )
+        }
+        return versions or None
 
     def _create_pending_history(
         self,
@@ -2453,13 +2553,22 @@ class PackageService:
                 else:
                     total_errors += 1
             except Exception as e:
+                self.db.rollback()
                 system = self.db.query(System).filter(System.id == system_id).first()
+                # Expected refusals carry an operator-meaningful message; any
+                # other exception is reported by class only, because its text
+                # can hold host or credential detail.
+                reason = (
+                    str(e)
+                    if isinstance(e, (SSHConnectionError, ValueError))
+                    else f"Update failed: {type(e).__name__}"
+                )
                 results.append(
                     {
                         "system_id": system_id,
                         "hostname": system.hostname if system else str(system_id),
                         "status": "error",
-                        "message": str(e),
+                        "message": reason,
                         "packages_updated": 0,
                         "packages_skipped": 0,
                     }

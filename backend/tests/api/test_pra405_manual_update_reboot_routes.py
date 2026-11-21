@@ -75,6 +75,7 @@ def host(db, seed_distro, static_group, credentials) -> System:
 
 class _FakeSSH:
     def __init__(self, db, probe_result: Dict[str, Any]):
+        self._db = db
         self.probe_result = probe_result
         self.commands: List[str] = []
 
@@ -85,6 +86,22 @@ class _FakeSSH:
         if "PRAXIS_REBOOT_PROBE" in command:
             return self.probe_result
         return dict(UPDATE_OK)
+
+    def execute_command(
+        self, system_id: int, command: str, timeout: Optional[int] = None
+    ) -> Dict[str, Any]:
+        """The host listing, read from the packages the test has seeded."""
+        rows = (
+            self._db.query(Package.name, Package.installed_version)
+            .filter(Package.system_id == system_id)
+            .all()
+        )
+        return {
+            "status": "success",
+            "exit_code": 0,
+            "stdout": "".join(f"{n}\t{v}\tinstall ok installed\n" for n, v in rows),
+            "stderr": "",
+        }
 
     def close_all_connections(self) -> None:  # pragma: no cover
         pass
