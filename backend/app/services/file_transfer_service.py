@@ -949,7 +949,7 @@ async def _spool_agent_download(
 
 
 def _download_via_agent(
-    db: DbSession, system: System, path: str, audit_id: int
+    _db: DbSession, system: System, path: str, audit_id: int
 ) -> DownloadStream:
     """Agent-backed download.
 
@@ -959,9 +959,8 @@ def _download_via_agent(
     large the file is, and because the whole transfer has succeeded before the
     response starts, an agent failure can never surface as a half-sent 200.
     The temp file is always deleted (success, over-cap, error, or client
-    disconnect).
+    disconnect). ``_db`` is unused; it keeps the call shape of the SSH path.
     """
-    del db  # kept for call-site symmetry with the SSH path
     info = _DownloadInfo()
     chunks = _agent_download_chunks(system, path, audit_id, info)
     return _prime_download(chunks, info)

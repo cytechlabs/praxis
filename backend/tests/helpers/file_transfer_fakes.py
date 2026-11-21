@@ -122,7 +122,8 @@ class _FakeHandle:
         self._offset = 0
         self._closed = False
 
-    def prefetch(self, *_a, **_k) -> None:
+    @staticmethod
+    def prefetch(*_a, **_k) -> None:
         return None
 
     def read(self, n: int = -1) -> bytes:
@@ -244,7 +245,7 @@ class FakeBroker:
         spec = self._files.get(path)
         if spec is None or spec.stat_errno == errno.ENOENT:
             raise BrokerError("not_found", "pre-stream failure")
-        if spec.stat_errno == errno.EACCES or spec.open_errno == errno.EACCES:
+        if errno.EACCES in (spec.stat_errno, spec.open_errno):
             raise BrokerError("denied", "pre-stream failure")
         if spec.is_dir:
             raise BrokerError("is_directory", "pre-stream failure")
@@ -275,7 +276,8 @@ class _NoCloseSession:
     def __getattr__(self, name: str) -> Any:
         return getattr(self._session, name)
 
-    def close(self) -> None:
+    @staticmethod
+    def close() -> None:
         return None
 
 
@@ -299,7 +301,6 @@ def patched_transfer_env(
     *,
     session: Any = None,
     gate: bool = True,
-    patch_audit: bool = False,
 ) -> Iterator[TransferEnv]:
     """Patch the network edge of ``file_transfer_service``.
 

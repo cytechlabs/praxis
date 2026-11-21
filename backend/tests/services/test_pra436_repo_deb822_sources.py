@@ -173,7 +173,9 @@ def test_missing_marker_newline_would_have_merged_files(fixture_root):
 def test_enabled_semantics(value, enabled):
     field = "" if value is None else f"Enabled: {value}\n"
     text = f"Types: deb\nURIs: http://x.test/d\nSuites: s\nComponents: main\n{field}"
-    (entry,) = _service()._parse_deb822(text)
+    entries = _service()._parse_deb822(text)
+    assert len(entries) == 1
+    entry = entries[0]
     assert entry["enabled"] is enabled
 
 

@@ -437,7 +437,8 @@ def test_agent_spool_write_failure_is_audited_and_cleaned_up(
         def __init__(self, fh):
             self._fh = fh
 
-        def write(self, _data):
+        @staticmethod
+        def write(_data):
             raise OSError(errno.ENOSPC, "No space left on device")
 
         def __enter__(self):
@@ -446,8 +447,9 @@ def test_agent_spool_write_failure_is_audited_and_cleaned_up(
         def __exit__(self, *exc):
             self._fh.close()
 
-    def _open(path, mode="r", *a, **k):
-        fh = real_open(path, mode, *a, **k)
+    def _open(path, *a, **k):
+        fh = real_open(path, *a, **k)
+        mode = a[0] if a else k.get("mode", "r")
         return _FullDisk(fh) if mode == "wb" else fh
 
     monkeypatch.setattr(fts, "open", _open, raising=False)

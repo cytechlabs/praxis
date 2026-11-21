@@ -108,10 +108,14 @@ def test_freshness_listing_keeps_the_verified_time_after_a_failed_check(
     service._record_apt_observation(a.id, verified, APT_FRESH, "")
     service._record_apt_observation(a.id, datetime.utcnow(), APT_FAILED, "x")
     row = next(
-        r
-        for r in authed_client.get("/packages/metadata-freshness").json()
-        if r["system_id"] == a.id
+        (
+            r
+            for r in authed_client.get("/packages/metadata-freshness").json()
+            if r["system_id"] == a.id
+        ),
+        None,
     )
+    assert row is not None, f"no freshness row for system {a.id}"
     assert row["state"] == APT_FAILED
     assert row["refreshed_at"] == "2026-11-19T08:00:00Z"
 
