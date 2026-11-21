@@ -313,7 +313,9 @@ def test_single_flight_runs_when_free(db, seed_distro, group, cred, monkeypatch)
     system = _system(db, seed_distro, group, cred, "pra322-sf-free")
     svc = PackageService(db)
     monkeypatch.setattr(
-        svc, "_scan_packages_impl", lambda sid: {"status": "success", "system_id": sid}
+        svc,
+        "_scan_packages_impl",
+        lambda sid, refresh=True: {"status": "success", "system_id": sid},
     )
     res = svc.scan_packages(system.id)
     assert res["status"] == "success"

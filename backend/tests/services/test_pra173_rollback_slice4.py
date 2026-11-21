@@ -753,8 +753,8 @@ def test_verify_due_default_probe_triggers_package_inventory_scan(
     )
     call_log: list = []
 
-    def _fake_scan_packages(self, system_id):
-        call_log.append(system_id)
+    def _fake_scan_packages(self, system_id, refresh=True):
+        call_log.append((system_id, refresh))
         pkg = (
             self.db.query(Package)
             .filter(Package.system_id == system_id, Package.name == "openssl")
@@ -774,9 +774,10 @@ def test_verify_due_default_probe_triggers_package_inventory_scan(
     )
 
     summary = verify_due_rollbacks(db, run.id, actor_user_id=admin_user.id)
-    assert call_log == [system.id], (
+    assert call_log == [(system.id, False)], (
         "default probe must invoke PackageService.scan_packages for the host "
-        "before reading Package rows"
+        "before reading Package rows, from cached lists and without a "
+        "metadata refresh"
     )
     assert summary.reachable_host_count == 1
     pkg_row = db.query(PatchRollbackDispatchHostPackage).one()
@@ -797,7 +798,7 @@ def test_verify_due_default_probe_records_refusal_when_scan_raises(
         db, admin_user, host_factory, slug="rb-s4-default-probe-fail"
     )
 
-    def _raise(self, system_id):
+    def _raise(self, system_id, refresh=True):
         raise ValueError("ssh down")
 
     monkeypatch.setattr(package_service.PackageService, "scan_packages", _raise)
@@ -830,7 +831,7 @@ def test_verify_due_default_probe_records_refusal_on_scan_status_error(
         db, admin_user, host_factory, slug="rb-s4-default-probe-status-err"
     )
 
-    def _error(self, system_id):
+    def _error(self, system_id, refresh=True):
         return {
             "system_id": system_id,
             "hostname": "fake",

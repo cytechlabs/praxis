@@ -121,7 +121,7 @@ def fake_scan(monkeypatch):
     outcomes = {}
 
     def _fake(kind):
-        def inner(self, system_id):
+        def inner(self, system_id, refresh=True):
             calls[kind].append(system_id)
             return {
                 "system_id": system_id,

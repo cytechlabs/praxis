@@ -113,7 +113,7 @@ def _stub_transport(
         lambda db: _FakeSSH(db, probe_result),
     )
 
-    def _rescan(self, system_id):
+    def _rescan(self, system_id, refresh=True):
         if versions_change:
             for upd in (
                 self.db.query(PackageUpdate)

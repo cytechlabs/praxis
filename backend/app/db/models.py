@@ -243,6 +243,14 @@ class System(Base):  # pylint: disable=too-few-public-methods
     distro_id = Column(Integer, ForeignKey("distros.id"), nullable=False, index=True)
     os_version = Column(String(50), nullable=False, index=True)
     last_audited = Column(DateTime, nullable=True)
+    # Latest APT metadata observation. NULL state means no observation has been
+    # recorded. Only a verified complete refresh advances
+    # apt_metadata_refreshed_at; cached, partial, and failed checks leave it as
+    # the last verified refresh.
+    apt_metadata_state = Column(String(20), nullable=True)
+    apt_metadata_refreshed_at = Column(DateTime, nullable=True)
+    apt_metadata_checked_at = Column(DateTime, nullable=True)
+    apt_metadata_detail = Column(String(500), nullable=True)
     status = Column(String(50), nullable=False)  # Active, Decommissioned
     group_id = Column(Integer, ForeignKey("groups.id"), nullable=False)
     credentials_id = Column(Integer, ForeignKey("credentials.id"), nullable=False)

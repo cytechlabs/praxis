@@ -61,8 +61,8 @@ _running_jobs: Dict[int, Dict[str, Any]] = {}  # job_id -> {"cancelled": Event}
 _running_jobs_lock = threading.Lock()
 
 # Scheduled-run maintenance-window policy by job type. Only read/refresh jobs
-# (package_scan/audit — they SSH-read inventory and never mutate a host) may run
-# outside a window; everything else is window-governed. This is an explicit
+# may run outside a window: package scans can refresh APT metadata, while
+# inventory audits use cached lists. Other jobs stay window-governed. This is an explicit
 # allowlist so an unknown/future job type FAILS CLOSED (stays window-governed).
 _READ_REFRESH_JOB_TYPES = frozenset({"package_scan", "audit"})
 
@@ -1120,7 +1120,9 @@ class JobService:
                 job_history_id=history_id,
             )
         elif job_type == "audit":
-            return pkg_service.scan_packages(system.id)
+            # An audit reads inventory only; it never refreshes upstream
+            # metadata, so a scheduled audit cannot run a privileged apt update.
+            return pkg_service.scan_packages(system.id, refresh=False)
         else:
             raise ValueError(f"Unsupported job type: {job_type}")
 
