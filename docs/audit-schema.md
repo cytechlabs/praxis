@@ -76,6 +76,10 @@ Fields:
 
 `target.kind` is `path` and `target.id` is the remote path.
 
+A download that fails, ends short, or is abandoned by the client emits `outcome`
+`failure` with `error` set and no `sha256`. `error` is `client_disconnected` when
+the client went away mid-transfer.
+
 ### Access bindings + requests
 
 | Action | `context` keys |

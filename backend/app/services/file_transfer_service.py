@@ -24,11 +24,13 @@ from __future__ import annotations
 
 import asyncio
 import concurrent.futures
+import errno
 import hashlib
 import logging
 import os
 import posixpath
 import re
+import stat as stat_module
 import tempfile
 import time
 from contextlib import contextmanager
@@ -38,6 +40,7 @@ from typing import Any, Awaitable, Dict, Iterator, List, Optional, Tuple
 import paramiko
 from sqlalchemy.orm import Session as DbSession
 
+from ..core.redaction import redact_text
 from ..db.access_models import FileTransferAudit
 from ..db.models import System, SystemMetadata, User
 from .access_authorization_service import (
@@ -103,6 +106,11 @@ def _resolve_agent_transfer_cap() -> int:
 
 AGENT_TRANSFER_MAX_BYTES = _resolve_agent_transfer_cap()
 CHUNK = 64 * 1024
+# How far past the client's position an SSH download may ask the host to read.
+# paramiko's prefetch() queues a request for every remaining byte of the file,
+# so reading ahead is done one window at a time, re-armed as the client
+# consumes the previous one.
+SSH_READ_AHEAD_BYTES = 2 * 1024 * 1024
 
 
 class FileTransferError(RuntimeError):
@@ -520,6 +528,139 @@ def stat(
     }
 
 
+class DownloadStream:
+    """A download whose setup has already succeeded.
+
+    ``download_stream`` returns one only after authorization, the host
+    connection, the file checks and (agent transport) the whole transfer have
+    succeeded, so the caller can commit success headers. ``size`` is the exact
+    body length when the host reported one (the caller declares it as
+    Content-Length so a body that ends early is detectable) and ``None`` when
+    the host cannot say. ``close`` releases the host connection or spool file
+    and records an abandoned transfer as a failure.
+    """
+
+    def __init__(
+        self, chunks: Iterator[bytes], first: Optional[bytes], size: Optional[int]
+    ) -> None:
+        self._chunks = chunks
+        self._pending = first
+        self.size = size
+
+    def __iter__(self) -> "DownloadStream":
+        return self
+
+    def __next__(self) -> bytes:
+        if self._pending is not None:
+            chunk, self._pending = self._pending, None
+            return chunk
+        return next(self._chunks)
+
+    def close(self) -> None:
+        self._pending = None
+        close = getattr(self._chunks, "close", None)
+        if close is not None:
+            close()
+
+
+class _DownloadInfo:  # pylint: disable=too-few-public-methods
+    """Body length published by a download generator before its first chunk."""
+
+    size: Optional[int] = None
+
+
+def _prime_download(chunks: Iterator[bytes], info: _DownloadInfo) -> DownloadStream:
+    """Run a download generator up to its first chunk.
+
+    Every failure that can happen before the first byte therefore raises here,
+    inside the request, where it can still become an HTTP error status. The
+    generator has already recorded the failure in the audit row by then.
+    """
+    try:
+        first: Optional[bytes] = next(chunks)
+    except StopIteration:
+        first = None
+    return DownloadStream(chunks, first, info.size)
+
+
+def _failure_text(exc: BaseException) -> str:
+    """Sanitized, never-empty text for a failed transfer.
+
+    Some exceptions (``TimeoutError()``, ``EOFError()``) stringify to nothing;
+    the failure must not depend on there being text to record.
+    """
+    return redact_text(str(exc)) or type(exc).__name__
+
+
+def _finalize_download_audit(
+    audit_id: int,
+    *,
+    failed: bool,
+    error: Optional[str],
+    size_bytes: int,
+    sha256: Optional[str],
+) -> None:
+    """Persist the outcome of a download on its own session.
+
+    The request session may be gone by the time a stream ends, so this opens a
+    fresh one. ``failed`` decides the outcome, not the error text. A failed or
+    abandoned transfer never carries a digest.
+    """
+    from ..db.session import SessionLocal
+
+    fdb = SessionLocal()
+    try:
+        row = (
+            fdb.query(FileTransferAudit)
+            .filter(FileTransferAudit.id == audit_id)
+            .first()
+        )
+        if row is not None:
+            _finish_audit(
+                fdb,
+                row,
+                status="error" if failed else "success",
+                size_bytes=size_bytes,
+                sha256=None if failed else sha256,
+                error_message=error if failed else None,
+            )
+    finally:
+        fdb.close()
+
+
+def _remote_file_error(path: str, exc: OSError) -> FileTransferError:
+    """Translate a remote open/stat failure into a sanitized, typed error."""
+    if exc.errno == errno.ENOENT:
+        return FileTransferError(f"file not found: {path}")
+    if exc.errno in (errno.EACCES, errno.EPERM):
+        return FileTransferError("forbidden: permission denied reading remote file")
+    return FileTransferError("download failed: remote file could not be read")
+
+
+def _stage_error(exc: OSError) -> FileTransferError:
+    """Sanitized error for a local spool failure (full disk, unwritable dir)."""
+    logger.warning("download spool failed: %s", _failure_text(exc))
+    error = FileTransferError(
+        "download failed: the backend could not stage the transfer"
+    )
+    error.__cause__ = exc
+    return error
+
+
+def _agent_transfer_error(path: str, exc: TransportError) -> FileTransferError:
+    """Translate an agent file_get refusal into a sanitized, typed error."""
+    reason = getattr(exc, "reason", None)
+    if reason == "not_found":
+        return FileTransferError(f"file not found: {path}")
+    if reason == "denied":
+        return FileTransferError("forbidden: permission denied reading remote file")
+    if reason in ("is_directory", "not_regular"):
+        return FileTransferError(f"not a regular file: {path}")
+    if reason == "too_large":
+        return FileTransferError("file too large: exceeds the transfer limit")
+    return FileTransferError(f"download failed: {exc}")
+
+
 def download_stream(
     db: DbSession,
     user: User,
@@ -527,21 +668,25 @@ def download_stream(
     path: str,
     *,
     client_ip: Optional[str] = None,
-) -> Iterator[bytes]:
-    """Generator yielding file bytes from the remote path.
+) -> DownloadStream:
+    """Prepare a download and return it ready to stream.
 
-    PRA-153 #3e: routing is per-host transport_preference.
-        pref=ssh / auto+tunnel-down → SSH (existing streaming).
-        pref=auto+healthy / pref=agent → AgentTransport.
+    Everything that can be known before the first byte is resolved here, so
+    the route can still answer with a real HTTP status: authorization, the
+    host connection, whether the path is a readable regular file, the size
+    cap, and the first chunk of data. For the agent transport the whole body is
+    received (into a bounded spool file) first, so a transfer that fails
+    part-way is an ordinary error response, never a partial success.
 
-    For SSH the stream is true streaming via paramiko. For agent
-    the body is buffered in memory once via the BrokerClient sync
-    bridge, then yielded — true streaming through asyncio.run is
-    a follow-up.
+    Routing is per-host transport_preference: ssh, or auto with the tunnel
+    down, uses SFTP; auto with a healthy tunnel, or agent, uses the agent.
+    For SSH the body is streamed from the host as the client consumes it, and
+    a failure after streaming has begun raises out of the iterator so the
+    connection is aborted instead of finishing as a short success.
 
-    Audit row is opened immediately so attribution survives caller
-    disconnect mid-stream. transport column reflects what was
-    actually attempted (SSH / agent) — not just operator intent.
+    The audit row is opened before any host work and finalized when the
+    transfer ends, fails, or is abandoned, so attribution survives caller
+    disconnect. The transport column reflects what was actually attempted.
     """
     validate_remote_path(path)
     system, login = _gate(db, user, system_id)
@@ -601,166 +746,275 @@ def _download_via_ssh(
     login: str,
     path: str,
     audit_id: int,
+) -> DownloadStream:
+    """SSH-backed download, streamed from the host as the client reads."""
+    info = _DownloadInfo()
+    chunks = _ssh_download_chunks(db, user, system, login, path, audit_id, info)
+    return _prime_download(chunks, info)
+
+
+def _open_ssh_download(sftp: Any, path: str) -> Tuple[Any, int]:
+    """Check that ``path`` is a readable regular file within the size cap and
+    open it. Returns the open remote file and the size the host reports."""
+    try:
+        st = sftp.stat(path)
+    except OSError as e:
+        raise _remote_file_error(path, e) from e
+    if st.st_mode is not None and not stat_module.S_ISREG(st.st_mode):
+        raise FileTransferError(f"not a regular file: {path}")
+    expected = int(st.st_size or 0)
+    if expected > MAX_TRANSFER_BYTES:
+        raise FileTransferError(f"file too large: {expected} > {MAX_TRANSFER_BYTES}")
+    try:
+        return sftp.open(path, "rb"), expected
+    except OSError as e:
+        raise _remote_file_error(path, e) from e
+
+
+def _download_failure(exc: Exception, started: bool, detail: str) -> Exception:
+    """The exception to raise for a failed download.
+
+    Before the first byte an unexpected local or host error becomes a typed,
+    sanitized FileTransferError so the route can answer with a real status;
+    after streaming has begun it passes through and aborts the response.
+    """
+    if started or isinstance(exc, FileTransferError):
+        return exc
+    logger.warning("download failed: %s", _failure_text(exc))
+    wrapped = FileTransferError(f"download failed: {detail}")
+    wrapped.__cause__ = exc
+    return wrapped
+
+
+class _TransferState:  # pylint: disable=too-few-public-methods
+    """Running outcome of one transfer, finalized into the audit row.
+
+    The transfer failed unless it was marked ``completed``: neither an empty
+    exception message nor an exit path nobody anticipated can finalize it as a
+    success.
+    """
+
+    def __init__(self) -> None:
+        self.sha = hashlib.sha256()
+        self.total = 0
+        self.digest: Optional[str] = None
+        self.error: Optional[str] = None
+        self.completed = False
+        self.started = False
+
+    def add(self, chunk: bytes) -> None:
+        self.total += len(chunk)
+        self.sha.update(chunk)
+
+    def fail(self, exc: BaseException) -> None:
+        self.error = _failure_text(exc)
+
+    def finalize(self, audit_id: int) -> None:
+        failed = not self.completed
+        error = None
+        if failed:
+            error = self.error or "interrupted"
+        _finalize_download_audit(
+            audit_id,
+            failed=failed,
+            error=error,
+            size_bytes=self.total,
+            sha256=self.digest or self.sha.hexdigest(),
+        )
+
+
+def _read_next(
+    remote: Any, state: "_TransferState", expected: int, window_end: int
+) -> Tuple[bytes, int]:
+    """Read the next chunk of an SSH download; returns (chunk, window_end).
+
+    With a known size the host is asked for one ``SSH_READ_AHEAD_BYTES`` window
+    at a time, re-armed only once the client has consumed the previous window,
+    so a slow client holds back the host instead of queueing the whole file.
+    """
+    left = CHUNK if expected == 0 else expected - state.total
+    if expected and left > 0 and state.total >= window_end:
+        window_end = min(expected, state.total + SSH_READ_AHEAD_BYTES)
+        remote.prefetch(file_size=window_end)
+    want = min(CHUNK, left)
+    if expected:
+        want = min(want, window_end - state.total)
+    return (remote.read(want) if want > 0 else b""), window_end
+
+
+def _ssh_download_chunks(
+    db: DbSession,
+    user: User,
+    system: System,
+    login: str,
+    path: str,
+    audit_id: int,
+    info: _DownloadInfo,
 ) -> Iterator[bytes]:
-    """SSH-backed download — true streaming via paramiko."""
-
-    def _stream() -> Iterator[bytes]:
-        from ..db.session import SessionLocal
-
-        sha = hashlib.sha256()
-        total = 0
-        err: Optional[str] = None
-        try:
-            with _open_sftp(db, user, system, login) as sftp:
-                st = sftp.stat(path)
-                expected = int(st.st_size or 0)
-                if expected > MAX_TRANSFER_BYTES:
+    state = _TransferState()
+    try:
+        with _open_sftp(db, user, system, login) as sftp:
+            remote, expected = _open_ssh_download(sftp, path)
+            with remote:
+                # A host that reports size 0 may still have content (procfs
+                # style); then read to EOF with no read-ahead and let the
+                # response go without a declared length. Otherwise read exactly
+                # the reported size, asking the host for one bounded window at
+                # a time.
+                info.size = expected
+                window_end = 0
+                while True:
+                    chunk, window_end = _read_next(remote, state, expected, window_end)
+                    if not chunk:
+                        break
+                    state.add(chunk)
+                    if expected == 0 and state.total > MAX_TRANSFER_BYTES:
+                        raise FileTransferError("transfer exceeded max size")
+                    if expected == 0:
+                        info.size = None
+                    state.started = True
+                    yield chunk
+                if state.total < expected:
                     raise FileTransferError(
-                        f"file too large: {expected} > {MAX_TRANSFER_BYTES}"
+                        f"transfer incomplete: received {state.total} of "
+                        f"{expected} bytes"
                     )
-                with sftp.open(path, "rb") as remote:
-                    remote.prefetch()
-                    while True:
-                        chunk = remote.read(CHUNK)
-                        if not chunk:
-                            break
-                        sha.update(chunk)
-                        total += len(chunk)
-                        if total > MAX_TRANSFER_BYTES:
-                            raise FileTransferError("transfer exceeded max size")
-                        yield chunk
-        except Exception as e:  # pylint: disable=broad-except
-            err = str(e)
+        state.completed = True
+    except GeneratorExit:
+        state.error = "client_disconnected"
+        raise
+    except Exception as e:  # pylint: disable=broad-except
+        state.fail(e)
+        failure = _download_failure(e, state.started, "could not read from the host")
+        if failure is e:
             raise
-        finally:
-            fdb = SessionLocal()
-            try:
-                row = (
-                    fdb.query(FileTransferAudit)
-                    .filter(FileTransferAudit.id == audit_id)
-                    .first()
-                )
-                if row is not None:
-                    _finish_audit(
-                        fdb,
-                        row,
-                        status="error" if err else "success",
-                        size_bytes=total,
-                        sha256=sha.hexdigest() if not err else None,
-                        error_message=err,
-                    )
-            finally:
-                fdb.close()
+        raise failure from e
+    finally:
+        state.finalize(audit_id)
 
-    return _stream()
+
+async def _spool_agent_download(
+    system: System, path: str, tmp_path: str
+) -> Tuple[int, str]:
+    """Receive an agent file_get body into ``tmp_path``; returns (bytes, sha256).
+
+    Skips the transport factory: the caller already resolved this op to the
+    agent path and the audit row says transport="agent". Re-running
+    get_transport here could fall back to SSH if the tunnel just went
+    unhealthy, leaving the audit row and the actual transport disagreeing.
+    One chunk is in memory at a time; the byte cap bounds spool disk usage.
+    """
+    from .transport.agent import AgentTransport
+
+    broker = BrokerClient()
+    try:
+        transport = AgentTransport(system, broker)
+        stream = await transport.open_file_get(path)
+        try:
+            # Reject a declared oversize BEFORE consuming the body when the
+            # stream advertises a size (broker X-Praxis-File-Size header).
+            declared = getattr(stream, "size", None)
+            if isinstance(declared, int) and declared > AGENT_TRANSFER_MAX_BYTES:
+                raise FileTransferError("transfer exceeded max size")
+
+            sha = hashlib.sha256()
+            total = 0
+            # tmp_path was created 0600 by mkstemp; "wb" truncates without
+            # widening the mode.
+            try:
+                fh = open(tmp_path, "wb")  # pylint: disable=consider-using-with
+            except OSError as e:
+                raise _stage_error(e) from e
+            with fh:
+                async for chunk in stream.chunks:
+                    total += len(chunk)
+                    # Enforce the tighter agent ceiling while consuming, not
+                    # the SSH cap.
+                    if total > AGENT_TRANSFER_MAX_BYTES:
+                        raise FileTransferError("transfer exceeded max size")
+                    sha.update(chunk)
+                    try:
+                        fh.write(chunk)
+                    except OSError as e:
+                        raise _stage_error(e) from e
+            if isinstance(declared, int) and declared > 0 and total < declared:
+                raise FileTransferError(
+                    f"transfer incomplete: received {total} of {declared} bytes"
+                )
+            return total, sha.hexdigest()
+        finally:
+            await stream.close()
+    finally:
+        await broker.__aexit__(None, None, None)
 
 
 def _download_via_agent(
-    _db: DbSession, system: System, path: str, audit_id: int
-) -> Iterator[bytes]:
+    db: DbSession, system: System, path: str, audit_id: int
+) -> DownloadStream:
     """Agent-backed download.
 
-    PRA-253: spool the agent stream to a bounded, 0600 temp file (writing chunk by
-    chunk while hashing + counting), then stream that file back to FastAPI in
-    fixed-size chunks. Backend memory is bounded to one ``CHUNK`` regardless of
-    file size — the old ``received += chunk`` full-body accumulation (quadratic
-    copying + up to the 1 GiB cap held in RAM per request, multiplied by
-    concurrent downloads) is gone. The cap now bounds temp-file disk usage; a
-    declared size over the cap is rejected before the body is consumed, and actual
-    bytes over the cap are rejected while consuming. The temp file is always
-    deleted (success, over-cap, stream error, or client disconnect).
+    The agent stream is spooled to a bounded, 0600 temp file (chunk by chunk,
+    hashing and counting) before anything is returned, then served from that
+    file in fixed-size chunks. Backend memory stays at one ``CHUNK`` however
+    large the file is, and because the whole transfer has succeeded before the
+    response starts, an agent failure can never surface as a half-sent 200.
+    The temp file is always deleted (success, over-cap, error, or client
+    disconnect).
     """
+    del db  # kept for call-site symmetry with the SSH path
+    info = _DownloadInfo()
+    chunks = _agent_download_chunks(system, path, audit_id, info)
+    return _prime_download(chunks, info)
 
-    async def _spool(tmp_path: str) -> Tuple[int, str]:
-        # Skip the factory — the caller already resolved this op to
-        # the agent path and the audit row says transport="agent".
-        # Re-running get_transport here could fall back to SSH if the
-        # tunnel just went unhealthy, leaving the audit row + the
-        # actual transport disagreeing. Build AgentTransport directly.
-        from .transport.agent import AgentTransport
 
-        broker = BrokerClient()
+def _agent_download_chunks(
+    system: System, path: str, audit_id: int, info: _DownloadInfo
+) -> Iterator[bytes]:
+    state = _TransferState()
+    tmp_path: Optional[str] = None
+    try:
         try:
-            transport = AgentTransport(system, broker)
-            stream = await transport.open_file_get(path)
+            # 0600 spool file; deleted in finally. Allocation is inside the
+            # protected block so a full or unwritable spool area is audited.
             try:
-                # Reject a declared oversize BEFORE consuming the body when the
-                # stream advertises a size (broker X-Praxis-File-Size header).
-                declared = getattr(stream, "size", None)
-                if isinstance(declared, int) and declared > AGENT_TRANSFER_MAX_BYTES:
-                    raise FileTransferError("transfer exceeded max size")
-
-                sha = hashlib.sha256()
-                total = 0
-                # tmp_path was created 0600 by mkstemp; "wb" truncates without
-                # widening the mode. One chunk in memory at a time.
-                with open(tmp_path, "wb") as fh:
-                    async for chunk in stream.chunks:
-                        total += len(chunk)
-                        # PRA-180 TRANSPORT-02 / PRA-253: enforce the tighter agent
-                        # ceiling while consuming, not the 5 GiB SSH cap.
-                        if total > AGENT_TRANSFER_MAX_BYTES:
-                            raise FileTransferError("transfer exceeded max size")
-                        sha.update(chunk)
-                        fh.write(chunk)
-                return total, sha.hexdigest()
-            finally:
-                await stream.close()
-        finally:
-            await broker.__aexit__(None, None, None)
-
-    def _stream() -> Iterator[bytes]:
-        from ..db.session import SessionLocal
-
-        err: Optional[str] = None
-        total = 0
-        sha_hex: Optional[str] = None
-        # 0600 spool file; deleted in finally.
-        fd, tmp_path = tempfile.mkstemp(prefix="praxis-agent-dl-", suffix=".bin")
-        os.close(fd)
-        try:
-            total, sha_hex = _run_async_from_sync(_spool(tmp_path))
-            # Stream the spooled file back one CHUNK at a time — bounded memory.
-            with open(tmp_path, "rb") as fh:
-                while True:
-                    chunk = fh.read(CHUNK)
-                    if not chunk:
-                        break
-                    yield chunk
-        except (TransportError, FileTransferError) as e:
-            err = str(e)
-            raise FileTransferError(f"download failed: {e}") from e
-        except Exception as e:  # pylint: disable=broad-except
-            # Fail closed like the SSH path: a broker truncation, short read, or
-            # any other unexpected error must mark the audit error, never leave it
-            # finalizing "success" on partial/absent data.
-            err = str(e)
-            raise
-        finally:
-            try:
-                os.remove(tmp_path)
-            except OSError:
-                pass
-            fdb = SessionLocal()
-            try:
-                row = (
-                    fdb.query(FileTransferAudit)
-                    .filter(FileTransferAudit.id == audit_id)
-                    .first()
+                fd, tmp_path = tempfile.mkstemp(
+                    prefix="praxis-agent-dl-", suffix=".bin"
                 )
-                if row is not None:
-                    _finish_audit(
-                        fdb,
-                        row,
-                        status="error" if err else "success",
-                        size_bytes=total,
-                        sha256=sha_hex if not err else None,
-                        error_message=err,
-                    )
-            finally:
-                fdb.close()
-
-    return _stream()
+                os.close(fd)
+            except OSError as e:
+                raise _stage_error(e) from e
+            state.total, state.digest = _run_async_from_sync(
+                _spool_agent_download(system, path, tmp_path)
+            )
+        except TransportUnavailable:
+            raise
+        except TransportError as e:
+            raise _agent_transfer_error(path, e) from e
+        info.size = state.total
+        with open(tmp_path, "rb") as fh:
+            while True:
+                chunk = fh.read(CHUNK)
+                if not chunk:
+                    break
+                state.started = True
+                yield chunk
+        state.completed = True
+    except GeneratorExit:
+        state.error = "client_disconnected"
+        raise
+    except Exception as e:  # pylint: disable=broad-except
+        # Fail closed like the SSH path: a broker truncation, short read, or
+        # any other unexpected error marks the audit as an error, never as a
+        # success on partial or absent data.
+        state.fail(e)
+        raise
+    finally:
+        try:
+            if tmp_path is not None:
+                os.remove(tmp_path)
+        except OSError:
+            pass
+        state.finalize(audit_id)
 
 
 def upload_stream(

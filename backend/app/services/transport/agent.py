@@ -242,6 +242,11 @@ _REASON_MESSAGES = {
     "op_stream_closed": "agent transfer stream closed early",
     "broker_busy": "agent broker is at capacity; retry shortly",
     "too_large": "transfer exceeded the size limit",
+    "not_found": "file not found on the host",
+    "denied": "permission denied on the host",
+    "is_directory": "path is a directory",
+    "not_regular": "path is not a regular file",
+    "read_failed": "the host could not read the file",
 }
 
 
@@ -283,6 +288,12 @@ def _broker_error_to_transport(exc: BrokerError) -> TransportError:
         )
     message = _REASON_MESSAGES.get(reason, "agent transport error")
     text = f"agent: {message} ({reason})"
+    error: TransportError
     if reason in ("transport_unavailable", "agent_not_active", "identity_unverifiable"):
-        return TransportUnavailable(text)
-    return TransportError(text)
+        error = TransportUnavailable(text)
+    else:
+        error = TransportError(text)
+    # Callers that must tell a missing file from a dead tunnel key off this
+    # instead of parsing the message.
+    error.reason = reason  # type: ignore[attr-defined]
+    return error

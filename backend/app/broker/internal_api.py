@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import contextlib
 import json
 import logging
 import os
@@ -743,24 +744,44 @@ class _FileGetStream:
             self.pump_task.cancel()
             if not self.watch_task.done():
                 self.watch_task.cancel()
+            self.release_bridge(cancel=False)
             return _error_response(504, "header_timeout")
         # The failure waiter won: watch_task already resolved with the
         # outcome we want to surface.
         await self.watch_task
         await _cancel_task(self.pump_task)
+        self.release_bridge(cancel=False)
         return JSONResponse(status_code=502, content=_outcome_json(self.op))
 
     async def refuse_bad_header(self):
         await self.mgr.cancel(self.op.operation_id)
         await self.watch_task
         await _cancel_task(self.pump_task)
+        self.release_bridge(cancel=False)
         return _error_response(502, "bad_header")
 
+    def release_bridge(self, *, cancel: bool = True) -> None:
+        """End the per-op websocket bridge once nobody will read this stream.
+
+        The frame pump is the only reader of ``op.inbound`` (bounded). When the
+        consumer goes away the pump is cancelled, and an agent that has more to
+        send then parks the bridge's inbound pump on a full queue forever, which
+        keeps the per-op socket and its handler alive. The op is cancelled if it
+        is still live (unless the caller has already cancelled it), and the outbound end-of-stream sentinel lets the bridge
+        return, cancel its inbound pump and close the socket.
+        """
+        if cancel and not self.op.completion.done():
+            _spawn_logged_cancel(self.mgr.cancel, self.op.operation_id)
+        with contextlib.suppress(asyncio.QueueFull):
+            self.op.outbound.put_nowait(None)
+
     async def body_iter(self) -> AsyncIterator[bytes]:
+        finished = False
         try:
             while True:
                 chunk = await self.body_queue.get()
                 if chunk is None:
+                    finished = True
                     return
                 if isinstance(chunk, _StreamFailure):
                     raise chunk
@@ -772,6 +793,8 @@ class _FileGetStream:
             await _cancel_task(self.pump_task)
             if not self.watch_task.done():
                 await _cancel_task(self.watch_task)
+            if not finished:
+                self.release_bridge()
 
 
 async def _handle_file_get(
