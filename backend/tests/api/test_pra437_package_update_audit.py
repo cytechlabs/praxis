@@ -177,9 +177,9 @@ class _Transport:
         # Packages the rescan newly adds to the inventory (first-time sync).
         self.discovered: Set[str] = set()
         self._host: Dict[int, Dict[str, str]] = {}
-        self._updated: Set[int] = set()
+        self.updated: Set[int] = set()
 
-    def _state(self, db, system_id: int) -> Dict[str, str]:
+    def state(self, db, system_id: int) -> Dict[str, str]:
         if system_id not in self._host:
             rows = db.query(Package).filter(Package.system_id == system_id).all()
             state = {p.name: p.installed_version for p in rows}
@@ -189,8 +189,8 @@ class _Transport:
             self._host[system_id] = state
         return self._host[system_id]
 
-    def _apply(self, db, system_id: int, command: str) -> None:
-        state = self._state(db, system_id)
+    def apply_command(self, db, system_id: int, command: str) -> None:
+        state = self.state(db, system_id)
         moves = self.advance_by_system.get(system_id, self.advance)
         named = command.split()
         for upd in (
@@ -205,89 +205,100 @@ class _Transport:
             if name in state and ("--only-upgrade" not in named or name in named):
                 state[name] = "9.9"
 
-    def install(self, monkeypatch, db) -> None:
-        transport = self
+    def run_privileged(self, db, system_id: int, command: str) -> Dict[str, Any]:
+        if "PRAXIS_REBOOT_PROBE" in command:
+            return dict(_PROBE)
+        self.commands.append(command)
+        if self.raise_on_update is not None:
+            raise self.raise_on_update
+        result = dict(self.update_result)
+        if result.get("exit_code") == 0:
+            self.apply_command(db, system_id, command)
+            self.updated.add(system_id)
+        return result
 
-        class _FakeSSH:
-            def __init__(self, _db):
-                pass
+    def run_listing(self, db, system_id: int) -> Dict[str, Any]:
+        after = system_id in self.updated
+        failing = (
+            self.listing_fails_after if after else self.listing_fails_before
+        ) or (after and self.rescan_status != "success")
+        if failing:
+            return {
+                "status": "error",
+                "exit_code": 255,
+                "stdout": "",
+                "stderr": "listing unavailable",
+            }
+        nonzero = self.listing_nonzero_after if after else self.listing_nonzero_before
+        lines = "".join(
+            f"{name}\t{version}\tinstall ok installed\n"
+            for name, version in self.state(db, system_id).items()
+        )
+        return {
+            "status": "warning" if nonzero else "success",
+            "exit_code": 1 if nonzero else 0,
+            "outcome": "command_failed" if nonzero else "success",
+            "stdout": lines,
+            "stderr": "",
+        }
 
-            def execute_privileged_command(
-                self, system_id, command, timeout=None
-            ):  # pylint: disable=unused-argument
-                if "PRAXIS_REBOOT_PROBE" in command:
-                    return dict(_PROBE)
-                transport.commands.append(command)
-                if transport.raise_on_update is not None:
-                    raise transport.raise_on_update
-                result = dict(transport.update_result)
-                if result.get("exit_code") == 0:
-                    transport._apply(db, system_id, command)
-                    transport._updated.add(system_id)
-                return result
-
-            def execute_command(
-                self, system_id, command, timeout=None
-            ):  # pylint: disable=unused-argument
-                after = system_id in transport._updated
-                failing = (
-                    transport.listing_fails_after
-                    if after
-                    else transport.listing_fails_before
-                ) or (after and transport.rescan_status != "success")
-                if failing:
-                    return {
-                        "status": "error",
-                        "exit_code": 255,
-                        "stdout": "",
-                        "stderr": "listing unavailable",
-                    }
-                nonzero = (
-                    transport.listing_nonzero_after
-                    if after
-                    else transport.listing_nonzero_before
-                )
-                lines = "".join(
-                    f"{name}\t{version}\tinstall ok installed\n"
-                    for name, version in transport._state(db, system_id).items()
-                )
-                return {
-                    "status": "warning" if nonzero else "success",
-                    "exit_code": 1 if nonzero else 0,
-                    "outcome": "command_failed" if nonzero else "success",
-                    "stdout": lines,
-                    "stderr": "",
-                }
-
-            def close_all_connections(self):  # pragma: no cover
-                pass
-
-        monkeypatch.setattr(package_service_module, "SSHService", _FakeSSH)
-
-        def _rescan(self, system_id, refresh=True):  # pylint: disable=unused-argument
-            if transport.rescan_status == "success":
-                state = transport._state(self.db, system_id)
-                known = set()
-                for pkg in (
-                    self.db.query(Package).filter(Package.system_id == system_id).all()
-                ):
-                    known.add(pkg.name)
-                    if pkg.name in state:
-                        pkg.installed_version = state[pkg.name]
-                for name in transport.discovered:
-                    if name not in known:
-                        self.db.add(
-                            Package(
-                                system_id=system_id,
-                                name=name,
-                                installed_version="3.0",
-                                package_type="apt",
-                            )
+    def rescan(self, service, system_id: int) -> Dict[str, Any]:
+        """Copy the host's versions into the service's inventory."""
+        if self.rescan_status == "success":
+            state = self.state(service.db, system_id)
+            known = set()
+            for pkg in (
+                service.db.query(Package).filter(Package.system_id == system_id).all()
+            ):
+                known.add(pkg.name)
+                if pkg.name in state:
+                    pkg.installed_version = state[pkg.name]
+            for name in self.discovered:
+                if name not in known:
+                    service.db.add(
+                        Package(
+                            system_id=system_id,
+                            name=name,
+                            installed_version="3.0",
+                            package_type="apt",
                         )
-            self.db.flush()
-            return {"status": transport.rescan_status}
+                    )
+        service.db.flush()
+        return {"status": self.rescan_status}
+
+    def install(self, monkeypatch, db) -> None:
+        """Route the service's SSH and rescan calls to this scripted host."""
+        monkeypatch.setattr(
+            package_service_module, "SSHService", lambda _db: _FakeSSH(self, db)
+        )
+
+        def _rescan(
+            service, system_id, refresh=True
+        ):  # pylint: disable=unused-argument
+            return self.rescan(service, system_id)
 
         monkeypatch.setattr(PackageService, "scan_packages", _rescan)
+
+
+class _FakeSSH:
+    """SSHService stand-in that answers from a :class:`_Transport`."""
+
+    def __init__(self, transport: _Transport, db) -> None:
+        self.transport = transport
+        self.db = db
+
+    def execute_privileged_command(
+        self, system_id, command, timeout=None
+    ):  # pylint: disable=unused-argument
+        return self.transport.run_privileged(self.db, system_id, command)
+
+    def execute_command(
+        self, system_id, command, timeout=None
+    ):  # pylint: disable=unused-argument
+        return self.transport.run_listing(self.db, system_id)
+
+    def close_all_connections(self) -> None:
+        """No-op: this fake never opens a connection."""
 
 
 @pytest.fixture
