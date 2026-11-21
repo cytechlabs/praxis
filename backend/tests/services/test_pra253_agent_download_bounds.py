@@ -320,7 +320,7 @@ def test_temp_spool_file_is_deleted_after_success():
     body = b"x" * (200 * 1024)
     chunks = [body[i : i + fts.CHUNK] for i in range(0, len(body), fts.CHUNK)]
 
-    yielded, finish, _ = _run_agent_download(system, chunks, capture_created=created)
+    yielded, _finish, _ = _run_agent_download(system, chunks, capture_created=created)
 
     assert b"".join(yielded) == body
     assert len(created) == 1, "exactly one spool file per download"

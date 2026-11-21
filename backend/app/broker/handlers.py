@@ -364,15 +364,15 @@ async def _reject(ws: WebSocketServerProtocol, code: str, detail: str) -> None:
 
 
 def _noop_last_seen_writer(
-    system_id: int, agent_version: Optional[str] = None
-) -> None:  # noqa: ARG001
+    _system_id: int, _agent_version: Optional[str] = None
+) -> None:
     """Default last-seen writer: do nothing. Production wiring
     (``main._build_last_seen_writer``) supplies a SessionLocal-backed writer
     that stamps ``agent_last_seen_at`` + ``agent_version``; tests inject their
     own to assert call cadence."""
 
 
-def _noop_facts_writer(system_id: int, payload: dict) -> None:  # noqa: ARG001
+def _noop_facts_writer(_system_id: int, _payload: dict) -> None:
     """Default facts writer: do nothing. Production wiring in
     PRA-155 #2a supplies a SessionLocal-backed writer that funnels
     into ``FactsService.ingest`` with ``source_transport='agent'``.

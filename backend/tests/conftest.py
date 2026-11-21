@@ -215,9 +215,9 @@ def db(test_engine) -> Generator[Session, None, None]:
     nested = connection.begin_nested()
 
     @event.listens_for(session, "after_transaction_end")
-    def _restart_savepoint(sess, trans):  # pragma: no cover - plumbing
+    def _restart_savepoint(_sess, trans):  # pragma: no cover - plumbing
         nonlocal nested
-        if trans.nested and not trans._parent.nested:
+        if trans.nested and not trans.parent.nested:
             nested = connection.begin_nested()
 
     try:
