@@ -1596,6 +1596,28 @@ class PackageService:
             ),
         )
 
+    def _fail_history_entries(
+        self,
+        history_entries: List[PackageHistory],
+        label: str,
+        result: Dict[str, Any],
+    ) -> str:
+        """Mark every entry failed after the command itself failed.
+
+        Commits and returns the operator-facing error text, which falls back
+        to the exit status when the command wrote nothing.
+        """
+        err_msg = (
+            result.get("stderr", "")
+            or result.get("error_message", "")
+            or f"exit status {result.get('exit_code')}"
+        )
+        for entry in history_entries:
+            entry.status = "failed"
+            entry.error_message = f"{label}: {err_msg}"
+        self.db.commit()
+        return err_msg
+
     def _apply_security_updates_impl(
         self,
         system_id: int,
@@ -1662,15 +1684,9 @@ class PackageService:
         )
 
         if not self._exited_cleanly(result):
-            err_msg = (
-                result.get("stderr", "")
-                or result.get("error_message", "")
-                or f"exit status {result.get('exit_code')}"
+            err_msg = self._fail_history_entries(
+                history_entries, "Security update failed", result
             )
-            for entry in history_entries:
-                entry.status = "failed"
-                entry.error_message = f"Security update failed: {err_msg}"
-            self.db.commit()
             return {
                 "system_id": system_id,
                 "hostname": system.hostname,
@@ -1846,6 +1862,32 @@ class PackageService:
             lambda: self._remove_packages_impl(system_id, package_names, user_id),
         )
 
+    def _settle_removals(
+        self,
+        system_id: int,
+        history_entries: List[PackageHistory],
+        removable_names: List[str],
+        still_installed: Set[str],
+    ) -> int:
+        """Mark each removal entry from the rescan and drop gone packages.
+
+        ``history_entries`` and ``removable_names`` are parallel. Returns how
+        many packages are confirmed gone. The caller commits.
+        """
+        completed = 0
+        for entry, pkg_name in zip(history_entries, removable_names):
+            if pkg_name in still_installed:
+                entry.status = "failed"
+                entry.error_message = "Package still installed after remove"
+                continue
+            entry.status = "completed"
+            completed += 1
+            self.db.query(Package).filter(
+                Package.system_id == system_id,
+                Package.name == pkg_name,
+            ).delete()
+        return completed
+
     def _remove_packages_impl(
         self,
         system_id: int,
@@ -1915,15 +1957,9 @@ class PackageService:
         )
 
         if not self._exited_cleanly(result):
-            err_msg = (
-                result.get("stderr", "")
-                or result.get("error_message", "")
-                or f"exit status {result.get('exit_code')}"
+            err_msg = self._fail_history_entries(
+                history_entries, "Remove failed", result
             )
-            for entry in history_entries:
-                entry.status = "failed"
-                entry.error_message = f"Remove failed: {err_msg}"
-            self.db.commit()
             return {
                 "system_id": system_id,
                 "hostname": system.hostname,
@@ -1945,22 +1981,9 @@ class PackageService:
             .all()
         }
 
-        completed = 0
-        for i, entry in enumerate(history_entries):
-            pkg_name = removable_names[i]
-            if pkg_name not in still_installed:
-                entry.status = "completed"
-                completed += 1
-            else:
-                entry.status = "failed"
-                entry.error_message = "Package still installed after remove"
-
-        for pkg_name in removable_names:
-            if pkg_name not in still_installed:
-                self.db.query(Package).filter(
-                    Package.system_id == system_id,
-                    Package.name == pkg_name,
-                ).delete()
+        completed = self._settle_removals(
+            system_id, history_entries, removable_names, still_installed
+        )
 
         self.db.commit()
 
@@ -2132,60 +2155,18 @@ class PackageService:
         pkg_manager = self._get_pkg_manager(system)
         commands = self._get_commands(pkg_manager)
 
-        packages_skipped = 0
-        if package_names:
-            held = {
-                p.name
-                for p in self.db.query(Package)
-                .filter(
-                    Package.system_id == system_id,
-                    Package.name.in_(package_names),
-                    Package.is_held.is_(True),
-                )
-                .all()
+        cmd, package_names, packages_skipped = self._select_update_command(
+            system_id, package_names, commands
+        )
+        if cmd is None:
+            return {
+                "system_id": system_id,
+                "hostname": system.hostname,
+                "status": "success",
+                "message": "All requested packages are held",
+                "packages_updated": 0,
+                "packages_skipped": packages_skipped,
             }
-            packages_skipped = len(held)
-            package_names = [n for n in package_names if n not in held]
-            if not package_names:
-                return {
-                    "system_id": system_id,
-                    "hostname": system.hostname,
-                    "status": "success",
-                    "message": "All requested packages are held",
-                    "packages_updated": 0,
-                    "packages_skipped": packages_skipped,
-                }
-            cmd = commands["apply_update"].format(
-                packages=" ".join(shlex.quote(p) for p in package_names)
-            )
-        else:
-            held = {
-                p.name
-                for p in self.db.query(Package)
-                .filter(
-                    Package.system_id == system_id,
-                    Package.is_held.is_(True),
-                )
-                .all()
-            }
-            packages_skipped = len(held)
-            updatable = (
-                self.db.query(PackageUpdate)
-                .join(Package)
-                .filter(
-                    PackageUpdate.system_id == system_id,
-                    ~Package.name.in_(held) if held else True,
-                )
-                .all()
-            )
-            if updatable:
-                names = list({u.package.name for u in updatable})
-                package_names = names
-                cmd = commands["apply_update"].format(
-                    packages=" ".join(shlex.quote(n) for n in names)
-                )
-            else:
-                cmd = commands["apply_all"]
 
         # Create pending history entries before running the command
         history_entries = self._create_pending_history(
@@ -2212,15 +2193,9 @@ class PackageService:
         )
 
         if not self._exited_cleanly(result):
-            err_msg = (
-                result.get("stderr", "")
-                or result.get("error_message", "")
-                or f"exit status {result.get('exit_code')}"
+            err_msg = self._fail_history_entries(
+                history_entries, "Update failed", result
             )
-            for entry in history_entries:
-                entry.status = "failed"
-                entry.error_message = f"Update failed: {err_msg}"
-            self.db.commit()
             return {
                 "system_id": system_id,
                 "hostname": system.hostname,
@@ -2242,40 +2217,16 @@ class PackageService:
         # package is unknown, and without one before it a change cannot be
         # attributed to this operation.
         attributable = versions_before is not None and versions_after is not None
-        completed = 0
-        failed: Optional[int] = None if versions_after is None else 0
-        for entry in history_entries:
-            name = entry.package.name
-            if versions_after is None:
-                entry.status = "failed"
-                entry.error_message = (
-                    "Update could not be verified: the installed package list "
-                    "was unavailable after the update"
-                )
-            elif versions_after.get(name) == entry.new_version:
-                entry.status = "completed"
-                # Only a move the readings attribute to this command is counted:
-                # a package already at its target before it was not moved by it,
-                # and without a reading before there is nothing to compare.
-                if versions_before is not None and versions_before.get(name) != (
-                    entry.new_version
-                ):
-                    completed += 1
-            else:
-                entry.status = "failed"
-                entry.error_message = "Package version unchanged after update"
-                failed = (failed or 0) + 1
+        completed, failed = self._reconcile_update_history(
+            history_entries, versions_before, versions_after
+        )
 
         # Packages whose installed version moved without a history row to
         # verify them. Unknown, not zero, when the evidence is incomplete.
         unrecorded: Optional[int] = None
         if attributable:
-            unrecorded = sum(
-                1
-                for name, before in versions_before.items()
-                if name not in tracked_names
-                and name in versions_after
-                and versions_after[name] != before
+            unrecorded = self._count_unrecorded_changes(
+                tracked_names, versions_before, versions_after
             )
 
         # Clean up applied PackageUpdate rows
@@ -2307,6 +2258,113 @@ class PackageService:
             response["reboot_evidence"] = reboot_evidence
 
         return response
+
+    def _select_update_command(
+        self,
+        system_id: int,
+        package_names: Optional[List[str]],
+        commands: Dict[str, str],
+    ) -> Tuple[Optional[str], Optional[List[str]], int]:
+        """Choose the update command and the packages it will name.
+
+        Returns ``(command, package_names, packages_skipped)``. The command is
+        None when every requested package is held, so nothing should run.
+        """
+        if package_names:
+            held = {
+                p.name
+                for p in self.db.query(Package)
+                .filter(
+                    Package.system_id == system_id,
+                    Package.name.in_(package_names),
+                    Package.is_held.is_(True),
+                )
+                .all()
+            }
+            package_names = [n for n in package_names if n not in held]
+            if not package_names:
+                return None, package_names, len(held)
+            cmd = commands["apply_update"].format(
+                packages=" ".join(shlex.quote(p) for p in package_names)
+            )
+            return cmd, package_names, len(held)
+
+        held = {
+            p.name
+            for p in self.db.query(Package)
+            .filter(
+                Package.system_id == system_id,
+                Package.is_held.is_(True),
+            )
+            .all()
+        }
+        updatable = (
+            self.db.query(PackageUpdate)
+            .join(Package)
+            .filter(
+                PackageUpdate.system_id == system_id,
+                ~Package.name.in_(held) if held else True,
+            )
+            .all()
+        )
+        if not updatable:
+            return commands["apply_all"], package_names, len(held)
+        names = list({u.package.name for u in updatable})
+        cmd = commands["apply_update"].format(
+            packages=" ".join(shlex.quote(n) for n in names)
+        )
+        return cmd, names, len(held)
+
+    @staticmethod
+    def _reconcile_update_history(
+        history_entries: List[PackageHistory],
+        versions_before: Optional[Dict[str, str]],
+        versions_after: Optional[Dict[str, str]],
+    ) -> Tuple[int, Optional[int]]:
+        """Settle each entry against the host's before and after readings.
+
+        Returns ``(completed, failed)``. ``failed`` is None, not zero, when
+        there is no reading after the command: the outcome is unknown. An entry
+        already at its target is marked completed but is counted only when the
+        readings show this command moved it; with no reading before, nothing
+        is attributable.
+        """
+        completed = 0
+        failed: Optional[int] = None if versions_after is None else 0
+        for entry in history_entries:
+            name = entry.package.name
+            if versions_after is None:
+                entry.status = "failed"
+                entry.error_message = (
+                    "Update could not be verified: the installed package list "
+                    "was unavailable after the update"
+                )
+            elif versions_after.get(name) == entry.new_version:
+                entry.status = "completed"
+                if versions_before is not None and versions_before.get(name) != (
+                    entry.new_version
+                ):
+                    completed += 1
+            else:
+                entry.status = "failed"
+                entry.error_message = "Package version unchanged after update"
+                failed = (failed or 0) + 1
+        return completed, failed
+
+    @staticmethod
+    def _count_unrecorded_changes(
+        tracked_names: Set[str],
+        versions_before: Dict[str, str],
+        versions_after: Dict[str, str],
+    ) -> int:
+        """Untracked packages whose installed version moved."""
+        return sum(
+            1
+            for name, before in versions_before.items()
+            if name not in tracked_names
+            and name in versions_after
+            and versions_after[name] != before
+        )
 
     def _observe_installed_versions(
         self, system_id: int, pkg_manager: str, commands: Dict[str, str]
