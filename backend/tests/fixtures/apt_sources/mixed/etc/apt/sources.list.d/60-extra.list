@@ -1,0 +1,3 @@
+deb http://list-only.example.test/debian trixie main
+# deb http://list-off.example.test/debian trixie main
+deb http://nonl.example.test/debian trixie main

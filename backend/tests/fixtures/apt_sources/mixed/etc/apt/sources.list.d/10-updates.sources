@@ -1,0 +1,6 @@
+# primary archive
+Types: deb
+URIs: http://deb.example.test/debian
+Suites: trixie-updates
+# comment inside stanza
+Components: main

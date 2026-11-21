@@ -1,0 +1,5 @@
+Types: deb
+URIs: https://enterprise.example.test/pve
+Suites: trixie
+Components: pve-enterprise
+Enabled: no
