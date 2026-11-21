@@ -347,9 +347,7 @@ async def test_agent_transport_exec_raises_unavailable_when_no_tunnel(fake_broke
     system.id = _NO_TUNNEL_SENTINEL
     transport = AgentTransport(system, BrokerClient())
 
-    from app.services.transport import TransportUnavailable as TU
-
-    with pytest.raises(TU):
+    with pytest.raises(TransportUnavailable):
         await transport.run_command(["echo", "hi"])
 
 
@@ -492,9 +490,13 @@ def test_upload_pref_agent_tunnel_down_raises_unavailable_with_audit(fake_broker
     user.id = 1
     rows, finishes, p_open, p_finish = _patch_audit_capture()
 
-    with _patch_gate(system), p_open, p_finish:
-        with pytest.raises(TransportUnavailable):
-            fts.upload_stream(MagicMock(), user, system.id, "/tmp/x", iter([b"hello"]))
+    with (
+        _patch_gate(system),
+        p_open,
+        p_finish,
+        pytest.raises(TransportUnavailable),
+    ):
+        fts.upload_stream(MagicMock(), user, system.id, "/tmp/x", iter([b"hello"]))
 
     assert len(rows) == 1
     assert rows[0].transport == "agent"

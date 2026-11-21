@@ -477,7 +477,7 @@ func awaitOpReady(ctx context.Context, conn *websocket.Conn) error {
 // runStub is the placeholder handler for op_types we don't implement
 // yet. Writes "stub: op_type=<X>" on STDOUT then CLOSE and returns
 // success. Used by tests; will go away when all op_types are real.
-func (p *opPump) runStub(ctx context.Context, opID int, conn *websocket.Conn, opType string) opOutcome {
+func (p *opPump) runStub(ctx context.Context, _ int, conn *websocket.Conn, opType string) opOutcome {
 	stub := []byte(fmt.Sprintf("stub: op_type=%s", opType))
 	outbox := []Frame{
 		{Op: FrameOpData, Channel: ChannelStdout, Payload: stub},

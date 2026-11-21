@@ -42,7 +42,7 @@ const CohortScanButton: React.FC<{
     setConfirmOpen(false);
     setRunning(true);
     try {
-      const res = await scanScope(scope, { security: !!security });
+      const res = await scanScope(scope, { security: Boolean(security) });
       setResult(res);
       if (res.failure_count > 0) {
         toast.warning(
@@ -54,8 +54,9 @@ const CohortScanButton: React.FC<{
         );
       } else {
         toast.success(
-          `Refreshed ${res.success_count}/${res.total} host(s)` +
-            (res.skipped_count ? `, ${res.skipped_count} skipped` : ''),
+          `Refreshed ${res.success_count}/${res.total} host(s)${
+            res.skipped_count ? `, ${res.skipped_count} skipped` : ''
+          }`,
         );
       }
       onComplete?.();

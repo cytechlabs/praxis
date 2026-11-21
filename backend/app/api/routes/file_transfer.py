@@ -64,11 +64,11 @@ def _client_ip(request: Request) -> Optional[str]:
 def _raise_http(exc: fts.FileTransferError) -> None:
     msg = str(exc)
     code = 400
-    if msg.startswith("forbidden:") or msg.startswith("action_not_allowed:"):
+    if msg.startswith(("forbidden:", "action_not_allowed:")):
         code = 403
     elif "not found" in msg:
         code = 404
-    elif msg.startswith("ssh_auth_failed") or msg.startswith("ssh_connect_failed"):
+    elif msg.startswith(("ssh_auth_failed", "ssh_connect_failed")):
         # Host-side misconfiguration — fail fast with a clear 502.
         code = 502
     raise HTTPException(status_code=code, detail=msg)
