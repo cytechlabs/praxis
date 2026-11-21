@@ -51,7 +51,8 @@
 #         change; the committed fixtures are otherwise static.
 #
 # A ``<name>.seed.sql`` beside a dump is the operator history that dump
-# carries. ``v1_0_0`` ships one because the 1.0.1 migrations backfill history
+# carries. ``v1_0_1`` ships one so the 1.0.2 column additions are proved to
+# leave persisted 1.0.1 rows untouched. ``v1_0_0`` ships one because the 1.0.1 migrations backfill history
 # a released database already holds: a schema-only fixture proves the chain
 # applies, and proves nothing about what the backfills read. Its dump is
 # additionally checked for content after the upgrade, not only for the
@@ -64,6 +65,7 @@
 #     pre_m13  = pra149_review                  (last pre-M13)
 #     pre_m15  = pra156_lifecycle_notif_state   (last pre-M15)
 #     v1_0_0   = align_groups_id_sequence       (the 1.0.0 head)
+#     v1_0_1   = bootstrap_admin_state          (the 1.0.1 head)
 #
 # Exit codes:
 #     0 - all fixtures upgraded to head cleanly; projects torn down.
@@ -98,6 +100,7 @@ declare -A REGENERATE_TARGETS=(
     [pre_m13]="pra149_review"
     [pre_m15]="pra156_lifecycle_notif_state"
     [v1_0_0]="align_groups_id_sequence"
+    [v1_0_1]="bootstrap_admin_state"
 )
 
 # ---------------------------------------------------------------- pre-flight
@@ -437,6 +440,67 @@ assert_backfills_v1_0_0() {
     echo "    all v1_0_0 backfill assertions passed"
 }
 
+# Content assertions for the v1.0.1 fixture, which ships persisted 1.0.1 state
+# in ``v1_0_1.seed.sql``. The 1.0.2 migration only adds nullable columns, so
+# these prove existing rows survive it unchanged and that a restart does not
+# disturb the bootstrap record or resurrect a deleted policy entry.
+assert_upgrade_v1_0_1() {
+    BACKFILL_FAILURES=0
+    echo "==> asserting 1.0.2 upgrade against the seeded 1.0.1 state"
+
+    expect_value "head is the APT metadata freshness revision" \
+        "$(db_value "SELECT version_num FROM alembic_version")" \
+        "system_apt_metadata_freshness"
+    expect_value "four APT metadata columns added to systems" \
+        "$(db_value "SELECT count(*) FROM information_schema.columns WHERE table_name = 'systems' AND column_name IN ('apt_metadata_state','apt_metadata_refreshed_at','apt_metadata_checked_at','apt_metadata_detail') AND is_nullable = 'YES'")" \
+        "4"
+    expect_value "existing hosts untouched and APT metadata unset" \
+        "$(db_value "SELECT count(*) FROM systems WHERE id IN (1,2,3) AND apt_metadata_state IS NULL AND apt_metadata_refreshed_at IS NULL AND apt_metadata_checked_at IS NULL AND apt_metadata_detail IS NULL")" \
+        "3"
+    expect_value "operator host description preserved" \
+        "$(db_value "SELECT description FROM systems WHERE id = 1")" \
+        "Fixturehostwithoperatordescription"
+    expect_value "host addresses preserved" \
+        "$(db_value "SELECT string_agg(host(ip_address), ',' ORDER BY id) FROM systems WHERE id IN (1,2,3)")" \
+        "192.0.2.11,192.0.2.12,192.0.2.13"
+    expect_value "audit host links unchanged" \
+        "$(db_value "SELECT string_agg(event_id || ':' || system_id, ',' ORDER BY id) FROM audit_event_systems")" \
+        "1:1,1:2"
+    expect_value "bootstrap record unchanged" \
+        "$(db_value "SELECT state || ':' || bootstrap_user_id || ':' || bootstrap_username FROM bootstrap_admin_state WHERE marker = 'bootstrap_admin'")" \
+        "provisioned:1:praxisadmin"
+    expect_value "deleted shipped entry stayed deleted" \
+        "$(db_value "SELECT count(*) FROM command_whitelist WHERE name = 'APT Search'")" \
+        "0"
+    expect_value "baseline rows retained" \
+        "$(db_value "SELECT count(*) FROM command_policy_baseline WHERE item_key IN ('APT Update','APT Upgrade','APT Search','Dangerous File Operations')")" \
+        "4"
+
+    echo "==> restarting backend to prove the second boot changes nothing"
+    compose restart backend >/dev/null
+    if ! wait_for_backend_health; then
+        echo "==> backend did not come back after restart" >&2
+        return 1
+    fi
+    expect_value "restart kept exactly one bootstrap record" \
+        "$(db_value "SELECT count(*) FROM bootstrap_admin_state")" "1"
+    expect_value "restart changed no account and added no administrator" \
+        "$(db_value "SELECT string_agg(u.username || '/' || coalesce(r.name, '-'), ',' ORDER BY u.id) FROM \"user\" u LEFT JOIN user_role ur ON ur.user_id = u.id LEFT JOIN role r ON r.id = ur.role_id")" \
+        "praxisadmin/admin,fixture-operator/maintainer,system/-"
+    expect_value "restart did not resurrect the deleted policy entry" \
+        "$(db_value "SELECT count(*) FROM command_whitelist WHERE name = 'APT Search'")" \
+        "0"
+    expect_value "restart left APT metadata unset until a scan runs" \
+        "$(db_value "SELECT count(*) FROM systems WHERE id IN (1,2,3) AND apt_metadata_state IS NOT NULL")" \
+        "0"
+
+    if [[ "${BACKFILL_FAILURES}" -ne 0 ]]; then
+        echo "==> ${BACKFILL_FAILURES} assertion(s) failed for v1_0_1" >&2
+        return 1
+    fi
+    echo "    all v1_0_1 upgrade assertions passed"
+}
+
 run_one_fixture() {
     local fixture="$1"
     local name
@@ -543,6 +607,12 @@ run_one_fixture() {
     # Fixtures that ship operator data assert what the backfills did with it.
     if [[ "${name}" == "v1_0_0" ]]; then
         if ! assert_backfills_v1_0_0; then
+            return 1
+        fi
+    fi
+
+    if [[ "${name}" == "v1_0_1" ]]; then
+        if ! assert_upgrade_v1_0_1; then
             return 1
         fi
     fi
