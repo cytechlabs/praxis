@@ -193,6 +193,7 @@ async def schema(
                 "session.idle_kill",
                 "session.max_duration",
                 "command.exec",
+                "package.update",
                 "file.upload",
                 "file.download",
                 "file.mkdir",
