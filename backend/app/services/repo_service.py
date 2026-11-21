@@ -6,7 +6,7 @@ import logging
 import re
 import shlex
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy.orm import Session
 
@@ -15,10 +15,44 @@ from .ssh_service import SSHService
 
 logger = logging.getLogger(__name__)
 
+# Marker line emitted before each APT source file so the parser can keep file
+# boundaries. The leading newline in the shell template guarantees the marker
+# starts its own line even when the previous file lacks a trailing newline.
+APT_FILE_MARKER = "@@praxis-source-file@@ "
+
+# APT only reads sources.list.d entries whose names use these characters, do not
+# start with a dot, and end in a lower-case .list or .sources extension.
+_APT_PART_NAME_RE = re.compile(r"[A-Za-z0-9_:-][A-Za-z0-9_.:-]*\.(?:list|sources)")
+
+
+def apt_list_repos_command(apt_dir: str = "/etc/apt") -> str:
+    """Shell command printing every APT source file, each preceded by a marker.
+
+    The main file comes first, then sources.list.d entries in byte order, which
+    matches the order APT reads them.
+    """
+    apt_dir = apt_dir.rstrip("/")
+    main = shlex.quote(f"{apt_dir}/sources.list")
+    parts = shlex.quote(f"{apt_dir}/sources.list.d")
+    marker = shlex.quote("\n" + APT_FILE_MARKER + "%s\n")
+    return (
+        "{ "
+        f"if [ -r {main} ]; then printf {marker} {main}; cat {main}; fi; "
+        f"LC_ALL=C find {parts} -maxdepth 1 \\( -type f -o -type l \\) "
+        "\\( -name '*.list' -o -name '*.sources' \\) "
+        "! -name '.*' ! -name '*[!A-Za-z0-9_.:-]*' -print 2>/dev/null "
+        "| LC_ALL=C sort | while IFS= read -r f; do "
+        f'printf {marker} "$f"; cat "$f" 2>/dev/null; done; '
+        "true; } 2>/dev/null"
+    )
+
+
+APT_LIST_REPOS_COMMAND = apt_list_repos_command()
+
 # Commands for repo operations by package manager
 REPO_COMMANDS = {
     "apt": {
-        "list_repos": "find /etc/apt/sources.list.d/ -name '*.list' -o -name '*.sources' 2>/dev/null | xargs cat 2>/dev/null; cat /etc/apt/sources.list 2>/dev/null",
+        "list_repos": APT_LIST_REPOS_COMMAND,
         "sync": "apt-get update",
         "add_repo": 'echo "{entry}" | tee /etc/apt/sources.list.d/{filename}',
         "remove_repo": "rm -f {file_path}",
@@ -120,6 +154,64 @@ REPO_TEMPLATES = {
     ],
 }
 
+_ONE_LINE_RE = re.compile(
+    r"^(?P<type>deb(?:-src)?)\s+(?:\[[^\]]*\]\s+)?(?P<uri>\S+)\s+(?P<suite>\S+)"
+    r"(?:\s+(?P<rest>.*))?$"
+)
+_FALSE_WORDS = {"no", "false", "off", "without", "disable"}
+_APT_INT_RE = re.compile(r"[+-]?(?:0[xX][0-9a-fA-F]+|[0-9]+)")
+
+
+def _deb822_enabled(value: Optional[str]) -> bool:
+    """Evaluate Enabled the way APT does.
+
+    A value that parses fully as an integer (C strtol, base 0) is false only
+    when it is zero. Otherwise the words no, false, off, without and disable
+    (any case) are false. Absent or unrecognised values keep the default, true.
+    """
+    if value is None:
+        return True
+    text = value.strip()
+    if _APT_INT_RE.fullmatch(text):
+        digits = text.lstrip("+-")
+        if digits[:2].lower() == "0x":
+            return int(digits, 16) != 0
+        if digits.startswith("0") and set(digits) <= set("01234567"):
+            return int(digits, 8) != 0
+        if not digits.startswith("0"):
+            return True
+        # a leading zero with an 8 or 9 stops strtol before the end: not numeric
+    return text.lower() not in _FALSE_WORDS
+
+
+def _looks_like_deb822(text: str) -> bool:
+    return any(re.match(r"(?i)^types\s*:", line.strip()) for line in text.split("\n"))
+
+
+def _deb822_stanzas(text: str) -> List[Dict[str, str]]:
+    """Split one file into stanzas of lower-cased field -> folded value."""
+    stanzas: List[Dict[str, str]] = []
+    current: Dict[str, str] = {}
+    key: Optional[str] = None
+    for raw in text.split("\n"):
+        line = raw.rstrip()
+        if line.lstrip().startswith("#"):
+            continue
+        if not line.strip():
+            if current:
+                stanzas.append(current)
+            current, key = {}, None
+        elif line[0] in " \t":
+            if key is not None and line.strip() != ".":
+                current[key] = f"{current[key]} {line.strip()}".strip()
+        elif ":" in line:
+            name, _, value = line.partition(":")
+            key = name.strip().lower()
+            current.setdefault(key, value.strip())
+    if current:
+        stanzas.append(current)
+    return stanzas
+
 
 class RepoService:
     """Service for managing package repository sources on remote systems."""
@@ -174,9 +266,13 @@ class RepoService:
             system_id, commands["list_repos"], timeout=30
         )
 
-        ssh_repos = []
+        ssh_repos: List[Dict[str, Any]] = []
+        disabled_repos: List[Dict[str, Any]] = []
         if result["status"] in ("success", "warning") and result["stdout"].strip():
-            ssh_repos = self._parse_repo_output(result["stdout"], pkg_manager)
+            if pkg_manager == "apt":
+                ssh_repos, disabled_repos = self._parse_apt_inventory(result["stdout"])
+            else:
+                ssh_repos = self._parse_repo_output(result["stdout"], pkg_manager)
 
         # Get DB records
         db_repos = (
@@ -204,6 +300,7 @@ class RepoService:
                 for r in db_repos
             ],
             "detected_repos": ssh_repos,
+            "disabled_repos": disabled_repos,
         }
 
     def _parse_repo_output(self, output: str, pkg_manager: str) -> List[Dict[str, str]]:
@@ -211,27 +308,7 @@ class RepoService:
         repos = []
 
         if pkg_manager == "apt":
-            # Try DEB822 format first (Ubuntu 24.04+: .sources files)
-            deb822_repos = self._parse_deb822(output)
-            if deb822_repos:
-                repos.extend(deb822_repos)
-
-            # Also parse traditional one-line format
-            for line in output.strip().split("\n"):
-                line = line.strip()
-                if not line or line.startswith("#"):
-                    continue
-                # deb http://archive.ubuntu.com/ubuntu jammy main restricted
-                match = re.match(r"^(deb(?:-src)?)\s+(\S+)\s+(\S+)\s+(.*)", line)
-                if match:
-                    repos.append(
-                        {
-                            "type": match.group(1),
-                            "url": match.group(2),
-                            "distribution": match.group(3),
-                            "components": match.group(4).strip(),
-                        }
-                    )
+            repos.extend(self._parse_apt_inventory(output)[0])
         elif pkg_manager in ("yum", "dnf"):
             # Parse INI-style .repo files
             current_repo = {}
@@ -258,52 +335,103 @@ class RepoService:
 
         return repos
 
-    def _parse_deb822(self, output: str) -> List[Dict[str, str]]:
-        """Parse DEB822 .sources format (Ubuntu 24.04+)."""
-        repos = []
-        current: Dict[str, str] = {}
+    def _parse_apt_inventory(
+        self, output: str
+    ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+        """Parse marker-delimited APT source output into (active, disabled).
 
-        for line in output.split("\n"):
-            line = line.rstrip()
-            if not line:
-                if current.get("uris"):
-                    # Expand suites into individual entries
-                    uris = current.get("uris", "")
-                    suites = current.get("suites", "").split()
-                    components = current.get("components", "")
-                    types = current.get("types", "deb")
+        Every file is parsed on its own so stanzas and entries never carry
+        over a file boundary. Entries keep the order APT reads them in.
+        """
+        active: List[Dict[str, Any]] = []
+        disabled: List[Dict[str, Any]] = []
+        for file_path, text in self._split_apt_files(output):
+            if file_path is not None and not self._is_apt_source_path(file_path):
+                continue
+            if file_path is not None and file_path.endswith(".sources"):
+                entries = self._parse_deb822(text, file_path)
+            elif file_path is None and _looks_like_deb822(text):
+                entries = self._parse_deb822(text, None)
+            else:
+                entries = self._parse_one_line(text, file_path)
+            for entry in entries:
+                (active if entry["enabled"] else disabled).append(entry)
+        return active, disabled
+
+    @staticmethod
+    def _is_apt_source_path(file_path: str) -> bool:
+        return bool(_APT_PART_NAME_RE.fullmatch(file_path.rsplit("/", 1)[-1]))
+
+    @staticmethod
+    def _split_apt_files(output: str) -> List[Tuple[Optional[str], str]]:
+        """Split output on file markers. Text before any marker has no path."""
+        files: List[Tuple[Optional[str], List[str]]] = []
+        for line in output.splitlines():
+            if line.startswith(APT_FILE_MARKER):
+                files.append((line[len(APT_FILE_MARKER) :].strip(), []))
+            elif files:
+                files[-1][1].append(line)
+            elif line.strip():
+                files.append((None, [line]))
+            # leading blank lines before any content are dropped
+        return [(path, "\n".join(lines)) for path, lines in files]
+
+    @staticmethod
+    def _parse_one_line(text: str, file_path: Optional[str]) -> List[Dict[str, Any]]:
+        """Parse classic one-line entries (`deb [opts] uri suite comps...`)."""
+        entries = []
+        for raw in text.split("\n"):
+            line = raw.split("#", 1)[0].strip()
+            match = _ONE_LINE_RE.match(line)
+            if not match:
+                continue
+            components = (match.group("rest") or "").split()
+            entries.append(
+                {
+                    "type": match.group("type"),
+                    "url": match.group("uri"),
+                    "distribution": match.group("suite"),
+                    "components": " ".join(components),
+                    "enabled": True,
+                    "file_path": file_path,
+                    "format": "list",
+                }
+            )
+        return entries
+
+    def _parse_deb822(
+        self, text: str, file_path: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """Parse a single DEB822 .sources file.
+
+        Entries are expanded per Types x URIs x Suites like APT does. A
+        stanza with `Enabled` set to a false value is returned with
+        enabled=False; an absent or unrecognised value means enabled.
+        """
+        entries: List[Dict[str, Any]] = []
+        for stanza in _deb822_stanzas(text):
+            types = stanza.get("types", "").split()
+            uris = stanza.get("uris", "").split()
+            suites = stanza.get("suites", "").split()
+            if not (types and uris and suites):
+                continue
+            enabled = _deb822_enabled(stanza.get("enabled"))
+            comps = " ".join(stanza.get("components", "").split())
+            for repo_type in types:
+                for uri in uris:
                     for suite in suites:
-                        repos.append(
+                        entries.append(
                             {
-                                "type": types,
-                                "url": uris,
+                                "type": repo_type,
+                                "url": uri,
                                 "distribution": suite,
-                                "components": components,
+                                "components": "" if suite.endswith("/") else comps,
+                                "enabled": enabled,
+                                "file_path": file_path,
+                                "format": "sources",
                             }
                         )
-                current = {}
-                continue
-            if ":" in line and not line.startswith(" "):
-                key, _, value = line.partition(":")
-                current[key.strip().lower()] = value.strip()
-
-        # Handle last entry if no trailing blank line
-        if current.get("uris"):
-            uris = current.get("uris", "")
-            suites = current.get("suites", "").split()
-            components = current.get("components", "")
-            types = current.get("types", "deb")
-            for suite in suites:
-                repos.append(
-                    {
-                        "type": types,
-                        "url": uris,
-                        "distribution": suite,
-                        "components": components,
-                    }
-                )
-
-        return repos
+        return entries
 
     def add_repo(self, system_id: int, repo_data: Dict[str, Any]) -> Dict[str, Any]:
         """Add a repository source to a system."""

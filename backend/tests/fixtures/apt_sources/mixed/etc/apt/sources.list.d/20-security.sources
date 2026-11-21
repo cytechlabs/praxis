@@ -1,0 +1,4 @@
+Types: deb
+URIs: http://security.example.test/debian-security
+Suites: trixie-security
+Components: main contrib
