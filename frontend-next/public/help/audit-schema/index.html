@@ -189,6 +189,9 @@
 
 <table><thead><tr><th>Action</th><th>When it fires</th><th><code>context</code> keys</th></tr></thead><tbody><tr><td><code>file.upload</code></td><td>Web UI → host SFTP upload</td><td><code>login</code>, <code>size_bytes</code>, <code>sha256</code>, <code>local_filename</code>, <code>error?</code></td></tr><tr><td><code>file.download</code></td><td>Host → web UI SFTP download</td><td><code>login</code>, <code>size_bytes</code>, <code>sha256</code>, <code>error?</code></td></tr><tr><td><code>file.mkdir</code></td><td>New remote directory</td><td><code>login</code>, <code>error?</code></td></tr><tr><td><code>file.unlink</code></td><td>Remote file/dir deletion</td><td><code>login</code>, <code>error?</code></td></tr></tbody></table>
 <p><code>target.kind</code> is <code>path</code> and <code>target.id</code> is the remote path.</p>
+<p>A download that fails, ends short, or is abandoned by the client emits <code>outcome</code>
+<code>failure</code> with <code>error</code> set and no <code>sha256</code>. <code>error</code> is <code>client_disconnected</code> when
+the client went away mid-transfer.</p>
 <h3 id="access-bindings--requests">Access bindings + requests</h3>
 
 

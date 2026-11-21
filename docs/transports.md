@@ -54,6 +54,40 @@ use SSH**, on every host, including agent-enrolled ones. Opening a shell on a
 host therefore needs SSH reachability and deployed certificate trust on that
 host, whatever its transport preference says.
 
+## File downloads
+
+A download is only reported as successful when the whole file arrived. Clients
+and scripts that fetch `GET /transfer/{system_id}/download` should rely on this
+contract on both transports:
+
+- **Problems that exist before the first byte are error responses.** A missing
+  file (404), a permission error (403), a path that is not a regular file (400),
+  a file over the transfer limit (413), and an unreachable or unready host (502
+  or 503) all return a JSON `detail` and no attachment. Nothing is sent that
+  could be mistaken for the file.
+- **A `200` declares its length.** When the host reports the file size the
+  response carries `Content-Length`. Compare the bytes you received with it.
+- **A failure after a `200` aborts the connection.** The status cannot change
+  once it has been sent, so the transfer is cut off and the body ends short of
+  the declared length (or, for a host that reports no size, the chunked body
+  never terminates). HTTP clients report this as an incomplete or reset
+  transfer, `curl` exits non-zero, and browsers show a failed download. Treat
+  anything other than a complete body as a failure and discard it.
+- **An empty file is a success.** A zero-byte file is a `200` with
+  `Content-Length: 0` and an empty body.
+
+The two transports differ in when a failure can appear. Over the agent the
+backend receives the whole file into a bounded temporary spool before it sends
+any header, so an agent transfer that fails part-way is an ordinary error
+response and never a cut-off `200`. Over SSH the file is streamed as it is read
+from the host, so a failure part-way is the aborted connection described above.
+The agent path is limited to 1 GiB by default and the SSH path to 5 GiB.
+
+Every download is recorded in the audit log whatever the outcome. A transfer
+that fails, is cut short, or is abandoned by the client is recorded as a
+failure with no checksum; a client that disconnects is recorded with the error
+`client_disconnected`.
+
 ## Transport preference
 
 Each host carries a preference:

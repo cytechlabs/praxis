@@ -183,9 +183,10 @@ def test_declared_over_cap_rejected_before_consuming():
         patch.object(fts, "AGENT_TRANSFER_MAX_BYTES", 1_000),
     ):
         agent_cls.return_value.open_file_get = _open_fg
-        gen = fts._download_via_agent(MagicMock(), system, "/big", 1)
+        # The transfer is spooled before any stream is handed back, so an
+        # oversize is raised while the download is being prepared.
         with pytest.raises(fts.FileTransferError, match="exceeded max size"):
-            list(gen)
+            fts._download_via_agent(MagicMock(), system, "/big", 1)
 
     assert consumed["iterated"] is False, "declared oversize must skip body consume"
     finish.assert_called_once()
@@ -235,9 +236,8 @@ def test_actual_over_cap_rejected_while_consuming():
         patch.object(fts, "AGENT_TRANSFER_MAX_BYTES", cap),
     ):
         agent_cls.return_value.open_file_get = _open_fg
-        gen = fts._download_via_agent(MagicMock(), system, "/big", 1)
         with pytest.raises(fts.FileTransferError, match="exceeded max size"):
-            yielded = list(gen)
+            yielded = list(fts._download_via_agent(MagicMock(), system, "/big", 1))
 
     assert yielded is None
     finish.assert_called_once()
@@ -269,9 +269,8 @@ def test_transport_error_marks_audit_error_and_fails_closed():
         patch("app.db.session.SessionLocal", return_value=MagicMock()),
     ):
         agent_cls.return_value.open_file_get = _open_fg
-        gen = fts._download_via_agent(MagicMock(), system, "/etc/hosts", 1)
         with pytest.raises(fts.FileTransferError, match="download failed"):
-            list(gen)
+            fts._download_via_agent(MagicMock(), system, "/etc/hosts", 1)
 
     finish.assert_called_once()
     kwargs = finish.call_args.kwargs
@@ -304,9 +303,8 @@ def test_unexpected_stream_error_fails_closed_and_marks_error():
         patch("app.db.session.SessionLocal", return_value=MagicMock()),
     ):
         agent_cls.return_value.open_file_get = _open_fg
-        gen = fts._download_via_agent(MagicMock(), system, "/etc/hosts", 1)
         with pytest.raises(RuntimeError, match="truncated"):
-            list(gen)
+            fts._download_via_agent(MagicMock(), system, "/etc/hosts", 1)
 
     finish.assert_called_once()
     kwargs = finish.call_args.kwargs
