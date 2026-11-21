@@ -110,6 +110,8 @@ export interface SecurityPosture {
   systems_failed: number;
   systems_scanning: number;
   systems_never_scanned: number;
+  /** Hosts whose latest APT check was cached, partial, or failed. */
+  systems_metadata_unverified?: number;
   last_successful_scan_at: string | null;
   last_scan_at: string | null;
   last_failure_detail: string | null;

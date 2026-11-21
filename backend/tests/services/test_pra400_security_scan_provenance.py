@@ -82,6 +82,12 @@ def _mk_system(db, distro, group, cred, hostname, ip):
         status="Active",
         group_id=group.id,
         credentials_id=cred.id,
+        # APT hosts count as covered only against verified metadata; these
+        # fixtures model a host whose refresh was verified before any scan.
+        apt_metadata_state="fresh" if distro.name != "Rocky" else None,
+        apt_metadata_refreshed_at=(
+            datetime(2000, 1, 1) if distro.name != "Rocky" else None
+        ),
     )
     db.add(s)
     db.flush()
@@ -610,7 +616,15 @@ def test_running_operation_with_unreadable_targets_marks_no_host_scanning(
 
 
 def _ssh_stub(monkeypatch, stdout, status="success", stderr=""):
-    def fake_exec(self, system_id, command, timeout=60):
+    def fake_exec(self, system_id, command, timeout=60, user_id=None):
+        if "apt-get update" in command:
+            # A clean metadata refresh, so apt scans below are against fresh lists.
+            return {
+                "status": "success",
+                "stdout": "Hit:1 http://deb.debian.org/debian trixie InRelease\n",
+                "stderr": "",
+                "exit_code": 0,
+            }
         return {"status": status, "stdout": stdout, "stderr": stderr}
 
     monkeypatch.setattr(

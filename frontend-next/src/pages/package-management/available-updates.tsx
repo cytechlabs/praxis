@@ -7,6 +7,8 @@ import { useLatestRequest } from '@/hooks/useLatestRequest';
 import {
   fetchAllUpdates,
   fetchSystemUpdates,
+  fetchAptMetadataFreshness,
+  AptMetadataFreshness,
   applyUpdates,
   scanPackages,
   fetchPackages,
@@ -24,6 +26,7 @@ import Link from 'next/link';
 import { usePackageScope } from '@/hooks/usePackageScope';
 import PackageScopeControl from '@/components/packages/PackageScopeControl';
 import CohortScanButton from '@/components/packages/CohortScanButton';
+import AptMetadataBanner from '@/components/packages/AptMetadataBanner';
 import { isScopeReady } from '@/services/packageScope';
 import { deriveLastChecked } from '@/utils/lastChecked';
 
@@ -61,6 +64,7 @@ const AvailableUpdates = () => {
         ? smartGroups.find((g) => g.id === scope.id)
         : null;
   const [updates, setUpdates] = useState<PackageUpdateItem[]>([]);
+  const [metadata, setMetadata] = useState<AptMetadataFreshness[]>([]);
   const [loading, setLoading] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [updating, setUpdating] = useState(false);
@@ -117,6 +121,15 @@ const AvailableUpdates = () => {
           : await fetchAllUpdates(scope);
       if (!isCurrent()) return;
       setUpdates(data);
+      // Freshness is advisory context for the counts; a failure to load it must
+      // not hide the updates themselves.
+      fetchAptMetadataFreshness(scope)
+        .then((rows) => {
+          if (isCurrent()) setMetadata(rows);
+        })
+        .catch(() => {
+          if (isCurrent()) setMetadata([]);
+        });
     } catch (err) {
       if (!isCurrent()) return;
       toast.error(err instanceof Error ? err.message : 'Failed to load updates');
@@ -153,9 +166,15 @@ const AvailableUpdates = () => {
     try {
       const result = await scanPackages(selectedSystem);
       if (result.status === 'success') {
-        toast.success(
-          `Scan complete: ${result.packages_found} packages found, ${result.updates_available} updates available`
-        );
+        const unverified = result.scan_state === 'partial';
+        const summary = `${result.packages_found} packages found, ${result.updates_available} updates available`;
+        if (unverified) {
+          toast.warning(
+            `Scan finished with unverified update counts: ${summary}. ${result.message ?? ''}`.trim()
+          );
+        } else {
+          toast.success(`Scan complete: ${summary}`);
+        }
         // PRA-348: reflect the new scan time on the matching system so the derived
         // "Last checked" updates immediately (and stays consistent with a reload).
         setSystems((prev) =>
@@ -326,6 +345,7 @@ const AvailableUpdates = () => {
       <PageHeader title="Available Updates" actions={<HelpLink slug="packages" />} />
       <Card>
         <CardBody>
+          <AptMetadataBanner rows={metadata} formatTimestamp={formatTimestamp} />
           <div className="mb-6">
             <div className="flex flex-wrap justify-between items-end gap-3">
               <PackageScopeControl
