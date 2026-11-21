@@ -29,8 +29,9 @@ from __future__ import annotations
 import json
 import logging
 import re
+from collections import Counter
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from sqlalchemy import false, func
 from sqlalchemy.orm import Session
@@ -323,6 +324,62 @@ def _coverage_detail(state: str, counts: Dict[str, int]) -> str:
     )
 
 
+def _outcome_bucket(
+    system_id: int,
+    outcome: Any,
+    apt_hosts: Dict[int, Tuple[Optional[str], Optional[datetime]]],
+) -> str:
+    """Coverage bucket for a host's latest recorded scan outcome.
+
+    ``never_scanned`` when no outcome exists. A success on an APT host counts as
+    ``scanned`` only when the host's recorded metadata check vouches for it;
+    otherwise it is ``partial``.
+    """
+    if outcome is None:
+        return "never_scanned"
+    if outcome.status == RESULT_SUCCESS:
+        if system_id in apt_hosts and not _security_success_is_vouched_for(
+            outcome, *apt_hosts[system_id]
+        ):
+            return "partial"
+        return "scanned"
+    if outcome.status == RESULT_PARTIAL:
+        return "partial"
+    return "failed"
+
+
+def _coverage_state(
+    in_scope: Set[int], scanning_ids: Set[int], scanned: int, partial: int, failed: int
+) -> str:
+    """Overall coverage state from the per-host bucket counts."""
+    if not in_scope:
+        return STATE_NOT_SCANNED
+    if scanning_ids:
+        return STATE_SCANNING
+    if scanned == len(in_scope):
+        return STATE_COMPLETE
+    if scanned == 0 and partial == 0:
+        return STATE_FAILED if failed else STATE_NOT_SCANNED
+    return STATE_PARTIAL
+
+
+def _metadata_unverified_count(db: Session, in_scope: Set[int]) -> int:
+    """In-scope hosts whose latest APT check was cached, partial, or failed.
+
+    A host that has never recorded a check is unknown, not unverified.
+    """
+    if not in_scope:
+        return 0
+    return (
+        db.query(System)
+        .filter(
+            System.id.in_(in_scope),
+            System.apt_metadata_state.in_(UNVERIFIED_METADATA_STATES),
+        )
+        .count()
+    )
+
+
 def get_security_scan_coverage(
     db: Session,
     system_ids: Optional[Set[int]] = None,
@@ -355,24 +412,14 @@ def get_security_scan_coverage(
     outcomes = _latest_outcomes(db, system_ids)
     scanning_ids = _scanning_system_ids(db, system_ids, now) & in_scope
 
-    scanned = partial = failed = never_scanned = 0
-    for system_id in in_scope:
-        if system_id in scanning_ids:
-            continue
-        outcome = outcomes.get(system_id)
-        if outcome is None:
-            never_scanned += 1
-        elif outcome.status == RESULT_SUCCESS:
-            if system_id in apt_hosts and not _security_success_is_vouched_for(
-                outcome, *apt_hosts[system_id]
-            ):
-                partial += 1
-            else:
-                scanned += 1
-        elif outcome.status == RESULT_PARTIAL:
-            partial += 1
-        else:
-            failed += 1
+    buckets = Counter(
+        _outcome_bucket(system_id, outcomes.get(system_id), apt_hosts)
+        for system_id in in_scope
+        if system_id not in scanning_ids
+    )
+    scanned = buckets["scanned"]
+    partial = buckets["partial"]
+    failed = buckets["failed"]
 
     counts = {
         "systems_total": len(in_scope),
@@ -380,32 +427,10 @@ def get_security_scan_coverage(
         "systems_partial": partial,
         "systems_failed": failed,
         "systems_scanning": len(scanning_ids),
-        "systems_never_scanned": never_scanned,
+        "systems_never_scanned": buckets["never_scanned"],
     }
-
-    if not in_scope:
-        state = STATE_NOT_SCANNED
-    elif scanning_ids:
-        state = STATE_SCANNING
-    elif scanned == len(in_scope):
-        state = STATE_COMPLETE
-    elif scanned == 0 and partial == 0:
-        state = STATE_FAILED if failed else STATE_NOT_SCANNED
-    else:
-        state = STATE_PARTIAL
-
-    # In-scope hosts whose latest APT check was cached, partial, or failed. A
-    # host that has never recorded a check is unknown, not unverified.
-    metadata_unverified = (
-        db.query(System)
-        .filter(
-            System.id.in_(in_scope),
-            System.apt_metadata_state.in_(UNVERIFIED_METADATA_STATES),
-        )
-        .count()
-        if in_scope
-        else 0
-    )
+    state = _coverage_state(in_scope, scanning_ids, scanned, partial, failed)
+    metadata_unverified = _metadata_unverified_count(db, in_scope)
 
     coverage_complete = bool(in_scope) and scanned == len(in_scope)
     return {

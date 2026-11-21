@@ -87,16 +87,31 @@ async function open(
   }
 }
 
-async function state(opener: Page) {
+interface AuditRow {
+  status: string;
+  error?: string | null;
+  sha256?: string | null;
+  size_bytes?: number;
+  transport?: string;
+}
+
+interface HarnessState {
+  audits: AuditRow[];
+  sha256: Record<string, string>;
+  leaked: number;
+  spool_files: string[];
+}
+
+async function state(opener: Page): Promise<HarnessState> {
   const res = await opener.request.get(`${API}/__state`);
   return res.json();
 }
 
 async function settledAudit(opener: Page) {
   for (let i = 0; i < 100; i++) {
-    const s = await state(opener);
-    if (s.audits.length && s.audits.every((a: any) => a.status !== "in_progress")) {
-      return s;
+    const snapshot = await state(opener);
+    if (snapshot.audits.length && snapshot.audits.every((audit) => audit.status !== "in_progress")) {
+      return snapshot;
     }
     await opener.waitForTimeout(100);
   }
@@ -127,11 +142,11 @@ test.describe("file download truthfulness in the browser", () => {
       expect(out.filename).toBe("medium.bin");
       const size = 5 * MIB + 3;
       expect(statSync(out.file).size).toBe(size);
-      const s = await settledAudit(opener);
+      const settled = await settledAudit(opener);
       expect(createHash("sha256").update(readFileSync(out.file)).digest("hex")).toBe(
-        s.sha256["/ok/medium.bin"],
+        settled.sha256["/ok/medium.bin"],
       );
-      expect(s.audits[0]).toMatchObject({ status: "success", size_bytes: size });
+      expect(settled.audits[0]).toMatchObject({ status: "success", size_bytes: size });
     });
 
     test(`${name}: a zero-byte file is a successful empty download`, async ({
@@ -168,9 +183,9 @@ test.describe("file download truthfulness in the browser", () => {
     expect(out.kind).toBe("download");
     if (out.kind !== "download") return;
     expect(out.failure).not.toBeNull();
-    const s = await settledAudit(opener);
-    expect(s.audits[0]).toMatchObject({ status: "error", sha256: null });
-    expect(s.leaked).toBe(0);
+    const settled = await settledAudit(opener);
+    expect(settled.audits[0]).toMatchObject({ status: "error", sha256: null });
+    expect(settled.leaked).toBe(0);
   });
 
   test("ssh: a failure on an unsized stream is a failed download", async ({
@@ -198,9 +213,9 @@ test.describe("file download truthfulness in the browser", () => {
     expect(out.kind).toBe("page");
     if (out.kind !== "page") return;
     expect(out.status).toBe(502);
-    const s = await settledAudit(opener);
-    expect(s.audits[0]).toMatchObject({ status: "error", transport: "agent" });
-    expect(s.spool_files).toEqual([]);
+    const settled = await settledAudit(opener);
+    expect(settled.audits[0]).toMatchObject({ status: "error", transport: "agent" });
+    expect(settled.spool_files).toEqual([]);
   });
 
   test("cancelling a download in the browser releases the host", async () => {
@@ -211,11 +226,11 @@ test.describe("file download truthfulness in the browser", () => {
     );
     const download = await started;
     await download.cancel();
-    const s = await settledAudit(opener);
-    expect(s.audits[0]).toMatchObject({
+    const settled = await settledAudit(opener);
+    expect(settled.audits[0]).toMatchObject({
       status: "error",
       error: "client_disconnected",
     });
-    expect(s.leaked).toBe(0);
+    expect(settled.leaked).toBe(0);
   });
 });

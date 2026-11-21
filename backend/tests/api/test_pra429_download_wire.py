@@ -143,7 +143,7 @@ def test_ssh_remote_ending_early_aborts_the_connection(server):
 
 
 def test_unsized_ssh_stream_failure_leaves_the_chunked_body_unterminated(server):
-    status, headers, body, err = _download(
+    status, headers, _body, err = _download(
         server, SSH_SYSTEM, "/err/midstream-chunked.bin"
     )
     assert status == 200
@@ -165,7 +165,7 @@ def test_unsized_ssh_stream_that_completes_is_served_in_full(server):
     "path", ["/err/midstream.bin", "/err/short.bin"], ids=["stream-error", "short"]
 )
 def test_agent_failure_during_transfer_is_never_a_200(server, path):
-    status, headers, body, err = _download(server, AGENT_SYSTEM, path)
+    status, headers, _body, err = _download(server, AGENT_SYSTEM, path)
     assert (status, err) == (502, None)
     assert "content-disposition" not in headers
     row = _settled_audit(server)[0]
@@ -177,11 +177,14 @@ def test_agent_failure_during_transfer_is_never_a_200(server, path):
 
 @TRANSPORTS
 def test_client_abandoning_a_download_cleans_up_and_audits_failure(server, system):
-    with httpx.Client(timeout=30) as client:
-        with client.stream("GET", _url(server, system, "/big/huge.bin")) as res:
-            assert res.status_code == 200
-            next(res.iter_bytes())
-        # Leaving the block closes the connection mid-body.
+    with (
+        httpx.Client(timeout=30) as client,
+        client.stream("GET", _url(server, system, "/big/huge.bin")) as res,
+    ):
+        assert res.status_code == 200
+        first = next(res.iter_bytes(), None)
+        assert first, "no first body chunk was received"
+    # Leaving the block closes the connection mid-body.
     row = _settled_audit(server)[0]
     assert row["status"] == "error"
     assert row["error"] == "client_disconnected"

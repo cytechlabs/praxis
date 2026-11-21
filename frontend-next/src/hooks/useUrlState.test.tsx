@@ -20,7 +20,7 @@ function makeRouter(query: Query, isReady = true) {
     isReady,
     pathname: '/page',
     query,
-    replace: vi.fn(async () => true),
+    replace: vi.fn(() => Promise.resolve(true)),
   };
   state.router = router;
   return router;
@@ -38,11 +38,11 @@ beforeEach(() => {
 describe('useUrlState', () => {
   it('reads the initial value from the query and defaults when absent', () => {
     makeRouter({ status: 'active' });
-    const a = renderHook(() => useUrlState('status', 'all'));
-    expect(a.result.current[0]).toBe('active');
+    const withValue = renderHook(() => useUrlState('status', 'all'));
+    expect(withValue.result.current[0]).toBe('active');
     makeRouter({});
-    const b = renderHook(() => useUrlState('status', 'all'));
-    expect(b.result.current[0]).toBe('all');
+    const withDefault = renderHook(() => useUrlState('status', 'all'));
+    expect(withDefault.result.current[0]).toBe('all');
   });
 
   it('hydrates once the router becomes ready (bookmark / reload)', () => {
@@ -104,7 +104,7 @@ describe('useUrlState', () => {
     );
   });
 
-  it('does not replace when the URL already matches (no loops)', async () => {
+  it('does not replace when the URL already matches (no loops)', () => {
     const router = makeRouter({ status: 'down' });
     const { result, rerender } = renderHook(() => useUrlState('status', 'all'));
     act(() => result.current[1]('down'));
@@ -178,6 +178,24 @@ describe('useUrlState', () => {
     return { promise, resolve, reject };
   }
 
+  it('omits a removed filter immediately and from the next pending write', async () => {
+    const router = makeRouter({ status: 'down', keep: 'z' });
+    const first = deferred<boolean>();
+    router.replace.mockImplementationOnce(() => first.promise);
+    const { result } = renderHook(() => ({
+      status: useUrlState('status', 'all'),
+      search: useUrlState('search', ''),
+    }));
+    act(() => result.current.status[1]('all'));
+    const calls = router.replace.mock.calls as unknown as Array<[{ query: Query }]>;
+    expect(calls[0][0].query).toStrictEqual({ keep: 'z' });
+    act(() => result.current.search[1]('web'));
+    expect(calls[1][0].query).toStrictEqual({ keep: 'z', search: 'web' });
+    await act(() => {
+      first.resolve(true);
+      return first.promise.then(() => undefined);
+    });
+  });
   it('keeps the whole pending query when the first replace resolves false', async () => {
     const router = makeRouter({});
     const first = deferred<boolean>();
@@ -195,13 +213,17 @@ describe('useUrlState', () => {
     act(() => result.current.status[1]('Active'));
     act(() => result.current.ca[1]('enabled'));
     // Superseded by the second replace; the router never published it.
-    await act(async () => first.resolve(false));
+    await act(() => {
+      first.resolve(false);
+      return first.promise.then(() => undefined);
+    });
     act(() => result.current.search[1]('web'));
     const calls = router.replace.mock.calls as unknown as Array<[{ query: Query }]>;
     expect(calls[2][0].query).toEqual({ status: 'Active', ca: 'enabled', search: 'web' });
-    await act(async () => {
+    await act(() => {
       second.resolve(true);
       third.resolve(true);
+      return Promise.all([second.promise, third.promise]).then(() => undefined);
     });
   });
 
@@ -217,9 +239,10 @@ describe('useUrlState', () => {
     act(() => result.current.status[1]('Active'));
     act(() => result.current.ca[1]('enabled'));
     expect(result.current.status[0]).toBe('Active');
-    await act(async () => {
+    await act(() => {
       first.resolve(false);
       second.resolve(false);
+      return Promise.all([first.promise, second.promise]).then(() => undefined);
     });
     expect(result.current.status[0]).toBe('all');
     expect(result.current.ca[0]).toBe('all');
@@ -229,7 +252,10 @@ describe('useUrlState', () => {
     const router = makeRouter({});
     router.replace.mockImplementationOnce(() => Promise.reject(new Error('aborted')));
     const { result } = renderHook(() => useUrlState('status', 'all'));
-    await act(async () => result.current[1]('Active'));
+    await act(() => {
+      result.current[1]('Active');
+      return Promise.resolve();
+    });
     expect(result.current[0]).toBe('all');
   });
 
@@ -249,6 +275,9 @@ describe('useUrlState', () => {
     act(() => result.current.ca[1]('off'));
     const calls = router.replace.mock.calls as unknown as Array<[{ query: Query }]>;
     expect(calls[1][0].query).toEqual({ status: 'Inactive', ca: 'off' });
-    await act(async () => first.resolve(true));
+    await act(() => {
+      first.resolve(true);
+      return first.promise.then(() => undefined);
+    });
   });
 });

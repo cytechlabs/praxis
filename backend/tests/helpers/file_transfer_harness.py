@@ -89,7 +89,7 @@ class AuditLog:
                 "size_bytes": 0,
                 "sha256": None,
             }
-        return SimpleNamespace(id=row_id, **{k: v for k, v in kw.items()})
+        return SimpleNamespace(id=row_id, **dict(kw))
 
     def finish(self, audit_id: int, *, failed, error, size_bytes, sha256) -> None:
         with self._lock:

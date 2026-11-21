@@ -29,7 +29,8 @@ class _Respond(BaseHTTPRequestHandler):
     do_HEAD = do_GET  # noqa: N815
 
     def log_message(self, *args):  # pylint: disable=arguments-differ
-        return
+        """Keep the test output quiet by dropping the access log."""
+        return None
 
 
 def _serve(status):
@@ -129,7 +130,7 @@ class NativeApt:
 
     def run(self, command):
         proc = subprocess.run(
-            ["sh", "-c", command],
+            ["/bin/sh", "-c", command],
             env=self.env,
             capture_output=True,
             text=True,
