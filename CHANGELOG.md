@@ -16,7 +16,7 @@ A maintenance release for the 1.0 line. It corrects host-facing defects found
 after 1.0.1, makes APT package inventory report how fresh it is, closes
 framework, runtime, and documentation-build dependency advisories, and hardens
 agent revocation and file transfer. Every change landed on `main` first and was
-cherry-picked onto `release/1.0`. Publication date: pending.
+cherry-picked onto `release/1.0`.
 
 ### Security
 
@@ -71,22 +71,24 @@ paths are `1.0.1` to `1.0.2` and `1.0.0` to `1.0.2`; the second applies the
 1.0.1 migrations first, including the host address uniqueness check. See
 [docs/upgrade-notes-1-0.md](docs/upgrade-notes-1-0.md).
 
-### Security findings under release qualification
+### Security findings carried into 1.0.2
 
-Final image scans are pending. The following findings are tracked for qualification:
+Both candidate images passed the scan gate for fixable critical findings.
+The following residual findings were accepted for this release:
 
-- The backend image's `libcurl4` and `libcurl3-gnutls` packages carry
-  five Debian findings for which no supported Bookworm fix was available at the
-  last check. Their carryover is accepted for 1.0.2 if the packaging recheck
-  confirms unchanged severity, exposure and fix availability.
-- Frontend development-tool findings (`vite`, `source-map-js`) and a bundled
-  `zod` copy in the production image are under reachability triage.
-- Remaining `npm audit` moderate findings (`minimatch`,
-  `postcss-selector-parser`, and the `typescript-eslint` family).
-
-No per-finding suppression or scanner gate change was made. The existing
-`ignore-unfixed: true` gate excludes findings without available fixes, so a
-passing gate does not mean such findings are absent.
+- Five advisories affect both Debian curl libraries in the backend image.
+  The packaging recheck found one medium and four low advisories per library,
+  with no supported Bookworm fix available. Published image digests are
+  rechecked because Debian packages can change between builds.
+- The backend uses `python-jose` for OIDC token verification with the allowed
+  algorithm fixed to RS256. Findings in `python-jose` and its `ecdsa`
+  dependency remain open pending replacement of that dependency chain.
+- Black and pylint ship in the backend image as development tools. Their
+  removal from the runtime image is deferred to maintenance.
+- Frontend and documentation build dependencies retain audit findings,
+  including Vite, source-map-js and Zod. Next.js also bundles Zod for
+  configuration validation. Qualification identified no production request
+  path to that copy. Dependency updates are deferred to maintenance.
 
 ### Known limitations
 
