@@ -81,7 +81,7 @@ Praxis runs as a Docker Compose stack on a single Linux host. Check
 [requirements](docs/requirements.md) first; most failed installs are a missing
 prerequisite.
 
-For an existing deployment on 1.0.0 or 1.0.1, follow the [1.0.2 upgrade notes](https://github.com/cytechlabs/praxis/blob/v1.0.2/docs/upgrade-notes-1-0.md).
+For an existing deployment on 1.0.0 or 1.0.1, follow the [1.0.2 upgrade notes](docs/upgrade-notes-1-0.md).
 
 The images are published to a container registry; the Compose files and the
 environment template come from this repository:

@@ -129,6 +129,19 @@ smoke.
 For a stable patch, `1.0` and `latest` should move to the `1.0.1` image digests;
 the immutable `1.0.0` tags must remain unchanged.
 
+## Synchronize the operator guides after publication
+
+Cloudflare Pages builds the public site from `main`. The application serves
+bundled help generated from the same `docs/` sources. After publishing a patch,
+bring its operator instructions and synchronized product version back to
+`main`. Update the README quickstart, install and upgrade commands, artifact
+examples, and changelog. Preserve any intervening changes on `main`.
+
+Rebuild the bundled help and run `npm run verify` from `docs-site/`. After
+merge, check the version and install command on the live site against the
+published release. The bundled help already shipped in a release stays tied
+to that release.
+
 ## Hotfix exception
 
 If an emergency requires fixing `release/X.Y` first, use the same protected

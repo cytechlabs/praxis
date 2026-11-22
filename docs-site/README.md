@@ -127,8 +127,9 @@ measures with and the site serves readers the same face. `src/mermaid.mjs` and
 
 ## Publishing to Cloudflare Pages
 
-Nothing in this repository deploys. A branch build and a pull request run the
-checks and stop; publication is a separate, deliberate action.
+Cloudflare Pages publishes the public site from `main`. Edit operator pages in
+`docs/`, rebuild the bundled help, and commit both together. The Documentation
+CI job verifies the two builds. Cloudflare deploys the public build after merge.
 
 ### One-time project setup
 
@@ -136,6 +137,7 @@ Create a Pages project connected to this repository, with:
 
 | Setting | Value |
 |---|---|
+| Production branch | `main` |
 | Framework preset | None |
 | Build command | `cd docs-site && npm ci && node ../scripts/build-docs.mjs --public` |
 | Build output directory | `docs-site/dist` |
