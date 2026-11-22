@@ -3,8 +3,6 @@ title: Install Praxis
 description: Deploy the Praxis control plane with Docker Compose, either from the published images or from source.
 ---
 
-For a new production deployment, follow the [1.0.2 installation guide](https://github.com/cytechlabs/praxis/blob/v1.0.2/docs/install.md). The examples below use the 1.0.0 checkout.
-
 This installs the control plane. It does not enroll any hosts; that is
 [enroll hosts](enroll-hosts.md), after [first run](first-run.md).
 
@@ -40,7 +38,7 @@ Compose files change between releases, so a checkout that does not match the
 images can start a stack the release was never tested as:
 
 ```sh
-git checkout v1.0.0
+git checkout v1.0.2
 ```
 
 On the source path, stay on the branch you are working on.
@@ -63,7 +61,7 @@ At minimum, set:
 | `PUBLIC_BASE_URL` | The external URL browsers use, for example `https://praxis.example.com`. Redirect flows and single sign-on depend on it. |
 | `PRAXIS_DOMAIN` | The hostname Caddy answers on. |
 | `PRAXIS_TLS_MODE` | `internal`, `acme`, or `byo`. See TLS below. |
-| `PRAXIS_VERSION` | The release to run, for example `1.0.0`. Pin it; do not run `latest` in production. A source build overrides the image, so this only labels what you built. |
+| `PRAXIS_VERSION` | The release to run, for example `1.0.2`. Pin it; do not run `latest` in production. A source build overrides the image, so this only labels what you built. |
 
 Keep `.env` out of version control and readable only by the account that runs
 the stack. `ENVIRONMENT=production` enables the startup hardening checks; do not

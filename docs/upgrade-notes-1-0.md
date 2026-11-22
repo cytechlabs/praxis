@@ -3,18 +3,10 @@ title: Upgrade notes for 1.0
 description: What changes when you move to 1.0 and the order to apply it in.
 ---
 
-## Upgrading to 1.0.2
-
-Both 1.0.0 and 1.0.1 can upgrade directly to 1.0.2. The migration adds four
-nullable APT metadata freshness columns. Existing hosts show an unknown state
-until a package scan records freshness. When upgrading from 1.0.0, check for
-duplicate host addresses before starting because the 1.0.1 migration requires
-unique addresses. The [tagged 1.0.2 upgrade notes](https://github.com/cytechlabs/praxis/blob/v1.0.2/docs/upgrade-notes-1-0.md)
-include the duplicate-address query, upgrade commands, and rollback guidance.
-
-## Moving from a prerelease to 1.0.0
-
-The steps below cover the original 1.0.0 release and use its image pins.
+These notes cover moving to the current 1.0 release. Three paths are supported:
+`1.0.0` to `1.0.2`, `1.0.1` to `1.0.2`, and a prerelease or local development
+build to the current release. There is no supported upgrade from a tagged release older than `1.0.0`,
+because none exists.
 
 If you are installing fresh, follow the
 [installation guide](install.md)
@@ -39,10 +31,10 @@ instead; you do not need this document.
 1. **Pin the target version.** In `.env`:
 
    ```sh
-   PRAXIS_VERSION=1.0.0
+   PRAXIS_VERSION=1.0.2
    ```
 
-2. **Pull (or build) the 1.0.0 images.**
+2. **Pull (or build) the release images.**
 
    ```sh
    # Pull published images (--profile proxy starts Caddy, the browser ingress):
@@ -84,6 +76,70 @@ instead; you do not need this document.
 7. **Run the smoke gates** (see [safe upgrade](guide-safe-upgrade.md)
    for the full set): fresh-install / upgrade / backup-restore smokes and the
    demo walkthrough if you want a visual confirmation of the lifecycle story.
+
+## Moving from 1.0.1 to 1.0.2
+
+`1.0.2` is a maintenance release. It adds no new required configuration, and
+the upgrade is the ordinary pinned-version upgrade above.
+
+The one schema change adds four nullable columns to `systems`
+(`apt_metadata_state`, `apt_metadata_refreshed_at`,
+`apt_metadata_checked_at`, `apt_metadata_detail`). Existing rows are not
+rewritten: each host reads as not yet checked until its next package scan
+records APT metadata freshness. The downgrade drops the columns and discards
+that recorded freshness, which a later scan re-creates.
+
+Moving from `1.0.0` directly to `1.0.2` applies the `1.0.1` migrations first,
+so the duplicate-address check described below applies to that path as well.
+
+**Revoked agents.** An agent that was disabled or revoked is now cut off on its
+live tunnel and refused new operations; it does not need a restart on the
+control plane to take effect.
+
+**Downloads.** A file download that fails before any data is sent now returns an
+error status instead of HTTP 200.
+
+## Moving from 1.0.0 to 1.0.1
+
+`1.0.1` is a maintenance release. It adds no new required configuration, and
+the upgrade is the ordinary pinned-version upgrade above.
+
+One schema change needs attention before you start.
+
+**Host addresses must be unique.** `systems.ip_address` gains a uniqueness
+constraint. Praxis has always treated a duplicate address as invalid, but only
+in the application, so a database written by an older release can still hold
+two hosts with the same address. The migration refuses to run while any
+duplicate exists rather than choosing a row to keep:
+
+```text
+Cannot add the unique constraint on systems.ip_address while duplicate
+addresses exist. ... No data has been changed.
+  10.0.0.11/32 used by 2 systems: host-a, host-b
+```
+
+Nothing is modified when the migration refuses, and the database stays on the
+`1.0.0` schema. Check for duplicates before upgrading:
+
+```sh
+docker compose exec -T db psql -U postgres -d praxis -c \
+  "SELECT ip_address, count(*), string_agg(hostname, ', ') FROM systems \
+   GROUP BY ip_address HAVING count(*) > 1;"
+```
+
+Resolve each address by correcting or decommissioning the duplicate hosts, then
+run the upgrade again.
+
+**Rolling back past this release** re-pins `PRAXIS_VERSION` as described in
+[Rolling back](#rolling-back). If you also downgrade the schema, the
+`systems.description` column is dropped, and the downgrade refuses while any
+host carries description text so operator-entered text is not destroyed
+silently. Clear those descriptions deliberately if you intend to lose them.
+
+Clear `ADMIN_PASSWORD` from `.env` once your first administrator has signed in.
+From `1.0.1` the bootstrap administrator is provisioned once per installation
+and is not recreated on later restarts, but an older release rolled back onto
+the same database will recreate it while that value is still set.
 
 ## Breaking change: privileged access baseline
 

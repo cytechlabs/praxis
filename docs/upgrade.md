@@ -3,8 +3,6 @@ title: Upgrade
 description: Move a Praxis deployment to a new release, and roll back if it does not go well.
 ---
 
-Upgrading from 1.0.0 or 1.0.1 to 1.0.2? Follow the [1.0.2 upgrade procedure](https://github.com/cytechlabs/praxis/blob/v1.0.2/docs/upgrade.md) and [migration notes](https://github.com/cytechlabs/praxis/blob/v1.0.2/docs/upgrade-notes-1-0.md). The example pin below is for 1.0.0.
-
 Upgrades are a pull and a restart. The risk is not the containers; it is the
 database migration, which is one-way. Everything below exists to make sure you
 can go back.
@@ -31,7 +29,7 @@ see its release notes and [upgrade notes for 1.0](upgrade-notes-1-0.md).
 Pin the new version in `.env`:
 
 ```text
-PRAXIS_VERSION=1.0.0
+PRAXIS_VERSION=1.0.2
 ```
 
 Then pull and restart:

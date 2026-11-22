@@ -3,8 +3,6 @@ title: Verify release artifacts
 description: Confirm the images and the agent tarball you are about to run were built by the Praxis release pipeline.
 ---
 
-To verify the published 1.0.2 images and agent, use the [1.0.2 artifact verification guide](https://github.com/cytechlabs/praxis/blob/v1.0.2/docs/verify-release-artifacts.md). The commands below use the 1.0.0 release.
-
 Do this before a deployment goes into service, and again after any upgrade.
 Verification proves that what you are running came from the published source
 through the published pipeline, rather than trusting a tag or a download page.
@@ -32,7 +30,7 @@ and the agent artifact checksums.
 ## Tags move; digests do not
 
 ```text
-ghcr.io/cytechlabs/praxis-backend:1.0.0                  a tag
+ghcr.io/cytechlabs/praxis-backend:1.0.2                  a tag
 ghcr.io/cytechlabs/praxis-backend@sha256:<64 hex chars>  a digest
 ```
 
@@ -49,7 +47,7 @@ Resolve the digest without pulling the layers, then compare it against the
 release index:
 
 ```sh
-docker buildx imagetools inspect ghcr.io/cytechlabs/praxis-backend:1.0.0
+docker buildx imagetools inspect ghcr.io/cytechlabs/praxis-backend:1.0.2
 ```
 
 Pull by digest and confirm the build provenance:
@@ -84,9 +82,9 @@ Repeat for `praxis-frontend`.
 ## Check the SBOM describes what you pulled
 
 ```sh
-gh release download v1.0.0 --pattern 'sbom-*.cdx.json'
+gh release download v1.0.2 --pattern 'sbom-*.cdx.json'
 
-jq -r '.metadata.component.name' sbom-backend-1.0.0.cdx.json
+jq -r '.metadata.component.name' sbom-backend-1.0.2.cdx.json
 ```
 
 The image named there must be the digest you pulled. An SBOM that names a
@@ -103,7 +101,7 @@ gh attestation verify oci://ghcr.io/cytechlabs/praxis-backend@sha256:<digest> \
 ## Read the release index
 
 ```sh
-gh release download v1.0.0 --pattern release-index.json
+gh release download v1.0.2 --pattern release-index.json
 
 jq -r '.source.commit, (.components[] | "\(.name) \(.digest // "n/a")")' \
     release-index.json

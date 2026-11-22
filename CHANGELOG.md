@@ -71,7 +71,7 @@ The upgrade adds four nullable columns to `systems` for APT metadata
 freshness. Existing rows are left null and no data is rewritten. Supported
 paths are `1.0.1` to `1.0.2` and `1.0.0` to `1.0.2`; the second applies the
 1.0.1 migrations first, including the host address uniqueness check. See
-[docs/upgrade-notes-1-0.md](https://github.com/cytechlabs/praxis/blob/v1.0.2/docs/upgrade-notes-1-0.md).
+[docs/upgrade-notes-1-0.md](docs/upgrade-notes-1-0.md).
 
 ### Security findings carried into 1.0.2
 
@@ -95,7 +95,7 @@ The following residual findings were accepted for this release:
 ### Known limitations
 
 Unchanged from 1.0.0 except as noted; see
-[docs/upgrade-notes-1-0.md](https://github.com/cytechlabs/praxis/blob/v1.0.2/docs/upgrade-notes-1-0.md).
+[docs/upgrade-notes-1-0.md](docs/upgrade-notes-1-0.md).
 
 The 1.0.1 limitation that a failed download could return HTTP 200 is
 corrected in this release. A transfer that fails after streaming has begun
