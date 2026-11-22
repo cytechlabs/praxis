@@ -3,6 +3,8 @@ title: Install Praxis
 description: Deploy the Praxis control plane with Docker Compose, either from the published images or from source.
 ---
 
+For a new production deployment, follow the [1.0.2 installation guide](https://github.com/cytechlabs/praxis/blob/v1.0.2/docs/install.md). The examples below use the 1.0.0 checkout.
+
 This installs the control plane. It does not enroll any hosts; that is
 [enroll hosts](enroll-hosts.md), after [first run](first-run.md).
 

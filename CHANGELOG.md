@@ -10,6 +10,98 @@ released under the `vX.Y.Z` tag (images `ghcr.io/cytechlabs/praxis-backend` and
 `agent-vX.Y.Z` tag. See [docs/maintainers/release-checklist.md](docs/maintainers/release-checklist.md)
 for the release runbook.
 
+## 1.0.2 - maintenance release
+
+A maintenance release for the 1.0 line. It corrects host-facing defects found
+after 1.0.1, makes APT package inventory report how fresh it is, closes
+framework, runtime, and documentation-build dependency advisories, and hardens
+agent revocation and file transfer. Every change landed on `main` first and was
+cherry-picked onto `release/1.0`.
+
+[Application release](https://github.com/cytechlabs/praxis/releases/tag/v1.0.2) | [Agent release](https://github.com/cytechlabs/praxis/releases/tag/agent-v1.0.2)
+
+### Security
+
+- Revoking or disabling an agent now takes effect on its live tunnel and on
+  operation dispatch. Dispatch is fenced against committed identity state, the
+  affected session is evicted, and an operation interrupted by revocation
+  reports what the agent confirmed about it. A revoked agent cannot reconnect.
+- PyJWT moves to 2.15.1 for backend authentication and license verification.
+- Next.js and its image optimizer move to 16.4.5 with refreshed `sharp`
+  runtime packages, closing three critical framework advisories
+  (`GHSA-2464-fhr4-w9xw`, `GHSA-673q-mjm6-r5xr`, `GHSA-vcvr-r3jv-pc5j`).
+- The frontend production image moves to Node 24.22.3 across the dependency,
+  build, and runtime stages.
+- The backend production image moves to Python 3.14.10 in both build stages,
+  and pip and its vendored packages are removed from the runtime image, which
+  retires the findings that were vendored inside pip (setuptools, msgpack, and
+  certifi copies). The builder keeps pip; the runtime verifies that neither
+  interpreter carries an installed copy.
+- The documentation build refreshes js-yaml and svgo within the existing Astro
+  dependency ranges, and frontend test tooling (Vitest, brace-expansion,
+  js-yaml) is aligned on patched releases.
+
+### Correctness
+
+- APT package scans record per-host metadata freshness: whether the package
+  index refresh succeeded, when it last did, and when it was last checked. An
+  incomplete scan keeps the last-known inventory instead of replacing it, and
+  the fleet dashboard counts a host as confidently scanned only after a
+  verified security scan.
+- APT source files are parsed one at a time, preserving file boundaries and
+  each source's enabled state, and the resulting inventory is compared with
+  native APT.
+- Ad-hoc package updates record their outcomes in the audit trail.
+- Download failures detected before streaming return a non-2xx status. SSH read-ahead is
+  bounded, and broker streams are released and audit records finalized when a
+  transfer fails or the client disconnects.
+- URL-backed filters stay in step with browser navigation and preserve
+  concurrent filter updates.
+
+### Packaging and operations
+
+- Browser release qualification is reproducible: authenticated sessions are
+  reused, seeded workflows and evidence recovery are verified, and screenshots
+  and disposable fixtures are isolated. Generated onboarding passwords stay out
+  of Playwright traces.
+
+### Upgrade notes
+
+The upgrade adds four nullable columns to `systems` for APT metadata
+freshness. Existing rows are left null and no data is rewritten. Supported
+paths are `1.0.1` to `1.0.2` and `1.0.0` to `1.0.2`; the second applies the
+1.0.1 migrations first, including the host address uniqueness check. See
+[docs/upgrade-notes-1-0.md](https://github.com/cytechlabs/praxis/blob/v1.0.2/docs/upgrade-notes-1-0.md).
+
+### Security findings carried into 1.0.2
+
+Both candidate images passed the scan gate for fixable critical findings.
+The following residual findings were accepted for this release:
+
+- Five advisories affect both Debian curl libraries in the backend image.
+  The packaging recheck found one medium and four low advisories per library,
+  with no supported Bookworm fix available. Published image digests are
+  rechecked because Debian packages can change between builds.
+- The backend uses `python-jose` for OIDC token verification with the allowed
+  algorithm fixed to RS256. Findings in `python-jose` and its `ecdsa`
+  dependency remain open pending replacement of that dependency chain.
+- Black and pylint ship in the backend image as development tools. Their
+  removal from the runtime image is deferred to maintenance.
+- Frontend and documentation build dependencies retain audit findings,
+  including Vite, source-map-js and Zod. Next.js also bundles Zod for
+  configuration validation. Qualification identified no production request
+  path to that copy. Dependency updates are deferred to maintenance.
+
+### Known limitations
+
+Unchanged from 1.0.0 except as noted; see
+[docs/upgrade-notes-1-0.md](https://github.com/cytechlabs/praxis/blob/v1.0.2/docs/upgrade-notes-1-0.md).
+
+The 1.0.1 limitation that a failed download could return HTTP 200 is
+corrected in this release. A transfer that fails after streaming has begun
+still cannot change the status already sent; clients detect a truncated body by
+comparing the received length with the declared length.
+
 ## 1.0.1 - maintenance release
 
 A maintenance release for the 1.0 line. It corrects host-facing defects found

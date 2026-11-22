@@ -3,9 +3,18 @@ title: Upgrade notes for 1.0
 description: What changes when you move to 1.0 and the order to apply it in.
 ---
 
-These notes cover moving to `1.0.0` from a prerelease or a local development
-build. 1.0 is the first supported release; there is no supported upgrade from an
-older tagged release because none exists.
+## Upgrading to 1.0.2
+
+Both 1.0.0 and 1.0.1 can upgrade directly to 1.0.2. The migration adds four
+nullable APT metadata freshness columns. Existing hosts show an unknown state
+until a package scan records freshness. When upgrading from 1.0.0, check for
+duplicate host addresses before starting because the 1.0.1 migration requires
+unique addresses. The [tagged 1.0.2 upgrade notes](https://github.com/cytechlabs/praxis/blob/v1.0.2/docs/upgrade-notes-1-0.md)
+include the duplicate-address query, upgrade commands, and rollback guidance.
+
+## Moving from a prerelease to 1.0.0
+
+The steps below cover the original 1.0.0 release and use its image pins.
 
 If you are installing fresh, follow the
 [installation guide](install.md)

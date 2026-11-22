@@ -3,6 +3,8 @@ title: Verify release artifacts
 description: Confirm the images and the agent tarball you are about to run were built by the Praxis release pipeline.
 ---
 
+To verify the published 1.0.2 images and agent, use the [1.0.2 artifact verification guide](https://github.com/cytechlabs/praxis/blob/v1.0.2/docs/verify-release-artifacts.md). The commands below use the 1.0.0 release.
+
 Do this before a deployment goes into service, and again after any upgrade.
 Verification proves that what you are running came from the published source
 through the published pipeline, rather than trusting a tag or a download page.
